@@ -1,0 +1,230 @@
+#!/bin/bash
+
+# Webinoly Server Manager Plugin
+# Syntax: webinoly <option>
+# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -config-load, -info
+
+opt="$1"
+arg="$2"
+
+source /opt/webinoly/lib/install
+
+if [ "$opt" == "-update" ]; then
+	app_install
+	app_purge
+	echo ""
+	echo "${gre}Webinoly App has been updated successfully!${end}"
+elif [[ "$opt" == "-server-update" || "$opt" == "-server-reset" ]]; then
+	
+	# Regenerate NGINX conf files
+	if [[ $(conf_read nginx-optim) == "true" ]]; then
+		sudo rm -rf /etc/nginx/common
+		sudo rm -rf /etc/nginx/conf.d/*
+		linux_purge
+		nginx_optim
+	fi
+	
+	# Regenerate PHP conf files
+	if [[ $(conf_read php-optim) == "true" ]]; then
+		sudo cat /opt/webinoly/templates/source/php.ini > /etc/php/$(conf_read php-ver)/fpm/php.ini
+		sudo cat /opt/webinoly/templates/source/www.conf > /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
+		sudo rm /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
+		php_optim
+	fi
+	
+	webinoly_version
+	echo ""
+	echo "${gre}Webinoly Server has been updated successfully!${end}"
+elif [ "$opt" == "-verify" ]; then
+	webinoly_verify
+elif [ "$opt" == "-dbpass" ]; then
+	if [[ -n $(conf_read mysql-root) || -n $(conf_read mysql-admin) ]]; then
+		echo "${gre}"
+		echo "  root: $( echo $(conf_read mysql-root) | openssl enc -d -a -salt )"
+		echo "  admin: $( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )"
+		echo "${end}"
+	else
+		echo "${red}"
+		echo "DB Passwords not found!"
+		echo "${end}"
+	fi
+elif [ "$opt" == "-tools-port" ]; then
+	if [[ $(conf_read nginx-tool) == "true" && $(conf_read nginx) == "true" ]]; then
+		oldport="$(conf_read tools-port)"
+		tools_port $arg
+		newport="$(conf_read tools-port)"
+		if [[ $oldport != $newport ]]; then
+			sudo mv /var/www/$oldport /var/www/$newport
+			sudo mv /etc/nginx/sites-available/$oldport /etc/nginx/sites-available/$newport
+			sudo rm /etc/nginx/sites-enabled/$oldport
+			sudo ln -s /etc/nginx/sites-available/$newport /etc/nginx/sites-enabled/$newport
+			sudo sed -i "s/${oldport}/${newport}/g"  /etc/nginx/sites-available/$newport
+			sudo service nginx reload
+		fi
+	else
+		echo "${red}"
+		echo "Nginx Tools not found in your server!"
+		echo "${end}"
+	fi
+elif [ "$opt" == "-login-www-data" ]; then
+	if [[ $(conf_read nginx) != "true" ]]; then
+		echo "${red} Nginx not found! ${end}"
+		exit 1
+	fi
+	if [[ $(conf_read login-www-data) == "true" ]]; then
+		echo "${red} User www-data already have SFTP access! ${end}"
+		exit 1
+	fi
+	
+	# Allow access for www-data user
+	sudo mkdir -p /var/www/.ssh
+	sudo chmod 700 /var/www/.ssh
+	sudo cat $HOME/.ssh/authorized_keys > /var/www/.ssh/authorized_keys
+	sudo chmod 600 /var/www/.ssh/*
+	sudo chown -R www-data:www-data /var/www
+
+	# www-data sftp-only access jail - if fails usrlib must be listed in /etc/shells
+	sudo usermod -s /usr/lib/openssh/sftp-server www-data
+	sudo addgroup --system sftponly
+	sudo usermod -G sftponly www-data
+	sudo chown root:root /var/www
+	sudo sed -i "/Subsystem sftp/c\Subsystem sftp internal-sftp" /etc/ssh/sshd_config
+	sudo echo 'Match Group sftponly
+	ChrootDirectory /var/www
+	X11Forwarding no
+	AllowTcpForwarding no
+	ForceCommand internal-sftp' >> /etc/ssh/sshd_config
+
+	falus=$( grep -F "AllowUsers" /etc/ssh/sshd_config )
+	if [[ -n $falus ]]; then
+		sudo sed -i "s/$falus/$falus www-data/" /etc/ssh/sshd_config
+	fi
+
+	conf_write login-www-data true
+	sudo service ssh restart
+	echo "${gre} SFTP access for www-data user has been successfuly enabled! ${end}"
+
+elif [ "$opt" == "-nologin-www-data" ]; then
+	if [[ $(conf_read nginx) != "true" ]]; then
+		echo "${red} Nginx not found! ${end}"
+		exit 1
+	fi
+	if [[ $(conf_read login-www-data) != "true" ]]; then
+		echo "${red} User www-data already have no SFTP access! ${end}"
+		exit 1
+	fi
+	
+	sudo rm -rf /var/www/.ssh
+	sudo sed -i '/www-data:/c\www-data:x:33:33:www-data:\/var\/www:\/usr\/sbin\/nologin' /etc/passwd
+	sudo gpasswd -d www-data sftponly
+	sudo delgroup sftponly
+	sudo chown www-data:www-data /var/www
+	sudo sed -i "/Subsystem sftp/c\Subsystem sftp \/usr\/lib\/openssh\/sftp-server" /etc/ssh/sshd_config
+	
+	falus=$( grep -F "AllowUsers" /etc/ssh/sshd_config )
+	if [[ -n $falus ]]; then
+		suffix="www-data"
+		foo=${falus%$suffix}
+		sudo sed -i "s/$falus/$foo/" /etc/ssh/sshd_config
+	fi
+
+	conf_write login-www-data purged
+	sudo service ssh restart
+	echo "${gre} SFTP access for www-data user has been successfuly disabled! ${end}"
+
+elif [ "$opt" == "-config-cache" ]; then
+	if [[ $(conf_read nginx) != "true" ]]; then
+		echo "${red} Nginx not found! ${end}"
+		exit 1
+	fi
+	
+	hitline=$( grep -F "fastcgi_cache_valid 200" /etc/nginx/conf.d/fastcgi.conf )
+	hitval=$(echo "${hitline//;}" | rev | cut -d' ' -f 1 | rev)
+	inaline=$( grep -F "fastcgi_cache_path" /etc/nginx/conf.d/fastcgi.conf )
+	inactive=$(echo "${inaline//;}" | rev | cut -d' ' -f 1 | rev)
+	inaval=$(echo "${inactive}" | cut -d'=' -f 2)
+	maxsize=$(echo "${inaline}" | rev | cut -d' ' -f 2 | rev)
+	othline=$( grep -F "fastcgi_cache_valid 301 302 307 404" /etc/nginx/conf.d/fastcgi.conf )
+	othval=$(echo "${othline//;}" | rev | cut -d' ' -f 1 | rev)
+	
+	if [[ -z $arg ]]; then
+		echo "${gre}"
+		echo "**********************************************************************"
+		echo "*************     Set FastCGI Cache new time values     **************"
+		echo "*****  Example: 30d = 30days  |  3h = 3hours  |  5m = 5minutes  ******"
+		echo "**********************************************************************"
+		echo "${blu}"
+		echo "FastCGI Cache Valid for Pages (HttpCode: 200) actual value is: $hitval"
+		read -p "   Set new value: " hit
+		hit=${hit:-$hitval}
+		echo ""
+		echo "Purge Cache for inactive pages actual value is: $inaval"
+		read -p "   Set new value: " ina
+		ina=${ina:-$inaval}
+		echo ""
+		echo "FastCGI Cache Valid for Errors and Redirections (HttpCode: 301, 302, 307, 404) actual value is: $othval"
+		read -p "   Set new value: " oth
+		oth=${oth:-$othval}
+	else
+		hit=$(echo "${arg}" | cut -d',' -f 1 )
+		ina=$(echo "${arg}" | cut -d',' -f 2 )
+		oth=$(echo "${arg}" | cut -d',' -f 3 )
+	fi
+	
+	if [[ "$hit" =~ ^[0-9]+[smhdwMy]$ && "$ina" =~ ^[0-9]+[smhdwMy]$ && "$oth" =~ ^[0-9]+[smhdwMy]$ ]]; then
+		sudo sed -i "/fastcgi_cache_valid 200/c \fastcgi_cache_valid 200 ${hit};" /etc/nginx/conf.d/fastcgi.conf
+		sudo sed -i "/fastcgi_cache_valid 301 302 307 404/c \fastcgi_cache_valid 301 302 307 404 ${oth};" /etc/nginx/conf.d/fastcgi.conf
+		sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path \/var\/run\/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m ${maxsize} inactive=${ina};" /etc/nginx/conf.d/fastcgi.conf
+		conf_write fastcgi-conf ${hit},${ina},${oth}
+		echo "${gre}"
+		echo "********  FastCGI Cache values has been successfully updated!   ********"
+		echo "${end}"
+	else
+		echo "${red}"
+		echo "  [ERROR] Invalid values!"
+		echo "${end}"
+	fi
+
+elif [ "$opt" == "-uninstall" ]; then
+	echo "${red}"
+	echo " You are about to remove completely Webinoly App from your server!!"
+	echo "${blu}     Are you sure [y/N]? "
+	while read -r -n 1 -s answer; do
+	  answer=${answer:-n}
+	  echo ""
+	  if [[ $answer = [YyNn] ]]; then
+		if [[ $answer == [Yy] ]]; then
+			if [[ $(conf_read linux-optim) == "purged" ]]; then
+				swap_delete
+			fi
+			sudo rm -rf /opt/webinoly
+			sudo rm /usr/bin/webinoly
+			sudo rm /usr/bin/stack
+			sudo rm /usr/bin/site
+			sudo rm /usr/bin/httpauth
+			sudo rm /usr/bin/log			
+			echo "${gre}  Webinoly App has been removed successfully from your server!"
+			echo "${end}"
+			exit 1;
+		else
+			echo "${gre}  Action aborted!"
+			echo "${end}"
+		fi
+		break
+	  fi
+	done
+
+elif [ "$opt" == "-config-load" ]; then
+	config_load
+
+elif [ "$opt" == "-info" ]; then
+	system_info
+
+else
+	echo "${red}Please enter a valid option!${end}"
+fi
+
+
+if [[ $(conf_read nginx) == "true" ]]; then
+	sudo service nginx reload
+fi

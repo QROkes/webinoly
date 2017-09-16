@@ -1,0 +1,103 @@
+#!/bin/bash
+
+# This is a library for Site Manager Plugin
+# Functions for SSL On/Off
+
+source /opt/webinoly/lib/general
+
+site_ssl_on() {
+	local cermail=$(conf_read mail)
+	local root="$domain"
+	if [[ "$cache" == "-root" ]]; then
+		root="$domroot"
+	fi
+	
+	echo "${gre}"
+	echo "***********************************************************************************************"
+	echo "**  Please, be careful with the number of intents or certificates you try to get.            **"
+	echo "**  Let’s Encrypt provides rate limits to ensure fair usage by as many people as possible.   **"
+	echo "**                                                                                           **"
+	echo "**  If you are getting errors or having issues when trying to get a new certificate          **"
+	echo "**  read about the Let's Encrypt rate limit - https://letsencrypt.org/docs/rate-limits/      **"
+	echo "***********************************************************************************************"
+
+	# We need an email to notify each renew intent (cron)
+	while [[ -z $cermail ]]
+	do
+		echo "${blu}"
+		read -p "Please, enter an email to register your new certificate: ${end}" cermail
+		if [[ "$cermail" =~ ^[a-z0-9_\+-]+(\.[a-z0-9_\+-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.([a-z]{2,4})$ ]]; then
+			conf_write mail $cermail
+			echo "${gre} Email address has been successfuly validated and saved! ${end}"
+		else
+			cermail=""
+			echo "${red}  Please enter a valid email address!"
+		fi
+		echo "${end}"
+	done
+		
+	# Generar nuevo certificado	
+	if [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
+		sudo letsencrypt certonly --webroot -w /var/www/$root/htdocs/ -d $domain -d www.$domain --email $cermail --agree-tos
+	fi
+	
+	# Configuracion NGINX del sitio para soportar SSL
+	if [[ -a /etc/letsencrypt/live/$root/fullchain.pem ]]; then
+		sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /etc/nginx/sites-available/$domain
+		sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /etc/nginx/sites-available/$domain
+		sudo sed -i '/headers-html.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$domain
+		sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$domain
+		#sudo sed -i "s/domain.com/${root}/g"  /etc/nginx/sites-available/$domain
+		sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$domain/}" /etc/nginx/sites-available/$domain
+		
+		# Auto-Renew Certificate
+		if [[ ! -a /var/spool/cron/crontabs/root ]]; then
+			sudo touch /var/spool/cron/crontabs/root
+			sudo chmod 600 /var/spool/cron/crontabs/root
+			sudo chown root:crontab /var/spool/cron/crontabs/root
+		fi
+		
+		cronmail=$( sudo grep -F "MAILTO=" /var/spool/cron/crontabs/root )
+		cronrene=$( sudo grep -F "letsencrypt renew" /var/spool/cron/crontabs/root )
+		if [[ -z $cronmail && -n $cermail && -z $cronrene ]]; then
+			echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root
+		fi
+		if [[ -z $cronrene ]]; then
+			echo "15 3 * * 7 letsencrypt renew" | sudo tee -a /var/spool/cron/crontabs/root
+		fi
+		
+		echo "${gre}SSL have been successfully enabled for site $domain!${end}"
+	else
+		echo "${red}"
+		echo " [ERROR] Certified not created!"
+		echo "${end}"
+	fi
+}
+
+
+site_ssl_off() {
+	sudo sed -i '/listen 443/c \	listen 80;' /etc/nginx/sites-available/$domain
+	sudo sed -i '/listen \[::\]:443/c \	listen [::]:80;' /etc/nginx/sites-available/$domain
+	sudo sed -i '/headers-https.conf/d' /etc/nginx/sites-available/$domain
+	sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$domain
+	
+	echo "${blu}"
+	echo "  Do you want to completely delete your certificate [y/N]? "
+	while read -r -n 1 -s answer; do
+	  answer=${answer:-n}
+	  if [[ $answer = [YyNn] ]]; then
+		break
+	  fi
+	done
+	echo "${end}"
+	if [[ $answer == [Yy] ]]; then
+		#sudo letsencrypt delete --cert-name $domain
+		rm -rf /etc/letsencrypt/live/${domain}
+		rm -rf /etc/letsencrypt/renewal/${domain}.conf
+		rm -rf /etc/letsencrypt/archive/${domain}
+		echo "${gre}"
+		echo "  Certificate for your site $domain has been completely removed!"
+		echo "${end}"
+	fi
+}
+	

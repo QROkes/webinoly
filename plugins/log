@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# View logs in real time Plugins
+# Syntax: log <domain> <option>
+# Options: -wp, -error (access log is default and have no option)
+# Notes: If no domain is entered, access logs are displayed.
+
+source /opt/webinoly/lib/general
+domain="$1"
+opt="$2"
+
+if [[ ! $(conf_read nginx) == "true" ]]; then
+	echo ""
+	echo "${red} NGINX is required to view your logs properly! ${end}"
+	echo ""
+	exit 1
+fi
+
+if [[ -z $opt ]]; then
+	case "$domain" in
+		"-mail")
+			sudo tail -f /var/log/mail.log /var/log/mail.err
+			;;
+		"-fpm")
+			sudo tail -f /var/log/php/$(conf_read php-ver)/*.log
+			;;
+		"-mysql")
+			sudo tail -f /var/log/mysql/*.log
+			;;
+	esac
+fi
+
+
+# Validations
+if [[ "$domain" == "-error" || "$domain" == "-wp" ]]; then
+	domain="$2"
+	opt="$1"
+fi
+
+if [[ -n "$opt" && "$opt" != "-error" && "$opt" != "-wp"  ]]; then
+	echo "${red} $opt is not a valid option!${end}"
+	exit 1
+elif [[ -z "$domain" && -n "$opt" && ! -a /var/log/nginx/error.log ]]; then
+	echo "${red}Error log file could not be retrieved!${end}"
+	exit 1
+elif [[ -n "$domain" && -n "$opt" && ! -a /var/log/nginx/$domain.error.log ]]; then
+	echo "${red}Error log file could not be retrieved!${end}"
+	exit 1
+elif [[ -z "$domain" && -z "$opt" && ! -a /var/log/nginx/access.log ]]; then
+	echo "${red}Access log file could not be retrieved!${end}"
+	exit 1
+elif [[ -n "$domain" && -z "$opt" && ! -a /var/log/nginx/$domain.access.log ]]; then
+	echo "${red}Access log file could not be retrieved!${end}"
+	exit 1
+fi
+
+
+# Show the correct log file
+if [[ "$opt" == "-error" && -z "$domain" ]]; then
+	sudo tail -f /var/log/nginx/*error.log
+elif [[ "$opt" == "-error" && -n "$domain" ]]; then
+	sudo tail -f /var/log/nginx/$domain.error.log
+elif [[ "$opt" == "-wp" && -n "$domain" ]]; then
+	if [[ -a /var/www/$domain/htdocs/wp-content/debug.log ]]; then
+		sudo tail -f /var/www/$domain/htdocs/wp-content/debug.log
+	else
+		echo "${red} Seems like debug is not enabled in your wp-config.php file! ${end}"
+	fi
+elif [[ -z "$domain" && -z "$opt" ]]; then
+	sudo tail -f /var/log/nginx/*access.log
+elif [[ -n "$domain" && -z "$opt" ]]; then
+	sudo tail -f /var/log/nginx/$domain.access.log
+fi

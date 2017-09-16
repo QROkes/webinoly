@@ -1,0 +1,66 @@
+# Webinoly admin NGINX CONFIGURATION
+
+server {
+
+  listen 22222 default_server deferred;
+  listen [::]:22222 default_server;
+  
+  access_log   /var/log/nginx/22222.access.log we_log;
+  error_log    /var/log/nginx/22222.error.log;
+
+  #ssl on;
+  #ssl_certificate /var/www/22222/cert/22222.crt;
+  #ssl_certificate_key /var/www/22222/cert/22222.key;
+  #ssl_stapling on;
+  #ssl_stapling_verify on;
+  #ssl_trusted_certificate /var/www/22222/cert/chain.pem;
+  
+  # Force HTTP to HTTPS
+  #error_page 497 =200 https://$host:22222$request_uri;
+
+  root /var/www/22222/htdocs;
+  index index.php index.htm index.html;
+
+  # Turn on directory listing
+  autoindex on;
+
+  # HTTP Authentication on port 22222
+  include common/acl.conf;
+
+  location / {
+    try_files $uri $uri/ /index.php?$args;
+  }
+
+  # Status pages
+  location /nginx_status {
+    stub_status on;
+    access_log off;
+  #  include common/acl.conf;
+  }
+  location ~ ^/(status|ping) {
+    include fastcgi_params;
+    fastcgi_pass php;
+  #  include common/acl.conf;
+  }
+
+  # Display menu at location /fpm/status/
+  location =  /fpm/status/ {}
+
+  location ~ /fpm/status/(.*) {
+    try_files $uri =404;
+    include fastcgi_params;
+    fastcgi_param  SCRIPT_NAME  /status;
+    fastcgi_pass $1;
+  }
+
+  location ~ \.php$ {
+    try_files $uri =404;
+    include fastcgi_params;
+    fastcgi_pass php;
+  }
+
+  location ~* \.(js|css|jpg|gif|png)$ {
+    root /var/www/22222/htdocs/;
+  }
+
+}

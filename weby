@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# Webinoly script.
+# This script is designed to install latest Webinoly.
+
+
+if [[ -n "$1" ]]; then
+	setup="$1"
+else
+	setup=9
+fi
+
+# Diplay menu to select type of server
+while ! [[ $setup -ge 0 && $setup -le 4 && $setup =~ ^[0-9]+$ ]] 2>/dev/null
+do
+	echo ""
+	echo "  1 - HTML Server"
+	echo "  2 - PHP Server"
+	echo "  3 - LEMP Server (Default)"
+	echo "  4 - Custom Configuration"
+	echo "  0 - Maybe later..."
+	echo ""
+	read -p "Select the desired option to configure your server: " setup
+	echo ""
+	echo "------------------------------------------------"
+	setup=${setup:-3}
+done
+
+
+sudo mkdir /opt/webinoly
+
+# Download and install Webinoly
+# Same as app_install, but manually because is not installed yet.
+sudo curl -o $HOME/webinoly.tar http://dl.qrokes.com/webinoly/webinoly.tar
+sudo tar -xf $HOME/webinoly.tar -C /opt/webinoly
+sudo find /opt/webinoly -type d -exec chmod 755 {} \;
+sudo find /opt/webinoly -type f -exec chmod 644 {} \;
+
+# Install plugins
+sudo chmod 755 /opt/webinoly/plugins/*
+sudo mv /opt/webinoly/plugins/* /usr/bin/
+
+source /opt/webinoly/lib/install
+
+# Save Tools Port after library is available.
+if [[ -z "$2" ]]; then
+	portools="22222"
+else
+	portools="$2"
+fi
+if [[ -a /opt/webinoly/webinoly.conf ]]; then
+	echo "${gre}Webinoly Configuration file was found, so we will use it!${end}"
+else
+	tools_port $portools
+fi
+
+
+#  NGINX Installation
+if [[ $setup -gt 0 && $setup != 4 ]]; then
+	stack -nginx
+fi
+
+#  PHP Installation
+if [[ $setup -gt 1 && $setup != 4 ]]; then
+	stack -php
+fi
+
+#  MySQL & PhpMyAdmin Installation
+if [[ $setup -gt 2 && $setup != 4 ]]; then
+	stack -mysql
+fi
+
+#  Custom Config
+if [ $setup == 4 ]; then
+	config_load
+fi
+
+
+# Write app version
+webinoly_version
+# Borrar archivos
+sudo rm $HOME/weby
+app_purge

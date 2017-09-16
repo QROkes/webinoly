@@ -1,0 +1,59 @@
+#!/bin/bash
+source /opt/webinoly/lib/general
+opt="$1"
+
+# Http-Authentication Plugin
+# Syntax: httpauth <option>
+# Options: -add, -delete, -list, -wp-admin-on, -wp-admin-off
+
+if [[ ! $(conf_read nginx) == "true" ]]; then
+	echo ""
+	echo "${red} NGINX is required to get HTTP Authentication working properly! ${end}"
+	echo ""
+	exit 1
+fi
+
+if [ "$opt" == "-add" ]; then
+	echo ""
+	read -p "${blu}HTTP-Auth User: ${end}" user
+	read -p "${blu}HTTP-Auth Password: ${end}" pass
+	echo ""
+	[ -a /etc/nginx/.htpasswd ] && exist=$( grep -F "${user}:" /etc/nginx/.htpasswd )
+	if [[ -z $exist ]]; then
+		sudo sh -c "echo -n '$user:$(openssl passwd -1 $pass)\n' >> /etc/nginx/.htpasswd"
+		echo "${gre}User '$user' has been added successfully!${end}"
+	else
+		echo "${red}User '$user' already exist!${end}"
+	fi
+	echo ""
+elif [ "$opt" == "-delete" ]; then
+	read -p "${blu}HTTP-Auth User: ${end}" userpurge
+	sudo sed -i "/$userpurge/d" /etc/nginx/.htpasswd
+	echo "${gre}User '$userpurge has been deleted successfully!${end}"
+elif [ "$opt" == "-list" ]; then
+	echo "${gre}"
+	cat /etc/nginx/.htpasswd | while read line
+		do
+			# Show only the user_name part, cut encrypted password string
+			echo "-  $line" | cut -f 1 -d ':'
+		done
+	echo "${end}"
+elif [ "$opt" == "-wp-admin-on" ]; then
+	iswpadon=$( grep -F "acl.conf;" /etc/nginx/common/wpcommon.conf )
+	if [[ -z $iswpadon ]]; then
+		sudo sed -i "/zone=one/a \  include common/acl.conf;" /etc/nginx/common/wpcommon.conf
+		sudo service nginx reload
+		conf_write wp-admin-auth true
+		echo "${gre}  WordPress admin authentication has been enabled! ${end}"
+	else
+		echo "${gre} HTTP Authentication for WP Admin pages is already enabled! ${end}"
+	fi
+	
+elif [ "$opt" == "-wp-admin-off" ]; then
+	sudo sed -i "/acl.conf/d" /etc/nginx/common/wpcommon.conf
+	sudo service nginx reload
+	conf_write wp-admin-auth purged
+	echo "${gre}  WordPress admin authentication has been disabled! ${end}"
+else
+	echo "${red}Please enter a valid option!${end}"
+fi

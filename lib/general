@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# echo colors
+red=`tput setaf 1`
+gre=`tput setaf 2`
+blu=`tput setaf 6`
+end=`tput sgr0`
+
+
+db_delete() {
+	local domain="$1"
+	if [[ $(conf_read mysql) == "true" ]]; then
+		# Get dbname and dbuser of a WP site
+		local name=$( grep -F "DB_NAME" /var/www/$domain/wp-config.php | cut -f 4 -d "'" )
+		local user=$( grep -F "DB_USER" /var/www/$domain/wp-config.php | cut -f 4 -d "'" )
+		local host=$( grep -F "DB_HOST" /var/www/$domain/wp-config.php | cut -f 4 -d "'" )
+		local url=$(echo "$host" | cut -f 1 -d ':')
+		local port=$(echo "$host" | cut -f 2 -d ':')
+		
+		dbsetup="DELETE FROM mysql.user WHERE User='$user';DROP DATABASE IF EXISTS $name;DELETE FROM mysql.db WHERE Db='$name' OR Db='$name\\_%';FLUSH PRIVILEGES;"
+		local done="0"
+		local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+		while [[ $done != "1" ]]
+		do
+			done="1"
+			if [[ $host == "localhost" ]]; then
+				sudo mysql --connect_timeout 10 --user=root -p$ROOT_PASS -e "$dbsetup"
+			else
+				echo ""
+				echo "${gre} External DB found in $domain "
+				read -p "${blu}External DB root username [root]: " uroot
+				read -p "External DB root password: " proot
+				echo "${end}"
+				sudo mysql --connect_timeout 10 -h "$url" -P "$port" -u"$uroot" -p"$proot" -e "$dbsetup"
+			fi
+			
+			if [ $? != "0" ]; then
+				done="0"
+				echo "${red}============================================"
+				echo "    [Error]: Database delete failed."
+				echo "============================================"
+				echo ""
+				echo "${blu}  Retry [Y/n]? "
+				while read -r -n 1 -s answer; do
+				  answer=${answer:-y}
+				  if [[ $answer = [YyNn] ]]; then
+					break
+				  fi
+				done
+				if [[ $answer  == [Nn] ]]; then
+					done="1"
+				fi
+			fi
+		done
+	else
+		echo "${red} [ERROR] Failed to delete $domain Database. MySQL was not found in your server! ${end}"
+	fi
+}
+
+
+mysql_client_install() {
+	# Install alternative repos for MariaDB
+	sudo apt-get -y install software-properties-common
+	sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+	sudo add-apt-repository 'deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu xenial main'
+	sudo apt-get update
+	sudo apt-get -y install mariadb-client
+	conf_write mysql-client true
+	echo "${gre}MySQL Client has been successfully installed!${end}"
+}
+
+
+conf_read() {
+	local val=$(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf | cut -f 2 -d ':')
+	echo $val
+}
+
+conf_write() {
+	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
+		sudo touch /opt/webinoly/webinoly.conf
+	fi
+	#if requested VAR exists overwrite it, if not, create it.
+	sed -i "/${1}:/d" /opt/webinoly/webinoly.conf
+	sh -c "echo -n '$1:$2\n' >> /opt/webinoly/webinoly.conf"
+}
+
+conf_delete() {
+	sed -i "/${1}:/d" /opt/webinoly/webinoly.conf
+}

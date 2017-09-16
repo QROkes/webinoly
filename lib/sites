@@ -1,0 +1,325 @@
+#!/bin/bash
+
+# This is a library for Site Manager Plugin
+# Functions for site creation and delete
+
+source /opt/webinoly/lib/general
+
+
+nginx_helper_plugin() {
+	# Download WP (latest version)
+	sudo curl -o /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
+	sudo unzip /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
+	sudo rm /var/www/$domain/htdocs/nginx-helper-plugin.zip
+	echo ""
+	echo "${gre} Nginx Helper Plugin has been installed! ${end}"
+}
+
+
+wpinstall() {
+	echo "${blu}"
+	echo "Do you need to setup new MySQL database? [Y/n]"
+	while read -r -n 1 -s setupmysql; do
+	  local setupmysql=${setupmysql:-y}
+	  if [[ $setupmysql = [YyNn] ]]; then
+		break
+	  fi
+	done
+	echo "Create WP-Config file automatically? [Y/n]"
+	while read -r -n 1 -s setupwp; do
+	  local setupwp=${setupwp:-y}
+	  if [[ $setupwp = [YyNn] ]]; then
+		break
+	  fi
+	done
+	
+	# Download WP (latest version)
+	sudo curl -o /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
+	sudo tar -xf /var/www/$domain/htdocs/wp.tar.gz -C /var/www/$domain/htdocs/
+	sudo mv /var/www/$domain/htdocs/wordpress/* /var/www/$domain/htdocs/
+	sudo rm -rf /var/www/$domain/htdocs/wordpress
+	sudo rm /var/www/$domain/htdocs/wp.tar.gz
+	
+	# Generate and auto-fill wp-config.php and also create database
+	if [[ "$setupmysql" == y || "$setupmysql" == Y || "$setupwp" == y || "$setupwp" == Y ]] ; then
+		local AUTOGENPASS_WPDB=`pwgen -s -1`
+		local dom=${domain//./_}	
+		local done="0"
+		
+		while [[ $done != "1" ]]
+		do
+			done="1"
+			# Ask DB data or suggest default values
+			echo ""
+			read -p "Database Host [localhost]:" dbhost
+			local dbhost=${dbhost:-localhost}
+			
+			if [[ $dbhost == "localhost" && ( "$setupmysql" == y || "$setupmysql" == Y ) && $(conf_read mysql) != "true" ]]; then
+				echo "${red} [ERROR] MySQL is not installed or localhost was not found!${blu}"
+				done="0"
+				continue 1;
+			fi
+			# Check if localhost or external DB
+			if [[ $dbhost != "localhost" && ( "$setupmysql" == y || "$setupmysql" == Y ) ]]; then
+				if [[ $(conf_read mysql-client) != "true" ]]; then
+					echo "${gre}MySQL Client is not installed and we need it to conect with your external server."
+					echo "Wait while we install MySQL Client... installing!!!${end}"
+					mysql_client_install > /dev/null 2>&1 &
+					echo "${gre}MySQL Client has been successfully installed!${end}"
+				fi
+				echo "${blu}"
+				read -p "External DB root username [root]: " dburoot
+				read -p "External DB root password: " dbproot
+				echo ""
+				local dburoot=${dburoot:-root}
+				local dbproot=${dbproot:-nodefined}
+					
+				local dburl=$(echo "$dbhost" | cut -f 1 -d ':')
+				local dbport=$(echo "$dbhost" | cut -f 2 -d ':')
+			fi
+			
+			read -p "Database Name [$dom]:" dbname
+			local dbname=${dbname:-$dom}
+				
+			# Check for duplicate database names, if already exists ask for another dbname to create the new db
+			if [[ "$setupmysql" == y || "$setupmysql" == Y ]]; then
+				local newdbname="$dbname"
+				while [[ $dbname == $newdbname && $dbreuse != y && $dbreuse != Y ]]; do
+					# Chech connection to DB first
+					if [[ $dbhost == "localhost" ]]; then
+						local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+						sudo mysql --connect_timeout 10 --user=root -p$ROOT_PASS -e "quit"
+					else
+						sudo mysql --connect_timeout 10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" -e "quit"
+					fi
+					if [[ $? != "0" ]]; then
+						done="0"
+						echo "${red}============================================"
+						echo "    [Error]: Database conection failed."
+						echo "============================================${blu}"
+						echo ""
+						continue 2;
+					fi
+					if [[ $dbhost == "localhost" ]]; then
+						local newdbname=$(sudo mysqlshow --user=root -p$ROOT_PASS $dbname | grep -v Wildcard | grep -ow $dbname)
+					else
+						local newdbname=$(sudo mysqlshow -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" $dbname | grep -v Wildcard | grep -ow $dbname)
+					fi
+					
+					if [ "$newdbname" == "$dbname" ]; then
+						echo ""
+						echo "${red}Database $dbname already exists!${blu}"
+						echo "Do you want to use this DB in your new site? [y/N]"
+						while read -r -n 1 -s dbreuse; do
+						  local dbreuse=${dbreuse:-n}
+						  if [[ $dbreuse = [YyNn] ]]; then
+							break
+						  fi
+						done
+						
+						if [[ $dbreuse != y && $dbreuse != Y ]]; then
+							echo ""
+							read -p "Please enter a new DB_NAME for your Database: " newdbname
+							dbname="$newdbname"
+						elif [[ $dbreuse == y || $dbreuse == Y ]]; then
+							# If you want to use the DB that already exist, abort DB creation.
+							setupmysql="n"
+						fi
+					fi
+				done
+			fi
+			read -p "Database User [$dom]:" dbuser
+			read -p "Database Password [$AUTOGENPASS_WPDB]:" dbpass
+			read -p "Database Prefix [wp_]:" dbpref
+			echo "${end}"
+			
+			# If empty, assign defalut values
+			local dbuser=${dbuser:-$dom}
+			local dbpass=${dbpass:-$AUTOGENPASS_WPDB}
+			local dbpref=${dbpref:-wp_}
+		
+		
+			# DB Creation
+			if [[ "$setupmysql" == y || "$setupmysql" == Y  ]] ; then
+				if [[ $dbhost == "localhost" ]]; then
+					local dbsetup="CREATE DATABASE $dbname;GRANT ALL PRIVILEGES ON $dbname.* TO $dbuser@$dbhost IDENTIFIED BY '$dbpass';FLUSH PRIVILEGES;"
+					sudo mysql --connect_timeout 10 --user=root -p$ROOT_PASS -e "$dbsetup"
+				else
+					sudo mysql --connect_timeout 10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
+CREATE DATABASE ${dbname};
+grant usage on ${dbname}.* to ${dbuser}@\`%\` identified by '${dbpass}';
+grant all privileges on ${dbname}.* to ${dbuser}@\`%\`;
+FLUSH PRIVILEGES;
+_EOF_
+				fi
+					
+				if [ $? != "0" ]; then
+					done="0"
+					echo "${red}============================================"
+					echo "    [Error]: Database creation failed."
+					echo "============================================${end}"
+					echo ""
+				fi
+			fi
+			
+			if [[ $done != "1" ]]; then
+				echo "${red} Some error ocurred during Database Configuration."
+				echo "${blu}  Retry [Y/n]? ${end}"
+				while read -r -n 1 -s done; do
+				  done=${done:-y}
+				  if [[ $done = [YyNn] ]]; then
+					break
+				  fi
+				done
+				if [[ $done  == n || $done == N ]]; then
+					done="1"
+				fi
+			fi
+		done
+	fi
+	
+	
+	#WP-Config.php auto-setup
+	if [[ "$setupwp" == y || "$setupwp" == Y ]] ; then
+		# Generate random salt keys
+		local SALT_AUTHK=`pwgen -s -1 64`
+		local SALT_SECUR=`pwgen -s -1 64`
+		local SALT_LOGGE=`pwgen -s -1 64`
+		local SALT_NONCE=`pwgen -s -1 64`
+		local SALT_AUTHS=`pwgen -s -1 64`
+		local SALT_SECUS=`pwgen -s -1 64`
+		local SALT_LOGGS=`pwgen -s -1 64`
+		local SALT_NONCS=`pwgen -s -1 64`	
+		
+		cp /var/www/$domain/htdocs/wp-config-sample.php /var/www/$domain/wp-config.php
+		
+		# Fill new wp-config with data
+		sudo sed -i "/DB_NAME/c \define('DB_NAME', '$dbname');" /var/www/$domain/wp-config.php
+		sudo sed -i "/DB_USER/c \define('DB_USER', '$dbuser');" /var/www/$domain/wp-config.php
+		sudo sed -i "/DB_PASSWORD/c \define('DB_PASSWORD', '$dbpass');" /var/www/$domain/wp-config.php
+		sudo sed -i "/DB_HOST/c \define('DB_HOST', '$dbhost');" /var/www/$domain/wp-config.php
+		sudo sed -i "/table_prefix/c \$table_prefix  = '$dbpref';" /var/www/$domain/wp-config.php
+		
+		sudo sed -i "/'AUTH_KEY'/c \define('AUTH_KEY',        '$SALT_AUTHK');" /var/www/$domain/wp-config.php
+		sudo sed -i "/'SECURE_AUTH_KEY'/c \define('SECURE_AUTH_KEY', '$SALT_SECUR');" /var/www/$domain/wp-config.php
+		sudo sed -i "/'LOGGED_IN_KEY'/c \define('LOGGED_IN_KEY',   '$SALT_LOGGE');" /var/www/$domain/wp-config.php
+		sudo sed -i "/'NONCE_KEY'/c \define('NONCE_KEY',       '$SALT_NONCE');" /var/www/$domain/wp-config.php
+		sudo sed -i "/'AUTH_SALT'/c \define('AUTH_SALT',       '$SALT_AUTHS');" /var/www/$domain/wp-config.php
+		sudo sed -i "/'SECURE_AUTH_SALT'/c \define('SECURE_AUTH_SALT','$SALT_SECUS');" /var/www/$domain/wp-config.php
+		sudo sed -i "/'LOGGED_IN_SALT'/c \define('LOGGED_IN_SALT',  '$SALT_LOGGS');" /var/www/$domain/wp-config.php
+		sudo sed -i "/'NONCE_SALT'/c \define('NONCE_SALT',      '$SALT_NONCS');" /var/www/$domain/wp-config.php
+		
+		# Multisite wp-config
+		if [[ "$type" == "-wpsubdir" || "$type" == "-wpsubdom" ]]; then
+			sudo sed -i "/stop editing/i \define('WP_ALLOW_MULTISITE', true);" /var/www/$domain/wp-config.php
+			sudo sed -i "/stop editing/i \#define('MULTISITE', true);" /var/www/$domain/wp-config.php
+			sudo sed -i "/stop editing/i \#define('DOMAIN_CURRENT_SITE', '$domain');" /var/www/$domain/wp-config.php
+			sudo sed -i "/stop editing/i \#define('PATH_CURRENT_SITE', '/');" /var/www/$domain/wp-config.php
+			sudo sed -i "/stop editing/i \#define('SITE_ID_CURRENT_SITE', 1);" /var/www/$domain/wp-config.php
+			sudo sed -i "/stop editing/i \#define('BLOG_ID_CURRENT_SITE', 1);" /var/www/$domain/wp-config.php
+		fi
+		if [ "$type" == "-wpsubdir" ]; then
+			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', false);" /var/www/$domain/wp-config.php
+		elif [ "$type" == "-wpsubdom" ]; then
+			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', true);" /var/www/$domain/wp-config.php
+			sudo sed -i "/server_name /c \	server_name $domain *.$domain;" /etc/nginx/sites-available/$domain
+		fi
+	fi
+	
+}
+
+
+
+deletesite() {
+	# Determine id site is WP, so you should delete the DB too.
+	if [[ -a /var/www/$domain/wp-config.php || -a /var/www/$domain/htdocs/wp-config.php ]]; then
+		echo "${blu}Delete Database [Y/n]?${end}"
+		while read -r -n 1 -s dbdel; do
+		  local dbdel=${dbdel:-y}
+		  if [[ $dbdel = [YyNn] ]]; then
+			break
+		  fi
+		done
+	fi
+	
+	if [[ "$dbdel" == "y" || "$dbdel" == "Y" ]]; then
+		db_delete $domain
+	fi
+	
+	# Delete site files
+	sudo rm /etc/nginx/sites-available/$domain
+	sudo rm /etc/nginx/sites-enabled/$domain
+	sudo rm -rf /var/www/$domain
+}
+
+
+
+createsite() {
+	if [[ "$wp" == "1" && $(conf_read php) != "true" ]]; then
+		echo "${red}"
+		echo " [ERROR] PHP must be installed before you can create a WP site!"
+		echo "${end}"
+		exit 1
+	fi
+	if [[ "$type" == "-php" && $(conf_read php) != "true" ]]; then
+		echo "${red}"
+		echo " [ERROR] PHP must be installed before you can create a PHP site!"
+		echo "${end}"
+		exit 1
+	fi
+	
+	# Check for duplicate sites
+	if [[ -a /etc/nginx/sites-available/$domain ]]; then
+		echo "${red}Site $domain could not be created because already exists!${end}"
+		exit 1
+	fi
+	
+	sudo cp /opt/webinoly/templates/template-site-php /etc/nginx/sites-available/$domain
+
+	# Nginx conf file for the new site (-php conf is default)
+	sudo sed -i "s/domain.com/$domain/g"  /etc/nginx/sites-available/$domain
+	
+	sudo chmod 644 /etc/nginx/sites-available/$domain
+	sudo chown root:root /etc/nginx/sites-available/$domain
+	sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
+	
+	# Create data folder for new site
+	if [[ ! -d /var/www/$domain/htdocs || ! -d /var/www/$domain ]]; then
+		sudo mkdir -p /var/www/$domain/htdocs
+		if [[ "$wp" == "1" ]]; then
+			wpinstall
+		fi
+	else
+		echo "${blu}"
+		echo "  We found a folder with $domain site data, do you want to use it [Y/n]? "
+		while read -r -n 1 -s wwwexist; do
+		  wwwexist=${wwwexist:-y}
+		  if [[ $wwwexist = [YyNn] ]]; then
+			break
+		  fi
+		done
+		echo ""
+		
+		if [[ $wwwexist == n || $wwwexist == N ]]; then
+			sudo rm -rf /var/www/$domain/htdocs
+			sudo mkdir -p /var/www/$domain/htdocs
+			if [[ "$wp" == "1" ]]; then
+				wpinstall
+			fi
+		fi
+	fi
+
+	sudo chown -R www-data:www-data /var/www
+	if [[ $(conf_read login-www-data) == "true" ]]; then
+		sudo chown root:root /var/www
+	fi
+	
+	# Activate FastCgi cache
+	if [[ "$cache" == "-cache" && "$wp" == "1" ]]; then
+		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
+		nginx_helper_plugin
+	fi
+	
+	echo "${gre}Site $domain has been successfully created!${end}"
+}
+

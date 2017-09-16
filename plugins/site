@@ -1,0 +1,239 @@
+#!/bin/bash
+
+# Site Manager Plugin (Create, delete and de/activate)
+# Syntax: site <domain> <option> <argument>
+# Options: -html, -php, -wp, -wpsubdir, -wpsubdom, -parked, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off
+# Arguments: -cache, -root
+
+# shopt is necessary for this kind !(html|22222) of patterns
+shopt -s extglob
+
+domain="$1"
+type="$2"
+cache="$3"
+domroot="$4"
+
+source /opt/webinoly/lib/general
+source /opt/webinoly/lib/sites
+source /opt/webinoly/lib/site-ssl
+
+if [[ ! $(conf_read nginx) == "true" ]]; then
+	echo ""
+	echo "${red} NGINX is required to create a site! ${end}"
+	echo ""
+	exit 1
+fi
+
+# Check if user entered arg before option and correct it.
+if [[ "$type" == "-cache" && -n $cache ]]; then
+	type="$3"
+	cache="$2"
+fi
+
+wp="0" # Evaluate if site to create is WP
+if [[ "$type" == "-wp" || "$type" == "-wpsubdir" || "$type" == "-wpsubdom" ]]; then
+	wp="1"
+fi
+
+# Cache validation
+if [[ "$cache" == "-cache" && "$wp" == "0" ]]; then
+	echo "${red} Site $domain is not a WP site! ${end}"
+	exit 1
+elif [[ ( "$cache" != "-cache" && "$cache" != "-root" ) && -n "$cache" && "$type" != "-parked" ]]; then
+	echo "${red} $cache is not a valid argument! ${end}"
+	exit 1
+fi
+
+
+
+# List Sites
+if [[ "$domain" == "-list" && -z "$type" && -z "$cache" ]]; then
+	echo ""
+	for site in "/var/www"/*
+	do
+		domi=$(echo $site | cut -f 4 -d "/")
+		echo "${gre}  -  $domi ${end}"
+	done
+	echo ""
+
+	
+# Delete all sites
+elif [[ "$domain" == "-delete-all" && -z "$type" && -z "$cache" ]]; then
+	# List all sites in /var/www/ folder
+	for site in "/var/www"/*
+	do
+		# Determina if site is WP (so has DB to delete)
+		if [[ -a $site/wp-config.php || -a $site/htdocs/wp-config.php ]]; then
+			domi=$(echo $site | cut -f 4 -d "/")
+			db_delete $domi
+			echo "${gre}Database of your site ${red}${domi}${gre} has been successfully deleted! ${end}"
+		fi
+	done
+
+	# Delete all files
+	# -rf is necessary to not generate an error when is empty.
+	sudo rm -rf /etc/nginx/sites-available/!(default|$(conf_read tools-port))
+	sudo rm -rf /etc/nginx/sites-enabled/!(default|$(conf_read tools-port))
+	sudo rm -rf /var/www/!(html|$(conf_read tools-port))
+	echo ""
+	echo "${gre}All sites and data has been deleted successfully!${end}"
+
+	
+# Create PHP site
+elif [ "$type" == "-php" ]; then
+	createsite
+	
+
+# Create HTML site
+elif [ "$type" == "-html" ]; then
+	createsite
+	sudo sed -i '/index/c \	index  index.html index.htm;' /etc/nginx/sites-available/$domain
+	sudo sed -i '/index/a \	location / { try_files $uri $uri/ =404; }' /etc/nginx/sites-available/$domain
+	sudo sed -i '/php.conf/d' /etc/nginx/sites-available/$domain
+
+
+# Create WP site	
+elif [ "$type" == "-wp" ]; then
+	createsite
+	sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
+
+
+# Create WP Multisite (Sub-directory)
+elif [ "$type" == "-wpsubdir" ]; then
+	createsite
+	sudo sed -i '/locations.conf/i \	include common/wpsubdir.conf;' /etc/nginx/sites-available/$domain
+	sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
+
+	
+# Create WP Multisite (Sub-domain)	
+elif [ "$type" == "-wpsubdom" ]; then
+	createsite
+	sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
+
+
+# Parked Domain
+elif [ "$type" == "-parked" ]; then
+	mapto="NeverMatchAtFirstDotCom"
+	if [[ -n $cache ]]; then
+		mapto="$cache"
+	fi
+	
+	while [[ ! -a /etc/nginx/sites-available/$mapto ]]
+	do
+		echo "${blu}"
+		read -p "Main site domain: " mapto
+		mapto=${mapto:-NeverMatchAtFirstDotCom}
+		echo "${end}"
+		if [[ ! -a /etc/nginx/sites-available/$mapto ]]; then
+			echo "${red} Main site domain not found! ${end}"
+		fi
+	done
+	sudo cp /etc/nginx/sites-available/$mapto /etc/nginx/sites-available/$domain
+	sudo chmod 644 /etc/nginx/sites-available/$domain
+	sudo chown root:root /etc/nginx/sites-available/$domain
+	sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
+
+	# Nginx conf file for the new parked domain
+	sudo sed -i "s/$mapto/$domain/g"  /etc/nginx/sites-available/$domain
+	sudo sed -i "/root/c \	root /var/www/$mapto/htdocs;" /etc/nginx/sites-available/$domain
+	cusconl=$( grep -F "include /var/www/$domain/conf/nginx" /etc/nginx/sites-available/$domain | sed "s/$domain/$mapto/" )
+	sed -i "/include \/var\/www\/$domain\/conf\/nginx/c \	${cusconl}" /etc/nginx/sites-available/$domain
+	
+	echo "${gre}"
+	echo "  Parked domain was successfully configured! "
+	echo "${end}"
+	
+
+# Site disabled	
+elif [[ "$type" == "-off" && ! -L /etc/nginx/sites-enabled/$domain ]]; then
+	echo "${red}Site $domain doesn't exist or is already disabled!${end}"
+elif [[ "$type" == "-off" && -L /etc/nginx/sites-enabled/$domain ]]; then
+	echo "${gre}Site $domain has been successfully disabled!${end}"
+	sudo rm /etc/nginx/sites-enabled/$domain
+
+	
+# Site re-enabled
+elif [[ "$type" == "-on" && -L /etc/nginx/sites-enabled/$domain ]]; then
+	echo "${gre}Site $domain is already enabled!${end}"
+elif [[ "$type" == "-on" && ! -L /etc/nginx/sites-enabled/$domain ]]; then
+	sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
+	echo "${gre}Site $domain has been successfully enabled!${end}"
+
+	
+# Delete site	
+elif [[ "$type" == "-delete" && -a /etc/nginx/sites-available/$domain ]]; then
+	deletesite
+	echo "${gre}Site $domain has been successfully deleted!${end}"
+
+	
+# SSL enabled (Letsencrypt)	
+elif [[ "$type" == "-ssl-on" && -a /etc/nginx/sites-available/$domain ]]; then
+	isssl=$( grep -F "ssl on;" /etc/nginx/sites-available/$domain )
+	if [[ -z $isssl ]]; then
+		site_ssl_on
+	else
+		echo "${red}SSL is already enabled for site $domain!${end}"
+	fi
+	
+	
+# SSL disabled (Letsencrypt)	
+elif [[ "$type" == "-ssl-off" && -a /etc/nginx/sites-available/$domain ]]; then
+	isssl=$( grep -F "ssl on;" /etc/nginx/sites-available/$domain )
+	if [[ -n $isssl ]]; then
+		site_ssl_off
+		echo "${gre}SSL have been successfully disabled for site $domain!${end}"
+	else
+		echo "${red}SSL is already disabled for site $domain!${end}"
+	fi
+	
+	
+# FastCGI Cache disabled
+elif [[ "$type" == "-nocache" && -a /etc/nginx/sites-available/$domain ]]; then
+	isfc=$( grep -F "wpfc.conf" /etc/nginx/sites-available/$domain )
+	if [[ -n $isfc ]]; then
+		sudo sed -i '/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
+		echo "${gre} FastCGI Cache in $domain has been disabled!${end}"
+	else
+		echo "${red} Site $domain is not a WP site or FastCGI were not enabled!${end}"
+	fi
+	
+	
+# FastCGI Cache enabled
+elif [[ "$type" == "-cache" && -a /etc/nginx/sites-available/$domain ]]; then
+	isphp=$( grep -F "php.conf" /etc/nginx/sites-available/$domain )
+	iswp=$( grep -F "wpcommon.conf" /etc/nginx/sites-available/$domain )
+	if [[ -n $isphp && -n $iswp ]]; then
+		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
+		if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/nginx-helper ]]; then
+			echo "${gre}"
+			echo "We recommend Nginx Helper Plugin as an easy way to manage FastCGI Cache on your site."
+			echo "${blu}   Do you want to install it now [Y/n]? "
+			while read -r -n 1 -s answer; do
+			  answer=${answer:-y}
+			  if [[ $answer = [YyNn] ]]; then
+				[[ $answer = [Yy] ]] && nginx_helper_plugin
+				break
+			  fi
+			done
+		fi
+		echo "${gre}"
+		echo " FastCGI Cache in $domain has been successfully enabled! "
+		echo "${end}"
+	else
+		echo "${red} Site $domain is not a WP site or FastCGI is already enabled!${end}"
+	fi
+	
+	
+# Catch ERROR 
+elif [[ ! -a /etc/nginx/sites-available/$domain && ( "$type" == "-nocache" || "$type" == "-cache" || "$type" == "-delete" || "$type" == "-on" || "$type" == "-ssl-on" || "$type" == "-ssl-off" ) ]]; then
+	echo "${red}Site $domain doesn't exists!${end}"
+else
+	echo "${red} Argument '${type}' is not a valid option! ${end}"
+fi
+
+shopt -u extglob
+
+
+if [[ $(conf_read nginx) == "true" ]]; then
+	sudo service nginx reload
+fi
