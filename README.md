@@ -20,12 +20,12 @@ sudo site example.com -wp
 ```
 
 ## Documentation
-For complete documentation, please [visit our site](https://qrokes.com/webinoly/).
+For complete documentation, please [visit our site](https://webinoly.com/).
 
 ## Contributing
 Please open an issue first to discuss what you would like to change.
 
-Also, you can visit our [Community Support Forum](https://qrokes.com/support/)
+Also, you can visit our [Community Support Forum](https://webinoly.com/support/)
 
 ## Donations
 [![PayPal Donations](https://www.paypalobjects.com/webstatic/en_US/i/btn/png/gold-rect-paypal-60px.png)](https://www.paypal.me/qrokes)

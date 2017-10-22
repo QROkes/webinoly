@@ -12,6 +12,7 @@ source /opt/webinoly/lib/install
 if [ "$opt" == "-update" ]; then
 	app_install
 	app_purge
+	webinoly_version
 	echo ""
 	echo "${gre}Webinoly App has been updated successfully!${end}"
 elif [[ "$opt" == "-server-update" || "$opt" == "-server-reset" ]]; then
@@ -32,7 +33,6 @@ elif [[ "$opt" == "-server-update" || "$opt" == "-server-reset" ]]; then
 		php_optim
 	fi
 	
-	webinoly_version
 	echo ""
 	echo "${gre}Webinoly Server has been updated successfully!${end}"
 elif [ "$opt" == "-verify" ]; then

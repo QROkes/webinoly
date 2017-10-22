@@ -13,13 +13,15 @@ site_ssl_on() {
 	fi
 	
 	echo "${gre}"
-	echo "***********************************************************************************************"
-	echo "**  Please, be careful with the number of intents or certificates you try to get.            **"
-	echo "**  Let’s Encrypt provides rate limits to ensure fair usage by as many people as possible.   **"
-	echo "**                                                                                           **"
-	echo "**  If you are getting errors or having issues when trying to get a new certificate          **"
-	echo "**  read about the Let's Encrypt rate limit - https://letsencrypt.org/docs/rate-limits/      **"
-	echo "***********************************************************************************************"
+	echo "*************************************************************************************************"
+	echo "**  Please, be careful with the number of intents or certificates you try to get.              **"
+	echo "**  Let’s Encrypt provides rate limits to ensure fair usage by as many people as possible.     **"
+	echo "**                                                                                             **"
+	echo "**  If you are getting errors or having issues when trying to get a new certificate            **"
+	echo "**  read about the Let's Encrypt rate limit - https://letsencrypt.org/docs/rate-limits/        **"
+	echo "**                                                                                             **"
+	echo "**  Please, be sure your domain and www subdomain are currently pointing (DNS) to this server  **"
+	echo "*************************************************************************************************"
 
 	# We need an email to notify each renew intent (cron)
 	while [[ -z $cermail ]]

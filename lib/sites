@@ -8,11 +8,14 @@ source /opt/webinoly/lib/general
 
 nginx_helper_plugin() {
 	# Download WP (latest version)
-	sudo curl -o /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
-	sudo unzip /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
+	sudo curl -o /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip 2>/dev/null
+	sudo unzip -qq /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
 	sudo rm /var/www/$domain/htdocs/nginx-helper-plugin.zip
 	echo ""
-	echo "${gre} Nginx Helper Plugin has been installed! ${end}"
+	echo "${gre} Nginx Helper Plugin has been installed!"
+	echo " Please, activate this plugin for a better experience with FastCgi Cache."
+	echo "${blu}It is important to configure the Purge Method of the plugin as “Delete local server cache file”, the support for the purge/url method has been disabled because it is considered a security risk. Similarly, the “Caching Method” should be set to “Nginx FastCgi Cache”. ${end}"
+	echo ""
 }
 
 

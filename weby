@@ -31,7 +31,7 @@ sudo mkdir /opt/webinoly
 
 # Download and install Webinoly
 # Same as app_install, but manually because is not installed yet.
-sudo curl -o $HOME/webinoly.tar http://dl.qrokes.com/webinoly/webinoly.tar
+sudo curl -o $HOME/webinoly.tar -L https://qrok.es/wytar
 sudo tar -xf $HOME/webinoly.tar -C /opt/webinoly
 sudo find /opt/webinoly -type d -exec chmod 755 {} \;
 sudo find /opt/webinoly -type f -exec chmod 644 {} \;

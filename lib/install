@@ -2,7 +2,7 @@
 source /opt/webinoly/lib/general
 
 webinoly_version() { 
-	conf_write app-version 1.0.0
+	conf_write app-version 1.0.1
 }
 server_version() { 
 	conf_write server-version 1.0
@@ -98,13 +98,13 @@ linux_purge() {
 
 messagend_install() {
 	echo "${gre}*****************************************************************************************"
-	echo "************             LA INSTALACIÓN HA FINALIZADO CON ÉXITO              ************"
+	echo "************            INSTALLATION HAS FINISHED SUCCESSFULLY               ************"
 	echo "*****************************************************************************************${end}"
 	if [[ $1 == "dbpass" ]]; then
 	local rootpass=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 	local adminpass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 	echo "${gre}*****************************************************************************************"
-	echo "************             Guarda tus claves de acceso para la DB:             ************"
+	echo "************         Save your DB access password in a secure place:         ************"
 	echo "************              root: ${rootpass}        admin: ${adminpass}              ************"
 	echo "*****************************************************************************************"
 	echo "${end}"
@@ -134,7 +134,9 @@ php_install() {
 	fi
 	ver=$(conf_read php-ver)
 	
-	sudo add-apt-repository -y 'ppa:ondrej/php'
+	# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
+	sudo apt-get install -y language-pack-en-base
+	sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 	sudo apt-get update
 	sudo apt-get -y install php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-mcrypt php${ver}-readline php${ver}-common php${ver}-recode php${ver}-mysql php${ver}-cli php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php-memcached php-imagick php-memcache memcached graphviz php-pear php-xdebug php-msgpack php${ver}-soap unzip pwgen
 	
@@ -360,7 +362,7 @@ mysql_tool() {
 app_install() {
 	
 	#Download and install/update Webinoly
-	sudo curl -o $HOME/webinoly.tar http://dl.qrokes.com/webinoly/webinoly.tar
+	sudo curl -o $HOME/webinoly.tar -L https://qrok.es/wytar
 	sudo tar -xf $HOME/webinoly.tar -C /opt/webinoly --overwrite
 	sudo find /opt/webinoly -type d -exec chmod 755 {} \;
 	sudo find /opt/webinoly -type f -exec chmod 644 {} \;
@@ -615,17 +617,16 @@ webinoly_verify() {
 		echo "*******************************************************"
 		echo "********      ${gre}> > >  E R R O R < < <${red}        ***********"
 		echo "********   ${gre}System could not work properly${red}   ***********"
-		echo "*******************************************************"
+		echo "******************************************************* ${end}"
 		exit 1
 	elif [ $warning != 0 ]; then
 		echo "***********************************************************************************************************"
 		echo "********      ${gre}[ W A R N I N G ] System seems to be corrupted and could not work properly${red}        ***********"
-		echo "***********************************************************************************************************"
+		echo "*********************************************************************************************************** ${end}"
 		exit 2
 	else
-		echo "${gre} Integrity test passed!!"
+		echo "${gre} Integrity test passed!! ${end}"
 	fi
-	echo "${end}"
 }
 
 
