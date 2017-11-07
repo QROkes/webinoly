@@ -1,9 +1,7 @@
 #!/bin/bash
 source /opt/webinoly/lib/general
 
-webinoly_version() { 
-	conf_write app-version 1.0.1
-}
+
 server_version() { 
 	conf_write server-version 1.0
 }
@@ -355,21 +353,6 @@ mysql_tool() {
 	fi
 	
 	conf_write mysql-tool true
-}
-
-
-# Aplication Webinoly
-app_install() {
-	
-	#Download and install/update Webinoly
-	sudo curl -o $HOME/webinoly.tar -L https://qrok.es/wytar
-	sudo tar -xf $HOME/webinoly.tar -C /opt/webinoly --overwrite
-	sudo find /opt/webinoly -type d -exec chmod 755 {} \;
-	sudo find /opt/webinoly -type f -exec chmod 644 {} \;
-
-	# Plugin instalation
-	sudo chmod 755 /opt/webinoly/plugins/*
-	sudo mv /opt/webinoly/plugins/* /usr/bin/
 }
 
 

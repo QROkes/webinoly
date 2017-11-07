@@ -8,7 +8,7 @@ source /opt/webinoly/lib/general
 
 nginx_helper_plugin() {
 	# Download WP (latest version)
-	sudo curl -o /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip 2>/dev/null
+	sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
 	sudo unzip -qq /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
 	sudo rm /var/www/$domain/htdocs/nginx-helper-plugin.zip
 	echo ""
@@ -37,7 +37,7 @@ wpinstall() {
 	done
 	
 	# Download WP (latest version)
-	sudo curl -o /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
+	sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
 	sudo tar -xf /var/www/$domain/htdocs/wp.tar.gz -C /var/www/$domain/htdocs/
 	sudo mv /var/www/$domain/htdocs/wordpress/* /var/www/$domain/htdocs/
 	sudo rm -rf /var/www/$domain/htdocs/wordpress

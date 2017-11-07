@@ -10,9 +10,11 @@ arg="$2"
 source /opt/webinoly/lib/install
 
 if [ "$opt" == "-update" ]; then
-	app_install
-	app_purge
-	webinoly_version
+	if [[ $arg == '-vbeta' ]]; then
+		sudo wget --timeout=15 -qrO weby https://s3.amazonaws.com/dl.qrokes.com/webinoly/beta/weby && sudo bash weby -vbeta
+	else
+		sudo wget --timeout=15 -qrO weby qrok.es/wy && sudo bash weby 0
+	fi
 	echo ""
 	echo "${gre}Webinoly App has been updated successfully!${end}"
 elif [[ "$opt" == "-server-update" || "$opt" == "-server-reset" ]]; then
