@@ -66,7 +66,6 @@ elif [[ "$domain" == "-delete-all" && -z "$type" && -z "$cache" ]]; then
 		if [[ -a $site/wp-config.php || -a $site/htdocs/wp-config.php ]]; then
 			domi=$(echo $site | cut -f 4 -d "/")
 			db_delete $domi
-			echo "${gre}Database of your site ${red}${domi}${gre} has been successfully deleted! ${end}"
 		fi
 	done
 

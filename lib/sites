@@ -65,7 +65,7 @@ wpinstall() {
 			# Check if localhost or external DB
 			if [[ $dbhost != "localhost" && ( "$setupmysql" == y || "$setupmysql" == Y ) ]]; then
 				if [[ $(conf_read mysql-client) != "true" ]]; then
-					echo "${gre}MySQL Client is not installed and we need it to conect with your external server."
+					echo "${gre}MySQL Client is not installed and we need it to stablish a connection with your external server."
 					echo "Wait while we install MySQL Client... installing!!!${end}"
 					mysql_client_install > /dev/null 2>&1 &
 					echo "${gre}MySQL Client has been successfully installed!${end}"
@@ -91,9 +91,9 @@ wpinstall() {
 					# Chech connection to DB first
 					if [[ $dbhost == "localhost" ]]; then
 						local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-						sudo mysql --connect_timeout 10 --user=root -p$ROOT_PASS -e "quit"
+						sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit"
 					else
-						sudo mysql --connect_timeout 10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" -e "quit"
+						sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" -e "quit"
 					fi
 					if [[ $? != "0" ]]; then
 						done="0"
@@ -104,9 +104,10 @@ wpinstall() {
 						continue 2;
 					fi
 					if [[ $dbhost == "localhost" ]]; then
-						local newdbname=$(sudo mysqlshow --user=root -p$ROOT_PASS $dbname | grep -v Wildcard | grep -ow $dbname)
+						# https://stackoverflow.com/questions/7364709/bash-script-check-if-mysql-database-exists-perform-action-based-on-result
+						local newdbname=$(sudo mysqlshow --user=root -p$ROOT_PASS | grep -ow $dbname)
 					else
-						local newdbname=$(sudo mysqlshow -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" $dbname | grep -v Wildcard | grep -ow $dbname)
+						local newdbname=$(sudo mysqlshow -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" | grep -ow $dbname)
 					fi
 					
 					if [ "$newdbname" == "$dbname" ]; then
@@ -123,6 +124,9 @@ wpinstall() {
 						if [[ $dbreuse != y && $dbreuse != Y ]]; then
 							echo ""
 							read -p "Please enter a new DB_NAME for your Database: " newdbname
+							if [[ -z "$newdbname" ]]; then
+								newdbname="$dbname"
+							fi
 							dbname="$newdbname"
 						elif [[ $dbreuse == y || $dbreuse == Y ]]; then
 							# If you want to use the DB that already exist, abort DB creation.
@@ -146,9 +150,9 @@ wpinstall() {
 			if [[ "$setupmysql" == y || "$setupmysql" == Y  ]] ; then
 				if [[ $dbhost == "localhost" ]]; then
 					local dbsetup="CREATE DATABASE $dbname;GRANT ALL PRIVILEGES ON $dbname.* TO $dbuser@$dbhost IDENTIFIED BY '$dbpass';FLUSH PRIVILEGES;"
-					sudo mysql --connect_timeout 10 --user=root -p$ROOT_PASS -e "$dbsetup"
+					sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup"
 				else
-					sudo mysql --connect_timeout 10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
+					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
 CREATE DATABASE ${dbname};
 grant usage on ${dbname}.* to ${dbuser}@\`%\` identified by '${dbpass}';
 grant all privileges on ${dbname}.* to ${dbuser}@\`%\`;
@@ -167,7 +171,7 @@ _EOF_
 			
 			if [[ $done != "1" ]]; then
 				echo "${red} Some error ocurred during Database Configuration."
-				echo "${blu}  Retry [Y/n]? ${end}"
+				echo "${blu}  Retry [Y/n]?"
 				while read -r -n 1 -s done; do
 				  done=${done:-y}
 				  if [[ $done = [YyNn] ]]; then
@@ -180,6 +184,7 @@ _EOF_
 			fi
 		done
 	fi
+	echo "${end}"
 	
 	
 	#WP-Config.php auto-setup
