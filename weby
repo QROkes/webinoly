@@ -2,7 +2,7 @@
 
 # Webinoly script.
 # This script is designed to install latest Webinoly.
-webyversion="1.0.2"
+webyversion="1.1.0-beta"
 
 if [[ -n "$1" ]]; then
 	setup="$1"
@@ -65,6 +65,10 @@ fi
 # Write app version
 conf_write app-version $webyversion
 
+# Check for missing essential packages
+sudo apt-get -qq update
+sudo apt-get -y -qq install software-properties-common python-software-properties
+
 
 #  NGINX Installation
 if [[ $setup -gt 0 && $setup != 4 ]]; then
@@ -87,6 +91,6 @@ if [ $setup == 4 ]; then
 fi
 
 
-# Borrar archivos
+# Remove Installation File
 sudo rm weby
 app_purge
