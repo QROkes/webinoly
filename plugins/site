@@ -142,7 +142,26 @@ elif [ "$type" == "-parked" ]; then
 	echo "  Parked domain was successfully configured! "
 	echo "${end}"
 	
-
+# Reverse proxy
+elif [[ "$type" == "-proxy"* ]]; then
+	createsite
+	sudo sed -i '/include /d' /etc/nginx/sites-available/$domain
+	sudo sed -i '/root /d' /etc/nginx/sites-available/$domain
+	sudo sed -i '/index /d' /etc/nginx/sites-available/$domain
+	sudo sed -i '/error_log /r /opt/webinoly/templates/template-site-proxy' /etc/nginx/sites-available/$domain
+	
+	rparg=$(echo "${type}" | cut -d'=' -f 2 -s)
+	rphost=$(echo "${rparg}" | cut -d':' -f 1 -s)
+	rpport=$(echo "${rparg}" | cut -d':' -f 2 -s)
+	
+	if [[ -n $rphost ]]; then
+		sudo sed -i "s/localhost/$rphost/g"  /etc/nginx/sites-available/$domain
+	fi
+	if [[ -n $rpport ]]; then
+		sudo sed -i "s/8080/$rpport/g"  /etc/nginx/sites-available/$domain
+	fi
+	
+	
 # Site disabled	
 elif [[ "$type" == "-off" && ! -L /etc/nginx/sites-enabled/$domain ]]; then
 	echo "${red}Site $domain doesn't exist or is already disabled!${end}"
@@ -184,8 +203,8 @@ elif [[ "$type" == "-ssl-off" && -a /etc/nginx/sites-available/$domain ]]; then
 	else
 		echo "${red}SSL is already disabled for site $domain!${end}"
 	fi
-	
-	
+
+
 # FastCGI Cache disabled
 elif [[ "$type" == "-nocache" && -a /etc/nginx/sites-available/$domain ]]; then
 	isfc=$( grep -F "wpfc.conf" /etc/nginx/sites-available/$domain )
