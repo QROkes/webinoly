@@ -71,6 +71,7 @@ elif [[ $arg == "-purge" && ( $opt == "-html" || $opt == "-nginx" ) ]]; then
 		sudo service nginx stop
 		sudo apt-get -y purge nginx nginx-common
 		sudo apt-get -y purge letsencrypt python-boto duplicity duply
+		echo | sudo add-apt-repository --remove 'ppa:nginx/stable'
 		sudo apt-get -y autoremove
 		sudo rm $HOME/www
 		sudo rm $HOME/sites-available
@@ -119,9 +120,10 @@ elif [[ $arg == "-purge" && $opt == "-php" ]]; then
 			stack -pma -purge
 		fi
 		sudo service php*-fpm stop
-		sudo apt-get -y purge php*-fpm php*-curl php*-gd php*-imap php*-mcrypt php*-readline php*-common php*-recode php*-mysql php*-cli php*-mbstring php*-bcmath php*-mysql php*-opcache php*-zip php*-xml php*-soap php-memcached php-imagick php-memcache memcached graphviz php-pear php-xdebug php-msgpack unzip
+		sudo apt-get -y purge php*-fpm php*-curl php*-gd php*-imap php*-mcrypt php*-readline php*-common php*-recode php*-mysql php*-cli php*-mbstring php*-bcmath php*-mysql php*-opcache php*-zip php*-xml php*-soap php-imagick graphviz php-pear php-xdebug php-msgpack unzip
+		sudo apt-get -y purge php-memcached php-memcache memcached
 		sudo apt-get -y purge redis-server php-redis postfix
-		sudo add-apt-repository --remove 'ppa:ondrej/php'
+		echo | sudo add-apt-repository --remove 'ppa:ondrej/php'
 		sudo apt-get -y autoremove
 		sudo rm -rf /etc/php
 		sudo rm /opt/webinoly/templates/source/*
@@ -229,12 +231,12 @@ elif [[ $arg == "-purge" && $opt == "-pma" ]]; then
 	
 elif [[ $arg == "-purge" && $opt == "-web-tools" ]]; then
 	if [[ $(conf_read web-tool) != "true" ]]; then
-		echo "${red} Web Tools (Postfix, Redis, Duplicity and Letsencrypt) are not installed, hence can not be deleted! ${end}"
+		echo "${red} Web Tools (Postfix, Redis, Memcached, Duplicity and Letsencrypt) are not installed, hence can not be deleted! ${end}"
 		exit 1
 	fi
 	
 	echo ""
-	echo "${red} ¡ C A U T I O N !  You are about to remove all your Web Tools (Postfix, Redis, Duplicity and Letsencrypt) from your server! ${end}"
+	echo "${red} ¡ C A U T I O N !  You are about to remove all your Web Tools (Postfix, Redis, Memcached, Duplicity and Letsencrypt) from your server! ${end}"
 	echo ""
 	if [ "$(conf_read delall)" != "true" ]; then
 		echo " ${blu} Are you sure [y/N]? ${end} "
@@ -247,7 +249,7 @@ elif [[ $arg == "-purge" && $opt == "-web-tools" ]]; then
 	fi
 	
 	if [[ $answer == [Yy] || $(conf_read delall) == "true" ]]; then
-		sudo apt-get -y purge redis-server php-redis postfix letsencrypt python-boto duplicity duply
+		sudo apt-get -y purge redis-server php-redis postfix letsencrypt python-boto duplicity duply php-memcached php-memcache memcached
 		sudo apt-get -y autoremove
 		conf_write web-tool purged
 		echo ""

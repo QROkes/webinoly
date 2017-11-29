@@ -137,7 +137,7 @@ php_install() {
 	sudo apt-get install -y language-pack-en-base
 	sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 	sudo apt-get update
-	sudo apt-get -y install php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-mcrypt php${ver}-readline php${ver}-common php${ver}-recode php${ver}-mysql php${ver}-cli php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php-memcached php-imagick php-memcache memcached graphviz php-pear php-xdebug php-msgpack php${ver}-soap unzip pwgen
+	sudo apt-get -y install php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-mcrypt php${ver}-readline php${ver}-common php${ver}-recode php${ver}-mysql php${ver}-cli php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php-imagick graphviz php-pear php-xdebug php-msgpack php${ver}-soap unzip pwgen
 	
 	sudo cp /etc/php/$(conf_read php-ver)/fpm/php.ini /opt/webinoly/templates/source/
 	sudo cp /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf /opt/webinoly/templates/source/
@@ -327,6 +327,9 @@ php_tool() {
 	echo | sudo add-apt-repository ppa:chris-lea/redis-server
 	sudo apt-get update
 	sudo apt-get -y install redis-server php-redis
+	
+	# Memcached (Object Cache)
+	sudo apt-get -y install php-memcached php-memcache memcached
 	
 	# Postfix mail
 	echo "postfix postfix/main_mailer_type        select  Internet Site" | debconf-set-selections
@@ -818,6 +821,8 @@ system_info() {
 	echo "${blu}"
 	echo "[SYSTEM]"
 	echo "Operating System: $(sudo cat /proc/version) "
+	echo "$(sudo lsb_release -d) "
+	echo "$(sudo lsb_release -c) "
 	echo "Cores: $(grep ^processor /proc/cpuinfo | wc -l) "
 	echo "RAM: $(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')kb "
 	echo "SWAP: $(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')kb "
