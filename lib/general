@@ -69,11 +69,32 @@ db_delete() {
 }
 
 
+check_osname() {
+	local distr=`echo $(lsb_release -i | cut -d':' -f 2)`
+	local osver=`echo $(lsb_release -c | cut -d':' -f 2)`
+	if ! [[ $distr == "Ubuntu" && $osver =~ ^(trusty|xenial|zesty|artful)$ ]]; then
+		echo "${red}" >&2
+		echo "****************************************************************************" >&2
+		echo "****  This OS is not supported by Webinoly and could not work properly  ****" >&2
+		echo "****************************************************************************" >&2
+		echo "${end}" >&2
+	fi
+	echo $osver
+}
+
+
 mysql_client_install() {
-	# Install alternative repos for MariaDB
-	sudo apt-get -y install software-properties-common
-	sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
-	sudo add-apt-repository 'deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu xenial main'
+	local osname=$(check_osname)
+	# Cases with MariaDB v10.2 support
+	case "$osname" in
+		"trusty")
+			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
+		;;
+		"xenial"|"zesty"|"artful")
+			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+		;;
+	esac
+	sudo add-apt-repository "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu $osname main"
 	sudo apt-get update
 	sudo apt-get -y install mariadb-client
 	conf_write mysql-client true

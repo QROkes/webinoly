@@ -4,6 +4,20 @@
 # This script is designed to install latest Webinoly.
 webyversion="1.1.0-beta"
 
+
+# Check OS support
+distr=`echo $(lsb_release -i | cut -d':' -f 2)`
+osver=`echo $(lsb_release -c | cut -d':' -f 2)`
+if ! [[ $distr == "Ubuntu" && $osver =~ ^(xenial)$ ]]; then
+	echo "$(tput setaf 1)"
+	echo "****************************************************************************"
+	echo "****  This OS is not supported by Webinoly and could not work properly  ****"
+	echo "****************************************************************************"
+	echo "$(tput sgr0)"
+	read -p "Press [Enter] key to continue..."
+fi
+
+
 if [[ -n "$1" ]]; then
 	setup="$1"
 else
@@ -67,7 +81,7 @@ conf_write app-version $webyversion
 
 # Check for missing essential packages
 sudo apt-get -qq update
-sudo apt-get -y -qq install software-properties-common python-software-properties
+sudo apt-get -y -qq install software-properties-common python-software-properties pwgen unzip
 
 
 #  NGINX Installation

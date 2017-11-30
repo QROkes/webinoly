@@ -137,7 +137,7 @@ php_install() {
 	sudo apt-get install -y language-pack-en-base
 	sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 	sudo apt-get update
-	sudo apt-get -y install php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-mcrypt php${ver}-readline php${ver}-common php${ver}-recode php${ver}-mysql php${ver}-cli php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php-imagick graphviz php-pear php-xdebug php-msgpack php${ver}-soap unzip pwgen
+	sudo apt-get -y install php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-mcrypt php${ver}-readline php${ver}-common php${ver}-recode php${ver}-mysql php${ver}-cli php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php-imagick graphviz php-pear php-xdebug php-msgpack php${ver}-soap
 	
 	sudo cp /etc/php/$(conf_read php-ver)/fpm/php.ini /opt/webinoly/templates/source/
 	sudo cp /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf /opt/webinoly/templates/source/
@@ -152,7 +152,7 @@ mysql_install() {
 		mysql_client_install
 	fi
 	
-	# debconf-utils for unattended scripts && pwgen to generate random strings (passwords)
+	# debconf-utils for unattended scripts
 	#  debconf-get-selections | grep phpmyadmin   <<-- list conf variables
 	sudo apt-get -y install debconf-utils
 	

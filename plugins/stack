@@ -120,7 +120,7 @@ elif [[ $arg == "-purge" && $opt == "-php" ]]; then
 			stack -pma -purge
 		fi
 		sudo service php*-fpm stop
-		sudo apt-get -y purge php*-fpm php*-curl php*-gd php*-imap php*-mcrypt php*-readline php*-common php*-recode php*-mysql php*-cli php*-mbstring php*-bcmath php*-mysql php*-opcache php*-zip php*-xml php*-soap php-imagick graphviz php-pear php-xdebug php-msgpack unzip
+		sudo apt-get -y purge php*-fpm php*-curl php*-gd php*-imap php*-mcrypt php*-readline php*-common php*-recode php*-mysql php*-cli php*-mbstring php*-bcmath php*-mysql php*-opcache php*-zip php*-xml php*-soap php-imagick graphviz php-pear php-xdebug php-msgpack
 		sudo apt-get -y purge php-memcached php-memcache memcached
 		sudo apt-get -y purge redis-server php-redis postfix
 		echo | sudo add-apt-repository --remove 'ppa:ondrej/php'
@@ -176,7 +176,7 @@ elif [[ $arg == "-purge" && $opt == "-mysql" ]]; then
 		sudo apt-get -y purge mariadb-server mariadb-common mysql-common debconf-utils
 		sudo apt-get -y purge mariadb-client
 		sudo apt-get -y autoremove
-		sudo add-apt-repository --remove 'deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu xenial main'
+		sudo add-apt-repository --remove "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu $(check_osname) main"
 		sudo rm -rf /etc/mysql
 		sudo rm -rf /var/lib/mysql
 		conf_delete mysql-root
