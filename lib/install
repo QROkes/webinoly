@@ -636,17 +636,17 @@ tools_port() {
 
 swap_delete() {
 	local swapkb=$(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
-	if [[ -n $swapkb && $swapkb =~ ^[0-9]+$ && $swapkb -gt 0 ]]; then
+	if [[ -n $swapkb && $swapkb =~ ^[0-9]+$ && $swapkb -gt 0 && $(conf_read swap-owner) == "webinoly" ]]; then
 		sudo swapoff -a -v
 		sudo rm /swapfile
 		sudo sed -i '/\/swapfile/d' /etc/fstab
 		sudo sed -i '/vm.swappiness/d' /etc/sysctl.conf
+		conf_delete swap-owner
 	fi
 }
 
 
 swap_create() {
-	local swapkb="0"
 	local swapkb=$(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
 	local swap=$(($swapkb/1048000))
 	local ramkb=$(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
@@ -697,9 +697,15 @@ swap_create() {
 			sudo chown root:root /swapfile
 			sudo chmod 0600 /swapfile
 
+			# Swap created by Webinoly - so we should remove it in uninstall
+			conf_write swap-owner webinoly
+
 			echo "${gre} A new SWAP Partion (${newswap}Gb) has been created! ${end}"
 		fi
 	else
+		if [[ $(conf_read swap-owner) != "webinoly" ]]; then
+			conf_write swap-owner system
+		fi
 		echo "${gre} SWAP Memory (${swap}Gb) detected!${end}"
 	fi
 }
