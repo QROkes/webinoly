@@ -34,6 +34,13 @@ wp="0" # Evaluate if site to create is WP
 if [[ "$type" == "-wp" || "$type" == "-wpsubdir" || "$type" == "-wpsubdom" ]]; then
 	wp="1"
 fi
+if [[ "$type" == "-wp="* || "$type" == "-wpsubdir="* || "$type" == "-wpsubdom="* ]]; then
+	wpunat=$(echo "${type}" | cut -d'=' -f 2 -s)
+	if [[ $wpunat == "default" ]]; then
+		wp="2"
+		type=$(echo "${type}" | cut -d'=' -f 1 -s)
+	fi
+fi
 
 # Cache validation
 if [[ "$cache" == "-cache" && "$wp" == "0" ]]; then

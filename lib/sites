@@ -20,21 +20,29 @@ nginx_helper_plugin() {
 
 
 wpinstall() {
+	local AUTOGENPASS_WPDB=`pwgen -s -1`
+	local dom=${domain//./_}
+	local setupmysql="y"
+	local setupwp="y"
+	local dbhost="localhost"
+	local dbname=$dom
+	local dbuser=$dom
+	local dbpass=$AUTOGENPASS_WPDB
+	local dbpref="wp_"
+	
 	echo "${blu}"
-	echo "Do you need to setup new MySQL database? [Y/n]"
-	while read -r -n 1 -s setupmysql; do
-	  local setupmysql=${setupmysql:-y}
-	  if [[ $setupmysql = [YyNn] ]]; then
-		break
-	  fi
-	done
-	echo "Create WP-Config file automatically? [Y/n]"
-	while read -r -n 1 -s setupwp; do
-	  local setupwp=${setupwp:-y}
-	  if [[ $setupwp = [YyNn] ]]; then
-		break
-	  fi
-	done
+	if [[ $wp != [2] ]]; then
+		echo "Do you need to setup new MySQL database? [Y/n]"
+		while read -r -n 1 -s setupmysql; do
+			  setupmysql=${setupmysql:-y}
+			  [[ $setupmysql = [YyNn] ]] && break
+		done
+		echo "Create WP-Config file automatically? [Y/n]"
+		while read -r -n 1 -s setupwp; do
+			  setupwp=${setupwp:-y}
+			  [[ $setupwp = [YyNn] ]] && break
+		done
+	fi
 	
 	# Download WP (latest version)
 	sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
@@ -45,8 +53,6 @@ wpinstall() {
 	
 	# Generate and auto-fill wp-config.php and also create database
 	if [[ "$setupmysql" == y || "$setupmysql" == Y || "$setupwp" == y || "$setupwp" == Y ]] ; then
-		local AUTOGENPASS_WPDB=`pwgen -s -1`
-		local dom=${domain//./_}	
 		local done="0"
 		
 		while [[ $done != "1" ]]
@@ -54,8 +60,8 @@ wpinstall() {
 			done="1"
 			# Ask DB data or suggest default values
 			echo ""
-			read -p "Database Host [localhost]:" dbhost
-			local dbhost=${dbhost:-localhost}
+			[[ $wp == [2] ]] || read -p "Database Host [localhost]:" dbhost
+			dbhost=${dbhost:-localhost}
 			
 			if [[ $dbhost == "localhost" && ( "$setupmysql" == y || "$setupmysql" == Y ) && $(conf_read mysql) != "true" ]]; then
 				echo "${red} [ERROR] MySQL is not installed or localhost was not found!${blu}"
@@ -81,8 +87,8 @@ wpinstall() {
 				local dbport=$(echo "$dbhost" | cut -f 2 -d ':')
 			fi
 			
-			read -p "Database Name [$dom]:" dbname
-			local dbname=${dbname:-$dom}
+			[[ $wp == [2] ]] || read -p "Database Name [$dom]:" dbname
+			dbname=${dbname:-$dom}
 				
 			# Check for duplicate database names, if already exists ask for another dbname to create the new db
 			if [[ "$setupmysql" == y || "$setupmysql" == Y ]]; then
@@ -135,16 +141,17 @@ wpinstall() {
 					fi
 				done
 			fi
-			read -p "Database User [$dom]:" dbuser
-			read -p "Database Password [$AUTOGENPASS_WPDB]:" dbpass
-			read -p "Database Prefix [wp_]:" dbpref
-			echo "${end}"
-			
-			# If empty, assign defalut values
-			local dbuser=${dbuser:-$dom}
-			local dbpass=${dbpass:-$AUTOGENPASS_WPDB}
-			local dbpref=${dbpref:-wp_}
-		
+			if [[ $wp != [2] ]]; then
+				read -p "Database User [$dom]:" dbuser
+				read -p "Database Password [$AUTOGENPASS_WPDB]:" dbpass
+				read -p "Database Prefix [wp_]:" dbpref
+				echo "${end}"
+				
+				# If empty, assign defalut values
+				dbuser=${dbuser:-$dom}
+				dbpass=${dbpass:-$AUTOGENPASS_WPDB}
+				dbpref=${dbpref:-wp_}
+			fi
 		
 			# DB Creation
 			if [[ "$setupmysql" == y || "$setupmysql" == Y  ]] ; then
@@ -263,7 +270,7 @@ deletesite() {
 
 
 createsite() {
-	if [[ "$wp" == "1" && $(conf_read php) != "true" ]]; then
+	if [[ "$wp" == [12] && $(conf_read php) != "true" ]]; then
 		echo "${red}"
 		echo " [ERROR] PHP must be installed before you can create a WP site!"
 		echo "${end}"
@@ -294,7 +301,7 @@ createsite() {
 	# Create data folder for new site
 	if [[ ! -d /var/www/$domain/htdocs || ! -d /var/www/$domain ]]; then
 		sudo mkdir -p /var/www/$domain/htdocs
-		if [[ "$wp" == "1" ]]; then
+		if [[ "$wp" == [12] ]]; then
 			wpinstall
 		fi
 	else
@@ -311,7 +318,7 @@ createsite() {
 		if [[ $wwwexist == n || $wwwexist == N ]]; then
 			sudo rm -rf /var/www/$domain/htdocs
 			sudo mkdir -p /var/www/$domain/htdocs
-			if [[ "$wp" == "1" ]]; then
+			if [[ "$wp" == [12] ]]; then
 				wpinstall
 			fi
 		fi
@@ -323,7 +330,7 @@ createsite() {
 	fi
 	
 	# Activate FastCgi cache
-	if [[ "$cache" == "-cache" && "$wp" == "1" ]]; then
+	if [[ "$cache" == "-cache" && "$wp" == [12] ]]; then
 		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
 		nginx_helper_plugin
 	fi
