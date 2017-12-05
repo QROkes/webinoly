@@ -2,7 +2,7 @@
 
 # Webinoly script.
 # This script is designed to install latest Webinoly.
-webyversion="1.1.0-beta"
+webyversion="1.1.0"
 
 
 # Check OS support
@@ -78,10 +78,6 @@ fi
 
 # Write app version
 conf_write app-version $webyversion
-
-# Check for missing essential packages
-sudo apt-get -qq update
-sudo apt-get -y -qq install software-properties-common python-software-properties pwgen unzip
 
 
 #  NGINX Installation

@@ -112,7 +112,7 @@ messagend_install() {
 
 nginx_install() {
 	echo | sudo add-apt-repository ppa:nginx/stable
-	sudo apt-get update
+	pre_install
 	sudo apt-get -y install nginx
 
 	if [[ $(conf_read login-www-data) == "true" ]]; then
@@ -136,7 +136,7 @@ php_install() {
 	# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
 	sudo apt-get install -y language-pack-en-base
 	sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
-	sudo apt-get update
+	pre_install
 	sudo apt-get -y install php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-mcrypt php${ver}-readline php${ver}-common php${ver}-recode php${ver}-mysql php${ver}-cli php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php-imagick graphviz php-pear php-xdebug php-msgpack php${ver}-soap
 	
 	sudo cp /etc/php/$(conf_read php-ver)/fpm/php.ini /opt/webinoly/templates/source/
@@ -152,6 +152,7 @@ mysql_install() {
 		mysql_client_install
 	fi
 	
+	pre_install
 	# debconf-utils for unattended scripts
 	#  debconf-get-selections | grep phpmyadmin   <<-- list conf variables
 	sudo apt-get -y install debconf-utils
@@ -290,7 +291,7 @@ nginx_tool() {
 	fi
 			
 	# Instalar Duply & Duplicity
-	sudo apt-get update
+	pre_install
 	sudo apt-get -y install python-boto duplicity duply
 	
 	# Install LetsEncrypt
@@ -325,7 +326,7 @@ php_tool() {
 
 	# Redis (Object Cache)
 	echo | sudo add-apt-repository ppa:chris-lea/redis-server
-	sudo apt-get update
+	pre_install
 	sudo apt-get -y install redis-server php-redis
 	
 	# Memcached (Object Cache)
@@ -350,6 +351,7 @@ mysql_tool() {
 	echo "phpmyadmin phpmyadmin/app-password-confirm password $AUTOGENPASS_PMA" | debconf-set-selections
 
 	#PhpMyAdmin Installation
+	pre_install
 	sudo apt-get -y install phpmyadmin
 	
 	if [[ -d /usr/share/phpmyadmin ]]; then

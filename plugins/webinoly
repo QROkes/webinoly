@@ -199,6 +199,11 @@ elif [ "$opt" == "-uninstall" ]; then
 			if [[ $(conf_read linux-optim) == "purged" ]]; then
 				swap_delete
 			fi
+			if [[ $(conf_read pre-packs) == true ]]; then
+				sudo apt-get -y -qq purge pwgen unzip
+				sudo apt-get -y -qq autoremove
+				conf_write pre-packs purged
+			fi
 			sudo rm -rf /opt/webinoly
 			sudo rm /usr/bin/webinoly
 			sudo rm /usr/bin/stack

@@ -124,6 +124,7 @@ elif [[ $arg == "-purge" && $opt == "-php" ]]; then
 		sudo apt-get -y purge php-memcached php-memcache memcached
 		sudo apt-get -y purge redis-server php-redis postfix
 		echo | sudo add-apt-repository --remove 'ppa:ondrej/php'
+		echo | sudo add-apt-repository --remove 'ppa:chris-lea/redis-server'
 		sudo apt-get -y autoremove
 		sudo rm -rf /etc/php
 		sudo rm /opt/webinoly/templates/source/*
@@ -176,7 +177,19 @@ elif [[ $arg == "-purge" && $opt == "-mysql" ]]; then
 		sudo apt-get -y purge mariadb-server mariadb-common mysql-common debconf-utils
 		sudo apt-get -y purge mariadb-client
 		sudo apt-get -y autoremove
-		sudo add-apt-repository --remove "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu $(check_osname) main"
+		
+		os_name=$(check_osname)
+		sudo add-apt-repository --remove "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu ${os_name} main"
+		# Cases with MariaDB v10.2 support
+		case "$os_name" in
+			"trusty")
+				sudo apt-key del 0xcbcb082a1bb943db
+			;;
+			"xenial"|"zesty"|"artful")
+				sudo apt-key del 0xF1656F24C74CD1D8
+			;;
+		esac
+		
 		sudo rm -rf /etc/mysql
 		sudo rm -rf /var/lib/mysql
 		conf_delete mysql-root

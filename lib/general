@@ -83,6 +83,16 @@ check_osname() {
 }
 
 
+pre_install() {
+	sudo apt-get -qq update
+	if [[ $(conf_read pre-packs) != true ]]; then
+		# Check for missing essential packages
+		sudo apt-get -y -qq install software-properties-common python-software-properties pwgen unzip
+		conf_write pre-packs true
+	fi
+}
+
+
 mysql_client_install() {
 	local osname=$(check_osname)
 	# Cases with MariaDB v10.2 support
@@ -95,7 +105,7 @@ mysql_client_install() {
 		;;
 	esac
 	sudo add-apt-repository "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu $osname main"
-	sudo apt-get update
+	pre_install
 	sudo apt-get -y install mariadb-client
 	conf_write mysql-client true
 	echo "${gre}MySQL Client has been successfully installed!${end}"
