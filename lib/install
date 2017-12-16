@@ -126,18 +126,22 @@ nginx_install() {
 
 
 php_install() {
-	if [[ -n $(conf_read php-ver) && ($(conf_read php-ver) == "7.1" || $(conf_read php-ver) == "7.0" || $(conf_read php-ver) == "5.6") ]]; then
+	ver=$(conf_read php-ver)
+	if [[ -n $ver && ($ver == "7.2" || $ver == "7.1" || $ver == "7.0" || $ver == "5.6") ]]; then
 		echo "${gre} Custom PHP version '$(conf_read php-ver)' detected!${end}"
 	else
 		conf_write php-ver 7.1
 	fi
-	ver=$(conf_read php-ver)
 	
 	# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
 	sudo apt-get install -y language-pack-en-base
 	sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 	pre_install
-	sudo apt-get -y install php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-mcrypt php${ver}-readline php${ver}-common php${ver}-recode php${ver}-mysql php${ver}-cli php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php-imagick graphviz php-pear php-xdebug php-msgpack php${ver}-soap
+	sudo apt-get -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-recode php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-xdebug php-msgpack
+	
+	if [[ -n $ver && ($ver == "7.1" || $ver == "7.0" || $ver == "5.6") ]]; then
+		sudo apt-get -y install php${ver}-mcrypt
+	fi
 	
 	sudo cp /etc/php/$(conf_read php-ver)/fpm/php.ini /opt/webinoly/templates/source/
 	sudo cp /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf /opt/webinoly/templates/source/
