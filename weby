@@ -47,7 +47,7 @@ fi
 # Download and install Webinoly
 if [[ $setup == '-vbeta' ]]; then
 	echo ""
-	sudo wget --timeout=15 -qrO $HOME/webinoly.tar https://s3.amazonaws.com/dl.qrokes.com/webinoly/beta/webinoly.tar
+	sudo wget --timeout=15 -qrO $HOME/webinoly.tar https://qrok.es/wytarb
 	echo "$(tput setaf 1)"
 	echo "  [WARNING] You are installing a BETA version of Webinoly and it's not recommended for production enviroments. $(tput sgr0)"
 else
