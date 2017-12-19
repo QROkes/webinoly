@@ -89,6 +89,13 @@ elif [[ "$domain" == "-delete-all" && -z "$type" && -z "$cache" ]]; then
 elif [ "$type" == "-php" ]; then
 	createsite
 	
+	
+# Create MYSQL site
+elif [ "$type" == "-mysql" ]; then
+	# We use WP function to create DB when wp=0 WP files are not installed.
+	createsite
+	wpinstall
+	
 
 # Create HTML site
 elif [ "$type" == "-html" ]; then

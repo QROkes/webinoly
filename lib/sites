@@ -31,7 +31,7 @@ wpinstall() {
 	local dbpref="wp_"
 	
 	echo "${blu}"
-	if [[ $wp != [2] ]]; then
+	if [[ $wp == 1 ]]; then
 		echo "Do you need to setup new MySQL database? [Y/n]"
 		while read -r -n 1 -s setupmysql; do
 			  setupmysql=${setupmysql:-y}
@@ -44,12 +44,17 @@ wpinstall() {
 		done
 	fi
 	
+	# Just create DB, not install WP
+	[[ $wp == 0 ]] && setupwp="n"
+	
 	# Download WP (latest version)
-	sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
-	sudo tar -xf /var/www/$domain/htdocs/wp.tar.gz -C /var/www/$domain/htdocs/
-	sudo mv /var/www/$domain/htdocs/wordpress/* /var/www/$domain/htdocs/
-	sudo rm -rf /var/www/$domain/htdocs/wordpress
-	sudo rm /var/www/$domain/htdocs/wp.tar.gz
+	if [[ $wp == [12] ]]; then
+		sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
+		sudo tar -xf /var/www/$domain/htdocs/wp.tar.gz -C /var/www/$domain/htdocs/
+		sudo mv /var/www/$domain/htdocs/wordpress/* /var/www/$domain/htdocs/
+		sudo rm -rf /var/www/$domain/htdocs/wordpress
+		sudo rm /var/www/$domain/htdocs/wp.tar.gz
+	fi
 	
 	# Generate and auto-fill wp-config.php and also create database
 	if [[ "$setupmysql" == y || "$setupmysql" == Y || "$setupwp" == y || "$setupwp" == Y ]] ; then
@@ -144,7 +149,8 @@ wpinstall() {
 			if [[ $wp != [2] ]]; then
 				read -p "Database User [$dom]:" dbuser
 				read -p "Database Password [$AUTOGENPASS_WPDB]:" dbpass
-				read -p "Database Prefix [wp_]:" dbpref
+				# Not ask for wp_prefix when wp=0 (mysql only site)
+				[[ $wp == 0 ]] || read -p "Database Prefix [wp_]:" dbpref
 				echo "${end}"
 				
 				# If empty, assign defalut values
