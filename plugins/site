@@ -2,7 +2,7 @@
 
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
-# Options: -html, -php, -wp, -wpsubdir, -wpsubdom, -parked, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off
+# Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off
 # Arguments: -cache, -root
 
 # shopt is necessary for this kind !(html|22222) of patterns
