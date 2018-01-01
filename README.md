@@ -2,7 +2,7 @@
 
 Optimized LEMP Web Server.
 
-Linux Ubuntu + Nginx + MySQL (MariaDB) + PHP is one of the most reliable configurations to host your websites.
+Linux Ubuntu + Nginx + MySQL (MariaDB) + PHP is one of the most reliable and powerful configurations to host your websites.
 
 With Webinoly you can set up your web server in just one step.
 
