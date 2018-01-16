@@ -179,7 +179,7 @@ elif [ "$type" == "-parked" ]; then
 	echo "${end}"
 	
 # Reverse proxy
-elif [[ "$type" == "-proxy"* ]]; then
+elif [[ "$type" == "-proxy" || "$type" == "-proxy="* ]]; then
 	createsite
 	sudo sed -i '/include /d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/root /d' /etc/nginx/sites-available/$domain
@@ -190,12 +190,20 @@ elif [[ "$type" == "-proxy"* ]]; then
 	rphost=$(echo "${rparg}" | cut -d':' -f 1 -s)
 	rpport=$(echo "${rparg}" | cut -d':' -f 2 -s)
 	
+	echo "${gre}"
 	if [[ -n $rphost ]]; then
 		sudo sed -i "s/localhost/$rphost/g"  /etc/nginx/sites-available/$domain
+		echo " Custom host found: $rphost"
+	else
+		echo " Default host: localhost"
 	fi
-	if [[ -n $rpport ]]; then
+	if [[ -n $rpport && $rpport -ge 0 && $rpport -le 65535 && $rpport =~ ^[0-9]+$ ]]; then
 		sudo sed -i "s/8080/$rpport/g"  /etc/nginx/sites-available/$domain
+		echo " Custom port found: $rpport"
+	else
+		echo " Default port: 8080"
 	fi
+	echo "${end}"
 	
 	
 # Site disabled	
