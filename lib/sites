@@ -14,8 +14,11 @@ nginx_helper_plugin() {
 	echo ""
 	echo "${gre} Nginx Helper Plugin has been installed!"
 	echo " Please, activate this plugin for a better experience with FastCgi Cache."
-	echo "${blu}It is important to configure the Purge Method of the plugin as “Delete local server cache file”, the support for the purge/url method has been disabled because it is considered a security risk. Similarly, the “Caching Method” should be set to “Nginx FastCgi Cache”. ${end}"
-	echo ""
+	echo "${blu} ** IMPORTANT - Plugin Settings **"
+	echo "- The “Caching Method” should be set to “Nginx FastCgi Cache”."
+	echo "- Support for purge/url method has been disabled because it is considered a security risk."
+	echo "- The Purge Method should be set to “Delete local server cache file” "
+	echo "${end}"
 }
 
 
@@ -269,7 +272,7 @@ _EOF_
 
 
 deletesite() {
-	# Determine id site is WP, so you should delete the DB too.
+	# Determine if site is WP, so you should delete the DB too.
 	if [[ -a /var/www/$domain/wp-config.php || -a /var/www/$domain/htdocs/wp-config.php ]]; then
 		echo "${blu}Delete Database [Y/n]?${end}"
 		while read -r -n 1 -s dbdel; do

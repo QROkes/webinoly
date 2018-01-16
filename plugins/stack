@@ -446,8 +446,8 @@ elif [[ $opt == "-purge-server-all" ]]; then
 	
 		echo "${gre}"
 		echo "****************************************************************************"
-		echo "***     Webinoly Stack have been completely removed from your server    ***"
-		echo "****         We are sad because you decided to remove Webinoly!!       ****"
+		echo "***     Webinoly Stack have been completely removed from your server     ***"
+		echo "****         We are sad because you decided to remove Webinoly!!        ****"
 		echo "****************************************************************************"
 		echo "${end}"
 	else

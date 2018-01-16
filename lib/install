@@ -643,7 +643,7 @@ tools_port() {
 swap_delete() {
 	local swapkb=$(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
 	if [[ -n $swapkb && $swapkb =~ ^[0-9]+$ && $swapkb -gt 0 && $(conf_read swap-owner) == "webinoly" ]]; then
-		sudo swapoff -a -v
+		sudo swapoff -a -v > /dev/null
 		sudo rm /swapfile
 		sudo sed -i '/\/swapfile/d' /etc/fstab
 		sudo sed -i '/vm.swappiness/d' /etc/sysctl.conf
