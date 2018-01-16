@@ -439,9 +439,9 @@ elif [[ $opt == "-purge-server-all" ]]; then
 
 	if [[ $answer == [Yy] ]]; then
 		conf_write delall true
+		stack -nginx -purge
 		stack -mysql -purge
 		stack -php -purge
-		stack -nginx -purge
 		conf_delete delall
 	
 		echo "${gre}"
