@@ -2,7 +2,7 @@
 
 # Webinoly script.
 # This script is designed to install latest Webinoly.
-webyversion="1.2.2-beta"
+webyversion="1.2.2"
 
 
 # Check OS support
@@ -64,15 +64,19 @@ sudo mv /opt/webinoly/plugins/* /usr/bin/
 
 source /opt/webinoly/lib/install
 
-# Save Tools Port after library is available.
-if [[ -z "$2" ]]; then
-	portools="22222"
-else
-	portools="$2"
+# Check for uninstalled Webinoly conf file
+if [[ -a $HOME/.webinoly-conf-restore_dont-remove ]]; then
+	sudo mv $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf
 fi
-if [[ -a /opt/webinoly/webinoly.conf ]]; then
+
+# Save Tools Port after library is available.
+if [[ -a /opt/webinoly/webinoly.conf && -n $(conf_read tools-port) ]]; then
 	echo "${gre}Webinoly Configuration file was found, so we will use it!${end}"
 else
+	portools="22222"
+	if [[ -n "$2" ]]; then
+		portools="$2"
+	fi
 	tools_port $portools
 fi
 
