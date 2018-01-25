@@ -262,7 +262,12 @@ elif [[ $arg == "-purge" && $opt == "-web-tools" ]]; then
 	fi
 	
 	if [[ $answer == [Yy] || $(conf_read delall) == "true" ]]; then
-		sudo apt-get -y purge redis-server php-redis postfix letsencrypt python-boto duplicity duply php-memcached php-memcache memcached
+		if [[ $(conf_read nginx-tool) == "true" ]]; then
+			sudo apt-get -y purge letsencrypt python-boto duplicity duply
+		fi
+		if [[ $(conf_read php-tool) == "true" ]]; then
+			sudo apt-get -y purge redis-server php-redis postfix php-memcached php-memcache memcached
+		fi
 		sudo apt-get -y autoremove
 		conf_write web-tool purged
 		echo ""
