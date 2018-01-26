@@ -88,12 +88,20 @@ if [[ "$domain" == "-list" && -z "$type" && -z "$cache" ]]; then
 	
 # Delete all sites
 elif [[ "$domain" == "-delete-all" && -z "$type" && -z "$cache" ]]; then
+	echo "${red}"
+	echo "All your sites files will be removed."
+	echo "This action will only delete Databases attached to a WordPress site, any other Database will not be deleted."
+	echo "${end}"
 	# List all sites in /var/www/ folder
 	for site in "/var/www"/*
 	do
+		domi=$(echo $site | cut -f 4 -d "/")
+		# List sites then will be deleted
+		if [[ $domi != "html" && $domi != $(conf_read tools-port) ]]; then
+			echo "${gre}Your site ${blu}${domi}${gre} has been successfully deleted! ${end}"
+		fi
 		# Determina if site is WP (so has DB to delete)
 		if [[ -a $site/wp-config.php || -a $site/htdocs/wp-config.php ]]; then
-			domi=$(echo $site | cut -f 4 -d "/")
 			db_delete $domi
 		fi
 	done
