@@ -2,7 +2,7 @@
 
 # Webinoly script.
 # This script is designed to install latest Webinoly.
-webyversion="1.2.3-beta"
+webyversion="1.2.3"
 
 
 # Check OS support

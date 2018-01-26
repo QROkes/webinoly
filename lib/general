@@ -36,33 +36,57 @@ db_delete() {
 			fi
 			local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 			sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup"
-		else
-			echo ""
-			echo "${gre} External DB found in $domain "
-			read -p "${blu}External DB root username [root]: " uroot
-			read -p "External DB root password: " proot
-			echo "${end}"
-			sudo mysql --connect-timeout=10 -h "$url" -P "$port" -u"$uroot" -p"$proot" -e "$dbsetup"
-		fi
-		
-		if [ $? != "0" ]; then
-			done="0"
-			echo "${red}============================================"
-			echo "    [Error]: Database delete failed."
-			echo "============================================"
-			echo ""
-			echo "${blu}  Retry [Y/n]? "
-			while read -r -n 1 -s answer; do
-			  answer=${answer:-y}
-			  if [[ $answer = [YyNn] ]]; then
-				break
-			  fi
-			done
-			if [[ $answer  == [Nn] ]]; then
-				done="1"
+			if [ $? != "0" ]; then
+				done="0"
+				echo "${red}============================================"
+				echo "    [Error]: Database delete failed."
+				echo "============================================"
+				echo ""
+				echo "${blu}  Retry [Y/n]? "
+				while read -r -n 1 -s answer; do
+				  answer=${answer:-y}
+				  if [[ $answer = [YyNn] ]]; then
+					break
+				  fi
+				done
+				if [[ $answer  == [Nn] ]]; then
+					done="1"
+				fi
+			else
+				echo "${gre}Database of your site ${blu}${domain}${gre} has been successfully deleted! ${end}"
 			fi
 		else
-			echo "${gre}Database of your site ${blu}${domain}${gre} has been successfully deleted! ${end}"
+			echo ""
+			echo "${gre}External DB found in $domain (Press 'Enter' key twice to skip and not delete)"
+			read -p "${blu}External DB root username [root]: " uroot
+			uroot=${uroot:-root}
+			read -p "External DB root password: " proot
+			if [[ $uroot == "root" && -z $proot ]]; then
+				echo "${red} Action aborted!"
+				continue 1;
+			else
+				sudo mysql --connect-timeout=10 -h "$url" -P "$port" -u"$uroot" -p"$proot" -e "$dbsetup"
+				if [ $? != "0" ]; then
+					done="0"
+					echo "${red}============================================"
+					echo "    [Error]: Database delete failed."
+					echo "============================================"
+					echo ""
+					echo "${blu}  Retry [Y/n]? "
+					while read -r -n 1 -s answer; do
+					  answer=${answer:-y}
+					  if [[ $answer = [YyNn] ]]; then
+						break
+					  fi
+					done
+					if [[ $answer  == [Nn] ]]; then
+						done="1"
+					fi
+				else
+					echo "${gre}Database of your site ${blu}${domain}${gre} has been successfully deleted! ${end}"
+				fi
+			fi
+			echo "${end}"
 		fi
 	done
 	
