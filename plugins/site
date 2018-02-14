@@ -125,7 +125,10 @@ elif [ "$type" == "-mysql" ]; then
 	# We use WP function to create DB when wp=0 WP files are not installed.
 	createsite
 	wpinstall
-	
+elif [[ "$domain" == "-mysql" && -z "$type" && -z "$cache" ]]; then
+	# Hack to create a DB easily (without site).
+	wpinstall
+
 
 # Create HTML site
 elif [ "$type" == "-html" ]; then
