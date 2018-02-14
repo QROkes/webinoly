@@ -22,6 +22,22 @@ nginx_helper_plugin() {
 }
 
 
+dbword_check() {
+	local win="$1"
+	local RANDOM_NAME=`pwgen -s -1`
+	
+	# Reserved words - https://mariadb.com/kb/en/library/reserved-words/
+	# https://mariadb.com/kb/en/library/identifier-names/
+	
+	shopt -s nocasematch
+	if [[ $win =~ ^(-MYSQL|ACCESSIBLE|ADD|ALL|ALTER|ANALYZE|AND|AS|ASC|ASENSITIVE|BEFORE|BETWEEN|BIGINT|BINARY|BLOB|BOTH|BY|CALL|CASCADE|CASE|CHANGE|CHAR|CHARACTER|CHECK|COLLATE|COLUMN|CONDITION|CONSTRAINT|CONTINUE|CONVERT|CREATE|CROSS|CURRENT_DATE|CURRENT_TIME|CURRENT_TIMESTAMP|CURRENT_USER|CURSOR|DATABASE|DATABASES|DAY_HOUR|DAY_MICROSECOND|DAY_MINUTE|DAY_SECOND|DEC|DECIMAL|DECLARE|DEFAULT|DELAYED|DELETE|DESC|DESCRIBE|DETERMINISTIC|DISTINCT|DISTINCTROW|DIV|DOUBLE|DROP|DUAL|EACH|ELSE|ELSEIF|ENCLOSED|ESCAPED|EXISTS|EXIT|EXPLAIN|FALSE|FETCH|FLOAT|FLOAT4|FLOAT8|FOR|FORCE|FOREIGN|FROM|FULLTEXT|GENERAL|GRANT|GROUP|HAVING|HIGH_PRIORITY|HOUR_MICROSECOND|HOUR_MINUTE|HOUR_SECOND|IF|IGNORE|IGNORE_SERVER_IDS|IN|INDEX|INFILE|INNER|INOUT|INSENSITIVE|INSERT|INT|INT1|INT2|INT3|INT4|INT8|INTEGER|INTERVAL|INTO|IS|ITERATE|JOIN|KEY|KEYS|KILL|LEADING|LEAVE|LEFT|LIKE|LIMIT|LINEAR|LINES|LOAD|LOCALTIME|LOCALTIMESTAMP|LOCK|LONG|LONGBLOB|LONGTEXT|LOOP|LOW_PRIORITY|MASTER_HEARTBEAT_PERIOD|MASTER_SSL_VERIFY_SERVER_CERT|MATCH|MAXVALUE|MEDIUMBLOB|MEDIUMINT|MEDIUMTEXT|MIDDLEINT|MINUTE_MICROSECOND|MINUTE_SECOND|MOD|MODIFIES|NATURAL|NOT|NO_WRITE_TO_BINLOG|NULL|NUMERIC|ON|OPTIMIZE|OPTION|OPTIONALLY|OR|ORDER|OUT|OUTER|OUTFILE|PARTITION|PRECISION|PRIMARY|PROCEDURE|PURGE|RANGE|READ|READS|READ_WRITE|REAL|RECURSIVE|REFERENCES|REGEXP|RELEASE|RENAME|REPEAT|REPLACE|REQUIRE|RESIGNAL|RESTRICT|RETURN|REVOKE|RIGHT|RLIKE|ROWS|SCHEMA|SCHEMAS|SECOND_MICROSECOND|SELECT|SENSITIVE|SEPARATOR|SET|SHOW|SIGNAL|SLOW|SMALLINT|SPATIAL|SPECIFIC|SQL|SQLEXCEPTION|SQLSTATE|SQLWARNING|SQL_BIG_RESULT|SQL_CALC_FOUND_ROWS|SQL_SMALL_RESULT|SSL|STARTING|STRAIGHT_JOIN|TABLE|TERMINATED|THEN|TINYBLOB|TINYINT|TINYTEXT|TO|TRAILING|TRIGGER|TRUE|UNDO|UNION|UNIQUE|UNLOCK|UNSIGNED|UPDATE|USAGE|USE|USING|UTC_DATE|UTC_TIME|UTC_TIMESTAMP|VALUES|VARBINARY|VARCHAR|VARCHARACTER|VARYING|WHEN|WHERE|WHILE|WINDOW|WITH|WRITE|XOR|YEAR_MONTH|ZEROFILL)$ ]]; then
+		win="Webinoly_$RANDOM_NAME"
+	fi
+	shopt -u nocasematch
+	echo $win
+}
+
+
 wpinstall() {
 	local AUTOGENPASS_WPDB=`pwgen -s -1`
 	local dom=${domain//./_}
@@ -112,6 +128,7 @@ wpinstall() {
 				local dbport=$(echo "$dbhost" | cut -f 2 -d ':')
 			fi
 			
+			dom=$(dbword_check $dom)
 			[[ $wp == [23] ]] || read -p "Database Name [$dom]:" dbname
 			dbname=${dbname:-$dom}
 				
@@ -141,16 +158,22 @@ wpinstall() {
 						local newdbname=$(sudo mysqlshow -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" | grep -ow $dbname)
 					fi
 					
-					if [ "$newdbname" == "$dbname" ]; then
+					if [[ $newdbname == $dbname || $dbname != $(dbword_check $dbname) ]]; then
 						echo ""
-						echo "${red}Database $dbname already exists!${blu}"
-						echo "Do you want to use this DB in your new site? [y/N]"
-						while read -r -n 1 -s dbreuse; do
-						  local dbreuse=${dbreuse:-n}
-						  if [[ $dbreuse = [YyNn] ]]; then
-							break
-						  fi
-						done
+						if [[ $newdbname == $dbname ]]; then
+							echo "${red}Database $dbname already exists!${blu}"
+							echo "Do you want to use this DB in your new site? [y/N]"
+							while read -r -n 1 -s dbreuse; do
+							  local dbreuse=${dbreuse:-n}
+							  if [[ $dbreuse = [YyNn] ]]; then
+								break
+							  fi
+							done
+						fi
+						if [[ $dbname != $(dbword_check $dbname) ]]; then
+							echo "${red}The DB Name can not be a reserved word!${blu}"
+							dbreuse="n"
+						fi
 						
 						if [[ $dbreuse != y && $dbreuse != Y ]]; then
 							echo ""
