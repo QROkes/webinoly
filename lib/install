@@ -137,10 +137,15 @@ php_install() {
 	sudo apt-get install -y language-pack-en-base
 	sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 	pre_install
-	sudo apt-get -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-recode php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-xdebug php-msgpack
+	sudo apt-get -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-recode php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
 	
 	if [[ -n $ver && ($ver == "7.1" || $ver == "7.0" || $ver == "5.6") ]]; then
+		# mcrypt deprecated in 7.2
 		sudo apt-get -y install php${ver}-mcrypt
+	fi
+	if [[ -n $ver && ($ver == "7.2" || $ver == "7.1" || $ver == "7.0") ]]; then
+		# xdebug deprecated in 5.6
+		sudo apt-get -y install php-xdebug
 	fi
 	
 	sudo cp /etc/php/$(conf_read php-ver)/fpm/php.ini /opt/webinoly/templates/source/
@@ -265,11 +270,14 @@ php_optim() {
 	sudo sed -i '/request_slowlog_timeout =/c\request_slowlog_timeout = 10s' /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
 	sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
 
-	sudo echo 'php_admin_flag[xdebug.profiler_enable] = off' >> /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
-	sudo echo 'php_admin_flag[xdebug.profiler_enable_trigger] = on' >> /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
-	sudo echo 'php_admin_value[xdebug.profiler_output_name] = cachegrind.out.%p-%H-%R' >> /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
-	sudo echo 'php_admin_value[xdebug.profiler_output_dir] = /tmp/' >> /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf 
-	sudo sed -i '/zend_extension=/c\;zend_extension=xdebug.so' /etc/php/$(conf_read php-ver)/mods-available/xdebug.ini
+	if [[ -n $ver && ($ver == "7.2" || $ver == "7.1" || $ver == "7.0") ]]; then
+		# xdebug deprecated in 5.6
+		sudo echo 'php_admin_flag[xdebug.profiler_enable] = off' >> /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
+		sudo echo 'php_admin_flag[xdebug.profiler_enable_trigger] = on' >> /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
+		sudo echo 'php_admin_value[xdebug.profiler_output_name] = cachegrind.out.%p-%H-%R' >> /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
+		sudo echo 'php_admin_value[xdebug.profiler_output_dir] = /tmp/' >> /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf 
+		sudo sed -i '/zend_extension=/c\;zend_extension=xdebug.so' /etc/php/$(conf_read php-ver)/mods-available/xdebug.ini
+	fi
 	
 	conf_write php-optim true
 	sudo service php*-fpm reload
