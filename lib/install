@@ -385,6 +385,7 @@ app_purge() {
 webinoly_verify() {
 	local error="0"
 	local warning="0"
+	local info="0"
 	echo "${gre} Verifying integrity of the entire Webinoly system... ${end}"
 	echo "${red}"
 	
@@ -452,8 +453,8 @@ webinoly_verify() {
 		error="1"
 	fi
 	if [[ ! -a /etc/nginx/.htpasswd && $(conf_read nginx-optim) == "true" ]]; then
-		echo "[WARNING] File: /etc/nginx/.htpasswd not found!"
-		warning="1"
+		echo "[INFO] File: /etc/nginx/.htpasswd not found!"
+		info="1"
 	fi
 	if [[ ! -a /etc/nginx/conf.d/blockips.conf && $(conf_read nginx-optim) == "true" ]]; then
 		echo "[WARNING] File: /etc/nginx/conf.d/blockips.conf not found!"
