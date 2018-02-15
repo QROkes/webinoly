@@ -319,15 +319,9 @@ deletesite() {
 
 
 createsite() {
-	if [[ "$wp" == [123] && $(conf_read php) != "true" ]]; then
+	if [[ $(conf_read php) != "true" && ("$wp" == [123] || "$type" == "-php") ]]; then
 		echo "${red}"
 		echo " [ERROR] PHP must be installed before you can create a WP site!"
-		echo "${end}"
-		exit 1
-	fi
-	if [[ "$type" == "-php" && $(conf_read php) != "true" ]]; then
-		echo "${red}"
-		echo " [ERROR] PHP must be installed before you can create a PHP site!"
 		echo "${end}"
 		exit 1
 	fi
@@ -339,6 +333,11 @@ createsite() {
 	fi
 	
 	sudo cp /opt/webinoly/templates/template-site-php /etc/nginx/sites-available/$domain
+	
+	# Remove www support for subdomains - only main domain will support both www and non-www.
+	if [[ $subdomflag == 1 ]]; then
+		sudo sed -i "s/ www.domain.com;/;/g"  /etc/nginx/sites-available/$domain
+	fi
 
 	# Nginx conf file for the new site (-php conf is default)
 	sudo sed -i "s/domain.com/$domain/g"  /etc/nginx/sites-available/$domain
