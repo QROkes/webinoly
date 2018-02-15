@@ -38,18 +38,19 @@ site_ssl_on() {
 		echo "${end}"
 	done
 		
-	# Generar nuevo certificado	
-	if [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
+	# Create new certificate
+	if [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $subdomflag == 0 ]]; then
 		sudo letsencrypt certonly --webroot -w /var/www/$root/htdocs/ -d $domain -d www.$domain --email $cermail --agree-tos
+	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $subdomflag == 1 ]]; then
+		sudo letsencrypt certonly --webroot -w /var/www/$root/htdocs/ -d $domain --email $cermail --agree-tos
 	fi
 	
-	# Configuracion NGINX del sitio para soportar SSL
+	# SSL Nginx Conf
 	if [[ -a /etc/letsencrypt/live/$root/fullchain.pem ]]; then
 		sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /etc/nginx/sites-available/$domain
 		sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /etc/nginx/sites-available/$domain
 		sudo sed -i '/headers-html.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$domain
 		sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$domain
-		#sudo sed -i "s/domain.com/${root}/g"  /etc/nginx/sites-available/$domain
 		sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$domain/}" /etc/nginx/sites-available/$domain
 		
 		# Auto-Renew Certificate

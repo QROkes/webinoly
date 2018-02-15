@@ -30,6 +30,14 @@ if [[ "$type" == "-cache" && -n $cache ]]; then
 	cache="$2"
 fi
 
+# Check if site is sub-domain
+subdom=$(echo "${domain}" | cut -d'.' -f 3 -s)
+if [[ -z $subdom ]]; then
+	subdomflag="0"
+else
+	subdomflag="1"
+fi
+
 wp="0" # Evaluate if site to create is WP ( 0 = noWP, 1 = WP, 2 = WP with default values, 3 = WP with custom values )
 if [[ "$type" == "-wp" || "$type" == "-wpsubdir" || "$type" == "-wpsubdom" ]]; then
 	wp="1"
