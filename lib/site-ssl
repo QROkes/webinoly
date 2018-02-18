@@ -53,6 +53,11 @@ site_ssl_on() {
 		sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$domain
 		sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$domain/}" /etc/nginx/sites-available/$domain
 		
+		# HTTP to HTTPS Redirection
+		local sername=$(grep -w "server_name .*;" /etc/nginx/sites-available/$domain)
+		sudo sed -i '1r /opt/webinoly/templates/template-site-sslredirect' /etc/nginx/sites-available/$domain
+		sudo sed -i "/#server_name;/c \	$sername" /etc/nginx/sites-available/$domain
+		
 		# Auto-Renew Certificate
 		if [[ ! -a /var/spool/cron/crontabs/root ]]; then
 			sudo touch /var/spool/cron/crontabs/root
@@ -83,6 +88,7 @@ site_ssl_off() {
 	sudo sed -i '/listen \[::\]:443/c \	listen [::]:80;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/headers-https.conf/d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$domain
+	sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
 	
 	echo "${blu}"
 	echo "  Do you want to completely delete your certificate [y/N]? "
