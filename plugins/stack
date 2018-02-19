@@ -57,7 +57,7 @@ elif [[ $arg == "-purge" && ( $opt == "-html" || $opt == "-nginx" ) ]]; then
 	echo ""
 	echo "${red} ¡ C A U T I O N !  You are about to remove NGINX from your server!"
 	echo ""
-	if [ $(conf_read delall) != "true" ]; then
+	if [[ $(conf_read delall) != "true" ]]; then
 		echo " ${blu} Are you sure [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
 		  answer=${answer:-n}
@@ -127,7 +127,7 @@ elif [[ $arg == "-purge" && $opt == "-php" ]]; then
 	echo "${red} ¡ C A U T I O N !  You are about to remove PHP from your server!"
 	echo " This action will also remove PhpMyAdmin if its installed because depends on PHP. ${end}"
 	echo ""
-	if [ $(conf_read delall) != "true" ]; then
+	if [[ $(conf_read delall) != "true" ]]; then
 		echo " ${blu} Are you sure [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
 		  answer=${answer:-n}
@@ -180,7 +180,7 @@ elif [[ $arg == "-purge" && $opt == "-mysql" ]]; then
 	echo ""
 	echo "${red} ¡ C A U T I O N !  You are about to remove MySQL from your server! ${end}"
 	echo ""
-	if [ $(conf_read delall) != "true" ]; then
+	if [[ $(conf_read delall) != "true" ]]; then
 		echo " ${blu} Are you sure [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
 		  answer=${answer:-n}
@@ -276,7 +276,7 @@ elif [[ $arg == "-purge" && $opt == "-web-tools" ]]; then
 	echo ""
 	echo "${red} ¡ C A U T I O N !  You are about to remove all your Web Tools (Postfix, Redis, Memcached, Duplicity and Letsencrypt) from your server! ${end}"
 	echo ""
-	if [ $(conf_read delall) != "true" ]; then
+	if [[ $(conf_read delall) != "true" ]]; then
 		echo " ${blu} Are you sure [y/N]? ${end} "
 		while read -r -n 1 -s answer; do
 		  answer=${answer:-n}
@@ -460,7 +460,7 @@ elif [[ $opt == "-purge-server-all" ]]; then
 	echo ""
 	echo " If you want to remove your sites data use the webinoly command: 'sudo webinoly -delete-all'"
 	echo ""
-	if [ $(conf_read delall) != "true" ]; then
+	if [[ $(conf_read delall) != "true" && $force != 1 ]]; then
 		echo " ${blu} Are you sure [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
 		  answer=${answer:-n}
