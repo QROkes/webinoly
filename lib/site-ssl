@@ -8,10 +8,8 @@ source /opt/webinoly/lib/general
 site_ssl_on() {
 	local cermail=$(conf_read mail)
 	local root="$domain"
-	if [[ "$cache" == "-root" ]]; then
-		root="$domroot"
-	fi
-	
+	[[ $cache == "-root" && -n $value ]] && root="$value"
+
 	echo "${gre}"
 	echo "*************************************************************************************************"
 	echo "**  Please, be careful with the number of intents or certificates you try to get.              **"

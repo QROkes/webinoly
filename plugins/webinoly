@@ -9,6 +9,14 @@ arg="$2"
 
 source /opt/webinoly/lib/install
 
+# Extract value if exist
+if [[ $opt == "-tools-port="* || $opt == "-config-cache="* ]]; then
+	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
+	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
+fi
+
+
+
 if [ "$opt" == "-update" ]; then
 	if [[ $arg == '-vbeta' ]]; then
 		sudo wget --timeout=15 -qrO weby https://qrok.es/wyupdb && sudo bash weby -vbeta
@@ -53,7 +61,7 @@ elif [ "$opt" == "-dbpass" ]; then
 elif [ "$opt" == "-tools-port" ]; then
 	if [[ $(conf_read nginx-tool) == "true" && $(conf_read nginx) == "true" ]]; then
 		oldport="$(conf_read tools-port)"
-		tools_port $arg
+		[[ -n $value ]] && tools_port $value || tools_port
 		newport="$(conf_read tools-port)"
 		if [[ $oldport != $newport ]]; then
 			sudo mv /var/www/$oldport /var/www/$newport
@@ -149,7 +157,7 @@ elif [ "$opt" == "-config-cache" ]; then
 	othline=$( grep -F "fastcgi_cache_valid 301 302 307 404" /etc/nginx/conf.d/fastcgi.conf )
 	othval=$(echo "${othline//;}" | rev | cut -d' ' -f 1 | rev)
 	
-	if [[ -z $arg ]]; then
+	if [[ -z $value ]]; then
 		echo "${gre}"
 		echo "**********************************************************************"
 		echo "*************     Set FastCGI Cache new time values     **************"
@@ -168,9 +176,13 @@ elif [ "$opt" == "-config-cache" ]; then
 		read -p "   Set new value: " oth
 		oth=${oth:-$othval}
 	else
-		hit=$(echo "${arg}" | cut -d',' -f 1 )
-		ina=$(echo "${arg}" | cut -d',' -f 2 )
-		oth=$(echo "${arg}" | cut -d',' -f 3 )
+		custombegin=$(echo "${value}" | cut -c-1)
+		customlast=$(echo "${value}" | rev | cut -c-1)
+		cachedata=${value:1:-1}
+			
+		hit=$(echo "${cachedata}" | cut -d',' -f 1 )
+		ina=$(echo "${cachedata}" | cut -d',' -f 2 )
+		oth=$(echo "${cachedata}" | cut -d',' -f 3 )
 	fi
 	
 	if [[ "$hit" =~ ^[0-9]+[smhdwMy]$ && "$ina" =~ ^[0-9]+[smhdwMy]$ && "$oth" =~ ^[0-9]+[smhdwMy]$ ]]; then
