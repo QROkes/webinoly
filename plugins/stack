@@ -18,14 +18,13 @@ fi
 
 # FORCE - Unattended Purge
 clear_force_flag() {
-	if [[ $(conf_read delall) == "true" ]]; then
-		conf_delete delall
-	fi
+	[[ $(conf_read delall) == "true" ]] && conf_delete delall
 }
-if [[ $arg == "-purge=force" || $opt == "-purge-server-all=force" ]]; then
+if [[ $arg == "-purge=force" || $opt == "-purge-server-all=force" || $opt == "-php=force" ]]; then
 	conf_write delall true
 	[[ $arg == "-purge=force" ]] && arg="-purge"
 	[[ $opt == "-purge-server-all=force" ]] && opt="-purge-server-all"
+	[[ $opt == "-php=force" ]] && opt="-php"
 	force="1"
 fi
 
