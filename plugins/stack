@@ -347,7 +347,7 @@ elif [[ $opt == "-html" || $opt == "-nginx" ]]; then
 	
 elif [[ $opt == "-php" ]]; then
 	if [[ $(conf_read php) != "true" ]]; then
-		if [[ $(conf_read nginx) != "true" ]]; then
+		if [[ $(conf_read nginx) != "true" && $(conf_read delall) != "true" ]]; then
 			echo ""
 			echo "${blu}Nginx is not installed, do you want to install it too [Y/n]?${end} "
 			while read -r -n 1 -s answer; do
@@ -438,16 +438,20 @@ elif [[ $opt == "-php-ver="* ]]; then
 		elif [[ $(conf_read php) == "true" && $(conf_read mysql-tool) == "true" ]]; then
 			sudo stack -php -purge=force
 			conf_write php-ver $phpver
+			# force flag prevent to be questioned (Unattended) when nginx is not installed.
+			conf_write delall true
 			sudo stack -php
 			sudo stack -pma
 		elif [[ $(conf_read php) == "true" && $(conf_read mysql-tool) != "true" ]]; then
 			sudo stack -php -purge=force
 			conf_write php-ver $phpver
+			conf_write delall true
 			sudo stack -php
 		elif [[ $(conf_read php) != "true" && $(conf_read mysql-tool) != "true" ]]; then
 			conf_write php-ver $phpver
 			echo "${gre} PHP is not already installed but new version will be installed next time! ${end}"
 		fi
+		clear_force_flag
 	else
 		echo "${red} Please, enter a valid PHP version!${end}"
 	fi
