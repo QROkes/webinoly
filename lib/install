@@ -783,9 +783,9 @@ config_load() {
 	if [[ -n $(conf_load_read php-ver) ]]; then
 		# PHP variable version in case of Overwriting
 		if [[ $answer == [Oo] && $(conf_read php) == "true" && $(conf_load_read php-ver) != $(conf_read php-ver) ]]; then
-			conf_write delall true
+			conf_write force-flag true
 			stack -php -purge
-			conf_delete delall
+			conf_delete force-flag
 		fi
 		conf_write php-ver $(conf_load_read php-ver)
 	fi
