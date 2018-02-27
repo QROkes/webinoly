@@ -136,6 +136,23 @@ mysql_client_install() {
 }
 
 
+tools_port() {
+	local in="$1"
+	while ! [[ $port -ge 0 && $port -le 65535 && $port =~ ^[0-9]+$ ]] 2>/dev/null
+	do
+		if [[ -z "$in" || $in == "empty" ]]; then
+			read -p "${blu}Tools Port [Default: 22222]: " port
+			port=${port:-22222}
+		else
+			port="$in"
+			in="empty"
+		fi
+	done
+	conf_write tools-port $port
+	echo "${gre} Port $port has been enabled to access all your Tools! ${end}"
+}
+
+
 conf_read() {
 	local val=$(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf | cut -f 2 -d ':')
 	echo $val

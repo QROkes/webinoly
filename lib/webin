@@ -1,0 +1,440 @@
+#!/bin/bash
+source /opt/webinoly/lib/install
+
+
+# Verify Integrity of all "required" files and system
+webinoly_verify() {
+	local error="0"
+	local warning="0"
+	local info="0"
+	echo "${gre} Verifying integrity of the entire Webinoly system... ${end}"
+	echo "${red}"
+	
+	# Webinoly
+	if [[ ! -a /opt/webinoly/lib/general ]]; then
+		echo "[ERROR] File: /opt/webinoly/lib/general not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/lib/install ]]; then
+		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/template-site-php ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/template-site-php not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
+		echo "[ERROR] File: /opt/webinoly/webinoly.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /usr/bin/webinoly ]]; then
+		echo "[ERROR] File: /usr/bin/webinoly not found!"
+		error="1"
+	fi
+	if [[ ! -a /usr/bin/site ]]; then
+		echo "[ERROR] File: /usr/bin/site not found!"
+		error="1"
+	fi
+	if [[ ! -a /usr/bin/httpauth ]]; then
+		echo "[ERROR] File: /usr/bin/httpauth not found!"
+		error="1"
+	fi
+	if [[ ! -a /usr/bin/log ]]; then
+		echo "[ERROR] File: /usr/bin/log not found!"
+		error="1"
+	fi
+	if [[ ! -a /usr/bin/stack ]]; then
+		echo "[ERROR] File: /usr/bin/stack not found!"
+		error="1"
+	fi
+	if [[ -z $(conf_read tools-port) ]]; then
+		echo "[ERROR] Port Tools not found!"
+		error="1"
+	fi
+	
+	# NGINX
+	if [[ ! -a /etc/nginx/nginx.conf && $(conf_read nginx) == "true" ]]; then
+		echo "[ERROR] File: /etc/nginx/nginx.conf not found!"
+		error="1"
+	elif [[ -a /etc/nginx/nginx.conf && $(conf_read nginx) != "true" ]]; then
+		echo "[WARNING] Seems like NGINX is installed but Webinoly can not detect it!"
+		warning="1"
+	fi
+	if [[ ! -a /etc/nginx/fastcgi.conf && $(conf_read nginx) == "true" ]]; then
+		echo "[ERROR] File: /etc/nginx/fastcgi.conf not found!"
+		error="1"
+	elif [[ -a /etc/nginx/fastcgi.conf && $(conf_read nginx) != "true" ]]; then
+		echo "[WARNING] Seems like NGINX is installed but Webinoly can not detect it!"
+		warning="1"
+	fi
+	
+	# NGINX Optim
+	if [[ ! -a /etc/nginx/fastcgi_params && $(conf_read nginx-optim) == "true" ]]; then
+		echo "[ERROR] File: /etc/nginx/fastcgi_params not found!"
+		error="1"
+	fi
+	if [[ ! -a /etc/nginx/.htpasswd && $(conf_read nginx-optim) == "true" ]]; then
+		echo "[INFO] File: /etc/nginx/.htpasswd not found!"
+		info="1"
+	fi
+	if [[ ! -a /etc/nginx/conf.d/blockips.conf && $(conf_read nginx-optim) == "true" ]]; then
+		echo "[WARNING] File: /etc/nginx/conf.d/blockips.conf not found!"
+		warning="1"
+	fi
+	if [[ ! -a /etc/nginx/conf.d/fastcgi.conf && $(conf_read nginx-optim) == "true" ]]; then
+		echo "[ERROR] File: /etc/nginx/conf.d/fastcgi.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /etc/nginx/conf.d/upstream.conf && $(conf_read nginx-optim) == "true" ]]; then
+		echo "[ERROR] File: /etc/nginx/conf.d/upstream.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /etc/nginx/common/acl.conf && $(conf_read nginx-optim) == "true" ]]; then
+		echo "[ERROR] File: /etc/nginx/common/acl.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /etc/nginx/common/locations.conf && $(conf_read nginx-optim) == "true" ]]; then
+		echo "[ERROR] File: /etc/nginx/common/locations.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /etc/nginx/common/php.conf && $(conf_read nginx-optim) == "true" ]]; then
+		echo "[ERROR] File: /etc/nginx/common/php.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /etc/nginx/common/wpcommon.conf && $(conf_read nginx-optim) == "true" ]]; then
+		echo "[ERROR] File: /etc/nginx/common/wpcommon.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /etc/nginx/common/wpfc.conf && $(conf_read nginx-optim) == "true" ]]; then
+		echo "[ERROR] File: /etc/nginx/common/wpfc.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /etc/nginx/common/wpsubdir.conf && $(conf_read nginx-optim) == "true" ]]; then
+		echo "[ERROR] File: /etc/nginx/common/wpsubdir.conf not found!"
+		error="1"
+	fi
+	
+	# NGINX Tools
+	if [[ ! -a /etc/nginx/sites-available/$(conf_read tools-port) && $(conf_read nginx-tool) == "true" ]]; then
+		echo "[ERROR] File: /etc/nginx/sites-available/$(conf_read tools-port) not found!"
+		error="1"
+	elif [[ -a /etc/nginx/sites-available/$(conf_read tools-port) && $(conf_read nginx-tool) != "true" ]]; then
+		echo "[WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!"
+		warning="1"
+	fi
+	if [[ ! -d /var/www/$(conf_read tools-port) && $(conf_read nginx-tool) == "true" ]]; then
+		echo "[ERROR] Folder: /var/www/$(conf_read tools-port) not found!"
+		error="1"
+	elif [[ -d /var/www/$(conf_read tools-port) && $(conf_read nginx-tool) != "true" ]]; then
+		echo "[WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!"
+		warning="1"
+	fi
+	
+	# NGINX Conf check
+	if [[ $(conf_read nginx) != "true" && ( $(conf_read nginx-optim) == "true" || $(conf_read nginx-tool) == "true" ) ]]; then
+		echo "[WARNING] NGINX Configuration corrupted!"
+		warning="1"
+	fi
+	
+	# PHP
+	if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/php.ini && $(conf_read php) == "true" ]]; then
+		echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/php.ini not found!"
+		error="1"
+	elif [[ -a /etc/php/$(conf_read php-ver)/fpm/php.ini && $(conf_read php) != "true" ]]; then
+		echo "[WARNING] Seems like PHP is installed but Webinoly can not detect it!"
+		warning="1"
+	fi
+	
+	# PHP Optim
+	if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf && $(conf_read php-optim) == "true" ]]; then
+		echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf && $(conf_read php-optim) == "true" ]]; then
+		echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf && $(conf_read php-optim) == "true" ]]; then
+		echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf not found!"
+		error="1"
+	fi
+	
+	# PHP Tools
+	if [[ ! -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/php && $(conf_read php-tool) == "true" ]]; then
+		echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/fpm/status/php not found!"
+		error="1"
+	elif [[ -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/php && $(conf_read php-tool) != "true" ]]; then
+		echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
+		warning="1"
+	fi
+	if [[ ! -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug && $(conf_read php-tool) == "true" ]]; then
+		echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug not found!"
+		error="1"
+	elif [[ -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug && $(conf_read php-tool) != "true" ]]; then
+		echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
+		error="1"
+	fi
+	if [[ ! -a /var/www/$(conf_read tools-port)/htdocs/php/index.php && $(conf_read php-tool) == "true" ]]; then
+		echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/php/index.php not found!"
+		error="1"
+	elif [[ -a /var/www/$(conf_read tools-port)/htdocs/php/index.php && $(conf_read php-tool) != "true" ]]; then
+		echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
+		warning="1"
+	fi
+	
+	# PHP Conf check
+	if [[ $(conf_read php) != "true" && ( $(conf_read php-optim) == "true" || $(conf_read php-tool) == "true" ) ]]; then
+		echo "[WARNING] PHP Configuration corrupted!"
+		warning="1"
+	fi
+	
+	# MySQL
+	if [[ ! -d /etc/mysql && $(conf_read mysql) == "true" ]]; then
+		echo "[ERROR] Folder: /etc/mysql not found!"
+		error="1"
+	elif [[ -d /etc/mysql && $(conf_read mysql) != "true" ]]; then
+		echo "[WARNING] Seems like MySQL is installed but Webinoly can not detect it!"
+		warning="1"
+	fi
+	
+	# MySQL Tools
+	if [[ ! -d /var/www/$(conf_read tools-port)/htdocs/pma && $(conf_read mysql-tool) == "true" ]]; then
+		echo "[ERROR] Folder: /var/www/$(conf_read tools-port)/htdocs/pma not found!"
+		error="1"
+	elif [[ ( -d /var/www/$(conf_read tools-port)/htdocs/pma || -d /usr/share/phpmyadmin ) && $(conf_read mysql-tool) != "true" ]]; then
+		echo "[WARNING] Seems like MySQL Tools (PhpMyAdmin) are enabled but Webinoly can not detect it!"
+		warning="1"
+	fi
+	
+	# MySQL Conf check
+	if [[ $(conf_read mysql) != "true" && $(conf_read mysql-tool) == "true" ]]; then
+		echo "[WARNING] MySQL Configuration corrupted!"
+		warning="1"
+	fi
+	
+	# Web Tools
+	if [[ ! -d /etc/redis && $(conf_read web-tool) == "true" && $(conf_read php_tool) == "true" ]]; then
+		echo "[ERROR] Folder: /etc/redis not found!"
+		error="1"
+	fi
+	if [[ ! -d /etc/postfix && $(conf_read web-tool) == "true" && $(conf_read php_tool) == "true" ]]; then
+		echo "[ERROR] Folder: /etc/postfix not found!"
+		error="1"
+	fi
+	if [[ ! -a /usr/bin/duplicity && $(conf_read web-tool) == "true" && $(conf_read nginx_tool) == "true" ]]; then
+		echo "[ERROR] File: /usr/bin/duplicity not found!"
+		error="1"
+	fi
+	if [[ ! -a /usr/bin/letsencrypt && $(conf_read web-tool) == "true" && $(conf_read nginx_tool) == "true" ]]; then
+		echo "[ERROR] File: /usr/bin/letsencrypt not found!"
+		error="1"
+	fi
+	if [[ ( -d /etc/redis || -d /etc/postfix || -a /usr/bin/duplicity || -a /usr/bin/letsencrypt ) && $(conf_read web-tool) != "true" ]]; then
+		echo "[WARNING] Seems like Web Tools (Redis, Letsencrypt, Postfix and Duplicity) are enabled but Webinoly can not detect it!"
+		warning="1"
+	fi
+	
+	
+	echo ""
+	if [ $error != 0 ]; then
+		echo "*******************************************************"
+		echo "********      ${gre}> > >  E R R O R < < <${red}        ***********"
+		echo "********   ${gre}System could not work properly${red}   ***********"
+		echo "******************************************************* ${end}"
+		exit 1
+	elif [ $warning != 0 ]; then
+		echo "***********************************************************************************************************"
+		echo "********      ${gre}[ W A R N I N G ] System seems to be corrupted and could not work properly${red}        ***********"
+		echo "*********************************************************************************************************** ${end}"
+		exit 2
+	else
+		echo "${gre} Integrity test passed!! ${end}"
+	fi
+}
+
+
+conf_load_read() {
+	local val=$(grep -F "${1}:" $HOME/webinoly.conf | cut -f 2 -d ':')
+	echo $val
+}
+config_load() {
+	webinoly -verify
+	if [[ $? == 1 || ! -a $HOME/webinoly.conf ]]; then
+		echo "${red}  Configuration file not found or is corrupted! ${end}"
+		exit 1
+	fi
+	
+	if [[ -a /opt/webinoly/webinoly.conf ]]; then
+		echo "${blu}"
+		echo " What do you want to do with your actual configuration [ P=Purge O=Overwrite C=Cancel ]? "
+		while read -r -n 1 -s answer; do
+			local answer=${answer:-n}
+			echo ""
+			if [[ $answer = [PpOoCc] ]]; then
+				if [[ $answer == [Pp] ]]; then
+					stack -purge-server-all
+				fi
+				if [[ $answer == [Oo] ]]; then
+					echo " Overwriting current configuration!! "
+				fi
+				if [[ $answer == [Cc] ]]; then
+					echo "${red}  Action aborted!"
+					echo "${end}"
+					exit 1
+				fi
+				break
+			fi
+		done
+		echo "${end}"
+	fi
+	
+	#sudo mv $HOME/webinoly.conf /opt/webinoly/
+
+	# Check for system variables before stack
+	if [[ -n $(conf_load_read swap-mem) ]]; then
+		conf_write swap-mem $(conf_load_read swap-mem)
+	fi
+	if [[ -n $(conf_load_read max-mb-uploads) ]]; then
+		conf_write max-mb-uploads $(conf_load_read max-mb-uploads)
+	fi
+	if [[ -n $(conf_load_read fd-ratio) ]]; then
+		conf_write fd-ratio $(conf_load_read fd-ratio)
+	fi
+	if [[ -n $(conf_load_read nginx-fd-ratio) ]]; then
+		conf_write nginx-fd-ratio $(conf_load_read nginx-fd-ratio)
+	fi
+	if [[ $answer == [Oo] && $(conf_read nginx-optim) == "true" ]]; then
+		linux_purge
+		linux_optim
+	fi
+	if [[ -n $(conf_load_read php-ver) ]]; then
+		# PHP variable version in case of Overwriting
+		if [[ $answer == [Oo] && $(conf_read php) == "true" && $(conf_load_read php-ver) != $(conf_read php-ver) ]]; then
+			conf_write force-flag true
+			stack -php -purge
+			conf_delete force-flag
+		fi
+		conf_write php-ver $(conf_load_read php-ver)
+	fi
+	
+	# Determine which stack install
+	if [[ $(conf_load_read nginx-tool) == "true" && $(conf_load_read nginx-optim) == "true" && $(conf_load_read nginx) == "true" ]]; then
+		stack -nginx
+	elif [[ $(conf_load_read nginx-tool) != "true" && $(conf_load_read nginx-optim) == "true" && $(conf_load_read nginx) == "true" ]]; then
+		stack -nginx -notools
+	fi
+	
+	if [[ $(conf_load_read php-tool) == "true" && $(conf_load_read php-optim) == "true" && $(conf_load_read php) == "true" ]]; then
+		stack -php
+	elif [[ $(conf_load_read php-tool) != "true" && $(conf_load_read php-optim) == "true" && $(conf_load_read php) == "true" ]]; then
+		stack -php -notools
+	fi
+	
+	if [[ $(conf_load_read mysql-tool) == "true" && $(conf_load_read mysql) == "true" ]]; then
+		stack -mysql
+	elif [[ $(conf_load_read mysql-tool) != "true" && $(conf_load_read mysql) == "true" ]]; then
+		stack -mysql -notools
+	fi
+	if [[ $(conf_load_read mysql-tool) == "true" && $(conf_read mysql-tool) != "true" ]]; then
+		# When pma has been purged due to php different version
+		stack -pma
+	fi
+	
+	if [[ $(conf_load_read web-tool) == "purged" ]]; then
+		stack -web-tools -purge
+	fi
+	
+	# Some user preferences
+	if [[ -n $(conf_load_read tools-port) ]]; then
+		webinoly -tools-port $(conf_load_read tools-port)
+	fi
+	if [[ -n $(conf_load_read fastcgi-conf) ]]; then
+		webinoly -config-cache $(conf_load_read fastcgi-conf)
+	fi
+	if [[ $(conf_load_read login-www-data) == "true" ]]; then
+		webinoly -login-www-data
+	fi
+	if [[ $(conf_load_read wp-admin-auth) == "purged" ]]; then
+		httpauth -wp-admin-off
+	fi
+	
+	echo "${gre}"
+	echo "  Custom configuration file successfully loaded!"
+	echo "${end}"
+	
+}
+
+
+system_info() {
+	echo "${blu}"
+	echo "[SYSTEM]"
+	echo "Operating System: $(sudo cat /proc/version) "
+	echo "$(sudo lsb_release -d) "
+	echo "$(sudo lsb_release -c) "
+	echo "Cores: $(grep ^processor /proc/cpuinfo | wc -l) "
+	echo "RAM: $(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')kb "
+	echo "SWAP: $(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')kb "
+	echo "File descriptors: $(sudo cat /proc/sys/fs/file-max) "
+	echo ""
+	echo [Disk Usage]
+	sudo df -Th /
+	echo ""
+	
+	echo "[NGINX]"
+	if [[ $(conf_read nginx) == "true" ]]; then
+		sudo nginx -v
+		echo "Nginx file descriptors: $(grep 'Max open files' /proc/$(cat /run/nginx.pid)/limits | cut -f 15 -d ' ') "
+		echo "worker_processes: $(grep worker_processes /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';') "
+		echo "worker_connections: $(grep worker_connections /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';')"
+		echo "worker_rlimit_nofile: $(grep worker_rlimit_nofile /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';')"
+		echo "client_max_body_size: $(grep client_max_body_size /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';')"
+		echo ""
+		echo "[CACHE]"
+		echo "FastCGI 200: $( grep -F "fastcgi_cache_valid 200" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | tr -d ';')"
+		echo "FastCGI 3xx/4xx: $( grep -F "fastcgi_cache_valid 301 302 307 404" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | tr -d ';' )"
+		echo "FastCGI inactive: $( grep -F "fastcgi_cache_path" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | cut -d'=' -f 2 | tr -d ';')"
+		echo "FastCGI max-size: $( grep -F "fastcgi_cache_path" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 2 | rev | cut -f 2 -d '=' )"
+		echo "open_file_cache_valid: $(grep open_file_cache_valid /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';')"
+		echo "open_file_cache max: $(grep -w open_file_cache /etc/nginx/nginx.conf | cut -f 2 -d ' ' | cut -f 2 -d '=')"
+		echo "open_file_cache inactive: $(grep -w open_file_cache /etc/nginx/nginx.conf | cut -f 3 -d ' ' | cut -f 2 -d '=' | tr -d ';')"
+		echo ""
+	else
+		echo "${red} NGINX is not installed! ${blu}"
+		echo ""
+	fi
+	
+	echo "[PHP]"
+	if [[ $(conf_read php) == "true" ]]; then
+		echo $(php -v | grep -m1 "")
+		echo "memory_limit: $(grep memory_limit /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' )"
+		echo "post_max_size: $(grep post_max_size /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' )"
+		echo "upload_max_filesize: $(grep upload_max_filesize /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' )"
+		echo "max_file_uploads: $(grep max_file_uploads /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' )"
+		echo "max_execution_time: $(grep max_execution_time /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' )"
+		echo ""
+	else
+		echo "${red} PHP is not installed! ${blu}"
+		echo ""
+	fi
+	
+	echo "[MYSQL]"
+	if [[ $(conf_read mysql) == "true" ]]; then
+		sudo mysql --version
+		echo "PhpMyAdmin: $(conf_read mysql-tool)"
+		echo ""		
+	else
+		echo "${red} MySQL is not installed! ${blu}"
+		echo ""
+	fi
+
+	echo "[Raw Conf]"
+	if [[ -a /opt/webinoly/webinoly.conf ]]; then
+		sudo cat /opt/webinoly/webinoly.conf
+	else
+		echo "${red} [ERROR] Configuration File not found! ${blu}"
+	fi
+	
+	echo ""
+	echo "${end}"
+}
+

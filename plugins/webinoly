@@ -7,7 +7,7 @@
 opt="$1"
 arg="$2"
 
-source /opt/webinoly/lib/install
+source /opt/webinoly/lib/webin
 
 # Extract value if exist
 if [[ $opt == "-tools-port="* || $opt == "-config-cache="* ]]; then
