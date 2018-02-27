@@ -140,16 +140,24 @@ wpinstall() {
 					if [[ $dbhost == "localhost" ]]; then
 						local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 						sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit"
+						if [[ $? != "0" ]]; then
+							done="0"
+							echo "${red}============================================"
+							echo "    [Error]: Database conection failed."
+							echo "============================================${blu}"
+							echo ""
+							continue 2;
+						fi
 					else
 						sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" -e "quit"
-					fi
-					if [[ $? != "0" ]]; then
-						done="0"
-						echo "${red}============================================"
-						echo "    [Error]: Database conection failed."
-						echo "============================================${blu}"
-						echo ""
-						continue 2;
+						if [[ $? != "0" ]]; then
+							done="0"
+							echo "${red}============================================"
+							echo "    [Error]: Database conection failed."
+							echo "============================================${blu}"
+							echo ""
+							continue 2;
+						fi
 					fi
 					if [[ $dbhost == "localhost" ]]; then
 						# https://stackoverflow.com/questions/7364709/bash-script-check-if-mysql-database-exists-perform-action-based-on-result
@@ -207,6 +215,13 @@ wpinstall() {
 				if [[ $dbhost == "localhost" ]]; then
 					local dbsetup="CREATE DATABASE $dbname;GRANT ALL PRIVILEGES ON $dbname.* TO $dbuser@$dbhost IDENTIFIED BY '$dbpass';FLUSH PRIVILEGES;"
 					sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup"
+					if [ $? != "0" ]; then
+						done="0"
+						echo "${red}============================================"
+						echo "    [Error]: Database creation failed."
+						echo "============================================${end}"
+						echo ""
+					fi
 				else
 					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
 CREATE DATABASE ${dbname};
@@ -214,14 +229,14 @@ grant usage on ${dbname}.* to ${dbuser}@\`%\` identified by '${dbpass}';
 grant all privileges on ${dbname}.* to ${dbuser}@\`%\`;
 FLUSH PRIVILEGES;
 _EOF_
-				fi
 					
-				if [ $? != "0" ]; then
-					done="0"
-					echo "${red}============================================"
-					echo "    [Error]: Database creation failed."
-					echo "============================================${end}"
-					echo ""
+					if [ $? != "0" ]; then
+						done="0"
+						echo "${red}============================================"
+						echo "    [Error]: Database creation failed."
+						echo "============================================${end}"
+						echo ""
+					fi
 				fi
 			fi
 			
