@@ -176,6 +176,12 @@ elif [ "$type" == "-wpsubdom" ]; then
 
 # Parked Domain
 elif [ "$type" == "-parked" ]; then
+	# Check for duplicate sites
+	if [[ -a /etc/nginx/sites-available/$domain ]]; then
+		echo "${red}Site $domain could not be created because already exists!${end}"
+		exit 1
+	fi
+	
 	mapto="NeverMatchAtFirstDotCom"
 	[[ -n $value ]] && mapto="$value"
 	
