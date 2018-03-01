@@ -2,7 +2,7 @@
 
 # Webinoly script.
 # This script is designed to install latest Webinoly.
-webyversion="1.3.1-beta"
+webyversion="1.3.1"
 
 
 # Check OS support
@@ -18,13 +18,9 @@ if ! [[ $distr == "Ubuntu" && $osver =~ ^(xenial)$ ]]; then
 fi
 
 
-if [[ -n "$1" ]]; then
-	setup="$1"
-else
-	setup=9
-fi
-
 # Diplay menu to select type of server
+[[ -n "$1" ]] && setup="$1" || setup=9
+
 while ! [[ ($setup -ge 0 && $setup -le 4 && $setup =~ ^[0-9]+$) || $setup == '-vbeta' ]] 2>/dev/null
 do
 	echo ""
@@ -40,11 +36,10 @@ do
 	setup=${setup:-3}
 done
 
-if [[ ! -d /opt/webinoly ]]; then
-	sudo mkdir /opt/webinoly
-fi
 
 # Download and install Webinoly
+[[ ! -d /opt/webinoly ]] && sudo mkdir /opt/webinoly
+
 if [[ $setup == '-vbeta' ]]; then
 	echo ""
 	sudo wget --timeout=15 -qrO $HOME/webinoly.tar https://qrok.es/wytarb
@@ -65,18 +60,14 @@ sudo mv /opt/webinoly/plugins/* /usr/bin/
 source /opt/webinoly/lib/install
 
 # Check for uninstalled Webinoly conf file
-if [[ -a $HOME/.webinoly-conf-restore_dont-remove ]]; then
-	sudo mv $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf
-fi
+[[ -a $HOME/.webinoly-conf-restore_dont-remove ]] && sudo mv $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf
 
 # Save Tools Port after library is available.
 if [[ -a /opt/webinoly/webinoly.conf && -n $(conf_read tools-port) ]]; then
 	echo "${gre}Webinoly Configuration file was found, so we will use it!${end}"
 else
 	portools="22222"
-	if [[ -n "$2" ]]; then
-		portools="$2"
-	fi
+	[[ -n "$2" ]] && portools="$2"
 	tools_port $portools
 fi
 
@@ -84,25 +75,11 @@ fi
 conf_write app-version $webyversion
 
 
-#  NGINX Installation
-if [[ $setup -gt 0 && $setup != 4 ]]; then
-	stack -nginx
-fi
-
-#  PHP Installation
-if [[ $setup -gt 1 && $setup != 4 ]]; then
-	stack -php
-fi
-
-#  MySQL & PhpMyAdmin Installation
-if [[ $setup -gt 2 && $setup != 4 ]]; then
-	stack -mysql
-fi
-
-#  Custom Config
-if [ $setup == 4 ]; then
-	config_load
-fi
+# Stack installation
+[[ $setup -gt 0 && $setup != 4 ]] && stack -nginx
+[[ $setup -gt 1 && $setup != 4 ]] && stack -php
+[[ $setup -gt 2 && $setup != 4 ]] && stack -mysql
+[[ $setup == 4 ]] && config_load
 
 
 # Remove Installation File
