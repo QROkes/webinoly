@@ -6,19 +6,38 @@
 source /opt/webinoly/lib/general
 
 
-nginx_helper_plugin() {
-	# Download WP (latest version)
-	sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
-	sudo unzip -qq /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
-	sudo rm /var/www/$domain/htdocs/nginx-helper-plugin.zip
-	echo ""
-	echo "${gre} Nginx Helper Plugin has been installed!"
-	echo " Please, activate this plugin for a better experience with FastCgi Cache."
-	echo "${blu} ** IMPORTANT - Plugin Settings **"
-	echo "- The “Caching Method” should be set to “Nginx FastCgi Cache”."
-	echo "- Support for purge/url method has been disabled because it is considered a security risk."
-	echo "- The Purge Method should be set to “Delete local server cache file” "
-	echo "${end}"
+wp_cache_plugins() {
+	if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/nginx-helper ]]; then
+		# Download Nginx Helper Plugin
+		sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
+		sudo unzip -qq /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
+		sudo rm /var/www/$domain/htdocs/nginx-helper-plugin.zip
+		echo ""
+		echo "${gre} Nginx Helper Plugin has been installed!"
+		echo " Please, activate this plugin for a better experience with FastCgi Cache."
+		echo "${blu} ** IMPORTANT - Plugin Settings **"
+		echo "- The “Caching Method” should be set to “Nginx FastCgi Cache”."
+		echo "- Support for purge/url method has been disabled because it is considered a security risk."
+		echo "- The Purge Method should be set to “Delete local server cache file” "
+		echo "${end}"
+	else
+		echo "${red}Nginx Helper Plugin is already installed!${end}"
+	fi
+
+	if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/redis-cache ]]; then
+		# Download Redis Object Cache Plugin
+		sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/redis-cache-plugin.zip https://downloads.wordpress.org/plugin/redis-cache.latest-stable.zip
+		sudo unzip -qq /var/www/$domain/htdocs/redis-cache-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
+		sudo rm /var/www/$domain/htdocs/redis-cache-plugin.zip
+		echo ""
+		echo "${gre} Redis Object Cache Plugin has been installed!"
+		echo " Please, activate this plugin for a better experience with WordPress Object Cache."
+		echo "${blu} ** IMPORTANT - Plugin Settings **"
+		echo "- Go to “Menu > Settings > Redis” and be sure that Object Cache is enabled. "
+		echo "${end}"
+	else
+		echo "${red}Redis Object Cache Plugin is already installed!${end}"
+	fi
 }
 
 
@@ -457,7 +476,7 @@ createsite() {
 	# Activate FastCgi cache
 	if [[ "$cache" == "-cache" && "$wp" == [123] ]]; then
 		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
-		nginx_helper_plugin
+		wp_cache_plugins
 	fi
 	
 	echo "${gre}Site $domain has been successfully created!${end}"

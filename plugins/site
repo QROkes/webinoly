@@ -299,14 +299,14 @@ elif [[ "$type" == "-cache" && -a /etc/nginx/sites-available/$domain ]]; then
 	iswp=$( grep -F "wpcommon.conf" /etc/nginx/sites-available/$domain )
 	if [[ -n $isphp && -n $iswp ]]; then
 		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
-		if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/nginx-helper ]]; then
+		if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/nginx-helper || ! -d /var/www/$domain/htdocs/wp-content/plugins/redis-cache ]]; then
 			echo "${gre}"
-			echo "We recommend Nginx Helper Plugin as an easy way to manage FastCGI Cache on your site."
-			echo "${blu}   Do you want to install it now [Y/n]? "
+			echo "We recommend Nginx Helper Plugin and Redis Object Cache Plugin as an easy way to manage FastCGI and Redis Cache on your WordPress site."
+			echo "${blu}Do you want to install it now [Y/n]? ${end}"
 			while read -r -n 1 -s answer; do
 			  answer=${answer:-y}
 			  if [[ $answer = [YyNn] ]]; then
-				[[ $answer = [Yy] ]] && nginx_helper_plugin
+				[[ $answer = [Yy] ]] && wp_cache_plugins
 				break
 			  fi
 			done
