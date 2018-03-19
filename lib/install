@@ -135,7 +135,8 @@ php_install() {
 	if [[ -n $(conf_read php-ver) && ($(conf_read php-ver) == "7.2" || $(conf_read php-ver) == "7.1" || $(conf_read php-ver) == "7.0" || $(conf_read php-ver) == "5.6") ]]; then
 		echo "${gre} Custom PHP version '$(conf_read php-ver)' detected!${end}"
 	else
-		conf_write php-ver 7.1
+		# Default PHP version
+		conf_write php-ver 7.2
 	fi
 	ver=$(conf_read php-ver)
 	
