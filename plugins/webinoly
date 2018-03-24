@@ -18,12 +18,8 @@ fi
 
 
 if [ "$opt" == "-update" ]; then
-	if [[ $arg == '-vbeta' ]]; then
-		sudo wget --timeout=15 -qrO weby https://qrok.es/wyupdb && sudo bash weby -vbeta
-	else
-		sudo wget --timeout=15 -qrO weby https://qrok.es/wyupd && sudo bash weby 0
-	fi
 	echo ""
+	sudo wget --timeout=15 -qrO weby https://qrok.es/wyupd && sudo bash weby 0
 	echo "${gre}Webinoly App has been updated successfully!${end}"
 elif [[ "$opt" == "-server-update" || "$opt" == "-server-reset" ]]; then
 	
