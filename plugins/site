@@ -3,7 +3,7 @@
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
 # Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off
-# Arguments: -cache, -root
+# Arguments: -cache, -root, -subdomain
 
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
@@ -35,7 +35,7 @@ if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type =
 	value=$(echo "${type}" | cut -d'=' -f 2 -s)
 	type=$(echo "${type}" | cut -d'=' -f 1 -s)
 fi
-if [[ $cache == "-root="* ]]; then
+if [[ $cache == "-root="*  || $cache == "-subdomain="* ]]; then
 	value=$(echo "${cache}" | cut -d'=' -f 2 -s)
 	cache=$(echo "${cache}" | cut -d'=' -f 1 -s)
 fi
@@ -51,8 +51,11 @@ if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked
 		fi
 		count=$[$count+1]
 	done
-	[[ -z $(echo "$(echo "${domain}" | rev | cut -d'.' -f $count- -s | rev)" | cut -d'.' -f 2 -s) ]] && subdomflag="0" || subdomflag="1"
+	[[ -n $(echo "$(echo "${domain}" | rev | cut -d'.' -f $count- -s | rev)" | cut -d'.' -f 2 -s) || $count == 1 ]] && subdomflag="1" || subdomflag="0"
 fi
+# Overwrite value if defined by user
+[[ $cache == "-subdomain" && $value == "true" ]] && subdomflag="1"
+[[ $cache == "-subdomain" && $value == "false" ]] && subdomflag="0"
 
 
 # Evaluate if site to create is WP ( 0 = noWP, 1 = WP, 2 = WP with default values, 3 = WP with custom values )
@@ -89,10 +92,10 @@ if [[ $type == "-wp" || $type == "-wpsubdir" || $type == "-wpsubdom" ]]; then
 fi
 
 # Cache validation
-if [[ "$cache" == "-cache" && "$wp" == "0" ]]; then
+if [[ $cache == "-cache" && $wp == "0" ]]; then
 	echo "${red} Site $domain is not a WP site! ${end}"
 	exit 1
-elif [[ ( "$cache" != "-cache" && "$cache" != "-root" ) && -n "$cache" && "$type" != "-parked" ]]; then
+elif [[ -n $cache && ( $cache != "-cache" && $cache != "-root" && $cache != "-subdomain" ) && $type != "-parked" ]]; then
 	echo "${red} $cache is not a valid argument! ${end}"
 	exit 1
 fi
