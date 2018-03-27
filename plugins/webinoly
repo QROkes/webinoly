@@ -2,7 +2,7 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option>
-# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -config-load, -info
+# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -config-load, -info, -domain-list-update
 
 opt="$1"
 arg="$2"
@@ -236,6 +236,21 @@ elif [ "$opt" == "-config-load" ]; then
 elif [ "$opt" == "-info" ]; then
 	system_info
 
+elif [ "$opt" == "-domain-list-update" ]; then
+	echo "${blu}- Downloading!${end}"
+	sudo wget --timeout=15 -qrO /tmp/temp-public_suffix_list.dat https://publicsuffix.org/list/public_suffix_list.dat
+	if [[ -s /tmp/temp-public_suffix_list.dat ]]; then
+		echo "${blu}- Processing file!${end}"
+		sudo sed -i '/^\/\// d' /tmp/temp-public_suffix_list.dat
+		sudo sed -i '/^$/d' /tmp/temp-public_suffix_list.dat
+		sudo sed -i 's/[!]\+//g' /tmp/temp-public_suffix_list.dat
+		sudo sed -i 's/^\*\.\+//g' /tmp/temp-public_suffix_list.dat
+		sudo mv /tmp/temp-public_suffix_list.dat /opt/webinoly/lib/public_suffix_list.dat
+		echo "${gre}Domain list has been successfully updated!${end}"
+	else
+		echo "${red}[ERROR] Domain list not updated!${end}"
+	fi
+	
 else
 	echo "${red}Please enter a valid option!${end}"
 fi

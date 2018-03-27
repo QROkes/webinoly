@@ -89,8 +89,10 @@ conf_write app-version $webyversion
 [[ $setup -gt 0 && $setup -lt 4 ]] && stack -nginx
 [[ $setup -gt 1 && $setup -lt 4 ]] && stack -php
 [[ $setup == 3 ]] && stack -mysql
-[[ $setup == 4 ]] && source /opt/webinoly/lib/webin; config_load
-
+if [[ $setup == 4 ]]; then
+	source /opt/webinoly/lib/webin
+	config_load
+fi
 
 # Remove Installation File
 sudo rm weby
