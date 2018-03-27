@@ -29,13 +29,6 @@ if [[ "$type" == "-cache" && -n $cache ]]; then
 	cache="$2"
 fi
 
-# Check if site is sub-domain
-subdom=$(echo "${domain}" | cut -d'.' -f 3 -s)
-if [[ -z $subdom ]]; then
-	subdomflag="0"
-else
-	subdomflag="1"
-fi
 
 # Extract value if exist
 if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type == "-wpsubdir="* || $type == "-wpsubdom="* ]]; then
@@ -45,6 +38,20 @@ fi
 if [[ $cache == "-root="* ]]; then
 	value=$(echo "${cache}" | cut -d'=' -f 2 -s)
 	cache=$(echo "${cache}" | cut -d'=' -f 1 -s)
+fi
+
+
+# Check if site is sub-domain
+if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked)$ ]]; then
+	count=1
+	while true; do
+		tld=$(echo "${domain}" | rev | cut -d'.' -f -$count -s | rev)
+		if ! grep -Fxq "$tld" /opt/webinoly/lib/public_suffix_list.dat; then
+			break
+		fi
+		count=$[$count+1]
+	done
+	[[ -z $(echo "$(echo "${domain}" | rev | cut -d'.' -f $count- -s | rev)" | cut -d'.' -f 2 -s) ]] && subdomflag="0" || subdomflag="1"
 fi
 
 
