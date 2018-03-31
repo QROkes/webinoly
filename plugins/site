@@ -2,7 +2,7 @@
 
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
-# Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off
+# Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off
 # Arguments: -cache, -root, -subdomain
 
 # shopt is necessary for this kind !(html|22222) of patterns
@@ -42,7 +42,7 @@ fi
 
 
 # Check if site is sub-domain
-if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked)$ ]]; then
+if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked|-proxy)$ ]]; then
 	count=1
 	while true; do
 		tld=$(echo "${domain}" | rev | cut -d'.' -f -$count -s | rev)
@@ -260,7 +260,7 @@ elif [[ "$type" == "-off" && -L /etc/nginx/sites-enabled/$domain ]]; then
 # Site re-enabled
 elif [[ "$type" == "-on" && -L /etc/nginx/sites-enabled/$domain ]]; then
 	echo "${gre}Site $domain is already enabled!${end}"
-elif [[ "$type" == "-on" && ! -L /etc/nginx/sites-enabled/$domain ]]; then
+elif [[ "$type" == "-on" && ! -L /etc/nginx/sites-enabled/$domain && -a /etc/nginx/sites-available/$domain ]]; then
 	sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 	echo "${gre}Site $domain has been successfully enabled!${end}"
 
@@ -330,15 +330,11 @@ elif [[ "$type" == "-cache" && -a /etc/nginx/sites-available/$domain ]]; then
 	
 	
 # Catch ERROR 
-elif [[ ! -a /etc/nginx/sites-available/$domain && ( "$type" == "-nocache" || "$type" == "-cache" || "$type" == "-delete" || "$type" == "-on" || "$type" == "-ssl-on" || "$type" == "-ssl-off" ) ]]; then
+elif [[ ! -a /etc/nginx/sites-available/$domain && $type =~ ^(-nocache|-cache|-delete|-off|-on|-ssl-on|-ssl-off)$ ]]; then
 	echo "${red}Site $domain doesn't exists!${end}"
 else
 	echo "${red} Argument '${type}' is not a valid option! ${end}"
 fi
 
 shopt -u extglob
-
-
-if [[ $(conf_read nginx) == "true" ]]; then
-	sudo service nginx reload
-fi
+[[ $(conf_read nginx) == "true" ]] && sudo service nginx reload

@@ -176,7 +176,6 @@ mysql_install() {
 	# Generate mysql user passwords
 	local AUTOGENPASS_ROOT=`pwgen -s -1`
 	local AUTOGENPASS_ADMIN=`pwgen -s -1`
-	local AUTOGENPASS_PMA=`pwgen -s -1`
 	local enc_pass_root=$( echo $AUTOGENPASS_ROOT | openssl enc -a -salt )
 	local enc_pass_admin=$( echo $AUTOGENPASS_ADMIN | openssl enc -a -salt )
 	conf_write mysql-root $enc_pass_root
@@ -364,6 +363,7 @@ php_tool() {
 
 mysql_tool() {
 	#PhpMyAdmin unattended script installation
+	local AUTOGENPASS_PMA=`pwgen -s -1`
 	echo "phpmyadmin phpmyadmin/dbconfig-install boolean true" | debconf-set-selections
 	echo "phpmyadmin phpmyadmin/reconfigure-webserver multiselect" | debconf-set-selections
 	echo "phpmyadmin phpmyadmin/mysql/app-pass password $AUTOGENPASS_PMA" | debconf-set-selections
@@ -373,9 +373,7 @@ mysql_tool() {
 	pre_install
 	sudo apt-get -y install phpmyadmin
 	
-	if [[ -d /usr/share/phpmyadmin ]]; then
-		sudo mv /usr/share/phpmyadmin /var/www/$(conf_read tools-port)/htdocs/pma
-	fi
+	[[ -d /usr/share/phpmyadmin ]] && sudo mv /usr/share/phpmyadmin /var/www/$(conf_read tools-port)/htdocs/pma
 	
 	conf_write mysql-tool true
 }
