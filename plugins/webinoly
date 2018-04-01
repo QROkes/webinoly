@@ -2,7 +2,7 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option>
-# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -config-load, -info, -domain-list-update
+# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -config-load, -info, -domain-list-update, -clear-cache
 
 opt="$1"
 arg="$2"
@@ -10,7 +10,7 @@ arg="$2"
 source /opt/webinoly/lib/webin
 
 # Extract value if exist
-if [[ $opt == "-tools-port="* || $opt == "-config-cache="* ]]; then
+if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* ]]; then
 	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
 	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
 fi
@@ -251,11 +251,36 @@ elif [ "$opt" == "-domain-list-update" ]; then
 		echo "${red}[ERROR] Domain list not updated!${end}"
 	fi
 	
+elif [ "$opt" == "-clear-cache" ]; then
+	[[ -z $value ]] && value="all"
+	if ! [[ $value =~ ^(redis|memcache|memcached|opcache|fastcgi|all)$ ]]; then
+		echo "${red}[ERROR] $value is not a valid option!${end}"
+		exit 1
+	fi
+	if [[ $value == "redis" || $value == "all" ]]; then
+		sudo redis-cli flushall
+		echo "${gre}- Redis Cache has been successfully cleared!${end}"
+	fi
+	if [[ $value == "memcache" || $value == "memcached" || $value == "all" ]]; then
+		memhost=$(grep ^-l /etc/memcached.conf | cut -f 2 -d ' ')
+		memport=$(grep ^-p /etc/memcached.conf | cut -f 2 -d ' ')
+		echo flush_all > /dev/tcp/$memhost/$memport
+		echo "${gre}- Memcached has been successfully cleared!${end}"
+	fi
+	if [[ $value == "opcache" || $value == "all" ]]; then
+		echo '<?php opcache_reset(); echo "OK\n";' > /tmp/php-opcache-reset.php
+		php /tmp/php-opcache-reset.php
+		sudo rm /tmp/php-opcache-reset.php
+		echo "${gre}- OpCache has been successfully cleared!${end}"
+	fi
+	if [[ $value == "fastcgi" || $value == "all" ]]; then
+		sudo rm -Rf /var/run/nginx-cache/*
+		echo "${gre}- FastCgi Cache has been successfully cleared!${end}"
+	fi
+	
 else
 	echo "${red}Please enter a valid option!${end}"
 fi
 
 
-if [[ $(conf_read nginx) == "true" ]]; then
-	sudo service nginx reload
-fi
+[[ $(conf_read nginx) == "true" ]] && sudo service nginx reload
