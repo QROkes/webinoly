@@ -101,7 +101,9 @@ linux_purge() {
 
 
 messagend_install() {
-	echo "${gre}*****************************************************************************************"
+	echo "${gre}"
+	echo ""
+	echo "*****************************************************************************************"
 	echo "************            INSTALLATION HAS FINISHED SUCCESSFULLY               ************"
 	echo "*****************************************************************************************${end}"
 	if [[ $1 == "dbpass" ]]; then
@@ -127,7 +129,7 @@ nginx_install() {
 	fi
 
 	conf_write nginx true
-	messagend_install
+	echo "${gre}Nginx has been installed successfully! ${end}"
 }
 
 
@@ -159,14 +161,12 @@ php_install() {
 	sudo cp /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf /opt/webinoly/templates/source/
 	
 	conf_write php true
-	messagend_install
+	echo "${gre}PHP has been installed successfully! ${end}"
 }
 
 
 mysql_install() {
-	if [[ $(conf_read mysql-client) != "true" ]]; then
-		mysql_client_install
-	fi
+	[[ $(conf_read mysql-client) != "true" ]] && mysql_client_install
 	
 	pre_install
 	# debconf-utils for unattended scripts
@@ -200,7 +200,7 @@ FLUSH PRIVILEGES;
 _EOF_
 
 	conf_write mysql true
-	messagend_install
+	echo "${gre}MySQL has been installed successfully! ${end}"
 }
 
 
@@ -376,6 +376,7 @@ mysql_tool() {
 	[[ -d /usr/share/phpmyadmin ]] && sudo mv /usr/share/phpmyadmin /var/www/$(conf_read tools-port)/htdocs/pma
 	
 	conf_write mysql-tool true
+	echo "${gre}PhpMyAdmin has been installed successfully! ${end}"
 }
 
 
