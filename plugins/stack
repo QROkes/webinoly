@@ -12,7 +12,7 @@ arg="$2"
 
 
 # Check if user entered arg before option and correct it.
-if [[ $opt == "-purge" || $opt == "-notools" ]]; then
+if [[ $opt == "-purge" || $opt == "-notools" || $opt == "-noptim" ]]; then
 	opt="$2"
 	arg="$1"
 fi
@@ -27,6 +27,12 @@ if [[ $arg == "-purge=force" || $opt == "-purge-server-all=force" || $opt == "-p
 	[[ $opt == "-purge-server-all=force" ]] && opt="-purge-server-all"
 	[[ $opt == "-php=force" ]] && opt="-php"
 	force="1"
+fi
+
+# Extract value if exist
+if [[ $opt == "-nginx="* || $opt == "-html="* || $opt == "-lemp="* ]]; then
+	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
+	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
 fi
 
 
@@ -86,7 +92,7 @@ elif [[ $arg == "-purge" && ( $opt == "-html" || $opt == "-nginx" ) ]]; then
 		sudo service nginx stop
 		sudo apt-get -y purge nginx nginx-common
 		sudo apt-get -y purge letsencrypt python-boto duplicity duply
-		echo | sudo add-apt-repository --remove 'ppa:nginx/stable'
+		[[ $(conf_read nginx-ppa) == "mainline" ]] && echo | sudo add-apt-repository --remove 'ppa:nginx/development' || echo | sudo add-apt-repository --remove 'ppa:nginx/stable'
 		sudo apt-get -y autoremove
 		sudo rm $HOME/www
 		sudo rm $HOME/sites-available		

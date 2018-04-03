@@ -119,7 +119,13 @@ messagend_install() {
 
 
 nginx_install() {
-	echo | sudo add-apt-repository ppa:nginx/stable
+	if [[ ($(conf_read nginx-ppa) == "mainline" || $value == "mainline") && $value != "stable" ]]; then
+		echo | sudo add-apt-repository ppa:nginx/development
+		conf_write nginx-ppa mainline
+	else
+		echo | sudo add-apt-repository ppa:nginx/stable
+		conf_write nginx-ppa stable
+	fi
 	pre_install
 	sudo apt-get -y install nginx
 
