@@ -13,12 +13,31 @@ if [[ ! $(conf_read nginx) == "true" ]]; then
 	exit 1
 fi
 
-if [ "$opt" == "-add" ]; then
-	echo ""
-	read -p "${blu}HTTP-Auth User: ${end}" user
-	read -p "${blu}HTTP-Auth Password: ${end}" pass
-	echo ""
-	[ -a /etc/nginx/.htpasswd ] && exist=$( grep -F "${user}:" /etc/nginx/.htpasswd )
+# Extract value if exist
+if [[ $opt == "-add="* || $opt == "-delete="* ]]; then
+	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
+	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
+fi
+
+
+if [[ $opt == "-add" ]]; then
+	if [[ -z $value ]]; then
+		echo ""
+		read -p "${blu}HTTP-Auth User: ${end}" user
+		read -p "${blu}HTTP-Auth Password: ${end}" pass
+		echo ""
+	else
+		userdata=${value:1:-1}
+		user=$(echo "${userdata}" | cut -d',' -f 1 -s)
+		pass=$(echo "${userdata}" | cut -d',' -f 2 -s)
+	fi
+	
+	if ! [[ -n $user && -n $pass && $user =~ ^[^:]+$ && $pass =~ ^[^:]+$ ]]; then
+		echo "${red}Please, enter a valid username and password!${end}"
+		exit 1
+	fi
+	
+	[[ -a /etc/nginx/.htpasswd ]] && exist=$( grep -E "^${user}:" /etc/nginx/.htpasswd )
 	if [[ -z $exist ]]; then
 		sudo sh -c "echo -n '$user:$(openssl passwd -1 $pass)\n' >> /etc/nginx/.htpasswd"
 		echo "${gre}User '$user' has been added successfully!${end}"
@@ -26,11 +45,17 @@ if [ "$opt" == "-add" ]; then
 		echo "${red}User '$user' already exist!${end}"
 	fi
 	echo ""
-elif [ "$opt" == "-delete" ]; then
-	read -p "${blu}HTTP-Auth User: ${end}" userpurge
+elif [[ $opt == "-delete" ]]; then
+	[[ -z $value ]] && read -p "${blu}HTTP-Auth User: ${end}" userpurge || userpurge=$value
+	exist=$( grep -E "^${userpurge}:" /etc/nginx/.htpasswd )
+	if [[ ! -a /etc/nginx/.htpasswd || -z $exist ]]; then
+		echo "${red}User '$userpurge' does not exist!${end}"
+		exit 1
+	fi
 	sudo sed -i "/$userpurge/d" /etc/nginx/.htpasswd
 	echo "${gre}User '$userpurge has been deleted successfully!${end}"
-elif [ "$opt" == "-list" ]; then
+elif [[ $opt == "-list" ]]; then
+	[[ ! -a /etc/nginx/.htpasswd ]] && exit 0
 	echo "${gre}"
 	cat /etc/nginx/.htpasswd | while read line
 		do
@@ -38,7 +63,7 @@ elif [ "$opt" == "-list" ]; then
 			echo "-  $line" | cut -f 1 -d ':'
 		done
 	echo "${end}"
-elif [ "$opt" == "-wp-admin-on" ]; then
+elif [[ $opt == "-wp-admin-on" ]]; then
 	iswpadon=$( grep -F "acl.conf;" /etc/nginx/common/wpcommon.conf )
 	if [[ -z $iswpadon ]]; then
 		sudo sed -i "/zone=one/a \  include common/acl.conf;" /etc/nginx/common/wpcommon.conf
@@ -49,7 +74,7 @@ elif [ "$opt" == "-wp-admin-on" ]; then
 		echo "${gre} HTTP Authentication for WP Admin pages is already enabled! ${end}"
 	fi
 	
-elif [ "$opt" == "-wp-admin-off" ]; then
+elif [[ $opt == "-wp-admin-off" ]]; then
 	sudo sed -i "/acl.conf/d" /etc/nginx/common/wpcommon.conf
 	sudo service nginx reload
 	conf_write wp-admin-auth purged
