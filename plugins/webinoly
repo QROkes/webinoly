@@ -5,8 +5,6 @@
 # Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -config-load, -info, -domain-list-update, -clear-cache
 
 opt="$1"
-arg="$2"
-
 source /opt/webinoly/lib/webin
 
 # Extract value if exist
@@ -17,11 +15,13 @@ fi
 
 
 
-if [ "$opt" == "-update" ]; then
+if [[ $opt == "-update" ]]; then
 	echo ""
 	sudo wget --timeout=15 -qrO weby https://qrok.es/wyupd && sudo bash weby 0
 	echo "${gre}Webinoly App has been updated successfully!${end}"
-elif [[ "$opt" == "-server-update" || "$opt" == "-server-reset" ]]; then
+
+	
+elif [[ $opt == "-server-update" || $opt == "-server-reset" ]]; then
 	
 	# Regenerate NGINX conf files
 	if [[ $(conf_read nginx-optim) == "true" ]]; then
@@ -41,9 +41,13 @@ elif [[ "$opt" == "-server-update" || "$opt" == "-server-reset" ]]; then
 	
 	echo ""
 	echo "${gre}Webinoly Server has been updated successfully!${end}"
-elif [ "$opt" == "-verify" ]; then
+	
+	
+elif [[ $opt == "-verify" ]]; then
 	webinoly_verify
-elif [ "$opt" == "-dbpass" ]; then
+	
+	
+elif [[ $opt == "-dbpass" ]]; then
 	if [[ -n $(conf_read mysql-root) || -n $(conf_read mysql-admin) ]]; then
 		echo "${gre}"
 		echo "  root: $( echo $(conf_read mysql-root) | openssl enc -d -a -salt )"
@@ -54,7 +58,9 @@ elif [ "$opt" == "-dbpass" ]; then
 		echo "DB Passwords not found!"
 		echo "${end}"
 	fi
-elif [ "$opt" == "-tools-port" ]; then
+	
+	
+elif [[ $opt == "-tools-port" ]]; then
 	if [[ $(conf_read nginx-tool) == "true" && $(conf_read nginx) == "true" ]]; then
 		oldport="$(conf_read tools-port)"
 		[[ -n $value ]] && tools_port $value || tools_port
@@ -72,7 +78,9 @@ elif [ "$opt" == "-tools-port" ]; then
 		echo "Nginx Tools not found in your server!"
 		echo "${end}"
 	fi
-elif [ "$opt" == "-login-www-data" ]; then
+	
+	
+elif [[ $opt == "-login-www-data" ]]; then
 	if [[ $(conf_read nginx) != "true" ]]; then
 		echo "${red} Nginx not found! ${end}"
 		exit 1
@@ -110,7 +118,8 @@ elif [ "$opt" == "-login-www-data" ]; then
 	sudo service ssh restart
 	echo "${gre} SFTP access for www-data user has been successfuly enabled! ${end}"
 
-elif [ "$opt" == "-nologin-www-data" ]; then
+	
+elif [[ $opt == "-nologin-www-data" ]]; then
 	if [[ $(conf_read nginx) != "true" ]]; then
 		echo "${red} Nginx not found! ${end}"
 		exit 1
@@ -138,7 +147,8 @@ elif [ "$opt" == "-nologin-www-data" ]; then
 	sudo service ssh restart
 	echo "${gre} SFTP access for www-data user has been successfuly disabled! ${end}"
 
-elif [ "$opt" == "-config-cache" ]; then
+	
+elif [[ $opt == "-config-cache" ]]; then
 	if [[ $(conf_read nginx) != "true" ]]; then
 		echo "${red} Nginx not found! ${end}"
 		exit 1
@@ -195,7 +205,8 @@ elif [ "$opt" == "-config-cache" ]; then
 		echo "${end}"
 	fi
 
-elif [ "$opt" == "-uninstall" ]; then
+	
+elif [[ $opt == "-uninstall" ]]; then
 	echo "${red}"
 	echo " You are about to remove completely Webinoly App from your server!!"
 	echo "${blu}     Are you sure [y/N]? "
@@ -230,13 +241,16 @@ elif [ "$opt" == "-uninstall" ]; then
 	  fi
 	done
 
-elif [ "$opt" == "-config-load" ]; then
+	
+elif [[ $opt == "-config-load" ]]; then
 	config_load
 
-elif [ "$opt" == "-info" ]; then
+	
+elif [[ $opt == "-info" ]]; then
 	system_info
 
-elif [ "$opt" == "-domain-list-update" ]; then
+	
+elif [[ $opt == "-domain-list-update" ]]; then
 	echo "${blu}- Downloading!${end}"
 	sudo wget --timeout=15 -qrO /tmp/temp-public_suffix_list.dat https://publicsuffix.org/list/public_suffix_list.dat
 	if [[ -s /tmp/temp-public_suffix_list.dat ]]; then
@@ -251,7 +265,8 @@ elif [ "$opt" == "-domain-list-update" ]; then
 		echo "${red}[ERROR] Domain list not updated!${end}"
 	fi
 	
-elif [ "$opt" == "-clear-cache" ]; then
+	
+elif [[ $opt == "-clear-cache" ]]; then
 	[[ -z $value ]] && value="all"
 	if ! [[ $value =~ ^(redis|memcache|memcached|opcache|fastcgi|all)$ ]]; then
 		echo "${red}[ERROR] $value is not a valid option!${end}"
@@ -277,6 +292,7 @@ elif [ "$opt" == "-clear-cache" ]; then
 		sudo rm -Rf /var/run/nginx-cache/*
 		echo "${gre}- FastCgi Cache has been successfully cleared!${end}"
 	fi
+	
 	
 else
 	echo "${red}Please enter a valid option!${end}"
