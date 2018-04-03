@@ -17,6 +17,12 @@ site_ssl_on() {
 		echo "${red}Please, enter a valid root path domain!${end}"
 		exit 1
 	fi
+	
+	# Check if Letsencrypt is installed
+	if [[ $(conf_read nginx-tool) != "true" || ! -a /usr/bin/letsencrypt ]]; then
+		echo "${red}[ERROR] Seems like Let's Encrypt tool is not installed!${end}"
+		exit 1
+	fi
 
 	echo "${gre}"
 	echo "*************************************************************************************************"
@@ -27,7 +33,7 @@ site_ssl_on() {
 	echo "**  read about the Let's Encrypt rate limit - https://letsencrypt.org/docs/rate-limits/        **"
 	echo "**                                                                                             **"
 	echo "**  Please, be sure your domain and www subdomain are currently pointing (DNS) to this server  **"
-	echo "*************************************************************************************************"
+	echo "*************************************************************************************************${end}"
 
 	# We need an email to notify each renew intent (cron)
 	while [[ -z $cermail ]]
@@ -73,13 +79,8 @@ site_ssl_on() {
 		
 		cronmail=$( sudo grep -F "MAILTO=" /var/spool/cron/crontabs/root )
 		cronrene=$( sudo grep -F "letsencrypt renew" /var/spool/cron/crontabs/root )
-		if [[ -z $cronmail && -n $cermail && -z $cronrene ]]; then
-			echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root
-		fi
-		if [[ -z $cronrene ]]; then
-			echo "15 3 * * 7 letsencrypt renew" | sudo tee -a /var/spool/cron/crontabs/root
-		fi
-		
+		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root
+		[[ -z $cronrene ]] && echo "15 3 * * 7 letsencrypt renew" | sudo tee -a /var/spool/cron/crontabs/root
 		echo "${gre}SSL have been successfully enabled for site $domain!${end}"
 	else
 		echo "${red}"
@@ -96,15 +97,17 @@ site_ssl_off() {
 	sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$domain
 	sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
 	
-	echo "${blu}"
-	echo "  Do you want to completely delete your certificate [y/N]? "
-	while read -r -n 1 -s answer; do
-	  answer=${answer:-n}
-	  if [[ $answer = [YyNn] ]]; then
-		break
-	  fi
-	done
-	echo "${end}"
+	if [[ -n $value && $value == "force" ]]; then
+		answer=="N"
+	else
+		echo "${blu}"
+		echo "  Do you want to delete your certificate files [y/N]? "
+		while read -r -n 1 -s answer; do
+		  answer=${answer:-n}
+		  [[ $answer = [YyNn] ]] && break
+		done
+		echo "${end}"
+	fi
 	if [[ $answer == [Yy] ]]; then
 		#sudo letsencrypt delete --cert-name $domain
 		rm -rf /etc/letsencrypt/live/${domain}
@@ -114,5 +117,5 @@ site_ssl_off() {
 		echo "  Certificate for your site $domain has been completely removed!"
 		echo "${end}"
 	fi
+	echo "${gre}SSL have been successfully disabled for site $domain!${end}"
 }
-	
