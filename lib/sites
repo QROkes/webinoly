@@ -417,11 +417,15 @@ _EOF_
 deletesite() {
 	# Determine if site is WP, so you should delete the DB too.
 	if [[ -a /var/www/$domain/wp-config.php || -a /var/www/$domain/htdocs/wp-config.php ]]; then
-		echo "${blu}Delete Database [Y/n]?${end}"
-		while read -r -n 1 -s dbdel; do
-		  local dbdel=${dbdel:-y}
-		  [[ $dbdel = [YyNn] ]] && break
-		done
+		if [[ $value != "force" ]]; then
+			echo "${blu}Delete Database [Y/n]?${end}"
+			while read -r -n 1 -s dbdel; do
+			  local dbdel=${dbdel:-y}
+			  [[ $dbdel = [YyNn] ]] && break
+			done
+		else
+			dbdel="Y"
+		fi
 	fi
 	
 	[[ $dbdel == [yY] ]] && db_delete $domain

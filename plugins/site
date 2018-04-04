@@ -35,7 +35,7 @@ if [[ $domain == "-mysql="* ]]; then
 	value=$(echo "${domain}" | cut -d'=' -f 2 -s)
 	domain=$(echo "${domain}" | cut -d'=' -f 1 -s)
 fi
-if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type == "-wpsubdir="* || $type == "-wpsubdom="* || $type == "-ssl-off="* || $type == "-mysql="* ]]; then
+if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type == "-wpsubdir="* || $type == "-wpsubdom="* || $type == "-ssl-off="* || $type == "-mysql="* || $type == "-delete="* ]]; then
 	value=$(echo "${type}" | cut -d'=' -f 2 -s)
 	type=$(echo "${type}" | cut -d'=' -f 1 -s)
 fi
