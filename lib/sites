@@ -77,9 +77,9 @@ dbword_check() {
 
 
 wpinstall() {
+	[[ $domain == "-mysql" ]] && local dom="Webinoly_$(pwgen -s -1)" || local dom=${domain//./_}
 	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 	local AUTOGENPASS_WPDB=`pwgen -s -1`
-	local dom=${domain//./_}
 	local setupmysql="y"
 	local setupwp="y"
 	local dbhost="localhost"
@@ -89,7 +89,7 @@ wpinstall() {
 	local dbpref="wp_"
 	
 	# WP with Custom Data
-	if [[ $wp == 3 ]]; then
+	if [[ $wp == [35] ]]; then
 		[[ $setmsqcustom == "false" ]] && setupmysql="n"
 		[[ $setpwpcustom == "false" ]] && setupwp="n"
 		
@@ -100,6 +100,16 @@ wpinstall() {
 		dbpref="$dbprefcustom"
 		dburoot="$exusercustom"
 		dbproot="$expasscustom"
+	fi
+	
+	# Print MySQL default data
+	if [[ $wp == 4 ]]; then
+		echo "${blu}"
+		echo "Host: $dbhost"
+		echo "Database Name: $dbname"
+		echo "Database User: $dbuser"
+		echo "Password: $dbpass"
+		echo "${end}"
 	fi
 	
 	echo "${blu}"
@@ -117,7 +127,7 @@ wpinstall() {
 	fi
 	
 	# Just create DB, not install WP
-	[[ $wp == 0 ]] && setupwp="n"
+	[[ $wp == [045] ]] && setupwp="n"
 	
 	# Download WP (latest version)
 	if [[ $wp == [123] ]]; then
@@ -137,16 +147,16 @@ wpinstall() {
 			done="1"
 			# Ask DB data or suggest default values
 			echo ""
-			[[ $wp == [23] ]] || read -p "Database Host [localhost]:" dbhost
+			[[ $wp == [2345] ]] || read -p "Database Host [localhost]:" dbhost
 			dbhost=${dbhost:-localhost}
 			
-			if [[ $dbhost == "localhost" && ( "$setupmysql" == y || "$setupmysql" == Y ) && $(conf_read mysql) != "true" ]]; then
+			if [[ $dbhost == "localhost" && $setupmysql == [yY] && $(conf_read mysql) != "true" ]]; then
 				echo "${red} [ERROR] MySQL is not installed or localhost was not found!${blu}"
 				done="0"
 				continue 1;
 			fi
 			# Check if localhost or external DB
-			if [[ $dbhost != "localhost" && ( "$setupmysql" == y || "$setupmysql" == Y ) ]]; then
+			if [[ $dbhost != "localhost" && $setupmysql == [yY] ]]; then
 				if [[ $(conf_read mysql-client) != "true" ]]; then
 					echo "${gre}MySQL Client is not installed and we need it to stablish a connection with your external server."
 					echo "Wait while we install MySQL Client... installing!!!${end}"
@@ -155,7 +165,7 @@ wpinstall() {
 				fi
 				echo "${blu}"
 				
-				if [[ $wp == 1 || ($wp == 3 && ( -z $dburoot || -z $dbproot )) ]]; then
+				if [[ $wp == 1 || ($wp == [35] && ( -z $dburoot || -z $dbproot )) ]]; then
 					read -p "External DB root username [root]: " dburoot
 					read -p "External DB root password: " dbproot
 					echo ""
@@ -169,7 +179,7 @@ wpinstall() {
 			
 			# ************* Ask for DB Name and validate data *************** #
 			dom=$(dbword_check $dom)
-			[[ $wp == [23] ]] || read -p "Database Name [$dom]:" dbname
+			[[ $wp == [2345] ]] || read -p "Database Name [$dom]:" dbname
 			dbname=${dbname:-$dom}
 			
 			# Check for duplicate database names, if already exists ask for another dbname to create the new db
@@ -234,7 +244,7 @@ wpinstall() {
 			fi
 			
 			# ************* Ask for DB User and validate data *************** #
-			[[ $wp == [23] ]] || read -p "Database User [$dom]:" dbuser
+			[[ $wp == [2345] ]] || read -p "Database User [$dom]:" dbuser
 			dbuser=${dbuser:-$dom}
 			
 			# Check for duplicate database users, if already exists ask for another dbuser to create the new user
@@ -298,10 +308,10 @@ wpinstall() {
 				done
 			fi
 			
-			if [[ $wp != [23] ]]; then
+			if [[ $wp != [2345] ]]; then
 				read -p "Database Password [$AUTOGENPASS_WPDB]:" dbpass
 				# Not ask for wp_prefix when wp=0 (mysql only site)
-				[[ $wp == 0 ]] || read -p "Database Prefix [wp_]:" dbpref
+				[[ $wp == [045] ]] || read -p "Database Prefix [wp_]:" dbpref
 				echo "${end}"
 				
 				# If empty, assign defalut values

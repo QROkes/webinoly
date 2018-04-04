@@ -31,7 +31,11 @@ fi
 
 
 # Extract value if exist
-if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type == "-wpsubdir="* || $type == "-wpsubdom="* || $type == "-ssl-off="* ]]; then
+if [[ $domain == "-mysql="* ]]; then
+	value=$(echo "${domain}" | cut -d'=' -f 2 -s)
+	domain=$(echo "${domain}" | cut -d'=' -f 1 -s)
+fi
+if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type == "-wpsubdir="* || $type == "-wpsubdom="* || $type == "-ssl-off="* || $type == "-mysql="* ]]; then
 	value=$(echo "${type}" | cut -d'=' -f 2 -s)
 	type=$(echo "${type}" | cut -d'=' -f 1 -s)
 fi
@@ -58,19 +62,22 @@ fi
 [[ $cache == "-subdomain" && $value == "false" ]] && subdomflag="0"
 
 
-# Evaluate if site to create is WP ( 0 = noWP, 1 = WP, 2 = WP with default values, 3 = WP with custom values )
+# Evaluate if site to create is WP ( 0 = noWP, 1 = WP, 2 = WP with default values, 3 = WP with custom values, 4 = MySQL with default values, 3 = MySQL with custom values )
 wp="0"
-if [[ $type == "-wp" || $type == "-wpsubdir" || $type == "-wpsubdom" ]]; then
-	wp="1"
+if [[ $type == "-wp" || $type == "-wpsubdir" || $type == "-wpsubdom" || $type == "-mysql" || $domain == "-mysql" ]]; then
+	[[ $type == "-mysql" || $domain == "-mysql" ]] || wp="1"
 
 	if [[ -n $value ]]; then
 		if [[ $value == "default" ]]; then
-			wp="2"
+			[[ $type == "-mysql" || $domain == "-mysql" ]] && wp="4" || wp="2"
 		else
 			# -wp=[setupmysql,setupwp,dbhost,dbname,dbuser,dbpass,dbpref,extdbuser,extdbpass]
 			custombegin=$(echo "${value}" | cut -c-1)
 			customlast=$(echo "${value}" | rev | cut -c-1)
 			wpdata=${value:1:-1}
+			
+			# Because MySQL format not have this parameters at the beggining to match WP format. Insert it!
+			[[ $type == "-mysql" || $domain == "-mysql" ]] && wpdata=${wpdata/#/true,false,}
 			
 			# Double coma is for lower case convertion
 			setmsqcustom=$(echo "${wpdata,,}" | cut -d',' -f 1 -s)
@@ -84,8 +91,8 @@ if [[ $type == "-wp" || $type == "-wpsubdir" || $type == "-wpsubdom" ]]; then
 			exusercustom=$(echo "${wpdata}" | cut -d',' -f 8 -s)
 			expasscustom=$(echo "${wpdata}" | cut -d',' -f 9 -s)
 			
-			if [[ $custombegin == "[" && $customlast == "]" && ((($setmsqcustom == "true" || $setpwpcustom == "true") && -n $dbhostcustom && -n $dbnamecustom && -n $dbusercustom && -n $dbpasscustom && -n $dbprefcustom) || ($setmsqcustom == "false" && $setpwpcustom == "false")) ]]; then
-				wp="3"
+			if [[ $custombegin == "[" && $customlast == "]" && ((($setmsqcustom == "true" || $setpwpcustom == "true") && -n $dbhostcustom && -n $dbnamecustom && -n $dbusercustom && -n $dbpasscustom && (-n $dbprefcustom || $type == "-mysql" || $domain == "-mysql")) || ($setmsqcustom == "false" && $setpwpcustom == "false")) ]]; then
+				[[ $type == "-mysql" || $domain == "-mysql" ]] && wp="5" || wp="3"
 			fi
 		fi
 	fi
