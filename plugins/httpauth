@@ -52,7 +52,7 @@ elif [[ $opt == "-delete" ]]; then
 		echo "${red}User '$userpurge' does not exist!${end}"
 		exit 1
 	fi
-	sudo sed -i "/$userpurge/d" /etc/nginx/.htpasswd
+	sudo sed -i "/^$userpurge:/d" /etc/nginx/.htpasswd
 	echo "${gre}User '$userpurge has been deleted successfully!${end}"
 elif [[ $opt == "-list" ]]; then
 	[[ ! -a /etc/nginx/.htpasswd ]] && exit 0

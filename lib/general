@@ -57,10 +57,10 @@ db_delete() {
 			fi
 		else
 			if [[ $dbdatadel == "true" ]]; then
-				local dbdatauser=$(echo "${dbdata}" | cut -d',' -f 3 -s)
-				local dbdatapass=$(echo "${dbdata}" | cut -d',' -f 4 -s)
+				local uroot=$(echo "${dbdata}" | cut -d',' -f 3 -s)
+				local proot=$(echo "${dbdata}" | cut -d',' -f 4 -s)
 			fi
-			if [[ -z $dbdatauser || -z $dbdatapass ]]; then
+			if [[ -z $uroot || -z $proot ]]; then
 				echo ""
 				echo "${gre}External DB found in $domain (Press 'Enter' key twice to skip and not delete)"
 				read -p "${blu}External DB root username [root]: " uroot
@@ -68,7 +68,7 @@ db_delete() {
 				read -p "External DB root password: " proot
 			fi
 			if [[ $uroot == "root" && -z $proot ]]; then
-				echo "${red} Action aborted, database not deteted!"
+				echo "${red} Action aborted, database not deleted!"
 				continue 1;
 			else
 				sudo mysql --connect-timeout=10 -h "$url" -P "$port" -u"$uroot" -p"$proot" -e "$dbsetup"

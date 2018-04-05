@@ -388,7 +388,7 @@ elif [[ $opt == "-pma" ]]; then
 	[[ $(conf_read mysql-tool) != "true" ]] && mysql_tool || echo "${red}PhpMyAdmin is already installed!${end}"
 
 elif [[ $opt == "-lemp" ]]; then
-	stack -nginx $arg
+	[[ $value =~ ^(stable|mainline)$ ]] && stack -nginx=$value $arg || stack -nginx $arg
 	stack -php $arg
 	stack -mysql $arg
 	echo ""

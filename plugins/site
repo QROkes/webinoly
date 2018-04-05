@@ -46,7 +46,7 @@ fi
 
 
 # Check if site is sub-domain
-if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked|-proxy)$ ]]; then
+if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked|-proxy|-ssl-on)$ ]]; then
 	count=1
 	while true; do
 		tld=$(echo "${domain}" | rev | cut -d'.' -f -$count -s | rev)
@@ -77,7 +77,16 @@ if [[ $type == "-wp" || $type == "-wpsubdir" || $type == "-wpsubdom" || $type ==
 			wpdata=${value:1:-1}
 			
 			# Because MySQL format not have this parameters at the beggining to match WP format. Insert it!
-			[[ $type == "-mysql" || $domain == "-mysql" ]] && wpdata=${wpdata/#/true,false,}
+			if [[ $type == "-mysql" || $domain == "-mysql" ]]; then
+				wpdata=${wpdata/#/true,false,}
+				# Insert wp_prefix if external db data is found.
+				extdata=$(echo "${wpdata,,}" | cut -d',' -f 7- -s)
+				if [[ -n $extdata ]]; then
+					wpdata=$(echo "${wpdata,,}" | cut -d',' -f -6 -s)
+					wpdata=${wpdata/%/,false,}
+					wpdata=${wpdata/%/$extdata}
+				fi
+			fi
 			
 			# Double coma is for lower case convertion
 			setmsqcustom=$(echo "${wpdata,,}" | cut -d',' -f 1 -s)
