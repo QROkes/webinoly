@@ -117,7 +117,10 @@ pre_install() {
 	sudo apt-get -qq update
 	if [[ $(conf_read pre-packs) != true ]]; then
 		# Check for missing essential packages
-		sudo apt-get -y -qq install software-properties-common python-software-properties pwgen unzip
+		sudo apt-get -y -qq install software-properties-common
+		sudo apt-get -y -qq install python-software-properties
+		sudo apt-get -y -qq install pwgen
+		sudo apt-get -y -qq install unzip
 		conf_write pre-packs true
 	fi
 }
@@ -129,12 +132,13 @@ mysql_client_install() {
 	case "$osname" in
 		"trusty")
 			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
+			sudo add-apt-repository "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu $osname main"
 		;;
 		"xenial"|"zesty"|"artful")
 			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+			sudo add-apt-repository "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu $osname main"
 		;;
 	esac
-	sudo add-apt-repository "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu $osname main"
 	pre_install
 	sudo apt-get -y install mariadb-client
 	conf_write mysql-client true

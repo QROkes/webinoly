@@ -438,6 +438,10 @@ swap_create() {
 		else
 			# Create SWAP Partition
 			sudo dd if=/dev/zero of=/swapfile bs=${newswap}M count=1024
+			
+			sudo chown root:root /swapfile
+			sudo chmod 0600 /swapfile
+			
 			sudo mkswap /swapfile
 			sudo swapon /swapfile
 
@@ -445,9 +449,6 @@ swap_create() {
 
 			echo 10 | sudo tee /proc/sys/vm/swappiness
 			echo vm.swappiness = 10 | sudo tee -a /etc/sysctl.conf
-
-			sudo chown root:root /swapfile
-			sudo chmod 0600 /swapfile
 
 			# Swap created by Webinoly - so we should remove it in uninstall
 			conf_write swap-owner webinoly
