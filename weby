@@ -72,12 +72,10 @@ source /opt/webinoly/lib/install
 [[ -a $HOME/.webinoly-conf-restore_dont-remove ]] && sudo mv $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf
 
 # Save Tools Port after library is available.
-if [[ -a /opt/webinoly/webinoly.conf && -n $(conf_read tools-port) ]]; then
+if [[ -a /opt/webinoly/webinoly.conf ]]; then
 	echo "${gre}Webinoly Configuration file was found, so we will use it!${end}"
 else
-	portools="22222"
-	[[ -n $2 && $2 != "-ver="* ]] && portools="$2"
-	tools_port $portools
+	[[ -n $2 && $2 != "-ver="* ]] && tools_port $2
 fi
 
 # Write app version

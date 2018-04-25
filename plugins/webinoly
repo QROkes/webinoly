@@ -61,22 +61,15 @@ elif [[ $opt == "-dbpass" ]]; then
 	
 	
 elif [[ $opt == "-tools-port" ]]; then
-	if [[ $(conf_read nginx-tool) == "true" && $(conf_read nginx) == "true" ]]; then
-		oldport="$(conf_read tools-port)"
-		[[ -n $value ]] && tools_port $value || tools_port
-		newport="$(conf_read tools-port)"
-		if [[ $oldport != $newport ]]; then
-			sudo mv /var/www/$oldport /var/www/$newport
-			sudo mv /etc/nginx/sites-available/$oldport /etc/nginx/sites-available/$newport
-			sudo rm /etc/nginx/sites-enabled/$oldport
-			sudo ln -s /etc/nginx/sites-available/$newport /etc/nginx/sites-enabled/$newport
-			sudo sed -i "s/${oldport}/${newport}/g"  /etc/nginx/sites-available/$newport
-			sudo service nginx reload
-		fi
-	else
-		echo "${red}"
-		echo "Nginx Tools not found in your server!"
-		echo "${end}"
+	oldport="$(conf_read tools-port)"
+	[[ -n $value ]] && tools_port $value || tools_port
+	newport="$(conf_read tools-port)"
+	if [[ $oldport != $newport && $(conf_read nginx-tool) == "true" && $(conf_read nginx) == "true" ]]; then
+		sudo mv /var/www/$oldport /var/www/$newport
+		sudo mv /etc/nginx/sites-available/$oldport /etc/nginx/sites-available/$newport
+		sudo rm /etc/nginx/sites-enabled/$oldport
+		sudo ln -s /etc/nginx/sites-available/$newport /etc/nginx/sites-enabled/$newport
+		sudo sed -i "s/${oldport}/${newport}/g"  /etc/nginx/sites-available/$newport
 	fi
 	
 	

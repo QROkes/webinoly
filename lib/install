@@ -298,6 +298,7 @@ php_optim() {
 
 nginx_tool_site() {
 	# Port 22222 tools site
+	[[ -z $(conf_read tools-port) ]] && tools_port 22222
 	sudo site $(conf_read tools-port) -php
 	sudo cp /opt/webinoly/templates/nginx/22222 /etc/nginx/sites-available/$(conf_read tools-port)
 	sudo sed -i "s/22222/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
@@ -306,13 +307,9 @@ nginx_tool_site() {
 
 
 nginx_tool() {
-	if [[ $(conf_read php) == "true" ]]; then
-		nginx_tool_site
-	fi
+	[[ $(conf_read php) == "true" ]] && nginx_tool_site
 	# in case php was installed before nginx
-	if [[ $(conf_read php-tool) == "true" && ! -a /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
-		php_tool_site
-	fi
+	[[ $(conf_read php-tool) == "true" && ! -a /var/www/$(conf_read tools-port)/htdocs/php/index.php ]] && php_tool_site
 			
 	# Instalar Duply & Duplicity
 	pre_install
