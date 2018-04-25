@@ -47,8 +47,8 @@ if [[ $opt == "-add" ]]; then
 	echo ""
 elif [[ $opt == "-delete" ]]; then
 	[[ -z $value ]] && read -p "${blu}HTTP-Auth User: ${end}" userpurge || userpurge=$value
-	exist=$( grep -E "^${userpurge}:" /etc/nginx/.htpasswd )
-	if [[ ! -a /etc/nginx/.htpasswd || -z $exist ]]; then
+	[[ -a /etc/nginx/.htpasswd ]] && exist=$( grep -E "^${userpurge}:" /etc/nginx/.htpasswd )
+	if [[ -z $exist ]]; then
 		echo "${red}User '$userpurge' does not exist!${end}"
 		exit 1
 	fi
