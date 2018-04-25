@@ -169,14 +169,12 @@ conf_read() {
 }
 
 conf_write() {
-	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
-		sudo touch /opt/webinoly/webinoly.conf
-	fi
+	[[ ! -a /opt/webinoly/webinoly.conf ]] && sudo touch /opt/webinoly/webinoly.conf
 	#if requested VAR exists overwrite it, if not, create it.
-	sed -i "/${1}:/d" /opt/webinoly/webinoly.conf
+	sed -i "/^${1}:/d" /opt/webinoly/webinoly.conf
 	sh -c "echo -n '$1:$2\n' >> /opt/webinoly/webinoly.conf"
 }
 
 conf_delete() {
-	sed -i "/${1}:/d" /opt/webinoly/webinoly.conf
+	sed -i "/^${1}:/d" /opt/webinoly/webinoly.conf
 }
