@@ -152,7 +152,7 @@ elif [[ "$domain" == "-delete-all" && -z "$type" && -z "$cache" ]]; then
 	for site in "/etc/nginx/sites-available"/*
 	do
 		domi=$(echo $site | cut -f 5 -d "/")
-		[[ $domi != "html" && $domi != "default" && $domi != $(conf_read tools-port) ]]; then
+		if [[ $domi != "html" && $domi != "default" && $domi != $(conf_read tools-port) ]]; then
 			echo "${gre}Your site ${blu}${domi}${gre} has been successfully deleted! ${end}"
 		fi
 	done
