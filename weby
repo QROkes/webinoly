@@ -47,6 +47,7 @@ if [[ $2 == "-ver="* ]]; then
 	echo "$(tput setaf 1)"
 	if [[ $code == 200 ]]; then
 		sudo wget --timeout=15 -qrO $HOME/webinoly.tar https://qrok.es/webinoly?version=$ver
+		sudo rm webinoly?version=$ver
 		webyversion="$ver"
 		[[ $ver == "beta" ]] && echo "[WARNING] You are installing a BETA version of Webinoly and it's not recommended for production enviroments. $(tput sgr0)"
 	else
