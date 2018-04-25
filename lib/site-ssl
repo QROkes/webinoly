@@ -18,6 +18,12 @@ site_ssl_on() {
 		exit 1
 	fi
 	
+	if [[ ! -d /var/www/$root/htdocs ]]; then
+		echo "${red}Seems like you are trying to request an SSL Certificate for a Parked/Mapped Domain.!${end}"
+		echo "${red}Please, use the '-root=domain.com' parameter to include the main domain path.${end}"
+		exit 1
+	fi
+	
 	# Check if Letsencrypt is installed
 	if [[ $(conf_read nginx-tool) != "true" || ! -a /usr/bin/letsencrypt ]]; then
 		echo "${red}[ERROR] Seems like Let's Encrypt tool is not installed!${end}"

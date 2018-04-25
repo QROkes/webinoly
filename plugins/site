@@ -141,14 +141,22 @@ elif [[ "$domain" == "-delete-all" && -z "$type" && -z "$cache" ]]; then
 		domi=$(echo $site | cut -f 4 -d "/")
 		# List sites then will be deleted
 		if [[ $domi != "html" && $domi != $(conf_read tools-port) ]]; then
+			sudo rm -rf /etc/nginx/sites-available/$domi
 			echo "${gre}Your site ${blu}${domi}${gre} has been successfully deleted! ${end}"
 		fi
 		# Determina if site is WP (so has DB to delete)
-		if [[ -a $site/wp-config.php || -a $site/htdocs/wp-config.php ]]; then
-			db_delete $domi
-		fi
+		[[ -a $site/wp-config.php || -a $site/htdocs/wp-config.php ]] && db_delete $domi
 	done
 
+	# List all remaining sites (parked and proxy)
+	for site in "/etc/nginx/sites-available"/*
+	do
+		domi=$(echo $site | cut -f 5 -d "/")
+		[[ $domi != "html" && $domi != "default" && $domi != $(conf_read tools-port) ]]; then
+			echo "${gre}Your site ${blu}${domi}${gre} has been successfully deleted! ${end}"
+		fi
+	done
+	
 	# Delete all files
 	# -rf is necessary to not generate an error when is empty.
 	sudo rm -rf /etc/nginx/sites-available/!(default|$(conf_read tools-port))
@@ -217,23 +225,23 @@ elif [ "$type" == "-parked" ]; then
 		read -p "Main site domain: " mapto
 		mapto=${mapto:-NeverMatchAtFirstDotCom}
 		echo "${end}"
-		if [[ ! -a /etc/nginx/sites-available/$mapto ]]; then
-			echo "${red} Main site domain not found! ${end}"
-		fi
+		[[ ! -a /etc/nginx/sites-available/$mapto ]] && echo "${red} Main site domain not found! ${end}"
 	done
 	sudo cp /etc/nginx/sites-available/$mapto /etc/nginx/sites-available/$domain
 	sudo chmod 644 /etc/nginx/sites-available/$domain
 	sudo chown root:root /etc/nginx/sites-available/$domain
 	sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
-
+	
 	# Nginx conf file for the new parked domain
 	sudo sed -i "s/$mapto/$domain/g"  /etc/nginx/sites-available/$domain
 	sudo sed -i "/root/c \	root /var/www/$mapto/htdocs;" /etc/nginx/sites-available/$domain
 	cusconl=$( grep -F "include /var/www/$domain/conf/nginx" /etc/nginx/sites-available/$domain | sed "s/$domain/$mapto/" )
 	sed -i "/include \/var\/www\/$domain\/conf\/nginx/c \	${cusconl}" /etc/nginx/sites-available/$domain
+	# Prevent if SSL is enabled in main site and ssl data is copied to parked site causing an error.
+	sudo site $domain -ssl-off=force > /dev/null 2>&1 &
 	
 	echo "${gre}"
-	echo "  Parked domain was successfully configured! "
+	echo "Parked domain was successfully configured! "
 	echo "${end}"
 	
 # Reverse proxy
