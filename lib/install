@@ -134,6 +134,7 @@ nginx_install() {
 		sudo chown root:root /var/www
 	fi
 
+	sudo nginx -t && sudo service nginx start
 	conf_write nginx true
 	echo "${gre}Nginx has been installed successfully! ${end}"
 }
@@ -234,9 +235,7 @@ nginx_optim() {
 
 	linux_optim
 	server_version
-	
 	conf_write nginx-optim true
-	sudo nginx -t && sudo service nginx reload
 }
 
 
