@@ -490,25 +490,27 @@ createsite() {
 	sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 	
 	# Create data folder for new site
-	if [[ ! -d /var/www/$domain/htdocs || ! -d /var/www/$domain ]]; then
-		sudo mkdir -p /var/www/$domain/htdocs
-		[[ "$wp" == [123] ]] && wpinstall
-	else
-		echo "${blu}"
-		echo "  We found a folder with $domain site data, do you want to use it [Y/n]? "
-		while read -r -n 1 -s wwwexist; do
-		  wwwexist=${wwwexist:-y}
-		  [[ $wwwexist == [YyNn] ]] && break
-		done
-		echo ""
-		
-		if [[ $wwwexist == [nN] ]]; then
-			sudo rm -rf /var/www/$domain/htdocs
+	if [[ $type != "-proxy" && $type != "-parked" ]]; then
+		if [[ ! -d /var/www/$domain/htdocs || ! -d /var/www/$domain ]]; then
 			sudo mkdir -p /var/www/$domain/htdocs
 			[[ "$wp" == [123] ]] && wpinstall
+		else
+			echo "${blu}"
+			echo "  We found a folder with $domain site data, do you want to use it [Y/n]? "
+			while read -r -n 1 -s wwwexist; do
+			  wwwexist=${wwwexist:-y}
+			  [[ $wwwexist == [YyNn] ]] && break
+			done
+			echo ""
+			
+			if [[ $wwwexist == [nN] ]]; then
+				sudo rm -rf /var/www/$domain/htdocs
+				sudo mkdir -p /var/www/$domain/htdocs
+				[[ "$wp" == [123] ]] && wpinstall
+			fi
 		fi
 	fi
-
+	
 	sudo chown -R www-data:www-data /var/www
 	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
 	

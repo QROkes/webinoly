@@ -210,13 +210,7 @@ elif [ "$type" == "-wpsubdom" ]; then
 
 # Parked Domain
 elif [ "$type" == "-parked" ]; then
-	domain_check $domain
-	# Check for duplicate sites
-	if [[ -a /etc/nginx/sites-available/$domain ]]; then
-		echo "${red}Site $domain could not be created because already exists!${end}"
-		exit 1
-	fi
-	
+	createsite
 	mapto="NeverMatchAtFirstDotCom"
 	[[ -n $value ]] && mapto="$value"
 	
@@ -228,18 +222,20 @@ elif [ "$type" == "-parked" ]; then
 		echo "${end}"
 		[[ ! -a /etc/nginx/sites-available/$mapto ]] && echo "${red} Main site domain not found! ${end}"
 	done
-	sudo cp /etc/nginx/sites-available/$mapto /etc/nginx/sites-available/$domain
-	sudo chmod 644 /etc/nginx/sites-available/$domain
-	sudo chown root:root /etc/nginx/sites-available/$domain
-	sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 	
 	# Nginx conf file for the new parked domain
+	sername=$(grep -w "server_name .*;" /etc/nginx/sites-available/$domain)
+	sudo truncate -s 0 /etc/nginx/sites-available/$domain
+	sudo cat /etc/nginx/sites-available/$mapto > /etc/nginx/sites-available/$domain
+	
+	# Prevent if SSL is enabled in main site and ssl data is copied to parked site causing an error.
+	sudo site $domain -ssl-off=force > /dev/null 2>&1 &
+	
+	sudo sed -i "/server_name/c \	$sername" /etc/nginx/sites-available/$domain
 	sudo sed -i "s/$mapto/$domain/g"  /etc/nginx/sites-available/$domain
 	sudo sed -i "/root/c \	root /var/www/$mapto/htdocs;" /etc/nginx/sites-available/$domain
 	cusconl=$( grep -F "include /var/www/$domain/conf/nginx" /etc/nginx/sites-available/$domain | sed "s/$domain/$mapto/" )
 	sed -i "/include \/var\/www\/$domain\/conf\/nginx/c \	${cusconl}" /etc/nginx/sites-available/$domain
-	# Prevent if SSL is enabled in main site and ssl data is copied to parked site causing an error.
-	sudo site $domain -ssl-off=force > /dev/null 2>&1 &
 	
 	echo "${gre}"
 	echo "Parked domain was successfully configured! "
