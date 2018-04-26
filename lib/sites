@@ -40,6 +40,20 @@ wp_cache_plugins() {
 	fi
 }
 
+domain_check() {
+	local din="$1"
+	
+	# Only numerals 0-9, basic Latin letters, both lowercase and uppercase, hyphen.
+	[[ $din =~ ^[\.0-9A-Za-z\-]+$ ]] || domfail="true"
+	
+	# Check Lenght
+	[[ ${#din} -gt 67 ]] && domfail="true"
+	
+	# Can not start or end with a hyphen
+	[[ $(echo "${din}" | cut -c-1) == "-" || $(echo "${din}" | rev | cut -c-1) == "-" ]] && domfail="true"
+	
+	[[ $domfail == "true" ]] && echo "${red}[WARNING] Domain names can only contain letters, numbers or a hyphen; can not start or end with a hyphen and can be up to 67 characters long.${end}"
+}
 
 dbword_check() {
 	local win="$1"
@@ -449,6 +463,7 @@ deletesite() {
 
 
 createsite() {
+	domain_check $domain
 	if [[ $(conf_read php) != "true" && ("$wp" == [123] || "$type" == "-php") ]]; then
 		echo "${red}"
 		echo " [ERROR] PHP must be installed before you can create a WP site!"
