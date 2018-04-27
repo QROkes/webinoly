@@ -204,6 +204,8 @@ wpinstall() {
 						sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit"
 						if [[ $? != "0" ]]; then
 							done="0"
+							# Remove the Unattended feature and ask for values.
+							[[ $wp == [2345] ]] && wp=1
 							echo "${red}============================================"
 							echo "    [Error]: Database conection failed."
 							echo "============================================${blu}"
@@ -214,6 +216,7 @@ wpinstall() {
 						sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" -e "quit"
 						if [[ $? != "0" ]]; then
 							done="0"
+							[[ $wp == [2345] ]] && wp=1
 							echo "${red}============================================"
 							echo "    [Error]: Database conection failed."
 							echo "============================================${blu}"

@@ -62,7 +62,7 @@ fi
 [[ $cache == "-subdomain" && $value == "false" ]] && subdomflag="0"
 
 
-# Evaluate if site to create is WP ( 0 = noWP, 1 = WP, 2 = WP with default values, 3 = WP with custom values, 4 = MySQL with default values, 3 = MySQL with custom values )
+# Evaluate if site to create is WP ( 0 = noWP, 1 = WP, 2 = WP with default values, 3 = WP with custom values, 4 = MySQL with default values, 5 = MySQL with custom values )
 wp="0"
 if [[ $type == "-wp" || $type == "-wpsubdir" || $type == "-wpsubdom" || $type == "-mysql" || $domain == "-mysql" ]]; then
 	[[ $type == "-mysql" || $domain == "-mysql" ]] || wp="1"
