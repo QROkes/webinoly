@@ -8,7 +8,7 @@ opt="$1"
 source /opt/webinoly/lib/webin
 
 # Extract value if exist
-if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* ]]; then
+if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* ]]; then
 	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
 	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
 fi
@@ -22,25 +22,34 @@ if [[ $opt == "-update" ]]; then
 
 	
 elif [[ $opt == "-server-update" || $opt == "-server-reset" ]]; then
+	if [[ -z $value ]]; then
+		value="all"
+	elif [[ -n $value && $value != "all" && $value != "nginx" && $value != "php" ]]; then
+		echo "${red}Please, enter a valid option to update your server configuration!${end}"
+		exit 1
+	fi
 	
 	# Regenerate NGINX conf files
-	if [[ $(conf_read nginx-optim) == "true" ]]; then
+	if [[ $(conf_read nginx-optim) == "true" && ( $value == "nginx" || $value = "all" ) ]]; then
 		sudo rm -rf /etc/nginx/common
 		sudo rm -rf /etc/nginx/conf.d/*
-		linux_purge
-		nginx_optim
+		linux_purge > /dev/null 2>&1 &
+		nginx_optim > /dev/null 2>&1 &
+		echo "${gre}Nginx has been updated successfully!${end}"
+	elif [[ $(conf_read nginx-optim) != "true" && ( $value == "nginx" || $value = "all" ) ]]; then
+		echo "${red}Seems like Nginx is not installed in your server!${end}"
 	fi
 	
 	# Regenerate PHP conf files
-	if [[ $(conf_read php-optim) == "true" ]]; then
+	if [[ $(conf_read php-optim) == "true" && ( $value == "php" || $value = "all" ) ]]; then
 		sudo cat /opt/webinoly/templates/source/php.ini > /etc/php/$(conf_read php-ver)/fpm/php.ini
 		sudo cat /opt/webinoly/templates/source/www.conf > /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
 		sudo rm /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
 		php_optim
+		echo "${gre}PHP has been updated successfully!${end}"
+	elif [[ $(conf_read php-optim) != "true" && ( $value == "php" || $value = "all" ) ]]; then
+		echo "${red}Seems like PHP is not installed in your server!${end}"
 	fi
-	
-	echo ""
-	echo "${gre}Webinoly Server has been updated successfully!${end}"
 	
 	
 elif [[ $opt == "-verify" ]]; then
