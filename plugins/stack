@@ -56,7 +56,8 @@ elif [[ $arg == "-purge" && ( $opt == "-html" || $opt == "-nginx" ) ]]; then
 	if [[ $(conf_read nginx) != "true" ]]; then
 		echo "${red}Nginx is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
-		exit 1
+		# Use "0" because any other number cause running commands twice when using "force" in -purge-server-all
+		exit 0
 	fi
 	
 	echo ""
@@ -116,7 +117,7 @@ elif [[ $arg == "-purge" && $opt == "-php" ]]; then
 	if [[ $(conf_read php) != "true" ]]; then
 		echo "${red}PHP is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
-		exit 1
+		exit 0
 	fi
 	
 	echo ""
@@ -168,7 +169,7 @@ elif [[ $arg == "-purge" && $opt == "-mysql" ]]; then
 	if [[ $(conf_read mysql) != "true" ]]; then
 		echo "${red}MySQL is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
-		exit 1
+		exit 0
 	fi
 	
 	echo ""
@@ -226,7 +227,7 @@ elif [[ $arg == "-purge" && $opt == "-pma" ]]; then
 	if [[ $(conf_read mysql-tool) != "true" ]]; then
 		echo "${red} PhpMyAdmin is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
-		exit 1
+		exit 0
 	fi
 	
 	echo ""
@@ -264,7 +265,7 @@ elif [[ $arg == "-purge" && $opt == "-web-tools" ]]; then
 	if [[ $(conf_read web-tool) != "true" ]]; then
 		echo "${red} Web Tools (Postfix, Redis, Memcached, Duplicity and Letsencrypt) are not installed, hence can not be deleted! ${end}"
 		clear_force_flag
-		exit 1
+		exit 0
 	fi
 	
 	echo ""
@@ -383,7 +384,7 @@ elif [[ $opt == "-pma" ]]; then
 	if [[ $(conf_read mysql) != "true" || $(conf_read php) != "true" || $(conf_read nginx) != "true" || $(conf_read nginx-tool) != "true" ]]; then
 		echo "${red} You need to have MySQL, PHP and NGINX installed before you can install PhpMyAdmin! ${end}"
 		clear_force_flag
-		exit 1
+		exit 0
 	fi
 	[[ $(conf_read mysql-tool) != "true" ]] && mysql_tool || echo "${red}PhpMyAdmin is already installed!${end}"
 
