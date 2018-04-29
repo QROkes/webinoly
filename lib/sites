@@ -411,7 +411,7 @@ _EOF_
 		
 		# Redis Conf
 		sudo sed -i "/stop editing/i \define('WP_REDIS_SELECTIVE_FLUSH', true);" /var/www/$domain/wp-config.php
-		sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'redis_object_cache_for_wp_$domain);" /var/www/$domain/wp-config.php
+		sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'redis_object_cache_for_wp_$domain');" /var/www/$domain/wp-config.php
 		
 		# Multisite wp-config
 		if [[ "$type" == "-wpsubdir" || "$type" == "-wpsubdom" ]]; then

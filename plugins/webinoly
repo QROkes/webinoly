@@ -302,7 +302,7 @@ elif [[ $opt == "-clear-cache" ]]; then
 				sudo chown -R www-data:www-data /var/www/$port/htdocs/php/opcache
 				sudo chmod 644 /var/www/$port/htdocs/php/opcache/index.php
 			fi
-			wget -q --spider --timeout=15 http://localhost:$port/cache/
+			wget -q --spider --timeout=15 http://localhost:$port/php/opcache/
 			echo "${gre}- OpCache has been successfully cleared!${end}"
 		else
 			echo "${red}[ERROR] We can not clear OpCache because PHP and NGINX are not installed!${end}"
