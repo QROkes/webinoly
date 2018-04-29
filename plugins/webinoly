@@ -275,24 +275,46 @@ elif [[ $opt == "-clear-cache" ]]; then
 		exit 1
 	fi
 	if [[ $value == "redis" || $value == "all" ]]; then
-		sudo redis-cli flushall
-		echo "${gre}- Redis Cache has been successfully cleared!${end}"
+		if [[ $(conf_read php-tool) == "true" ]]; then
+			sudo redis-cli flushall
+			echo "${gre}- Redis Cache has been successfully cleared!${end}"
+		else
+			echo "${red}[ERROR] We can not clear Redis Cache because PHP is not installed!${end}"
+		fi
 	fi
 	if [[ $value == "memcache" || $value == "memcached" || $value == "all" ]]; then
-		memhost=$(grep ^-l /etc/memcached.conf | cut -f 2 -d ' ')
-		memport=$(grep ^-p /etc/memcached.conf | cut -f 2 -d ' ')
-		echo flush_all > /dev/tcp/$memhost/$memport
-		echo "${gre}- Memcached has been successfully cleared!${end}"
+		if [[ $(conf_read php-tool) == "true" ]]; then
+			memhost=$(grep ^-l /etc/memcached.conf | cut -f 2 -d ' ')
+			memport=$(grep ^-p /etc/memcached.conf | cut -f 2 -d ' ')
+			echo flush_all > /dev/tcp/$memhost/$memport
+			echo "${gre}- Memcached has been successfully cleared!${end}"
+		else
+			echo "${red}[ERROR] We can not clear Memcache because PHP is not installed!${end}"
+		fi
 	fi
 	if [[ $value == "opcache" || $value == "all" ]]; then
-		echo '<?php opcache_reset(); echo "OK\n";' > /tmp/php-opcache-reset.php
-		php /tmp/php-opcache-reset.php
-		sudo rm /tmp/php-opcache-reset.php
-		echo "${gre}- OpCache has been successfully cleared!${end}"
+		if [[ $(conf_read nginx-tool) == "true" && $(conf_read php-tool) == "true" ]]; then
+			port=$(conf_read tools-port)
+			if [[ ! -a /var/www/$port/htdocs/cache/index.php ]]; then
+				sudo mkdir /var/www/$port/htdocs/cache
+				sudo touch /var/www/$port/htdocs/cache/index.php
+				echo '<?php opcache_reset(); echo "OK\n";' > /var/www/$port/htdocs/cache/index.php
+				sudo chown -R www-data:www-data /var/www/$port/htdocs/cache
+				sudo chmod 644 /var/www/$port/htdocs/cache/index.php
+			fi
+			wget -q --spider --timeout=15 http://localhost:$port/cache/
+			echo "${gre}- OpCache has been successfully cleared!${end}"
+		else
+			echo "${red}[ERROR] We can not clear OpCache because PHP and NGINX are not installed!${end}"
+		fi
 	fi
 	if [[ $value == "fastcgi" || $value == "all" ]]; then
-		sudo rm -Rf /var/run/nginx-cache/*
-		echo "${gre}- FastCgi Cache has been successfully cleared!${end}"
+		if [[ $(conf_read nginx) == "true" ]]; then
+			sudo rm -Rf /var/run/nginx-cache/*
+			echo "${gre}- FastCgi Cache has been successfully cleared!${end}"
+		else	
+			echo "${red}[ERROR] We can not clear FastCGI Cache because NGINX is not installed!${end}"
+		fi
 	fi
 	
 	
