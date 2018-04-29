@@ -295,12 +295,12 @@ elif [[ $opt == "-clear-cache" ]]; then
 	if [[ $value == "opcache" || $value == "all" ]]; then
 		if [[ $(conf_read nginx-tool) == "true" && $(conf_read php-tool) == "true" ]]; then
 			port=$(conf_read tools-port)
-			if [[ ! -a /var/www/$port/htdocs/cache/index.php ]]; then
-				sudo mkdir /var/www/$port/htdocs/cache
-				sudo touch /var/www/$port/htdocs/cache/index.php
-				echo '<?php opcache_reset(); echo "OK\n";' > /var/www/$port/htdocs/cache/index.php
-				sudo chown -R www-data:www-data /var/www/$port/htdocs/cache
-				sudo chmod 644 /var/www/$port/htdocs/cache/index.php
+			if [[ ! -a /var/www/$port/htdocs/php/opcache/index.php ]]; then
+				sudo mkdir /var/www/$port/htdocs/php/opcache
+				sudo touch /var/www/$port/htdocs/php/opcache/index.php
+				echo '<?php opcache_reset(); echo "OK\n";' > /var/www/$port/htdocs/php/opcache/index.php
+				sudo chown -R www-data:www-data /var/www/$port/htdocs/php/opcache
+				sudo chmod 644 /var/www/$port/htdocs/php/opcache/index.php
 			fi
 			wget -q --spider --timeout=15 http://localhost:$port/cache/
 			echo "${gre}- OpCache has been successfully cleared!${end}"
