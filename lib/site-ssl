@@ -67,12 +67,13 @@ site_ssl_on() {
 	if [[ -a /etc/letsencrypt/live/$root/fullchain.pem ]]; then
 		sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /etc/nginx/sites-available/$domain
 		sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /etc/nginx/sites-available/$domain
-		sudo sed -i '/headers-html.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$domain
+		sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$domain
 		sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$domain
 		sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$domain/}" /etc/nginx/sites-available/$domain
 		
 		# HTTP to HTTPS Redirection
-		local sername=$(grep -w "server_name .*;" /etc/nginx/sites-available/$domain)
+		local sername="server_name $domain www.$domain;"
+		[[ $subdomflag == 1 ]] && sername="server_name $domain;"
 		sudo sed -i '1r /opt/webinoly/templates/template-site-sslredirect' /etc/nginx/sites-available/$domain
 		sudo sed -i "/#server_name;/c \	$sername" /etc/nginx/sites-available/$domain
 		
@@ -107,7 +108,7 @@ site_ssl_off() {
 		answer=="N"
 	else
 		echo "${blu}"
-		echo "  Do you want to delete your certificate files [y/N]? "
+		echo "Do you want to delete your certificate files [y/N]? "
 		while read -r -n 1 -s answer; do
 		  answer=${answer:-n}
 		  [[ $answer = [YyNn] ]] && break
@@ -120,7 +121,7 @@ site_ssl_off() {
 		rm -rf /etc/letsencrypt/renewal/${domain}.conf
 		rm -rf /etc/letsencrypt/archive/${domain}
 		echo "${gre}"
-		echo "  Certificate for your site $domain has been completely removed!"
+		echo "Certificate for your site $domain has been completely removed!"
 		echo "${end}"
 	fi
 	echo "${gre}SSL have been successfully disabled for site $domain!${end}"

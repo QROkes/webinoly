@@ -35,7 +35,7 @@ if [[ $domain == "-mysql="* ]]; then
 	value=$(echo "${domain}" | cut -d'=' -f 2 -s)
 	domain=$(echo "${domain}" | cut -d'=' -f 1 -s)
 fi
-if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type == "-wpsubdir="* || $type == "-wpsubdom="* || $type == "-ssl-off="* || $type == "-mysql="* || $type == "-delete="* ]]; then
+if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type == "-wpsubdir="* || $type == "-wpsubdom="* || $type == "-ssl-off="* || $type == "-mysql="* || $type == "-delete="* || $type == "-force-redirect="* ]]; then
 	value=$(echo "${type}" | cut -d'=' -f 2 -s)
 	type=$(echo "${type}" | cut -d'=' -f 1 -s)
 fi
@@ -46,7 +46,7 @@ fi
 
 
 # Check if site is sub-domain
-if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked|-proxy|-ssl-on)$ ]]; then
+if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked|-proxy|-ssl-on|-force-redirect)$ ]]; then
 	count=1
 	while true; do
 		tld=$(echo "${domain}" | rev | cut -d'.' -f -$count -s | rev)
@@ -339,10 +339,15 @@ elif [[ "$type" == "-cache" && -a /etc/nginx/sites-available/$domain ]]; then
 	else
 		echo "${red} Site $domain is not a WP site or FastCGI is already enabled!${end}"
 	fi
+
+	
+# Force www or non-www redirect (www, root, off)
+elif [[ "$type" == "-force-redirect" && -a /etc/nginx/sites-available/$domain ]]; then
+	force_redirect
 	
 	
 # Catch ERROR 
-elif [[ ! -a /etc/nginx/sites-available/$domain && $type =~ ^(-nocache|-cache|-delete|-off|-on|-ssl-on|-ssl-off)$ ]]; then
+elif [[ ! -a /etc/nginx/sites-available/$domain && $type =~ ^(-nocache|-cache|-delete|-off|-on|-ssl-on|-ssl-off|-force-redirect)$ ]]; then
 	echo "${red}Site $domain doesn't exists!${end}"
 else
 	echo "${red} Argument '${type}' is not a valid option! ${end}"
