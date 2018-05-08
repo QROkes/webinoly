@@ -142,16 +142,30 @@ nginx_install() {
 
 php_install() {
 	if [[ -n $(conf_read php-ver) && ($(conf_read php-ver) == "7.2" || $(conf_read php-ver) == "7.1" || $(conf_read php-ver) == "7.0" || $(conf_read php-ver) == "5.6") ]]; then
-		echo "${gre} Custom PHP version '$(conf_read php-ver)' detected!${end}"
+		echo "${gre}Default PHP version '$(conf_read php-ver)' detected!${end}"
 	else
 		# Default PHP version
 		conf_write php-ver 7.2
 	fi
 	ver=$(conf_read php-ver)
 	
-	# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
-	sudo apt-get install -y language-pack-en-base
-	sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
+	# Multi-PHP
+	if [[ $(conf_read multi-php) == "true" && -n $1 && $1 =~ ^(5.6|7.0|7.1|7.2)$ && $(conf_read php) == "true" && $1 != $ver ]]; then
+		ver="$1"
+		echo "${gre}Multi-PHP version is enabled. PHP '$ver' will be installed!${end}"
+	elif [[ $(conf_read multi-php) != "true" && -n $1 ]]; then
+		echo "${red}Multi-PHP is not enabled! ${end}"
+		exit 1
+	elif [[ $(conf_read multi-php) == "true" && -n $1 ]]; then
+		echo "${red}Please, enter a valid PHP version or default PHP is not installed yet! ${end}"
+		exit 1
+	fi
+	
+	if [[ $(conf_read php) != "true" ]]; then
+		# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
+		sudo apt-get install -y language-pack-en-base
+		sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
+	fi
 	pre_install
 	sudo apt-get -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-recode php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
 	
@@ -164,10 +178,14 @@ php_install() {
 		sudo apt-get -y install php-xdebug
 	fi
 	
-	sudo cp /etc/php/$(conf_read php-ver)/fpm/php.ini /opt/webinoly/templates/source/
-	sudo cp /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf /opt/webinoly/templates/source/
+	def=$(conf_read php-ver)
+	if [[ $(conf_read php-v${def}) != "true" ]]; then
+		sudo cp /etc/php/$ver/fpm/php.ini /opt/webinoly/templates/source/
+		sudo cp /etc/php/$ver/fpm/pool.d/www.conf /opt/webinoly/templates/source/
+	fi
 	
 	conf_write php true
+	conf_write php-v$ver true
 	echo "${gre}PHP has been installed successfully! ${end}"
 }
 
@@ -242,52 +260,60 @@ nginx_optim() {
 
 # PHP OPTIM
 php_optim() {
+	[[ -n $1 ]] && ver="$1" || ver=$(conf_read php-ver)
+
 	if [[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ ]]; then
 		local maxuploads=$(conf_read max-mb-uploads)
 	else
 		local maxuploads="100"
 	fi
 	
-	sudo sed -i '/cgi.fix_pathinfo=/c\cgi.fix_pathinfo=0' /etc/php/$(conf_read php-ver)/fpm/php.ini
-	sudo sed -i '/memory_limit =/c\memory_limit = 128M' /etc/php/$(conf_read php-ver)/fpm/php.ini
-	sudo sed -i '/max_execution_time =/c\max_execution_time = 300' /etc/php/$(conf_read php-ver)/fpm/php.ini
-	sudo sed -i '/expose_php =/c\expose_php = Off' /etc/php/$(conf_read php-ver)/fpm/php.ini
-	sudo sed -i "/upload_max_filesize =/c\upload_max_filesize = ${maxuploads}M" /etc/php/$(conf_read php-ver)/fpm/php.ini
-	sudo sed -i "/post_max_size =/c\post_max_size = ${maxuploads}M" /etc/php/$(conf_read php-ver)/fpm/php.ini
-	sudo sed -i '/max_file_uploads =/c\max_file_uploads = 20' /etc/php/$(conf_read php-ver)/fpm/php.ini
-	sudo sed -i '/date.timezone =/c\date.timezone = America/Mexico_City' /etc/php/$(conf_read php-ver)/fpm/php.ini
+	sudo sed -i '/cgi.fix_pathinfo=/c\cgi.fix_pathinfo=0' /etc/php/$ver/fpm/php.ini
+	sudo sed -i '/memory_limit =/c\memory_limit = 128M' /etc/php/$ver/fpm/php.ini
+	sudo sed -i '/max_execution_time =/c\max_execution_time = 300' /etc/php/$ver/fpm/php.ini
+	sudo sed -i '/expose_php =/c\expose_php = Off' /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/upload_max_filesize =/c\upload_max_filesize = ${maxuploads}M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/post_max_size =/c\post_max_size = ${maxuploads}M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i '/max_file_uploads =/c\max_file_uploads = 20' /etc/php/$ver/fpm/php.ini
+	sudo sed -i '/date.timezone =/c\date.timezone = America/Mexico_City' /etc/php/$ver/fpm/php.ini
 
-	sudo mkdir -p /var/log/php/$(conf_read php-ver)
-	sudo touch /var/log/php/$(conf_read php-ver)/fpm.log
-	sudo sed -i "/error_log =/c\error_log = /var/log/php/$(conf_read php-ver)/fpm.log" /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf
-	sudo sed -i '/log_level =/c\log_level = notice' /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf
+	sudo mkdir -p /var/log/php/$ver
+	sudo touch /var/log/php/$ver/fpm.log
+	sudo sed -i "/error_log =/c\error_log = /var/log/php/$ver/fpm.log" /etc/php/$ver/fpm/php-fpm.conf
+	sudo sed -i '/log_level =/c\log_level = notice' /etc/php/$ver/fpm/php-fpm.conf
 
-	sudo sed -i '/pm =/c\pm = ondemand' /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
-	sudo sed -i '/request_terminate_timeout =/c\request_terminate_timeout = 300' /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
-	sudo sed -i '/pm.max_spare_servers =/c\pm.max_spare_servers = 30' /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
-	sudo sed -i '/pm.min_spare_servers =/c\pm.min_spare_servers = 10' /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
-	sudo sed -i '/pm.start_servers =/c\pm.start_servers = 20' /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
-	sudo sed -i '/pm.max_children =/c\pm.max_children = 100' /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
-	sudo sed -i '/pm.max_requests =/c\pm.max_requests = 500' /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
-	sudo sed -i '/pm.status_path =/c\pm.status_path = /status' /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
-	sudo sed -i '/ping.path =/c\ping.path = /ping' /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
-	sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
+	sudo sed -i '/pm =/c\pm = ondemand' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i '/request_terminate_timeout =/c\request_terminate_timeout = 300' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i '/pm.max_spare_servers =/c\pm.max_spare_servers = 30' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i '/pm.min_spare_servers =/c\pm.min_spare_servers = 10' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i '/pm.start_servers =/c\pm.start_servers = 20' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i '/pm.max_children =/c\pm.max_children = 100' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i '/pm.max_requests =/c\pm.max_requests = 500' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i '/pm.status_path =/c\pm.status_path = /status' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i '/ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
+	[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
+	[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
+	[[ $ver == 7.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9004' /etc/php/$ver/fpm/pool.d/www.conf
+	[[ $ver == 5.6 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9006' /etc/php/$ver/fpm/pool.d/www.conf
 
-	sudo touch /var/log/php/$(conf_read php-ver)/slow.log
-	sudo cp /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
-	sudo sed -i '/\[www\]/c\[debug]' /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
-	sudo sed -i '/rlimit_core =/c\rlimit_core = unlimited' /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
-	sudo sed -i "/slowlog =/c\slowlog = /var/log/php/$(conf_read php-ver)/slow.log" /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
-	sudo sed -i '/request_slowlog_timeout =/c\request_slowlog_timeout = 10s' /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
-	sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
+	sudo touch /var/log/php/$ver/slow.log
+	sudo cp /etc/php/$ver/fpm/pool.d/www.conf /etc/php/$ver/fpm/pool.d/debug.conf
+	sudo sed -i '/\[www\]/c\[debug]' /etc/php/$ver/fpm/pool.d/debug.conf
+	sudo sed -i '/rlimit_core =/c\rlimit_core = unlimited' /etc/php/$ver/fpm/pool.d/debug.conf
+	sudo sed -i "/slowlog =/c\slowlog = /var/log/php/$ver/slow.log" /etc/php/$ver/fpm/pool.d/debug.conf
+	sudo sed -i '/request_slowlog_timeout =/c\request_slowlog_timeout = 10s' /etc/php/$ver/fpm/pool.d/debug.conf
+	[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
+	[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/debug.conf
+	[[ $ver == 7.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9005' /etc/php/$ver/fpm/pool.d/debug.conf
+	[[ $ver == 5.6 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9007' /etc/php/$ver/fpm/pool.d/debug.conf
 
 	if [[ -n $ver && ($ver == "7.2" || $ver == "7.1" || $ver == "7.0") ]]; then
 		# xdebug deprecated in 5.6
-		sudo echo 'php_admin_flag[xdebug.profiler_enable] = off' >> /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
-		sudo echo 'php_admin_flag[xdebug.profiler_enable_trigger] = on' >> /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
-		sudo echo 'php_admin_value[xdebug.profiler_output_name] = cachegrind.out.%p-%H-%R' >> /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
-		sudo echo 'php_admin_value[xdebug.profiler_output_dir] = /tmp/' >> /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf 
-		sudo sed -i '/zend_extension=/c\;zend_extension=xdebug.so' /etc/php/$(conf_read php-ver)/mods-available/xdebug.ini
+		sudo echo 'php_admin_flag[xdebug.profiler_enable] = off' >> /etc/php/$ver/fpm/pool.d/debug.conf
+		sudo echo 'php_admin_flag[xdebug.profiler_enable_trigger] = on' >> /etc/php/$ver/fpm/pool.d/debug.conf
+		sudo echo 'php_admin_value[xdebug.profiler_output_name] = cachegrind.out.%p-%H-%R' >> /etc/php/$ver/fpm/pool.d/debug.conf
+		sudo echo 'php_admin_value[xdebug.profiler_output_dir] = /tmp/' >> /etc/php/$ver/fpm/pool.d/debug.conf 
+		sudo sed -i '/zend_extension=/c\;zend_extension=xdebug.so' /etc/php/$ver/mods-available/xdebug.ini
 	fi
 	
 	conf_write php-optim true
