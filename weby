@@ -40,14 +40,13 @@ done
 if [[ $2 == "-ver="* ]]; then
 	ver=$(echo "$2" | cut -d'=' -f 2 -s)	
 	# Be sure we have a valid server response for the requested version
-	code=$(wget --server-response https://qrok.es/webinoly?version=$ver 2>&1 | awk '/^  HTTP/{print $2}')
+	code=$(wget --server-response --spider https://qrok.es/webinoly?version=$ver 2>&1 | awk '/^  HTTP/{print $2}')
 	# Get the last code (redirections)
 	code="${code##*$'\n'}"
 
 	echo "$(tput setaf 1)"
 	if [[ $code == 200 ]]; then
 		sudo wget --timeout=15 -qrO $HOME/webinoly.tar https://qrok.es/webinoly?version=$ver
-		sudo rm webinoly?version=$ver
 		webyversion="$ver"
 		[[ $ver == "beta" ]] && echo "[WARNING] You are installing a BETA version of Webinoly and it's not recommended for production enviroments."
 	else
