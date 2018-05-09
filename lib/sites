@@ -90,8 +90,7 @@ dbword_check() {
 
 
 wpinstall() {
-	local dom=${domain//./_}
-	local dom=${dom//-/_}
+	local dom=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
 	[[ $domain == "-mysql" ]] && dom="Webinoly_$(pwgen -s -1)"
 	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 	local AUTOGENPASS_WPDB=`pwgen -s -1`
