@@ -90,7 +90,9 @@ dbword_check() {
 
 
 wpinstall() {
-	[[ $domain == "-mysql" ]] && local dom="Webinoly_$(pwgen -s -1)" || local dom=${domain//./_}
+	local dom=${domain//./_}
+	local dom=${dom//-/_}
+	[[ $domain == "-mysql" ]] && dom="Webinoly_$(pwgen -s -1)"
 	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 	local AUTOGENPASS_WPDB=`pwgen -s -1`
 	local setupmysql="y"
@@ -242,6 +244,11 @@ wpinstall() {
 							done
 						fi
 						if [[ $dbname != $(dbword_check $dbname) ]]; then
+							if [[ $wp == [24] ]]; then
+								newdbname="Webinoly_$(pwgen -s -1)"
+								dbname="$newdbname"
+								continue 1;
+							fi
 							echo "${red}The DB Name can not be a reserved word or should only contain allowed characters!${blu}"
 							dbreuse="n"
 						fi
@@ -307,6 +314,11 @@ wpinstall() {
 							done
 						fi
 						if [[ $dbuser != $(dbword_check $dbuser user) ]]; then
+							if [[ $wp == [24] ]]; then
+								newdbuser="Webinoly_$(pwgen -s -1)"
+								dbuser="$newdbuser"
+								continue 1;
+							fi
 							echo "${red}The DB User can not be a reserved word or should only contain allowed characters!${blu}"
 							dbureuse="n"
 						fi
