@@ -90,8 +90,7 @@ dbword_check() {
 
 
 wpinstall() {
-	local dom=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
-	[[ $domain == "-mysql" ]] && dom="Webinoly_$(pwgen -s -1)"
+	[[ $domain == "-mysql" ]] && local dom="Webinoly_$(pwgen -s -1)" || local dom=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
 	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 	local AUTOGENPASS_WPDB=`pwgen -s -1`
 	local setupmysql="y"
@@ -477,7 +476,10 @@ deletesite() {
 
 
 createsite() {
+	# Check domain and then prevent reserved characters for file names.
 	domain_check $domain
+	domain=$(echo $domain | sed "s/[^\.0-9A-Za-z\-]/_/g")
+	
 	if [[ $(conf_read php) != "true" && ("$wp" == [123] || "$type" == "-php") ]]; then
 		echo "${red}"
 		echo " [ERROR] PHP must be installed before you can create a WP site!"
