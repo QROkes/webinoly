@@ -77,6 +77,7 @@ if [[ -a /opt/webinoly/webinoly.conf ]]; then
 	echo "${gre}Webinoly Configuration file was found, so we will use it!${end}"
 else
 	[[ -n $2 && $2 != "-ver="* ]] && tools_port $2
+	newinst="true"
 fi
 
 # Write app version
@@ -91,6 +92,24 @@ if [[ $setup == 4 ]]; then
 	source /opt/webinoly/lib/webin
 	config_load
 fi
+
+
+# Message Center
+if [[ $newinst == "true" && $setup == 0 ]]; then
+	echo "${blu}You have chosen the option '0', it means that you have to manually build your own stack."
+	echo "But, don't worry! With Webinoly this is an easy task, just use the stack command, i.e. 'sudo stack -lemp'"
+	echo "${gre}"
+	echo "Webinoly has been successfully installed!!!"
+fi
+
+echo "${blu}"
+echo "****************************************************************************"
+echo "**********************     D O N A T I O N S     ***************************"
+echo "***   If you like Webinoly, buy me a coffee or a beer to show support.   ***"
+echo "************     PayPal: https://www.paypal.me/qrokes     ******************"
+echo "****************************************************************************"
+echo "${end}"	
+
 
 # Remove Installation File
 sudo rm weby
