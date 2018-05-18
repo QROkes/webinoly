@@ -587,10 +587,12 @@ force_redirect() {
 	elif [[ -n $isssl && $value =~ ^(www|root)$ ]]; then
 		sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /tmp/template-site-wwwredirect
 		sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /tmp/template-site-wwwredirect
-		sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /tmp/template-site-wwwredirect
 	
-		sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /tmp/template-site-wwwredirect
-		sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$domain/}" /tmp/template-site-wwwredirect
+		if [[ $cache != "-ignore-ssl" ]]; then
+			sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /tmp/template-site-wwwredirect
+			sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /tmp/template-site-wwwredirect
+			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$domain/}" /tmp/template-site-wwwredirect
+		fi
 		
 		sudo sed -i "/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/s/\(server_name\).*$/$sername/" /etc/nginx/sites-available/$domain
 		sudo sed -i '/WebinolySSLredirectEnd/r /tmp/template-site-wwwredirect' /etc/nginx/sites-available/$domain
