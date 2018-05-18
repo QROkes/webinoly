@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Webinoly Installation Script.
-webyversion="1.4.2-beta"
+webyversion="1.4.2"
 
 
 # Check OS support
 distr=`echo $(lsb_release -i | cut -d':' -f 2)`
 osver=`echo $(lsb_release -c | cut -d':' -f 2)`
-if ! [[ $distr == "Ubuntu" && $osver =~ ^(xenial)$ ]]; then
+if ! [[ $distr == "Ubuntu" && $osver =~ ^(xenial|bionic)$ ]]; then
 	echo "$(tput setaf 1)"
 	echo "****************************************************************************"
 	echo "****  This OS is not supported by Webinoly and could not work properly  ****"
