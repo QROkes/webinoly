@@ -463,7 +463,8 @@ swap_create() {
 		swap_delete
 		swapkb=$(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
 	fi
-	
+
+	# https://help.ubuntu.com/community/SwapFaq
 	if [[ -z $swapkb || $swapkb == "0" ]]; then
 		api_update in5
 		if [[ -n $(conf_read swap-mem) && $(conf_read swap-mem) =~ ^[0-9]+$ ]]; then
@@ -484,6 +485,8 @@ swap_create() {
 			local newswap="8"
 		elif [[ $ram -le 128 ]]; then
 			local newswap="11"
+		elif [[ $ram -gt 128 ]]; then
+			local newswap="15"
 		else
 			local newswap="0"
 		fi

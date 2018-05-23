@@ -205,8 +205,10 @@ elif [[ $arg == "-purge" && $opt == "-mysql" ]]; then
 			conf_delete delautopma
 		fi	
 		sudo service mysql stop
-		sudo apt-get -y purge mariadb-server mariadb-common mysql-common debconf-utils
+		echo "mariadb-server-10.2 mariadb-server-10.2/postrm_remove_databases boolean true" | debconf-set-selections
+		sudo apt-get -y purge mariadb-server mariadb-common mysql-common
 		sudo apt-get -y purge mariadb-client
+		sudo apt-get -y purge debconf-utils
 		sudo apt-get -y autoremove
 		
 		os_name=$(check_osname)
@@ -216,7 +218,7 @@ elif [[ $arg == "-purge" && $opt == "-mysql" ]]; then
 			"trusty")
 				sudo apt-key del 0xcbcb082a1bb943db
 			;;
-			"xenial"|"zesty"|"artful")
+			"xenial"|"zesty"|"artful"|"bionic")
 				sudo apt-key del 0xF1656F24C74CD1D8
 			;;
 		esac

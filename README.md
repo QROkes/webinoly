@@ -16,7 +16,7 @@ Webinoly provides a set of tools and commands that facilitate the web server adm
 - Log viewer in real time.
 
 ### Requirements
-* Ubuntu 16.04
+* Ubuntu 16.04 or 18.04
 
 ## Usage
 
