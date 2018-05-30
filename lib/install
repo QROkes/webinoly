@@ -291,22 +291,30 @@ php_optim() {
 	sudo sed -i '/pm.max_requests =/c\pm.max_requests = 500' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.status_path =/c\pm.status_path = /status' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
-	[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
-	[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
-	[[ $ver == 7.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9004' /etc/php/$ver/fpm/pool.d/www.conf
-	[[ $ver == 5.6 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9006' /etc/php/$ver/fpm/pool.d/www.conf
-
+	if [[ $(conf_read multi-php) == "true" ]]; then
+		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9004' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 5.6 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9006' /etc/php/$ver/fpm/pool.d/www.conf
+	else
+		sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
+	fi
+	
 	sudo touch /var/log/php/$ver/slow.log
 	sudo cp /etc/php/$ver/fpm/pool.d/www.conf /etc/php/$ver/fpm/pool.d/debug.conf
 	sudo sed -i '/\[www\]/c\[debug]' /etc/php/$ver/fpm/pool.d/debug.conf
 	sudo sed -i '/rlimit_core =/c\rlimit_core = unlimited' /etc/php/$ver/fpm/pool.d/debug.conf
 	sudo sed -i "/slowlog =/c\slowlog = /var/log/php/$ver/slow.log" /etc/php/$ver/fpm/pool.d/debug.conf
 	sudo sed -i '/request_slowlog_timeout =/c\request_slowlog_timeout = 10s' /etc/php/$ver/fpm/pool.d/debug.conf
-	[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
-	[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/debug.conf
-	[[ $ver == 7.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9005' /etc/php/$ver/fpm/pool.d/debug.conf
-	[[ $ver == 5.6 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9007' /etc/php/$ver/fpm/pool.d/debug.conf
-
+	if [[ $(conf_read multi-php) == "true" ]]; then
+		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
+		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/debug.conf
+		[[ $ver == 7.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9005' /etc/php/$ver/fpm/pool.d/debug.conf
+		[[ $ver == 5.6 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9007' /etc/php/$ver/fpm/pool.d/debug.conf
+	else
+		sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
+	fi
+	
 	if [[ -n $ver && ($ver == "7.2" || $ver == "7.1" || $ver == "7.0") ]]; then
 		# xdebug deprecated in 5.6
 		sudo echo 'php_admin_flag[xdebug.profiler_enable] = off' >> /etc/php/$ver/fpm/pool.d/debug.conf
