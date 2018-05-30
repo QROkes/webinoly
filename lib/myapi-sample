@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# Installation process
+#
+# i1 - Common Packages
+# i2 - Common Packages Finished
+#
+# in1 - NGINX Installation
+# in2 - NGINX Installation Finished
+# in3 - NGINX Optimization
+# in4 - Ubuntu Optimization
+# in5 - SWAP Creation
+# in6 - SWAP Creation Finished
+# in7 - Ubuntu Optimization Finished
+# in8 - NGINX Optimization Finished
+# in9 - NGINX Tools
+# in10 - NGINX Tools Finished
+#
+# ip1 - PHP Installation
+# ip2 - PHP Installation Finished
+# ip3 - PHP Optimization
+# ip4 - PHP Optimization Finished
+# ip5 - PHP Tools
+# ip6 - PHP Tools site creation
+# ip7 - PHP Tools site creation Finished
+# ip8 - PHP Tools Finished
+#
+# im1 - MySQL Installation
+# im2 - MySQL Client Installation
+# im3 - MySQL Client Installation Finished
+# im4 - MySQL Installation Finished
+# im5 - MySQL Tool (PhpMyAdmin)
+# im6 - MySQL Tool (PhpMyAdmin) Finished
+#
+#
+# Purge (UnInstall)
+#
+# pn1 - NGINX Purge
+# pn2 - NGINX Delete All Sites
+# pn3 - NGINX Delete All Sites Finished
+# pn4 - NGINX Purge Finished
+# pn5 - NGINX Purge Tools
+# pn6 - NGINX Purge Tools Finished
+# pn7 - Ubuntu Optimization Purge
+# pn8 - Ubuntu Optimization Purge Finished
+# pn9 - SWAP Purge
+# pn10 - SWAP Purge Finished
+#
+# pp1 - PHP Purge
+# pp2 - PHP Purge Finished
+#
+# pm1 - MySQL Purge
+# pm2 - MySQL Tool (PhpMyAdmin) Purge
+# pm3 - MySQL Tool (PhpMyAdmin) Purge Finished
+# pm4 - MySQL Purge Finished
+
+
+api_catch_status() {
+	echo "${blu}API Status: $1 ${end}"
+}

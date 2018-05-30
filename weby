@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Webinoly Installation Script.
-webyversion="1.4.3"
+webyversion="1.5.0-beta"
 
 
 # Check OS support

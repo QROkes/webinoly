@@ -2,8 +2,8 @@
 
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
-# Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off
-# Arguments: -cache, -root, -subdomain
+# Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off, -force-redirect
+# Arguments: -cache, -root, -subdomain, -ignore-ssl
 
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
@@ -24,7 +24,7 @@ if [[ ! $(conf_read nginx) == "true" ]]; then
 fi
 
 # Check if user entered arg before option and correct it.
-if [[ "$type" == "-cache" && -n $cache ]]; then
+if [[ -n $cache && ($type == "-cache" || $type == "-ignore-ssl") ]]; then
 	type="$3"
 	cache="$2"
 fi
@@ -35,7 +35,7 @@ if [[ $domain == "-mysql="* ]]; then
 	value=$(echo "${domain}" | cut -d'=' -f 2 -s)
 	domain=$(echo "${domain}" | cut -d'=' -f 1 -s)
 fi
-if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type == "-wpsubdir="* || $type == "-wpsubdom="* || $type == "-ssl-off="* || $type == "-mysql="* || $type == "-delete="* ]]; then
+if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type == "-wpsubdir="* || $type == "-wpsubdom="* || $type == "-ssl-off="* || $type == "-mysql="* || $type == "-delete="* || $type == "-force-redirect="* ]]; then
 	value=$(echo "${type}" | cut -d'=' -f 2 -s)
 	type=$(echo "${type}" | cut -d'=' -f 1 -s)
 fi
@@ -46,7 +46,7 @@ fi
 
 
 # Check if site is sub-domain
-if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked|-proxy|-ssl-on)$ ]]; then
+if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked|-proxy|-ssl-on|-force-redirect)$ ]]; then
 	count=1
 	while true; do
 		tld=$(echo "${domain}" | rev | cut -d'.' -f -$count -s | rev)
@@ -108,10 +108,10 @@ if [[ $type == "-wp" || $type == "-wpsubdir" || $type == "-wpsubdom" || $type ==
 fi
 
 # Cache validation
-if [[ $cache == "-cache" && $wp == "0" ]]; then
+if [[ $cache == "-cache" && $wp == [045] ]]; then
 	echo "${red} Site $domain is not a WP site! ${end}"
 	exit 1
-elif [[ -n $cache && ( $cache != "-cache" && $cache != "-root" && $cache != "-subdomain" ) && $type != "-parked" ]]; then
+elif [[ -n $cache && ( $cache != "-cache" && $cache != "-root" && $cache != "-subdomain" && $cache != "-ignore-ssl" ) && $type != "-parked" ]]; then
 	echo "${red} $cache is not a valid argument! ${end}"
 	exit 1
 fi
@@ -339,10 +339,15 @@ elif [[ "$type" == "-cache" && -a /etc/nginx/sites-available/$domain ]]; then
 	else
 		echo "${red} Site $domain is not a WP site or FastCGI is already enabled!${end}"
 	fi
+
+	
+# Force www or non-www redirect (www, root, off)
+elif [[ "$type" == "-force-redirect" && -a /etc/nginx/sites-available/$domain ]]; then
+	force_redirect
 	
 	
 # Catch ERROR 
-elif [[ ! -a /etc/nginx/sites-available/$domain && $type =~ ^(-nocache|-cache|-delete|-off|-on|-ssl-on|-ssl-off)$ ]]; then
+elif [[ ! -a /etc/nginx/sites-available/$domain && $type =~ ^(-nocache|-cache|-delete|-off|-on|-ssl-on|-ssl-off|-force-redirect)$ ]]; then
 	echo "${red}Site $domain doesn't exists!${end}"
 else
 	echo "${red} Argument '${type}' is not a valid option! ${end}"
