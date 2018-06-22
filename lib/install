@@ -288,6 +288,7 @@ php_optim() {
 	sudo sed -i "/upload_max_filesize =/c\upload_max_filesize = ${maxuploads}M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i "/post_max_size =/c\post_max_size = ${maxuploads}M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/max_file_uploads =/c\max_file_uploads = 20' /etc/php/$ver/fpm/php.ini
+	sudo sed -i '/session.cookie_httponly =/c\session.cookie_httponly = 1' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/date.timezone =/c\date.timezone = America/Mexico_City' /etc/php/$ver/fpm/php.ini
 
 	sudo mkdir -p /var/log/php/$ver
