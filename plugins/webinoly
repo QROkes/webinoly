@@ -243,11 +243,7 @@ elif [[ $opt == "-uninstall" ]]; then
 	  fi
 	done
 
-	
-elif [[ $opt == "-config-load" ]]; then
-	config_load
 
-	
 elif [[ $opt == "-info" ]]; then
 	system_info
 

@@ -20,13 +20,12 @@ fi
 # Diplay menu to select type of server
 [[ -n "$1" ]] && setup="$1" || setup=9
 
-while ! [[ $setup -ge 0 && $setup -le 4 && $setup =~ ^[0-9]+$ ]] 2>/dev/null
+while ! [[ $setup -ge 0 && $setup -le 3 && $setup =~ ^[0-9]+$ ]] 2>/dev/null
 do
 	echo ""
 	echo "  1 - HTML Server"
 	echo "  2 - PHP Server"
 	echo "  3 - LEMP Server (Default)"
-	echo "  4 - Custom Configuration"
 	echo "  0 - Maybe later..."
 	echo ""
 	read -p "Select the desired option to configure your server: " setup
@@ -85,13 +84,9 @@ conf_write app-version $webyversion
 
 
 # Stack installation
-[[ $setup -gt 0 && $setup -lt 4 ]] && stack -nginx
-[[ $setup -gt 1 && $setup -lt 4 ]] && stack -php
+[[ $setup -gt 0 && $setup -lt 3 ]] && stack -nginx
+[[ $setup -gt 1 && $setup -lt 3 ]] && stack -php
 [[ $setup == 3 ]] && stack -mysql
-if [[ $setup == 4 ]]; then
-	source /opt/webinoly/lib/webin
-	config_load
-fi
 
 
 # Message Center
