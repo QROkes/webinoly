@@ -244,7 +244,7 @@ elif [ "$type" == "-parked" ]; then
 # Reverse proxy
 elif [[ "$type" == "-proxy" ]]; then
 	createsite
-	sudo sed -i '/include /d' /etc/nginx/sites-available/$domain
+	sudo sed -i '/php.conf;/d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/root /d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/index /d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/error_log /r /opt/webinoly/templates/template-site-proxy' /etc/nginx/sites-available/$domain

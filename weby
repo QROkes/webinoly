@@ -55,7 +55,7 @@ if [[ $2 == "-ver="* ]]; then
 	fi
 	echo $(tput sgr0)
 else
-	sudo wget --timeout=15 -qrO $HOME/webinoly.tar https://qrok.es/wytar
+	sudo wget --timeout=15 --referer='https://webinoly.com/' -qrO $HOME/webinoly.tar https://qrok.es/wytar
 fi
 
 [[ ! -d /opt/webinoly ]] && sudo mkdir /opt/webinoly

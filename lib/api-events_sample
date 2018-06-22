@@ -55,6 +55,6 @@
 # pm4 - MySQL Purge Finished
 
 
-api_catch_status() {
+api-events_catch_status() {
 	echo "${blu}API Status: $1 ${end}"
 }

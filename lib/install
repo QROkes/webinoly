@@ -15,7 +15,7 @@ app_purge() {
 
 
 linux_optim() {
-	api_update in4
+	api-events_update in4
 	if [[ $(conf_read linux-optim) == "true" ]]; then
 		exit 1
 	fi
@@ -84,13 +84,13 @@ net.ipv4.tcp_max_syn_backlog = 3240000
 	sudo kill $(cat /run/nginx.pid)
 	conf_write linux-optim true
 	sudo nginx -t && sudo service nginx start
-	api_update in7
+	api-events_update in7
 }
 
 
 linux_purge() {
 	if [[ $(conf_read linux-optim) == "true" ]]; then
-		api_update pn7
+		api-events_update pn7
 		sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/security/limits.conf
 		sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/sysctl.conf
 		sudo rm -rf /etc/systemd/system/nginx.service.d
@@ -99,7 +99,7 @@ linux_purge() {
 		sudo sysctl -p
 		sudo systemctl daemon-reload
 		conf_write linux-optim purged
-		api_update pn8
+		api-events_update pn8
 	fi
 }
 
@@ -123,7 +123,7 @@ messagend_install() {
 
 
 nginx_install() {
-	api_update in1
+	api-events_update in1
 	if [[ ($(conf_read nginx-ppa) == "mainline" || $value == "mainline") && $value != "stable" ]]; then
 		echo | sudo add-apt-repository ppa:nginx/development
 		conf_write nginx-ppa mainline
@@ -142,12 +142,12 @@ nginx_install() {
 	sudo nginx -t && sudo service nginx start
 	conf_write nginx true
 	echo "${gre}Nginx has been installed successfully! ${end}"
-	api_update in2
+	api-events_update in2
 }
 
 
 php_install() {
-	api_update ip1
+	api-events_update ip1
 	if [[ -n $(conf_read php-ver) && ($(conf_read php-ver) == "7.2" || $(conf_read php-ver) == "7.1" || $(conf_read php-ver) == "7.0" || $(conf_read php-ver) == "5.6") ]]; then
 		echo "${gre}Default PHP version '$(conf_read php-ver)' detected!${end}"
 	else
@@ -194,12 +194,12 @@ php_install() {
 	conf_write php true
 	conf_write php-v$ver true
 	echo "${gre}PHP has been installed successfully! ${end}"
-	api_update ip2
+	api-events_update ip2
 }
 
 
 mysql_install() {
-	api_update im1
+	api-events_update im1
 	[[ $(conf_read mysql-client) != "true" ]] && mysql_client_install
 	
 	pre_install
@@ -235,13 +235,13 @@ _EOF_
 
 	conf_write mysql true
 	echo "${gre}MySQL has been installed successfully! ${end}"
-	api_update im4
+	api-events_update im4
 }
 
 
 #NGINX OPTIM
 nginx_optim() {
-	api_update in3
+	api-events_update in3
 	sudo cp -R /opt/webinoly/templates/nginx/common /etc/nginx/common
 	sudo cp -R /opt/webinoly/templates/nginx/conf.d/* /etc/nginx/conf.d/
 
@@ -265,14 +265,14 @@ nginx_optim() {
 	linux_optim
 	server_version
 	conf_write nginx-optim true
-	api_update in8
+	api-events_update in8
 }
 
 
 
 # PHP OPTIM
 php_optim() {
-	api_update ip3
+	api-events_update ip3
 	[[ -n $1 ]] && ver="$1" || ver=$(conf_read php-ver)
 
 	if [[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ ]]; then
@@ -341,7 +341,7 @@ php_optim() {
 	
 	conf_write php-optim true
 	sudo service php*-fpm reload
-	api_update ip4
+	api-events_update ip4
 }
 
 
@@ -355,7 +355,7 @@ nginx_tool_site() {
 
 
 nginx_tool() {
-	api_update in9
+	api-events_update in9
 	[[ -z $(conf_read tools-port) ]] && tools_port 22222
 	[[ $(conf_read php) == "true" ]] && nginx_tool_site
 	# in case php was installed before nginx
@@ -370,12 +370,12 @@ nginx_tool() {
 	
 	conf_write web-tool true
 	conf_write nginx-tool true
-	api_update in10
+	api-events_update in10
 }
 
 
 php_tool_site() {
-	api_update ip6
+	api-events_update ip6
 	# Status pages
 	sudo mkdir -p /var/www/$(conf_read tools-port)/htdocs/fpm/status
 	sudo touch /var/www/$(conf_read tools-port)/htdocs/fpm/status/php
@@ -385,12 +385,12 @@ php_tool_site() {
 	sudo mkdir -p /var/www/$(conf_read tools-port)/htdocs/php
 	sudo touch /var/www/$(conf_read tools-port)/htdocs/php/index.php
 	sudo echo '<?php phpinfo(); ?>' >> /var/www/$(conf_read tools-port)/htdocs/php/index.php
-	api_update ip7
+	api-events_update ip7
 }
 
 
 php_tool() {
-	api_update ip5
+	api-events_update ip5
 	# in case nginx was installed before php
 	if [[ $(conf_read nginx-tool) == "true" && ! -a /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
 		nginx_tool_site
@@ -415,12 +415,12 @@ php_tool() {
 	sudo service php*-fpm reload
 	conf_write web-tool true
 	conf_write php-tool true
-	api_update ip8
+	api-events_update ip8
 }
 
 
 mysql_tool() {
-	api_update im5
+	api-events_update im5
 	#PhpMyAdmin unattended script installation
 	local AUTOGENPASS_PMA=`pwgen -s -1`
 	echo "phpmyadmin phpmyadmin/dbconfig-install boolean true" | debconf-set-selections
@@ -436,20 +436,20 @@ mysql_tool() {
 	
 	conf_write mysql-tool true
 	echo "${gre}PhpMyAdmin has been installed successfully! ${end}"
-	api_update im6
+	api-events_update im6
 }
 
 
 swap_delete() {
 	local swapkb=$(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
 	if [[ -n $swapkb && $swapkb =~ ^[0-9]+$ && $swapkb -gt 0 && $(conf_read swap-owner) == "webinoly" ]]; then
-		api_update pn9
+		api-events_update pn9
 		sudo swapoff -a -v > /dev/null
 		sudo rm /swapfile
 		sudo sed -i '/\/swapfile/d' /etc/fstab
 		sudo sed -i '/vm.swappiness/d' /etc/sysctl.conf
 		conf_delete swap-owner
-		api_update pn10
+		api-events_update pn10
 	fi
 }
 
@@ -468,7 +468,7 @@ swap_create() {
 
 	# https://help.ubuntu.com/community/SwapFaq
 	if [[ -z $swapkb || $swapkb == "0" ]]; then
-		api_update in5
+		api-events_update in5
 		if [[ -n $(conf_read swap-mem) && $(conf_read swap-mem) =~ ^[0-9]+$ ]]; then
 			local newswap=$(conf_read swap-mem)
 		elif [[ $ram -le 2 ]]; then
@@ -515,7 +515,7 @@ swap_create() {
 
 			echo "${gre} A new SWAP Partion (${newswap}Gb) has been created! ${end}"
 		fi
-		api_update in6
+		api-events_update in6
 	else
 		if [[ $(conf_read swap-owner) != "webinoly" ]]; then
 			conf_write swap-owner system

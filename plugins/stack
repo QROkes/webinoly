@@ -53,7 +53,7 @@ if [[ $arg == "-noptim" && $opt == "-lemp" ]]; then
 
 # Delete some stack
 elif [[ $arg == "-purge" && ( $opt == "-html" || $opt == "-nginx" ) ]]; then
-	api_update pn1
+	api-events_update pn1
 	if [[ $(conf_read nginx) != "true" ]]; then
 		echo "${red}Nginx is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
@@ -86,23 +86,23 @@ elif [[ $arg == "-purge" && ( $opt == "-html" || $opt == "-nginx" ) ]]; then
 		fi
 		if [[ $answer == [Yy] ]]; then
 			[[ $(conf_read mysql-tool) == "true" ]] && stack -pma -purge
-			api_update pn2
+			api-events_update pn2
 			site -delete-all
 			sudo rm -rf /var/www/$(conf_read tools-port)
 			sudo rm -rf /var/www/html
-			api_update pn3
+			api-events_update pn3
 		fi
 		
 		sudo service nginx stop
 		sudo apt-get -y purge nginx nginx-common
 		[[ $(conf_read nginx-ppa) == "mainline" ]] && echo | sudo add-apt-repository --remove 'ppa:nginx/development' || echo | sudo add-apt-repository --remove 'ppa:nginx/stable'
-		api_update pn4
-		api_update pn5
+		api-events_update pn4
+		api-events_update pn5
 		sudo apt-get -y purge letsencrypt python-boto duplicity duply
 		sudo apt-get -y autoremove
 		sudo rm $HOME/www
 		sudo rm $HOME/sites-available
-		api_update pn6
+		api-events_update pn6
 		linux_purge
 		
 		[[ $(conf_read php-tool) != "true" ]] && conf_write web-tool purged		
@@ -120,7 +120,7 @@ elif [[ $arg == "-purge" && ( $opt == "-html" || $opt == "-nginx" ) ]]; then
 	echo ""
 	
 elif [[ $arg == "-purge" && $opt == "-php" ]]; then
-	api_update pp1
+	api-events_update pp1
 	if [[ $(conf_read php) != "true" ]]; then
 		echo "${red}PHP is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
@@ -175,11 +175,11 @@ elif [[ $arg == "-purge" && $opt == "-php" ]]; then
 		echo ""
 	fi
 	echo ""
-	api_update pp2
+	api-events_update pp2
 
 	
 elif [[ $arg == "-purge" && $opt == "-mysql" ]]; then
-	api_update pm1
+	api-events_update pm1
 	if [[ $(conf_read mysql) != "true" ]]; then
 		echo "${red}MySQL is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
@@ -238,10 +238,10 @@ elif [[ $arg == "-purge" && $opt == "-mysql" ]]; then
 		echo ""
 	fi
 	echo ""
-	api_update pm4
+	api-events_update pm4
 	
 elif [[ $arg == "-purge" && $opt == "-pma" ]]; then
-	api_update pm2
+	api-events_update pm2
 	if [[ $(conf_read mysql-tool) != "true" ]]; then
 		echo "${red} PhpMyAdmin is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
@@ -278,7 +278,7 @@ elif [[ $arg == "-purge" && $opt == "-pma" ]]; then
 		echo ""
 	fi
 	echo ""
-	api_update pm3
+	api-events_update pm3
 	
 elif [[ $arg == "-purge" && $opt == "-web-tools" ]]; then
 	if [[ $(conf_read web-tool) != "true" ]]; then
