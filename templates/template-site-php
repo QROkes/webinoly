@@ -1,4 +1,5 @@
 
+# WebinolyNginxServerStart
 server {
 	listen 80;
 	listen [::]:80;
@@ -16,5 +17,6 @@ server {
 	include common/locations.conf;
 	include common/headers-http.conf;
 	include common/headers-html.conf;
-	#include /var/www/domain.com/conf/nginx/*.conf;
+	include /var/www/domain.com/*-nginx.conf;
 }
+# WebinolyNginxServerEnd
