@@ -213,25 +213,21 @@ webinoly_verify() {
 	fi
 	
 	# Web Tools
-	if [[ ! -d /etc/redis && $(conf_read web-tool) == "true" && $(conf_read php_tool) == "true" ]]; then
+	if [[ ! -d /etc/redis && $(conf_read php_tool) == "true" ]]; then
 		echo "[ERROR] Folder: /etc/redis not found!"
 		error="1"
 	fi
-	if [[ ! -d /etc/postfix && $(conf_read web-tool) == "true" && $(conf_read php_tool) == "true" ]]; then
+	if [[ ! -d /etc/postfix && $(conf_read php_tool) == "true" ]]; then
 		echo "[ERROR] Folder: /etc/postfix not found!"
 		error="1"
 	fi
-	if [[ ! -a /usr/bin/duplicity && $(conf_read web-tool) == "true" && $(conf_read nginx_tool) == "true" ]]; then
+	if [[ ! -a /usr/bin/duplicity && $(conf_read nginx_tool) == "true" ]]; then
 		echo "[ERROR] File: /usr/bin/duplicity not found!"
 		error="1"
 	fi
-	if [[ ! -a /usr/bin/letsencrypt && $(conf_read web-tool) == "true" && $(conf_read nginx_tool) == "true" ]]; then
+	if [[ ! -a /usr/bin/letsencrypt && $(conf_read nginx_tool) == "true" ]]; then
 		echo "[ERROR] File: /usr/bin/letsencrypt not found!"
 		error="1"
-	fi
-	if [[ ( -d /etc/redis || -d /etc/postfix || -a /usr/bin/duplicity || -a /usr/bin/letsencrypt ) && $(conf_read web-tool) != "true" ]]; then
-		echo "[WARNING] Seems like Web Tools (Redis, Letsencrypt, Postfix and Duplicity) are enabled but Webinoly can not detect it!"
-		warning="1"
 	fi
 	
 	
@@ -340,9 +336,6 @@ config_load() {
 		stack -pma
 	fi
 	
-	if [[ $(conf_load_read web-tool) == "purged" ]]; then
-		stack -web-tools -purge
-	fi
 	
 	# Some user preferences
 	if [[ -n $(conf_load_read tools-port) ]]; then

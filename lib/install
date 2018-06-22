@@ -368,7 +368,6 @@ nginx_tool() {
 	# Install LetsEncrypt
 	sudo apt-get -y install letsencrypt
 	
-	conf_write web-tool true
 	conf_write nginx-tool true
 	api-events_update in10
 }
@@ -413,7 +412,6 @@ php_tool() {
 	sudo apt-get -y install postfix
 
 	sudo service php*-fpm reload
-	conf_write web-tool true
 	conf_write php-tool true
 	api-events_update ip8
 }

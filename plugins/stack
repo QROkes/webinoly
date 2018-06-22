@@ -2,7 +2,7 @@
 
 # Server Stack Manager
 # Syntax: stack <option> <arguments>
-# Options: -html, -nginx, -php, -lemp, -mysql, -pma, -info, -purge-server-all, -web-tools, -php-ver
+# Options: -html, -nginx, -php, -lemp, -mysql, -pma, -info, -purge-server-all, -php-ver
 # Arguments: -purge, -notools, -noptim
 
 source /opt/webinoly/lib/install
@@ -105,7 +105,6 @@ elif [[ $arg == "-purge" && ( $opt == "-html" || $opt == "-nginx" ) ]]; then
 		api-events_update pn6
 		linux_purge
 		
-		[[ $(conf_read php-tool) != "true" ]] && conf_write web-tool purged		
 		conf_write nginx purged
 		conf_write nginx-optim purged
 		conf_write nginx-tool purged
@@ -165,7 +164,6 @@ elif [[ $arg == "-purge" && $opt == "-php" ]]; then
 			conf_write php-tool purged
 		fi
 
-		[[ $(conf_read nginx-tool) != "true" ]] && conf_write web-tool purged
 		echo ""
 		echo "${gre}PHP has been deleted successfully! ${end}"
 		echo ""
@@ -279,41 +277,7 @@ elif [[ $arg == "-purge" && $opt == "-pma" ]]; then
 	fi
 	echo ""
 	api-events_update pm3
-	
-elif [[ $arg == "-purge" && $opt == "-web-tools" ]]; then
-	if [[ $(conf_read web-tool) != "true" ]]; then
-		echo "${red} Web Tools (Postfix, Redis, Memcached, Duplicity and Letsencrypt) are not installed, hence can not be deleted! ${end}"
-		clear_force_flag
-		exit 0
-	fi
-	
-	echo ""
-	echo "${red} ¡ C A U T I O N !  You are about to remove all your Web Tools (Postfix, Redis, Memcached, Duplicity and Letsencrypt) from your server! ${end}"
-	echo ""
-
-	if [[ $(conf_read force-flag) != "true" ]]; then
-		echo " ${blu} Are you sure [y/N]? ${end} "
-		while read -r -n 1 -s answer; do
-		  answer=${answer:-n}
-		  [[ $answer = [YyNn] ]] && break
-		done
-	fi
-	
-	if [[ $answer == [Yy] || $(conf_read force-flag) == "true" ]]; then
-		[[ $(conf_read nginx-tool) == "true" ]] && sudo apt-get -y purge letsencrypt python-boto duplicity duply
-		[[ $(conf_read php-tool) == "true" ]] && sudo apt-get -y purge redis-server php-redis postfix php-memcached php-memcache memcached
-		sudo apt-get -y autoremove
-		conf_write web-tool purged
-		echo ""
-		echo "${gre}Web Tools have been deleted successfully! ${end}"
-		echo ""
-	else
-		echo ""
-		echo " ${gre} Action aborted!!!  ${end}"
-		echo ""
-	fi
-	echo ""
-	
+		
 elif [[ $arg == "-purge" && $opt == "-lemp" ]]; then
 	echo ""
 	echo "${red}If you want to remove Webinoly Stack completely from your server use the '-purge-server-all' option or remove each package individually.  ${end}"
