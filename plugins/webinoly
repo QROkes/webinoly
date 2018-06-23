@@ -248,8 +248,8 @@ elif [[ $opt == "-info" ]]; then
 	system_info
 
 	
-elif [[ $opt == "-domain-list-update" ]]; then
-	echo "${blu}- Downloading!${end}"
+elif [[ $opt == "-external-list-update" ]]; then
+	echo "${blu}- Downloading Public Suffix List!${end}"
 	sudo wget --timeout=15 -qrO /tmp/temp-public_suffix_list.dat https://publicsuffix.org/list/public_suffix_list.dat
 	if [[ -s /tmp/temp-public_suffix_list.dat ]]; then
 		echo "${blu}- Processing file!${end}"
@@ -261,6 +261,22 @@ elif [[ $opt == "-domain-list-update" ]]; then
 		echo "${gre}Domain list has been successfully updated!${end}"
 	else
 		echo "${red}[ERROR] Domain list not updated!${end}"
+	fi
+	
+	echo ""
+	echo "${blu}- Downloading Timezone Database!${end}"
+	sudo wget --timeout=15 -qrO /tmp/temp-timezonedb.zip https://timezonedb.com/files/timezonedb.csv.zip
+	if [[ -s /tmp/temp-timezonedb.zip ]]; then
+		echo "${blu}- Processing file!${end}"
+		sudo unzip -qq /tmp/temp-timezonedb.zip -d /tmp/tz/
+		sudo cut -d',' -f3 /tmp/tz/zone.csv >> timezone.dat
+		sudo sed -i 's/"//g' timezone.dat
+		sudo mv timezone.dat /opt/webinoly/lib/
+		sudo rm -rf /tmp/tz
+		sudo rm /tmp/temp-timezonedb.zip
+		echo "${gre}Timezone Database has been successfully updated!${end}"
+	else
+		echo "${red}[ERROR] Timezone Database not updated!${end}"
 	fi
 	
 	
