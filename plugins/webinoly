@@ -8,7 +8,7 @@ opt="$1"
 source /opt/webinoly/lib/webin
 
 # Extract value if exist
-if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* ]]; then
+if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* || $opt == "-timezone="* ]]; then
 	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
 	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
 fi
@@ -328,6 +328,19 @@ elif [[ $opt == "-clear-cache" ]]; then
 			echo "${red}[ERROR] We can not clear FastCGI Cache because NGINX is not installed!${end}"
 		fi
 	fi
+
+
+elif [[ $opt == "-timezone" ]]; then
+	if [[ -z $value ]]; then
+		echo "${gre}"
+		echo "Please, enter a valid Timezone for Ubuntu and PHP."
+		echo "http://php.net/manual/en/timezones.php"
+		echo ""
+		read -p "${blu} Timezone: ${end}" value
+		echo ""
+	fi
+	conf_write timezone $value
+	set_timezone all
 	
 	
 else

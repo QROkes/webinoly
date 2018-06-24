@@ -14,6 +14,22 @@ app_purge() {
 }
 
 
+set_timezone() {
+	if [[ -n $(conf_read timezone) ]] && grep -Fxq $(conf_read timezone) /opt/webinoly/lib/timezone.dat; then
+		[[ $1 == "os" || $1 == "all" ]] && sudo timedatectl set-timezone $(conf_read timezone)
+		# It's not compatible with multi-php feature.
+		if [[ ($1 == "php" || $1 == "all") && $(conf_read php) == "true" ]]; then
+			sudo sed -i "/date.timezone =/c\date.timezone = $(conf_read timezone)" /etc/php/$(conf_read php-ver)/fpm/php.ini
+			sudo service php*-fpm reload
+		fi
+		echo "${gre}Timezone: $(conf_read timezone) ${end}"
+	else
+		conf_delete timezone
+		echo "${red}Timezone not found or not valid!${end}"
+	fi
+}
+
+
 linux_optim() {
 	api-events_update in4
 	if [[ $(conf_read linux-optim) == "true" ]]; then
@@ -78,6 +94,7 @@ net.ipv4.tcp_max_syn_backlog = 3240000
 	sudo sed -i "/End of file/i \# WebinolyEnd" /etc/security/limits.conf
 
 	swap_create
+	set_timezone os
 	
 	sudo sysctl -p
 	sudo systemctl daemon-reload
@@ -289,7 +306,7 @@ php_optim() {
 	sudo sed -i "/post_max_size =/c\post_max_size = ${maxuploads}M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/max_file_uploads =/c\max_file_uploads = 20' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/session.cookie_httponly =/c\session.cookie_httponly = 1' /etc/php/$ver/fpm/php.ini
-	sudo sed -i '/date.timezone =/c\date.timezone = America/Mexico_City' /etc/php/$ver/fpm/php.ini
+	set_timezone php
 
 	sudo mkdir -p /var/log/php/$ver
 	sudo touch /var/log/php/$ver/fpm.log
