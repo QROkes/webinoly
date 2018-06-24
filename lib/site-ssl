@@ -55,12 +55,13 @@ site_ssl_on() {
 		fi
 		echo "${end}"
 	done
-		
+	
 	# Create new certificate
-	if [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $subdomflag == 0 && $(conf_read debug) != "true" ]]; then
-		sudo letsencrypt certonly --webroot -w /var/www/$root/htdocs/ -d $domain -d www.$domain --email $cermail --agree-tos
-	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $subdomflag == 1 && $(conf_read debug) != "true" ]]; then
-		sudo letsencrypt certonly --webroot -w /var/www/$root/htdocs/ -d $domain --email $cermail --agree-tos
+	[[ $(conf_read debug) == "true" ]] && param="--test-cert" || param=""
+	if [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $subdomflag == 0 ]]; then
+		sudo certbot certonly --webroot -w /var/www/$root/htdocs/ -d $domain -d www.$domain --email $cermail --no-eff-email --agree-tos --staple-ocsp --must-staple $param
+	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $subdomflag == 1 ]]; then
+		sudo certbot certonly --webroot -w /var/www/$root/htdocs/ -d $domain --email $cermail --no-eff-email --agree-tos --staple-ocsp --must-staple $param
 	fi
 	
 	# SSL Nginx Conf
@@ -85,9 +86,9 @@ site_ssl_on() {
 		fi
 		
 		cronmail=$( sudo grep -F "MAILTO=" /var/spool/cron/crontabs/root )
-		cronrene=$( sudo grep -F "letsencrypt renew" /var/spool/cron/crontabs/root )
+		cronrene=$( sudo grep -F "certbot renew" /var/spool/cron/crontabs/root )
 		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root
-		[[ -z $cronrene ]] && echo "15 3 * * 7 letsencrypt renew" | sudo tee -a /var/spool/cron/crontabs/root
+		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root
 		echo "${gre}SSL have been successfully enabled for site $domain!${end}"
 	else
 		echo "${red}"
@@ -108,7 +109,7 @@ site_ssl_off() {
 		answer=="N"
 	else
 		echo "${blu}"
-		echo "Do you want to delete your certificate files [y/N]? "
+		echo "Do you want to delete and revoke this certificate [y/N]? "
 		while read -r -n 1 -s answer; do
 		  answer=${answer:-n}
 		  [[ $answer = [YyNn] ]] && break
@@ -116,13 +117,11 @@ site_ssl_off() {
 		echo "${end}"
 	fi
 	if [[ $answer == [Yy] ]]; then
-		#sudo letsencrypt delete --cert-name $domain
-		rm -rf /etc/letsencrypt/live/${domain}
-		rm -rf /etc/letsencrypt/renewal/${domain}.conf
-		rm -rf /etc/letsencrypt/archive/${domain}
+		[[ $(conf_read debug) == "true" ]] && param="--test-cert" || param=""
+		sudo certbot revoke --cert-path /etc/letsencrypt/live/$domain/cert.pem --delete-after-revoke $param
 		echo "${gre}"
 		echo "Certificate for your site $domain has been completely removed!"
 		echo "${end}"
 	fi
-	echo "${gre}SSL have been successfully disabled for site $domain!${end}"
+	echo "${gre}SSL has been successfully disabled for site -${blu} $domain!${end}"
 }

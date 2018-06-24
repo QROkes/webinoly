@@ -98,7 +98,8 @@ elif [[ $arg == "-purge" && ( $opt == "-html" || $opt == "-nginx" ) ]]; then
 		[[ $(conf_read nginx-ppa) == "mainline" ]] && echo | sudo add-apt-repository --remove 'ppa:nginx/development' || echo | sudo add-apt-repository --remove 'ppa:nginx/stable'
 		api-events_update pn4
 		api-events_update pn5
-		sudo apt-get -y purge letsencrypt python-boto duplicity duply
+		sudo apt-get -y purge certbot python-boto duplicity duply
+		echo | sudo add-apt-repository --remove 'ppa:certbot/certbot'
 		sudo apt-get -y autoremove
 		sudo rm $HOME/www
 		sudo rm $HOME/sites-available

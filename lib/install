@@ -378,13 +378,14 @@ nginx_tool() {
 	[[ $(conf_read php) == "true" ]] && nginx_tool_site
 	# in case php was installed before nginx
 	[[ $(conf_read php-tool) == "true" && ! -a /var/www/$(conf_read tools-port)/htdocs/php/index.php ]] && php_tool_site
-			
-	# Instalar Duply & Duplicity
-	pre_install
-	sudo apt-get -y install python-boto duplicity duply
-	
+
 	# Install LetsEncrypt
-	sudo apt-get -y install letsencrypt
+	echo | sudo add-apt-repository ppa:certbot/certbot
+	pre_install
+	sudo apt-get -y install certbot
+	
+	# Instalar Duply & Duplicity
+	sudo apt-get -y install python-boto duplicity duply
 	
 	conf_write nginx-tool true
 	api-events_update in10
