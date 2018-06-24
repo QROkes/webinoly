@@ -261,10 +261,6 @@ elif [[ $arg == "-purge" && $opt == "-pma" ]]; then
 	fi
 
 	if [[ $answer == [Yy] || $(conf_read force-flag) == "true" || $(conf_read delautopma) == "true" ]]; then
-		echo "phpmyadmin      phpmyadmin/dbconfig-remove      boolean true" | debconf-set-selections
-		echo "phpmyadmin      phpmyadmin/purge        boolean true" | debconf-set-selections
-		sudo apt-get -y purge phpmyadmin
-		sudo apt-get -y autoremove
 		sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma
 		conf_write mysql-tool purged
 		echo ""

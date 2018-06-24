@@ -437,18 +437,18 @@ php_tool() {
 
 mysql_tool() {
 	api-events_update im5
-	#PhpMyAdmin unattended script installation
-	local AUTOGENPASS_PMA=`pwgen -s -1`
-	echo "phpmyadmin phpmyadmin/dbconfig-install boolean true" | debconf-set-selections
-	echo "phpmyadmin phpmyadmin/reconfigure-webserver multiselect" | debconf-set-selections
-	echo "phpmyadmin phpmyadmin/mysql/app-pass password $AUTOGENPASS_PMA" | debconf-set-selections
-	echo "phpmyadmin phpmyadmin/app-password-confirm password $AUTOGENPASS_PMA" | debconf-set-selections
+	sudo mkdir /var/www/$(conf_read tools-port)/htdocs/pma
+	sudo wget --timeout=15 -qrO /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.xz
+	sudo tar -xf /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz -C /var/www/$(conf_read tools-port)/htdocs/pma
+	sudo mv /var/www/$(conf_read tools-port)/htdocs/pma/phpMyAdmin-*-all-languages/* /var/www/$(conf_read tools-port)/htdocs/pma/
+	sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma/phpMyAdmin-*-all-languages
+	sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma/test
+	sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma/setup
+	sudo rm /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz
 
-	#PhpMyAdmin Installation
-	pre_install
-	sudo apt-get -y install phpmyadmin
-	
-	[[ -d /usr/share/phpmyadmin ]] && sudo mv /usr/share/phpmyadmin /var/www/$(conf_read tools-port)/htdocs/pma
+	sudo cp /var/www/$(conf_read tools-port)/htdocs/pma/config.sample.inc.php /var/www/$(conf_read tools-port)/htdocs/pma/config.inc.php
+	sudo sed -i "/blowfish_secret/c \$cfg['blowfish_secret'] = '$(pwgen -s -1 32)';" /var/www/$(conf_read tools-port)/htdocs/pma/config.inc.php
+	sudo chown -R www-data:www-data /var/www/
 	
 	conf_write mysql-tool true
 	echo "${gre}PhpMyAdmin has been installed successfully! ${end}"
