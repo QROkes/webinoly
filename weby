@@ -71,9 +71,12 @@ source /opt/webinoly/lib/install
 # Check for uninstalled Webinoly conf file
 [[ -a $HOME/.webinoly-conf-restore_dont-remove ]] && sudo mv $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf
 
-# Save Tools Port after library is available.
+# Check for Server Conf Updates and Save Tools Port after library is available.
 if [[ -a /opt/webinoly/webinoly.conf ]]; then
 	echo "${gre}Webinoly Configuration file was found, so we will use it!${end}"
+	newver=$(server_version)
+	oldver=$(conf_read server-version)
+	[[ ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
 else
 	[[ -n $2 && $2 != "-ver="* ]] && tools_port $2
 	newinst="true"

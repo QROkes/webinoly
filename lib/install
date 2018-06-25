@@ -3,7 +3,8 @@ source /opt/webinoly/lib/general
 
 
 server_version() { 
-	conf_write server-version 1.0
+	local ser_ver="1.1"
+	echo $ser_ver
 }
 
 
@@ -280,7 +281,7 @@ nginx_optim() {
 	fi
 
 	linux_optim
-	server_version
+	conf_write server-version $(server_version)
 	conf_write nginx-optim true
 	api-events_update in8
 }

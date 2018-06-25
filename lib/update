@@ -1,0 +1,51 @@
+#!/bin/bash
+
+echo "${red}"
+echo "Your server configuration will be updated and all changes you manually made will be lost!!"
+echo "${blu}Current server version '$oldver' will be upgraded to the newest '$newver'"
+echo "Wait...${end}"
+
+onezero_to_oneone() {
+	
+	if [[ $(conf_read mysql-tool) == "true" ]]; then
+		# Remove old phpMyAdmin
+		echo "phpmyadmin      phpmyadmin/dbconfig-remove      boolean true" | debconf-set-selections
+		echo "phpmyadmin      phpmyadmin/purge        boolean true" | debconf-set-selections
+		sudo apt-get -y purge phpmyadmin
+		sudo apt-get -y autoremove
+		sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma
+		conf_write mysql-tool purged
+		
+		# Install new phpMyAdmin
+		sudo stack -pma
+	fi
+	
+	if [[ $(conf_read nginx-tool) == "true" ]]; then
+		# Install LetsEncrypt
+		echo | sudo add-apt-repository ppa:certbot/certbot
+		pre_install
+		sudo apt-get -y install certbot
+		
+		cronrene=$( sudo grep -F "letsencrypt renew" /var/spool/cron/crontabs/root )
+		[[ -n $cronrene ]] && sudo sed -i '/letsencrypt renew/c\15 3 * * 7 certbot renew --post-hook "service nginx restart"' /var/spool/cron/crontabs/root
+		
+		sudo echo "
+staple-ocsp = True
+must-staple = True" | tee -a /etc/letsencrypt/cli.ini
+
+		for site in "/etc/nginx/sites-available"/*
+		do
+			domi=$(echo $site | cut -f 5 -d "/")
+			[[ $domi != "html" && $domi != $(conf_read tools-port) ]] && sudo sed -i "/#include \/var\/www\//c\	include /var/www/$domi/*-nginx.conf;" /etc/nginx/sites-available/$domi
+		done
+	fi
+	
+	sudo webinoly -server-update
+	
+}
+
+# Version numbers without point
+[[ ${newver//.} -ge 11 ]] && onezero_to_oneone > /dev/null 2>&1 &
+
+echo "${blu}Done!"
+echo "${gre}Your server-configuration has been successfully updated!${end}"
