@@ -1,7 +1,5 @@
 #!/bin/bash
-
 # Webinoly Installation Script.
-webyversion="1.5.0-beta"
 
 
 # Check OS support
@@ -74,15 +72,20 @@ source /opt/webinoly/lib/install
 # Check for Server Conf Updates and Save Tools Port after library is available.
 if [[ -a /opt/webinoly/webinoly.conf ]]; then
 	echo "${gre}Webinoly Configuration file was found, so we will use it!${end}"
-	newver=$(server_version)
-	oldver=$(conf_read server-version)
-	[[ ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
+	# svr_version function was created at the same time as the first update of server-version. Not check before!
+	if declare -F svr_version > /dev/null 2>&1; then
+		newver=$(svr_version)
+		oldver=$(conf_read server-version)
+		[[ ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
+	fi
 else
 	[[ -n $2 && $2 != "-ver="* ]] && tools_port $2
 	newinst="true"
 fi
 
 # Write app version
+declare -F app_version > /dev/null 2>&1 && webyversion=$(app_version)
+[[ -z $webyversion ]] && webyversion="undetermined"
 conf_write app-version $webyversion
 
 

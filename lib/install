@@ -2,7 +2,11 @@
 source /opt/webinoly/lib/general
 
 
-server_version() { 
+app_version() { 
+	local app_ver="1.5.0-beta"
+	echo $app_ver
+}
+svr_version() { 
 	local ser_ver="1.1"
 	echo $ser_ver
 }
@@ -281,7 +285,7 @@ nginx_optim() {
 	fi
 
 	linux_optim
-	conf_write server-version $(server_version)
+	conf_write server-version $(svr_version)
 	conf_write nginx-optim true
 	api-events_update in8
 }
