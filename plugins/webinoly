@@ -33,11 +33,11 @@ elif [[ $opt == "-server-update" || $opt == "-server-reset" ]]; then
 	if [[ $(conf_read nginx-optim) == "true" && ( $value == "nginx" || $value = "all" ) ]]; then
 		sudo rm -rf /etc/nginx/common
 		sudo rm -rf /etc/nginx/conf.d/*
-		linux_purge > /dev/null 2>&1 &
+		linux_purge
 		nginx_optim > /dev/null 2>&1 &
-		echo "${gre}Nginx has been updated successfully!${end}"
+		echo "${gre}Nginx settings has been updated successfully!${end}"
 	elif [[ $(conf_read nginx-optim) != "true" && ( $value == "nginx" || $value = "all" ) ]]; then
-		echo "${red}Seems like Nginx is not installed in your server!${end}"
+		echo "${red}Nginx settings couldn't been updated, seems like is not installed in your server!${end}"
 	fi
 	
 	# Regenerate PHP conf files
@@ -46,9 +46,9 @@ elif [[ $opt == "-server-update" || $opt == "-server-reset" ]]; then
 		sudo cat /opt/webinoly/templates/source/www.conf > /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
 		sudo rm /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
 		php_optim
-		echo "${gre}PHP has been updated successfully!${end}"
+		echo "${gre}PHP settings has been updated successfully!${end}"
 	elif [[ $(conf_read php-optim) != "true" && ( $value == "php" || $value = "all" ) ]]; then
-		echo "${red}Seems like PHP is not installed in your server!${end}"
+		echo "${red}PHP settings couldn't been updated, seems like is not installed in your server!${end}"
 	fi
 	
 	

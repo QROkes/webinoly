@@ -1,9 +1,8 @@
 #!/bin/bash
 
 echo "${red}"
-echo "Your server configuration will be updated and all changes you manually made will be lost!!"
-echo "${blu}Current server version '$oldver' will be upgraded to the newest '$newver'"
-echo "Wait...${end}"
+echo "Your server configuration will be updated and all changes you manually did will be lost!!"
+echo "${blu}Current server version 'v$oldver' will be upgraded to the newest 'v$newver'. Wait...${end}"
 
 onezero_to_oneone() {
 	
@@ -40,6 +39,7 @@ must-staple = True" | tee -a /etc/letsencrypt/cli.ini
 		done
 	fi
 	
+	# Update nginx and php conf files
 	sudo webinoly -server-update
 	
 }
@@ -47,5 +47,5 @@ must-staple = True" | tee -a /etc/letsencrypt/cli.ini
 # Version numbers without point
 [[ ${newver//.} -ge 11 ]] && onezero_to_oneone > /dev/null 2>&1 &
 
-echo "${blu}Done!"
+
 echo "${gre}Your server-configuration has been successfully updated!${end}"

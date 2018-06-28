@@ -3,7 +3,7 @@ source /opt/webinoly/lib/general
 
 
 app_version() { 
-	local app_ver="1.5.0-beta"
+	local app_ver="1.5.0"
 	echo $app_ver
 }
 svr_version() { 
@@ -303,7 +303,9 @@ php_optim() {
 		local maxuploads="100"
 	fi
 	
-	sudo sed -i '/cgi.fix_pathinfo=/c\cgi.fix_pathinfo=0' /etc/php/$ver/fpm/php.ini
+	# Not needed anymore! https://serverfault.com/questions/627903/is-the-php-option-cgi-fix-pathinfo-really-dangerous-with-nginx-php-fpm
+	#sudo sed -i '/cgi.fix_pathinfo=/c\cgi.fix_pathinfo=0' /etc/php/$ver/fpm/php.ini
+	
 	sudo sed -i '/memory_limit =/c\memory_limit = 128M' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/max_execution_time =/c\max_execution_time = 300' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/expose_php =/c\expose_php = Off' /etc/php/$ver/fpm/php.ini
@@ -530,7 +532,7 @@ swap_create() {
 			sudo sed -i "/LABEL.*/a \/swapfile none swap sw 0 0" /etc/fstab
 
 			echo 10 | sudo tee /proc/sys/vm/swappiness
-			echo vm.swappiness = 10 | sudo tee -a /etc/sysctl.conf
+			echo vm.swappiness = 10 | sudo tee -a /etc/sysctl.conf 
 
 			# Swap created by Webinoly - so we should remove it in uninstall
 			conf_write swap-owner webinoly

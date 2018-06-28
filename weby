@@ -90,8 +90,8 @@ conf_write app-version $webyversion
 
 
 # Stack installation
-[[ $setup -gt 0 && $setup -lt 3 ]] && stack -nginx
-[[ $setup -gt 1 && $setup -lt 3 ]] && stack -php
+[[ $setup -gt 0 && $setup -le 3 ]] && stack -nginx
+[[ $setup -gt 1 && $setup -le 3 ]] && stack -php
 [[ $setup == 3 ]] && stack -mysql
 
 
