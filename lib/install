@@ -300,7 +300,7 @@ php_optim() {
 	if [[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ ]]; then
 		local maxuploads=$(conf_read max-mb-uploads)
 	else
-		local maxuploads="100"
+		local maxuploads="50"
 	fi
 	
 	# Not needed anymore! https://serverfault.com/questions/627903/is-the-php-option-cgi-fix-pathinfo-really-dangerous-with-nginx-php-fpm
@@ -322,9 +322,9 @@ php_optim() {
 
 	sudo sed -i '/pm =/c\pm = ondemand' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/request_terminate_timeout =/c\request_terminate_timeout = 300' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i '/pm.max_spare_servers =/c\pm.max_spare_servers = 30' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i '/pm.max_spare_servers =/c\pm.max_spare_servers = 35' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.min_spare_servers =/c\pm.min_spare_servers = 10' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i '/pm.start_servers =/c\pm.start_servers = 20' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i '/pm.start_servers =/c\pm.start_servers = 15' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.max_children =/c\pm.max_children = 100' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.max_requests =/c\pm.max_requests = 500' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.status_path =/c\pm.status_path = /status' /etc/php/$ver/fpm/pool.d/www.conf
