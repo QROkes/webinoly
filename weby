@@ -46,13 +46,15 @@ if [[ $2 == "-ver="* ]]; then
 		sudo wget --timeout=15 -qrO $HOME/webinoly.tar https://qrok.es/webinoly?version=$ver
 		webyversion="$ver"
 		[[ $ver == "beta" ]] && echo "[WARNING] You are installing a BETA version of Webinoly and it's not recommended for production enviroments."
+		# Just for stadistics
+		sudo wget --timeout=15 --spider --referer="https://webinoly.com/?version=${ver}" -q https://qrok.es/wyver
 	else
 		echo "[ERROR] Version not found or not available! ($code) $(tput sgr0)"
 		exit 1
 	fi
 	echo $(tput sgr0)
 else
-	sudo wget --timeout=15 --referer='https://webinoly.com/' -qrO $HOME/webinoly.tar https://qrok.es/wytar
+	sudo wget --timeout=15 --referer="https://webinoly.com/?option=${setup}" -qrO $HOME/webinoly.tar https://qrok.es/wytar
 fi
 
 [[ ! -d /opt/webinoly ]] && sudo mkdir /opt/webinoly

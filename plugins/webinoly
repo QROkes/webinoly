@@ -17,7 +17,7 @@ fi
 
 if [[ $opt == "-update" ]]; then
 	echo ""
-	sudo wget --timeout=15 --referer='https://update.webinoly.com/' -qrO weby https://qrok.es/wyupd && sudo bash weby 0
+	sudo wget --timeout=15 --referer="https://update.webinoly.com/?ver=$(app_version)" -qrO weby https://qrok.es/wyupd && sudo bash weby 0
 	echo "${gre}Webinoly App has been updated successfully!${end}"
 
 	
