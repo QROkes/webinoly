@@ -487,7 +487,7 @@ mysql_tool() {
 
 	sudo cp /var/www/$(conf_read tools-port)/htdocs/pma/config.sample.inc.php /var/www/$(conf_read tools-port)/htdocs/pma/config.inc.php
 	sudo sed -i "/blowfish_secret/c \$cfg['blowfish_secret'] = '$(pwgen -s -1 32)';" /var/www/$(conf_read tools-port)/htdocs/pma/config.inc.php
-	sudo chown -R www-data:www-data /var/www/
+	sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs/pma
 	
 	conf_write mysql-tool true
 	echo "${gre}PhpMyAdmin has been installed successfully! ${end}"
