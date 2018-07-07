@@ -76,7 +76,7 @@ if [[ -a /opt/webinoly/webinoly.conf ]]; then
 	if declare -F svr_version > /dev/null 2>&1; then
 		newver=$(svr_version)
 		oldver=$(conf_read server-version)
-		[[ ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
+		[[ -n $oldver && ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
 	fi
 else
 	[[ -n $2 && $2 != "-ver="* ]] && tools_port $2

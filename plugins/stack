@@ -109,6 +109,7 @@ elif [[ $arg == "-purge" && ( $opt == "-html" || $opt == "-nginx" ) ]]; then
 		conf_write nginx purged
 		conf_write nginx-optim purged
 		conf_write nginx-tool purged
+		conf_delete server-version
 		echo ""
 		echo "${gre}Nginx has been deleted successfully! ${end}"
 		echo ""
