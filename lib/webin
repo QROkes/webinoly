@@ -7,7 +7,7 @@ webinoly_verify() {
 	local error="0"
 	local warning="0"
 	local info="0"
-	echo "${gre} Verifying integrity of the entire Webinoly system... ${end}"
+	echo "${gre}Verifying integrity of the entire Webinoly system... ${end}"
 	echo "${red}"
 	
 	# Webinoly
@@ -19,8 +19,108 @@ webinoly_verify() {
 		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
 		error="1"
 	fi
+	if [[ ! -a /opt/webinoly/lib/sites ]]; then
+		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/lib/site-ssl ]]; then
+		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/lib/webin ]]; then
+		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/lib/update ]]; then
+		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/lib/public_suffix_list.dat ]]; then
+		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/lib/timezone.dat ]]; then
+		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/lib/api-events_sample ]]; then
+		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
+		error="1"
+	fi
 	if [[ ! -a /opt/webinoly/templates/template-site-php ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/template-site-php not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/template-site-proxy ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/template-site-php not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/template-site-ssl ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/template-site-php not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/template-site-sslredirect ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/template-site-php not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/template-site-wwwredirect ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/template-site-php not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/nginx.conf ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/nginx.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/22222 ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/22222 not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/conf.d/blockips.conf ]]; then
+			echo "[WARNING] File: /opt/webinoly/templates/nginx/conf.d/blockips.conf not found!"
+			warning="1"
+		fi
+	if [[ ! -a /opt/webinoly/templates/nginx/conf.d/fastcgi.conf ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/conf.d/fastcgi.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/conf.d/upstream.conf ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/conf.d/upstream.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/common/acl.conf ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/acl.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/common/locations.conf ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/locations.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/common/php.conf ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/php.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/common/wpcommon.conf ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/wpcommon.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/common/wpfc.conf ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/wpfc.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/common/wpsubdir.conf ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/wpsubdir.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/common/headers-html ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/wpsubdir.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/common/headers-http ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/wpsubdir.conf not found!"
+		error="1"
+	fi
+	if [[ ! -a /opt/webinoly/templates/nginx/common/headers-https ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/wpsubdir.conf not found!"
 		error="1"
 	fi
 	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
@@ -47,87 +147,113 @@ webinoly_verify() {
 		echo "[ERROR] File: /usr/bin/stack not found!"
 		error="1"
 	fi
-	if [[ -z $(conf_read tools-port) ]]; then
-		echo "[ERROR] Port Tools not found!"
-		error="1"
-	fi
 	
 	# NGINX
-	if [[ ! -a /etc/nginx/nginx.conf && $(conf_read nginx) == "true" ]]; then
-		echo "[ERROR] File: /etc/nginx/nginx.conf not found!"
-		error="1"
-	elif [[ -a /etc/nginx/nginx.conf && $(conf_read nginx) != "true" ]]; then
-		echo "[WARNING] Seems like NGINX is installed but Webinoly can not detect it!"
-		warning="1"
+	if [[ $(conf_read nginx) == "true" ]]; then
+		if [[ ! -a /etc/nginx/nginx.conf ]]; then
+			echo "[ERROR] File: /etc/nginx/nginx.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/nginx/fastcgi.conf ]]; then
+			echo "[ERROR] File: /etc/nginx/fastcgi.conf not found!"
+			error="1"
+		fi
 	fi
-	if [[ ! -a /etc/nginx/fastcgi.conf && $(conf_read nginx) == "true" ]]; then
-		echo "[ERROR] File: /etc/nginx/fastcgi.conf not found!"
-		error="1"
-	elif [[ -a /etc/nginx/fastcgi.conf && $(conf_read nginx) != "true" ]]; then
-		echo "[WARNING] Seems like NGINX is installed but Webinoly can not detect it!"
-		warning="1"
+	if [[ $(conf_read nginx) != "true" ]]; then
+		if [[ -a /etc/nginx/nginx.conf ]]; then
+			echo "[WARNING] Seems like NGINX is installed but Webinoly can not detect it!"
+			warning="1"
+		fi
+		if [[ -a /etc/nginx/fastcgi.conf ]]; then
+			echo "[WARNING] Seems like NGINX is installed but Webinoly can not detect it!"
+			warning="1"
+		fi
 	fi
 	
 	# NGINX Optim
-	if [[ ! -a /etc/nginx/fastcgi_params && $(conf_read nginx-optim) == "true" ]]; then
-		echo "[ERROR] File: /etc/nginx/fastcgi_params not found!"
-		error="1"
-	fi
-	if [[ ! -a /etc/nginx/.htpasswd && $(conf_read nginx-optim) == "true" ]]; then
-		echo "[INFO] File: /etc/nginx/.htpasswd not found!"
-		info="1"
-	fi
-	if [[ ! -a /etc/nginx/conf.d/blockips.conf && $(conf_read nginx-optim) == "true" ]]; then
-		echo "[WARNING] File: /etc/nginx/conf.d/blockips.conf not found!"
-		warning="1"
-	fi
-	if [[ ! -a /etc/nginx/conf.d/fastcgi.conf && $(conf_read nginx-optim) == "true" ]]; then
-		echo "[ERROR] File: /etc/nginx/conf.d/fastcgi.conf not found!"
-		error="1"
-	fi
-	if [[ ! -a /etc/nginx/conf.d/upstream.conf && $(conf_read nginx-optim) == "true" ]]; then
-		echo "[ERROR] File: /etc/nginx/conf.d/upstream.conf not found!"
-		error="1"
-	fi
-	if [[ ! -a /etc/nginx/common/acl.conf && $(conf_read nginx-optim) == "true" ]]; then
-		echo "[ERROR] File: /etc/nginx/common/acl.conf not found!"
-		error="1"
-	fi
-	if [[ ! -a /etc/nginx/common/locations.conf && $(conf_read nginx-optim) == "true" ]]; then
-		echo "[ERROR] File: /etc/nginx/common/locations.conf not found!"
-		error="1"
-	fi
-	if [[ ! -a /etc/nginx/common/php.conf && $(conf_read nginx-optim) == "true" ]]; then
-		echo "[ERROR] File: /etc/nginx/common/php.conf not found!"
-		error="1"
-	fi
-	if [[ ! -a /etc/nginx/common/wpcommon.conf && $(conf_read nginx-optim) == "true" ]]; then
-		echo "[ERROR] File: /etc/nginx/common/wpcommon.conf not found!"
-		error="1"
-	fi
-	if [[ ! -a /etc/nginx/common/wpfc.conf && $(conf_read nginx-optim) == "true" ]]; then
-		echo "[ERROR] File: /etc/nginx/common/wpfc.conf not found!"
-		error="1"
-	fi
-	if [[ ! -a /etc/nginx/common/wpsubdir.conf && $(conf_read nginx-optim) == "true" ]]; then
-		echo "[ERROR] File: /etc/nginx/common/wpsubdir.conf not found!"
-		error="1"
+	if [[ $(conf_read nginx-optim) == "true" ]]; then
+		if [[ ! -a /etc/nginx/fastcgi_params ]]; then
+			echo "[ERROR] File: /etc/nginx/fastcgi_params not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/nginx/.htpasswd ]]; then
+			echo "[INFO] File: /etc/nginx/.htpasswd not found!"
+			info="1"
+		fi
+		if [[ ! -a /etc/nginx/conf.d/blockips.conf ]]; then
+			echo "[WARNING] File: /etc/nginx/conf.d/blockips.conf not found!"
+			warning="1"
+		fi
+		if [[ ! -a /etc/nginx/conf.d/fastcgi.conf ]]; then
+			echo "[ERROR] File: /etc/nginx/conf.d/fastcgi.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/nginx/conf.d/upstream.conf ]]; then
+			echo "[ERROR] File: /etc/nginx/conf.d/upstream.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/nginx/common/acl.conf ]]; then
+			echo "[ERROR] File: /etc/nginx/common/acl.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/nginx/common/locations.conf ]]; then
+			echo "[ERROR] File: /etc/nginx/common/locations.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/nginx/common/php.conf ]]; then
+			echo "[ERROR] File: /etc/nginx/common/php.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/nginx/common/wpcommon.conf ]]; then
+			echo "[ERROR] File: /etc/nginx/common/wpcommon.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/nginx/common/wpfc.conf ]]; then
+			echo "[ERROR] File: /etc/nginx/common/wpfc.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/nginx/common/wpsubdir.conf ]]; then
+			echo "[ERROR] File: /etc/nginx/common/wpsubdir.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/nginx/common/headers-html ]]; then
+			echo "[ERROR] File: /etc/nginx/common/wpsubdir.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/nginx/common/headers-http ]]; then
+			echo "[ERROR] File: /etc/nginx/common/wpsubdir.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/nginx/common/headers-https ]]; then
+			echo "[ERROR] File: /etc/nginx/common/wpsubdir.conf not found!"
+			error="1"
+		fi
 	fi
 	
 	# NGINX Tools
-	if [[ ! -a /etc/nginx/sites-available/$(conf_read tools-port) && $(conf_read nginx-tool) == "true" ]]; then
-		echo "[ERROR] File: /etc/nginx/sites-available/$(conf_read tools-port) not found!"
-		error="1"
-	elif [[ -a /etc/nginx/sites-available/$(conf_read tools-port) && $(conf_read nginx-tool) != "true" ]]; then
-		echo "[WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!"
-		warning="1"
+	if [[ $(conf_read nginx-tool) == "true" ]]; then
+		if [[ ! -a /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
+			echo "[ERROR] File: /etc/nginx/sites-available/$(conf_read tools-port) not found!"
+			error="1"
+		fi
+		if [[ ! -d /var/www/$(conf_read tools-port) ]]; then
+			echo "[ERROR] Folder: /var/www/$(conf_read tools-port) not found!"
+			error="1"
+		fi
+		if [[ -z $(conf_read tools-port) ]]; then
+			echo "[ERROR] Port Tools not found!"
+			error="1"
+		fi
 	fi
-	if [[ ! -d /var/www/$(conf_read tools-port) && $(conf_read nginx-tool) == "true" ]]; then
-		echo "[ERROR] Folder: /var/www/$(conf_read tools-port) not found!"
-		error="1"
-	elif [[ -d /var/www/$(conf_read tools-port) && $(conf_read nginx-tool) != "true" ]]; then
-		echo "[WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!"
-		warning="1"
+	if [[ $(conf_read nginx-tool) != "true" ]]; then
+		if [[ -a /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
+			echo "[WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!"
+			warning="1"
+		fi
+		if [[ -d /var/www/$(conf_read tools-port) ]]; then
+			echo "[WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!"
+			warning="1"
+		fi
 	fi
 	
 	# NGINX Conf check
@@ -146,40 +272,57 @@ webinoly_verify() {
 	fi
 	
 	# PHP Optim
-	if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf && $(conf_read php-optim) == "true" ]]; then
-		echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf not found!"
-		error="1"
-	fi
-	if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf && $(conf_read php-optim) == "true" ]]; then
-		echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf not found!"
-		error="1"
-	fi
-	if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf && $(conf_read php-optim) == "true" ]]; then
-		echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf not found!"
-		error="1"
+	if [[ $(conf_read php-optim) == "true" ]]; then
+		if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf ]]; then
+			echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf ]]; then
+			echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf ]]; then
+			echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /opt/webinoly/templates/source/www.conf ]]; then
+			echo "[ERROR] File: /opt/webinoly/templates/source/www.conf not found!"
+			error="1"
+		fi
+		if [[ ! -a /opt/webinoly/templates/source/php.ini ]]; then
+			echo "[ERROR] File: /opt/webinoly/templates/source/php.ini not found!"
+			error="1"
+		fi
 	fi
 	
 	# PHP Tools
-	if [[ ! -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/php && $(conf_read php-tool) == "true" ]]; then
-		echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/fpm/status/php not found!"
-		error="1"
-	elif [[ -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/php && $(conf_read php-tool) != "true" ]]; then
-		echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
-		warning="1"
+	if [[ $(conf_read php-tool) == "true" ]]; then
+		if [[ ! -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/php ]]; then
+			echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/fpm/status/php not found!"
+			error="1"
+		fi
+		if [[ ! -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug ]]; then
+			echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug not found!"
+			error="1"
+		fi
+		if [[ ! -a /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
+			echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/php/index.php not found!"
+			error="1"
+		fi
 	fi
-	if [[ ! -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug && $(conf_read php-tool) == "true" ]]; then
-		echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug not found!"
-		error="1"
-	elif [[ -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug && $(conf_read php-tool) != "true" ]]; then
-		echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
-		error="1"
-	fi
-	if [[ ! -a /var/www/$(conf_read tools-port)/htdocs/php/index.php && $(conf_read php-tool) == "true" ]]; then
-		echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/php/index.php not found!"
-		error="1"
-	elif [[ -a /var/www/$(conf_read tools-port)/htdocs/php/index.php && $(conf_read php-tool) != "true" ]]; then
-		echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
-		warning="1"
+	if [[ $(conf_read php-tool) != "true" ]]; then
+		if [[ -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/php ]]; then
+			echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
+			warning="1"
+		fi
+		if [[ -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug ]]; then
+			echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
+			error="1"
+		fi
+		if [[ -a /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
+			echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
+			warning="1"
+		fi
 	fi
 	
 	# PHP Conf check
@@ -213,23 +356,34 @@ webinoly_verify() {
 	fi
 	
 	# Web Tools
-	if [[ ! -d /etc/redis && $(conf_read php_tool) == "true" ]]; then
-		echo "[ERROR] Folder: /etc/redis not found!"
-		error="1"
+	if [[ $(conf_read php_tool) == "true" ]]; then
+		if [[ ! -d /etc/redis ]]; then
+			echo "[ERROR] Folder: /etc/redis not found!"
+			error="1"
+		fi
+		if [[ ! -d /etc/postfix ]]; then
+			echo "[ERROR] Folder: /etc/postfix not found!"
+			error="1"
+		fi
 	fi
-	if [[ ! -d /etc/postfix && $(conf_read php_tool) == "true" ]]; then
-		echo "[ERROR] Folder: /etc/postfix not found!"
-		error="1"
-	fi
-	if [[ ! -a /usr/bin/duplicity && $(conf_read nginx_tool) == "true" ]]; then
-		echo "[ERROR] File: /usr/bin/duplicity not found!"
-		error="1"
-	fi
-	if [[ ! -a /usr/bin/letsencrypt && $(conf_read nginx_tool) == "true" ]]; then
-		echo "[ERROR] File: /usr/bin/letsencrypt not found!"
-		error="1"
+	if [[ $(conf_read nginx_tool) == "true" ]]; then
+		if [[ ! -a /usr/bin/duplicity ]]; then
+			echo "[ERROR] File: /usr/bin/duplicity not found!"
+			error="1"
+		fi
+		if [[ ! -a /usr/bin/letsencrypt ]]; then
+			echo "[ERROR] File: /usr/bin/letsencrypt not found!"
+			error="1"
+		fi
 	fi
 	
+	# Linux Optim
+	local swapkb=$(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
+	if [[ $(conf_read linux-optim) == "true" && ( -z $swapkb || $swapkb == "0" ) && $(conf_read swap-mem) != 0 ]]; then
+		echo "[ERROR] SWAP Memory File not found!"
+		error="1"
+	fi
+
 	
 	echo ""
 	if [ $error != 0 ]; then

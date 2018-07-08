@@ -69,7 +69,11 @@ sudo mv /opt/webinoly/plugins/* /usr/bin/
 source /opt/webinoly/lib/install
 
 # Check for uninstalled Webinoly conf file
-[[ -a $HOME/.webinoly-conf-restore_dont-remove ]] && sudo mv $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf
+if [[ -a $HOME/.webinoly-conf-restore_dont-remove ]]; then
+	echo "${gre}Seems like Webinoly was installed previously, we will try to recover your old configuration!${end}"
+	sudo mv $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf
+	sudo webinoly -verify
+fi
 
 # Check for Server Conf Updates and Save Tools Port after library is available.
 if [[ -a /opt/webinoly/webinoly.conf ]]; then
