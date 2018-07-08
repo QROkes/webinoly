@@ -18,9 +18,17 @@ db_delete() {
 	fi
 	
 	# Get dbname and dbuser of a WP site
-	local name=$( grep -F "DB_NAME" /var/www/$domain/wp-config.php | cut -f 4 -d "'" )
-	local user=$( grep -F "DB_USER" /var/www/$domain/wp-config.php | cut -f 4 -d "'" )
-	local host=$( grep -F "DB_HOST" /var/www/$domain/wp-config.php | cut -f 4 -d "'" )
+	if [[ -a /var/www/$domain/wp-config.php ]]; then
+		wpconfpath="/var/www/$domain/wp-config.php"
+	elif [[ -a /var/www/$domain/htdocs/wp-config.php ]]; then
+		wpconfpath="/var/www/$domain/htdocs/wp-config.php"
+	else
+		return
+	fi
+	
+	local name=$( grep -F "DB_NAME" $wpconfpath | cut -f 4 -d "'" )
+	local user=$( grep -F "DB_USER" $wpconfpath | cut -f 4 -d "'" )
+	local host=$( grep -F "DB_HOST" $wpconfpath | cut -f 4 -d "'" )
 	local url=$(echo "$host" | cut -f 1 -d ':')
 	local port=$(echo "$host" | cut -f 2 -d ':')
 	local done="0"
