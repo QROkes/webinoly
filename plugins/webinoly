@@ -105,11 +105,13 @@ elif [[ $opt == "-login-www-data" ]]; then
 	sudo usermod -G sftponly www-data
 	sudo chown root:root /var/www
 	sudo sed -i "/Subsystem sftp/c\Subsystem sftp internal-sftp" /etc/ssh/sshd_config
-	sudo echo 'Match Group sftponly
-	ChrootDirectory /var/www
-	X11Forwarding no
-	AllowTcpForwarding no
-	ForceCommand internal-sftp' >> /etc/ssh/sshd_config
+	sudo echo '# WebinolySFTPstart
+Match Group sftponly
+ChrootDirectory /var/www
+X11Forwarding no
+AllowTcpForwarding no
+ForceCommand internal-sftp
+# WebinolySFTPend' >> /etc/ssh/sshd_config
 
 	falus=$( grep -F "AllowUsers" /etc/ssh/sshd_config )
 	if [[ -n $falus ]]; then
@@ -118,7 +120,7 @@ elif [[ $opt == "-login-www-data" ]]; then
 
 	conf_write login-www-data true
 	sudo service ssh restart
-	echo "${gre} SFTP access for www-data user has been successfuly enabled! ${end}"
+	echo "${gre}SFTP access for www-data user has been successfuly enabled! ${end}"
 
 	
 elif [[ $opt == "-nologin-www-data" ]]; then
@@ -137,6 +139,7 @@ elif [[ $opt == "-nologin-www-data" ]]; then
 	sudo delgroup sftponly
 	sudo chown www-data:www-data /var/www
 	sudo sed -i "/Subsystem sftp/c\Subsystem sftp \/usr\/lib\/openssh\/sftp-server" /etc/ssh/sshd_config
+	sudo sed -i '/WebinolySFTPstart/,/WebinolySFTPstart/{/.*/d}' /etc/ssh/sshd_config
 	
 	falus=$( grep -F "AllowUsers" /etc/ssh/sshd_config )
 	if [[ -n $falus ]]; then
@@ -147,7 +150,7 @@ elif [[ $opt == "-nologin-www-data" ]]; then
 
 	conf_write login-www-data purged
 	sudo service ssh restart
-	echo "${gre} SFTP access for www-data user has been successfuly disabled! ${end}"
+	echo "${gre}SFTP access for www-data user has been successfuly disabled! ${end}"
 
 	
 elif [[ $opt == "-config-cache" ]]; then

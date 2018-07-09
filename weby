@@ -47,7 +47,7 @@ if [[ $2 == "-ver="* ]]; then
 		webyversion="$ver"
 		[[ $ver == "beta" ]] && echo "[WARNING] You are installing a BETA version of Webinoly and it's not recommended for production enviroments."
 		# Just for stadistics
-		sudo wget --timeout=15 --spider --referer="https://webinoly.com/?version=${ver}" -q https://qrok.es/wyver
+		[[ $ver != "alpha" ]] && sudo wget --timeout=15 --spider --referer="https://webinoly.com/?version=${ver}" -q https://qrok.es/wyver
 	else
 		echo "[ERROR] Version not found or not available! ($code) $(tput sgr0)"
 		exit 1
@@ -73,6 +73,7 @@ if [[ -a $HOME/.webinoly-conf-restore_dont-remove ]]; then
 	echo "${gre}Seems like Webinoly was installed previously, we will try to recover your old configuration!${end}"
 	sudo mv $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf
 	sudo webinoly -verify
+	[[ $? == 1 ]] && exit 1
 fi
 
 # Check for Server Conf Updates and Save Tools Port after library is available.

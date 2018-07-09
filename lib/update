@@ -39,29 +39,20 @@ must-staple = True" | tee -a /etc/letsencrypt/cli.ini
 		done
 	fi
 	
-	# Update nginx and php conf files
-	serupd=1
-	
 }
 
 
 oneone_to_onetwo() {
 	# Forgot doing it in 1.1 update
 	sudo apt-get -y install zip
-	
-	# Update nginx and php conf files
-	serupd=1
 }
 
-
-# Update-Server Flag
-serupd=0
 
 # Version numbers without point
 [[ ${oldver//.} -lt 11 ]] && onezero_to_oneone > /dev/null 2>&1 &
 [[ ${oldver//.} -lt 12 ]] && oneone_to_onetwo > /dev/null 2>&1 &
 
 
-[[ $serupd == 1 ]] && sudo webinoly -server-update
+sudo webinoly -server-reset
 
 echo "${gre}Your server-configuration has been successfully updated!${end}"
