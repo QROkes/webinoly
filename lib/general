@@ -126,6 +126,7 @@ pre_install() {
 	if [[ $(conf_read pre-packs) != true ]]; then
 		# Check for missing essential packages
 		api-events_update i1
+		sudo apt-get -y -qq install dialog
 		sudo apt-get -y -qq install software-properties-common
 		sudo apt-get -y -qq install python-software-properties
 		sudo apt-get -y -qq install pwgen

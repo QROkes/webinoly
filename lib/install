@@ -54,7 +54,7 @@ linux_optim() {
 	if [[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ ]]; then
 		local maxuploads=$(conf_read max-mb-uploads)
 	else
-		local maxuploads="100"
+		local maxuploads="50"
 	fi
 	
 	local ramkb=$(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
@@ -135,7 +135,7 @@ net.ipv4.conf.default.send_redirects = 0
 	swap_create
 	set_timezone os
 	
-	sudo sysctl -p
+	sudo sysctl -p -q
 	sudo systemctl daemon-reload
 	sudo kill $(cat /run/nginx.pid)
 	conf_write linux-optim true
@@ -152,7 +152,7 @@ linux_purge() {
 		sudo rm -rf /etc/systemd/system/nginx.service.d
 		sudo sed -i '/\/var\/run\/nginx-cache/d' /etc/fstab
 		#sudo umount /var/run/nginx-cache
-		sudo sysctl -p
+		sudo sysctl -p -q
 		sudo systemctl daemon-reload
 		conf_write linux-optim purged
 		api-events_update pn8
@@ -180,6 +180,7 @@ messagend_install() {
 
 nginx_install() {
 	api-events_update in1
+	pre_install
 	if [[ ($(conf_read nginx-ppa) == "mainline" || $value == "mainline") && $value != "stable" ]]; then
 		echo | sudo add-apt-repository ppa:nginx/development
 		conf_write nginx-ppa mainline
@@ -224,6 +225,7 @@ php_install() {
 		exit 1
 	fi
 	
+	pre_install
 	if [[ $(conf_read php) != "true" ]]; then
 		# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
 		sudo apt-get install -y language-pack-en-base
@@ -256,9 +258,9 @@ php_install() {
 
 mysql_install() {
 	api-events_update im1
+	pre_install
 	[[ $(conf_read mysql-client) != "true" ]] && mysql_client_install
 	
-	pre_install
 	# debconf-utils for unattended scripts
 	#  debconf-get-selections | grep phpmyadmin   <<-- list conf variables
 	sudo apt-get -y install debconf-utils
@@ -318,7 +320,7 @@ nginx_optim() {
 		sudo chmod 600 /etc/ssl/dhparam.pem
 	fi
 
-	linux_optim
+	linux_optim > /dev/null 2>&1 &
 	conf_write server-version $(svr_version)
 	conf_write nginx-optim true
 	api-events_update in8
