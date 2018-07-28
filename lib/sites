@@ -469,7 +469,8 @@ deletesite() {
 	
 	# Delete site files
 	sudo rm /etc/nginx/sites-available/$domain
-	sudo rm /etc/nginx/sites-enabled/$domain
+	# Check to avoid error when site is disabled.
+	[[ -L /etc/nginx/sites-enabled/$domain ]] && sudo rm /etc/nginx/sites-enabled/$domain
 	sudo rm -rf /var/www/$domain
 }
 
