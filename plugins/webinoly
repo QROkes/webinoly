@@ -8,7 +8,7 @@ opt="$1"
 source /opt/webinoly/lib/webin
 
 # Extract value if exist
-if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* || $opt == "-timezone="* ]]; then
+if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* || $opt == "-timezone="* || $opt == "-update="* ]]; then
 	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
 	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
 fi
@@ -17,7 +17,8 @@ fi
 
 if [[ $opt == "-update" ]]; then
 	echo ""
-	sudo wget --timeout=15 --referer="https://update.webinoly.com/?ver=$(app_version)" -qrO weby https://qrok.es/wyupd && sudo bash weby 0
+	[[ -n $value ]] && branch="-ver=${value}" || branch=""
+	sudo wget --timeout=15 --referer="https://update.webinoly.com/?ver=$(app_version)" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
 	echo "${gre}Webinoly App has been updated successfully!${end}"
 
 	
