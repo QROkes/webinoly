@@ -2,15 +2,17 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option>
-# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -config-load, -info, -domain-list-update, -clear-cache
+# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-list-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_
 
 opt="$1"
 source /opt/webinoly/lib/webin
 
 # Extract value if exist
-if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* || $opt == "-timezone="* || $opt == "-update="* ]]; then
+if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* || $opt == "-timezone="* || $opt == "-update="* || $opt == "-blockip="* || $opt == "-unblockip="* || $opt == "-conf-value_"* ]]; then
 	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
 	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
+	# Prevent cases like -conf-value where is valid enter a value without = causing empty opt.
+	[[ -z $opt ]] && opt=$1
 fi
 
 
@@ -347,7 +349,59 @@ elif [[ $opt == "-timezone" ]]; then
 	conf_write timezone $value
 	set_timezone all
 	
+
+elif [[ $opt == "-version" || $opt == "-v" || $opt == "-V" ]]; then
+	echo "${blu}"
+	echo "Webinoly version: $(app_version)"
+	echo "Current stack version: $(conf_read server-version)"
+	echo "Available stack version: $(svr_version)"
+	echo "${end}"
+
+
+elif [[ $opt == "-blockip" ]]; then
+	if [[ -a /etc/nginx/conf.d/blockips.conf ]]; then
+		[[ -z $value ]] && read -p "${blu}IP address to block: ${end}" value
+		if [[ -n $value && $value =~ ^[\.0-9A-Za-z\/]+$ ]]; then
+			sh -c "echo -n 'deny $value;\n' >> /etc/nginx/conf.d/blockips.conf"
+			echo "${gre}The IP address ${blu}'$value'${gre} was successfully blocked!${end}"
+		else	
+			echo "${red}Please, enter a valid value!${end}"
+		fi
+	else
+		echo "${red}[ERROR] Nginx file not found!${end}"
+	fi
+
+
+elif [[ $opt == "-unblockip" ]]; then
+	if [[ -a /etc/nginx/conf.d/blockips.conf ]]; then
+		[[ -z $value ]] && read -p "${blu}IP address to unblock: ${end}" value
+		if [[ -n $value && $value =~ ^[\.0-9A-Za-z\/]+$ ]]; then
+			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
+			sed -i "\#^deny ${value};#d" /etc/nginx/conf.d/blockips.conf
+			echo "${gre}The IP address ${blu}'$value'${gre} was successfully unblocked!${end}"
+		else
+			echo "${red}Please, enter a valid value!${end}"
+		fi
+	else
+		echo "${red}[ERROR] Nginx file not found!${end}"
+	fi
 	
+
+elif [[ $opt == "-conf-value_"* ]]; then
+	var=$(echo "${opt}" | cut -d'_' -f 2 -s)
+	if [[ -n $var && $var =~ ^[A-Za-z\-]+$ ]]; then
+		[[ -z $value ]] && read -p "${blu}Enter a value for '${var}': ${end}" value
+		if [[ -n $value ]]; then
+			conf_write $var $value
+			echo "${gre}Configuration successfully updated!${end}"
+		else
+			echo "${red}Please, enter a valid value!${end}"
+		fi
+	else
+		echo "${red}Please, enter a valid variable name!${end}"
+	fi
+
+
 else
 	echo "${red}Please enter a valid option!${end}"
 fi
