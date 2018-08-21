@@ -406,9 +406,9 @@ webinoly_verify() {
 
 system_info() {
 	ramv=$(($(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024))
-	[[ $ramv -gt 1024 ]] && ramv="$(($ramv/1024))Gb" || ramv="${ramv}Mb"
+	[[ $ramv -ge 1024 ]] && ramv="$(($ramv/1024))Gb" || ramv="${ramv}Mb"
 	swapv=$(($(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024))
-	[[ $swapv -gt 1024 ]] && swapv="$(($swapv/1024))Gb" || swapv="${swapv}Mb"
+	[[ $swapv -ge 1024 ]] && swapv="$(($swapv/1024))Gb" || swapv="${swapv}Mb"
 	
 	echo "${blu}"
 	echo "[SYSTEM]"
