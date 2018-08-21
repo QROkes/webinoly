@@ -2,13 +2,13 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option>
-# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-list-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_
+# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-list-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap
 
 opt="$1"
 source /opt/webinoly/lib/webin
 
 # Extract value if exist
-if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* || $opt == "-timezone="* || $opt == "-update="* || $opt == "-blockip="* || $opt == "-unblockip="* || $opt == "-conf-value_"* ]]; then
+if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* || $opt == "-timezone="* || $opt == "-update="* || $opt == "-blockip="* || $opt == "-unblockip="* || $opt == "-conf-value_"* || $opt == "-yoast-sitemap="* ]]; then
 	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
 	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
 	# Prevent cases like -conf-value where is valid enter a value without = causing empty opt.
@@ -399,6 +399,27 @@ elif [[ $opt == "-conf-value_"* ]]; then
 		fi
 	else
 		echo "${red}Please, enter a valid variable name!${end}"
+	fi
+
+
+elif [[ $opt == "-yoast-sitemap"* ]]; then
+	ystmap=$( grep -F "# YoastSitemapStart - Yoast SEO Plugin" /etc/nginx/common/wpcommon.conf )
+	if [[ $value == "on" ]]; then
+		if [[ -z $ystmap ]]; then
+			sudo cat /opt/webinoly/templates/template-yoast-sitemap >> /etc/nginx/common/wpcommon.conf
+			echo "${gre}Yoast Sitemap Support was successfully enabled!${end}"
+		else
+			echo "${red}Yoast Sitemap Support is already enabled!${end}"
+		fi
+	elif [[ $value == "off" ]]; then
+		if [[ -n $ystmap ]]; then
+			sudo sed -i '/YoastSitemapStart/,/YoastSitemapEnd/{/.*/d}' /etc/nginx/common/wpcommon.conf
+			echo "${gre}Yoast Sitemap Support was successfully disabled!${end}"
+		else
+			echo "${red}Yoast Sitemap Support is already disabled!${end}"
+		fi
+	else
+		echo "${red}Please, enter a valid option to enable/disable Yoast Sitemap Support!${end}"
 	fi
 
 
