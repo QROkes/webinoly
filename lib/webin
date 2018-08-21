@@ -405,14 +405,19 @@ webinoly_verify() {
 
 
 system_info() {
+	ramv=$(($(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024))
+	[[ $ramv -gt 1024 ]] && ramv="$(($ramv/1024))Gb" || ramv="${ramv}Mb"
+	swapv=$(($(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024))
+	[[ $swapv -gt 1024 ]] && swapv="$(($swapv/1024))Gb" || swapv="${swapv}Mb"
+	
 	echo "${blu}"
 	echo "[SYSTEM]"
 	echo "Operating System: $(sudo cat /proc/version) "
 	echo "$(sudo lsb_release -d) "
 	echo "$(sudo lsb_release -c) "
 	echo "Cores: $(grep ^processor /proc/cpuinfo | wc -l) "
-	echo "RAM: $(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')kb "
-	echo "SWAP: $(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')kb "
+	echo "RAM: ${ramv} "
+	echo "SWAP: ${swapv} "
 	echo "File descriptors: $(sudo cat /proc/sys/fs/file-max) "
 	echo ""
 	echo [Disk Usage]
@@ -422,7 +427,7 @@ system_info() {
 	echo "[NGINX]"
 	if [[ $(conf_read nginx) == "true" ]]; then
 		sudo nginx -v
-		echo "Nginx file descriptors: $(grep 'Max open files' /proc/$(cat /run/nginx.pid)/limits | cut -f 15 -d ' ') "
+		echo "nginx file descriptors: $(grep 'Max open files' /proc/$(cat /run/nginx.pid)/limits | cut -f 15 -d ' ') "
 		echo "worker_processes: $(grep worker_processes /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';') "
 		echo "worker_connections: $(grep worker_connections /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';')"
 		echo "worker_rlimit_nofile: $(grep worker_rlimit_nofile /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';')"
@@ -458,8 +463,11 @@ system_info() {
 	
 	echo "[MYSQL]"
 	if [[ $(conf_read mysql) == "true" ]]; then
+		
+		[[ $(conf_read mysql-tool) == "true" ]] && pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/22222/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'") || pmaver="Not installed!"
+		
 		sudo mysql --version
-		echo "PhpMyAdmin: $(conf_read mysql-tool)"
+		echo "PhpMyAdmin: $pmaver"
 		echo ""		
 	else
 		echo "${red} MySQL is not installed! ${blu}"
