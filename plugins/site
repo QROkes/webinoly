@@ -243,17 +243,25 @@ elif [ "$type" == "-parked" ]; then
 	
 # Reverse proxy
 elif [[ "$type" == "-proxy" ]]; then
+	if [[ -n $value ]]; then
+		firstchar=$(echo "${value}" | cut -c-1)
+		lastchar=$(echo "${value}" | rev | cut -c-1)
+		proxydata=${value:1:-1}
+		rphost=$(echo "${proxydata}" | cut -d':' -f 1 -s)
+		rpport=$(echo "${proxydata}" | cut -d':' -f 2 -s)
+		
+		if ! [[ -n $proxydata && $firstchar == "[" && $lastchar == "]" && -n $rphost && -n $rpport && $rpport =~ ^[0-9]+$ && $rpport -ge 0 && $rpport -le 65535 ]]; then
+			echo "${red}[ERROR] Please, enter a valid host and port!${end}"
+			exit 1
+		fi
+	fi
+	
 	createsite
 	sudo sed -i '/include /d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/root /d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/index /d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/error_log /r /opt/webinoly/templates/template-site-proxy' /etc/nginx/sites-available/$domain
-	
-	if [[ -n $value ]]; then
-		rphost=$(echo "${value}" | cut -d':' -f 1 -s)
-		rpport=$(echo "${value}" | cut -d':' -f 2 -s)
-	fi
-	
+		
 	echo "${gre}"
 	if [[ -n $rphost ]]; then
 		sudo sed -i "s/localhost/$rphost/g"  /etc/nginx/sites-available/$domain
@@ -261,12 +269,19 @@ elif [[ "$type" == "-proxy" ]]; then
 	else
 		echo " Default host: localhost"
 	fi
-	if [[ -n $rpport && $rpport -ge 0 && $rpport -le 65535 && $rpport =~ ^[0-9]+$ ]]; then
+	if [[ -n $rpport ]]; then
 		sudo sed -i "s/8080/$rpport/g"  /etc/nginx/sites-available/$domain
 		echo " Custom port found: $rpport"
 	else
 		echo " Default port: 8080"
 	fi
+	
+	# Check host and port
+	code=$(wget -t 1 --timeout=5 --server-response --spider ${rphost}:${rpport} 2>&1 | awk '/^  HTTP/{print $2}')
+	code="${code##*$'\n'}"
+	echo "${red}"
+	[[ $code != 200 ]] && echo "[WARNING] Seems like your host/port is not responding!"
+	
 	echo "${end}"
 	
 	
