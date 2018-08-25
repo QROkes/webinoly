@@ -2,8 +2,8 @@
 
 # View logs in real time Plugins
 # Syntax: log <domain> <option>
-# Options: -wp, -error (access log is default and have no option)
-# Notes: If no domain is entered, access logs are displayed.
+# Options: -wp, -error, -mail, -php o -fpm, -mysql, -only-error
+# Notes: If no domain or option is entered, access logs are displayed.
 
 source /opt/webinoly/lib/general
 domain="$1"
@@ -15,6 +15,24 @@ error() {
 	echo ""
 	exit 1
 }
+
+# Validations
+if [[ $domain =~ ^(-error|-wp)$ || $domain == "-only-error="* ]]; then
+	domain="$2"
+	opt="$1"
+fi
+
+# Extract value if exist
+if [[ $opt == "-only-error="* ]]; then
+	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
+	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
+fi
+
+if [[ -n $opt ]] && ! [[ $opt =~ ^(-error|-wp|-only-error)$ ]]; then
+	echo "${red}[ERROR] Please, enter a valid option!${end}"
+	exit 1
+fi
+
 
 if [[ -z $opt ]]; then
 	case "$domain" in
@@ -47,15 +65,55 @@ if [[ -z $opt ]]; then
 fi
 
 
-# Validations
-if [[ "$domain" == "-error" || "$domain" == "-wp" ]]; then
-	domain="$2"
-	opt="$1"
-fi
-
-if [[ -n "$opt" && "$opt" != "-error" && "$opt" != "-wp"  ]]; then
-	echo "${red} $opt is not a valid option!${end}"
-	exit 1
+# Turn On/Off Access Logs
+if [[ $opt == "-only-error" ]]; then
+	if ! [[ $value =~ ^(on|off)$ ]]; then
+		echo "${red}[ERROR] Empty or not valid parameter for Only-Error!${end}"
+		exit 1
+	fi
+	
+	# Global-Conf
+	if [[ -z $domain ]]; then
+		islog=$( grep -F "access_log off;" /etc/nginx/nginx.conf )
+		if [[ $value == "on" ]]; then
+			if [[ -z $islog ]]; then
+				sudo sed -i '/access_log/c \	access_log off;' /etc/nginx/nginx.conf
+				echo "${gre}Only-Error Log was successfully enabled (global)!${end}"
+			else	
+				echo "${red}Only-Error Log is already enabled (global)!${end}"
+			fi
+		elif [[ $value == "off" ]]; then
+			if [[ -n $islog ]]; then
+				sudo sed -i "/access_log/c \	access_log \/var\/log\/nginx\/access.log;" /etc/nginx/nginx.conf
+				echo "${gre}Only-Error Log was successfully disabled (global)!${end}"
+			else	
+				echo "${red}Only-Error Log is already disabled (global)!${end}"
+			fi
+		fi
+	fi
+	
+	# Per site
+	if [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
+		islog=$( grep -F "access_log off;" /etc/nginx/sites-available/$domain )
+		if [[ $value == "on" ]]; then
+			if [[ -z $islog ]]; then
+				sudo sed -i '/access_log/c \	access_log off;' /etc/nginx/sites-available/$domain
+				echo "${gre}Only-Error Log was successfully enabled for ${blu}${domain} ${gre}site!${end}"
+			else	
+				echo "${red}Access Log is already enabled for ${blu}${domain} ${gre}site!${end}"
+			fi
+		elif [[ $value == "off" ]]; then
+			if [[ -n $islog ]]; then
+				sudo sed -i "/access_log/c \	access_log \/var\/log\/nginx\/${domain}.access.log we_log;" /etc/nginx/sites-available/$domain
+				echo "${gre}Only-Error Log was successfully disabled for ${blu}${domain} ${gre}site!${end}"
+			else	
+				echo "${red}Access Log is already disabled for ${blu}${domain} ${gre}site!${end}"
+			fi
+		fi
+	elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
+		echo "${red}[ERROR] Domain not found!${end}"
+	fi
+	exit 0
 fi
 
 
