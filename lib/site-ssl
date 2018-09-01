@@ -58,7 +58,9 @@ site_ssl_on() {
 	
 	# Create new certificate
 	[[ $(conf_read debug) == "true" ]] && param="--test-cert" || param=""
-	if [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $subdomflag == 0 ]]; then
+	if [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $cache == "-wildcard" ]]; then
+		sudo certbot certonly --manual --preferred-challenges=dns --no-eff-email --manual-public-ip-logging-ok --agree-tos --staple-ocsp --must-staple --email $cermail -d $domain -d *.$domain $param
+	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $subdomflag == 0 ]]; then
 		sudo certbot certonly --webroot -w /var/www/$root/htdocs/ -d $domain -d www.$domain --email $cermail --no-eff-email --agree-tos --staple-ocsp --must-staple $param
 	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $subdomflag == 1 ]]; then
 		sudo certbot certonly --webroot -w /var/www/$root/htdocs/ -d $domain --email $cermail --no-eff-email --agree-tos --staple-ocsp --must-staple $param
