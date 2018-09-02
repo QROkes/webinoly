@@ -74,6 +74,7 @@ fi
 sudo tar -xf $HOME/webinoly.tar -C /opt/webinoly
 sudo find /opt/webinoly -type d -exec chmod 755 {} \;
 sudo find /opt/webinoly -type f -exec chmod 644 {} \;
+sudo chmod 744 /opt/webinoly/lib/ex-*
 
 # Install plugins
 sudo chmod 755 /opt/webinoly/plugins/*

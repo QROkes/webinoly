@@ -3,7 +3,7 @@
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
 # Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off, -force-redirect
-# Arguments: -cache, -root, -subdomain, -ignore-ssl, -wildcard
+# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard
 
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
@@ -24,7 +24,7 @@ if [[ ! $(conf_read nginx) == "true" ]]; then
 fi
 
 # Check if user entered arg before option and correct it.
-if [[ -n $cache && ($type == "-cache" || $type == "-root" || $type == "-subdomain" || $type == "-ignore-ssl" || $type == "-wildcard") ]]; then
+if [[ -n $cache && ($type == "-cache" || $type == "-root" || $type == "-root-path" || $type == "-subdomain" || $type == "-ignore-ssl" || $type == "-wildcard") ]]; then
 	type="$3"
 	cache="$2"
 fi
@@ -39,7 +39,7 @@ if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type =
 	value=$(echo "${type}" | cut -d'=' -f 2 -s)
 	type=$(echo "${type}" | cut -d'=' -f 1 -s)
 fi
-if [[ $cache == "-root="*  || $cache == "-subdomain="* ]]; then
+if [[ $cache == "-root="*  || $cache == "-subdomain="* || $cache == "-root-path="* ]]; then
 	value=$(echo "${cache}" | cut -d'=' -f 2 -s)
 	cache=$(echo "${cache}" | cut -d'=' -f 1 -s)
 fi
@@ -111,7 +111,7 @@ fi
 if [[ $cache == "-cache" && $wp == [045] ]]; then
 	echo "${red} Site $domain is not a WP site! ${end}"
 	exit 1
-elif [[ -n $cache && ( $cache != "-cache" && $cache != "-root" && $cache != "-subdomain" && $cache != "-ignore-ssl" && $cache != "-wildcard" ) && $type != "-parked" ]]; then
+elif [[ -n $cache && ( $cache != "-cache" && $cache != "-root" && $cache != "-root-path" && $cache != "-subdomain" && $cache != "-ignore-ssl" && $cache != "-wildcard" ) && $type != "-parked" ]]; then
 	echo "${red} $cache is not a valid argument! ${end}"
 	exit 1
 fi

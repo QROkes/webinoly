@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Let's Encrypt manual mode (for Reverse Proxy sites)
+rm -rf $value/.well-known

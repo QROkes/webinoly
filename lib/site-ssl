@@ -18,7 +18,7 @@ site_ssl_on() {
 		exit 1
 	fi
 	
-	if [[ ! -d /var/www/$root/htdocs ]]; then
+	if [[ ! -d /var/www/$root/htdocs && $cache != "-root-path" ]]; then
 		echo "${red}Seems like you are trying to request an SSL Certificate for a Parked/Mapped Domain.!${end}"
 		echo "${red}Please, use the '-root=domain.com' parameter to include the main domain path.${end}"
 		exit 1
@@ -58,13 +58,25 @@ site_ssl_on() {
 	
 	# Create new certificate
 	[[ $(conf_read debug) == "true" ]] && param="--test-cert" || param=""
+	[[ $subdomflag == 1 ]] && domset="-d $domain" || domset="-d $domain -d www.$domain"
+	
+	# Wildcard
 	if [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $cache == "-wildcard" ]]; then
 		sudo certbot certonly --manual --preferred-challenges=dns --no-eff-email --manual-public-ip-logging-ok --agree-tos --staple-ocsp --must-staple --email $cermail -d $domain -d *.$domain $param
-	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $subdomflag == 0 ]]; then
-		sudo certbot certonly --webroot -w /var/www/$root/htdocs/ -d $domain -d www.$domain --email $cermail --no-eff-email --agree-tos --staple-ocsp --must-staple $param
-	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $subdomflag == 1 ]]; then
-		sudo certbot certonly --webroot -w /var/www/$root/htdocs/ -d $domain --email $cermail --no-eff-email --agree-tos --staple-ocsp --must-staple $param
+	
+	# Manual mode for Reverse Proxy sites
+	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $cache == "-root-path" ]]; then
+		if [[ ! -d $value ]]; then
+			echo "${red}[ERROR] Invalid root path!${end}"
+			exit 1
+		fi
+		sudo certbot certonly --manual --preferred-challenges=http --manual-auth-hook /opt/webinoly/lib/ex-ssl-authentication --manual-cleanup-hook /opt/webinoly/lib/ex-ssl-cleanup $domset --no-eff-email --manual-public-ip-logging-ok --agree-tos --staple-ocsp --must-staple --email $cermail $param
+	
+	# Single cert
+	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
+		sudo certbot certonly --webroot -w /var/www/$root/htdocs/ $domset --email $cermail --no-eff-email --agree-tos --staple-ocsp --must-staple $param
 	fi
+	
 	
 	# SSL Nginx Conf
 	if [[ -a /etc/letsencrypt/live/$root/fullchain.pem ]]; then
