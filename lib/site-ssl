@@ -7,7 +7,9 @@ source /opt/webinoly/lib/general
 
 site_ssl_on() {
 	local cermail=$(conf_read mail)
-	local root="$domain"
+	local root=$domain
+	
+	# Some validations to prevent errors when creating certs.
 	if [[ $cache == "-root" && -n $value && -a /etc/nginx/sites-available/$value ]]; then
 		root="$value"
 	elif [[ $cache == "-root" && -n $value && ! -a /etc/nginx/sites-available/$value ]]; then
@@ -19,8 +21,12 @@ site_ssl_on() {
 	fi
 	
 	if [[ ! -d /var/www/$root/htdocs && $cache != "-root-path" ]]; then
-		echo "${red}Seems like you are trying to request an SSL Certificate for a Parked/Mapped Domain.!${end}"
-		echo "${red}Please, use the '-root=domain.com' parameter to include the main domain path.${end}"
+		echo "${red}Seems like you are trying to request an SSL Certificate for a Parked/Mapped Domain.${end}"
+		echo "${red}Please, use the '-root=domain.com' parameter to specify the main domain.${end}"
+		exit 1
+	fi
+	if [[ $cache == "-root-path" && ! -d $value ]]; then
+		echo "${red}[ERROR] Invalid root path!${end}"
 		exit 1
 	fi
 	
@@ -48,38 +54,37 @@ site_ssl_on() {
 		read -p "Please, enter an email to register your new certificate: ${end}" cermail
 		if [[ "$cermail" =~ ^[a-z0-9_\+-]+(\.[a-z0-9_\+-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.([a-z]{2,4})$ ]]; then
 			conf_write mail $cermail
-			echo "${gre} Email address has been successfuly validated and saved! ${end}"
+			echo "${gre}Email address has been successfuly validated and saved! ${end}"
 		else
 			cermail=""
-			echo "${red}  Please enter a valid email address!"
+			echo "${red}Please enter a valid email address!"
 		fi
 		echo "${end}"
 	done
 	
 	# Create new certificate
-	[[ $(conf_read debug) == "true" ]] && param="--test-cert" || param=""
-	[[ $subdomflag == 1 ]] && domset="-d $domain" || domset="-d $domain -d www.$domain"
+	local param="--email $cermail --no-eff-email --agree-tos --staple-ocsp --must-staple"
+	[[ $(conf_read debug) == "true" ]] && param="$param --test-cert"
+	[[ $subdomflag == 1 ]] && local domset="-d $domain" || local domset="-d $domain -d www.$domain"
 	
 	# Wildcard
 	if [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $cache == "-wildcard" ]]; then
-		sudo certbot certonly --manual --preferred-challenges=dns --no-eff-email --manual-public-ip-logging-ok --agree-tos --staple-ocsp --must-staple --email $cermail -d $domain -d *.$domain $param
+		sudo certbot certonly --manual --preferred-challenges=dns --manual-public-ip-logging-ok -d $domain -d *.$domain $param
 	
 	# Manual mode for Reverse Proxy sites
 	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $cache == "-root-path" ]]; then
-		if [[ ! -d $value ]]; then
-			echo "${red}[ERROR] Invalid root path!${end}"
-			exit 1
-		fi
-		sudo certbot certonly --manual --preferred-challenges=http --manual-auth-hook /opt/webinoly/lib/ex-ssl-authentication --manual-cleanup-hook /opt/webinoly/lib/ex-ssl-cleanup $domset --no-eff-email --manual-public-ip-logging-ok --agree-tos --staple-ocsp --must-staple --email $cermail $param
+		conf_write temp-path $value
+		sudo certbot certonly --manual --preferred-challenges=http --manual-auth-hook /opt/webinoly/lib/ex-ssl-authentication --manual-cleanup-hook /opt/webinoly/lib/ex-ssl-cleanup --manual-public-ip-logging-ok $domset $param
+		conf_delete temp-path
 	
 	# Single cert
 	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
-		sudo certbot certonly --webroot -w /var/www/$root/htdocs/ $domset --email $cermail --no-eff-email --agree-tos --staple-ocsp --must-staple $param
+		sudo certbot certonly --webroot -w /var/www/$root/htdocs/ $domset $param
 	fi
 	
 	
 	# SSL Nginx Conf
-	if [[ -a /etc/letsencrypt/live/$root/fullchain.pem ]]; then
+	if [[ -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
 		sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /etc/nginx/sites-available/$domain
 		sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /etc/nginx/sites-available/$domain
 		sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$domain
@@ -87,8 +92,8 @@ site_ssl_on() {
 		sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$domain/}" /etc/nginx/sites-available/$domain
 		
 		# HTTP to HTTPS Redirection
-		local sername="server_name $domain www.$domain;"
-		[[ $subdomflag == 1 ]] && sername="server_name $domain;"
+		[[ $subdomflag == 1 ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
+		[[ $cache == "-wildcard" ]] && sername="server_name $domain *.$domain;"
 		sudo sed -i '1r /opt/webinoly/templates/template-site-sslredirect' /etc/nginx/sites-available/$domain
 		sudo sed -i "/#server_name;/c \	$sername" /etc/nginx/sites-available/$domain
 		
@@ -106,7 +111,7 @@ site_ssl_on() {
 		echo "${gre}SSL have been successfully enabled for site $domain!${end}"
 	else
 		echo "${red}"
-		echo " [ERROR] Certified not created!"
+		echo "[ERROR] Unable to create the new certificate!"
 		echo "${end}"
 	fi
 }
@@ -131,7 +136,7 @@ site_ssl_off() {
 		echo "${end}"
 	fi
 	if [[ $answer == [Yy] ]]; then
-		[[ $(conf_read debug) == "true" ]] && param="--test-cert" || param=""
+		[[ $(conf_read debug) == "true" ]] && local param="--test-cert" || local param=""
 		sudo certbot revoke --cert-path /etc/letsencrypt/live/$domain/cert.pem --delete-after-revoke $param
 		echo "${gre}"
 		echo "Certificate for your site $domain has been completely removed!"

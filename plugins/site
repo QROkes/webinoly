@@ -311,24 +311,6 @@ elif [[ "$type" == "-delete" && -a /etc/nginx/sites-available/$domain ]]; then
 elif [[ "$type" == "-ssl-on" && -a /etc/nginx/sites-available/$domain ]]; then
 	isssl=$( grep -F "ssl on;" /etc/nginx/sites-available/$domain )
 	[[ -z $isssl ]] && site_ssl_on || echo "${red}SSL is already enabled for site $domain!${end}"
-# SSL for WP-subdom subsites
-elif [[ "$type" == "-ssl-on" && ! -a /etc/nginx/sites-available/$domain && $subdomflag == 1 && $cache == "-root" && ! -d /var/www/$domain/htdocs && $tld == $value && -d /var/www/$tld/htdocs/wp-admin && -a /etc/nginx/sites-available/$value ]]; then
-	if [[ -a /var/www/$value/wp-config.php ]]; then
-		wpconfpath="/var/www/$value/wp-config.php"
-	elif [[ -a /var/www/$value/htdocs/wp-config.php ]]; then
-		wpconfpath="/var/www/$value/htdocs/wp-config.php"
-	else
-		echo "${red}[ERROR] wp-config.php file not found!${end}"
-		exit 1
-	fi
-	
-	wpsubdom=$( grep -F "'SUBDOMAIN_INSTALL'" $wpconfpath | cut -f 2 -d "," )
-	if [[ $wpsubdom == *"true"* ]]; then
-		echo "${blu}* SSL for WP Multisite with subdomain configuration.${end}"
-		site_ssl_on
-	else
-		echo "${red}[ERROR] $value is not a WP Multisite with subdomain configuration.${end}"
-	fi
 
 	
 # SSL disabled (Letsencrypt)	

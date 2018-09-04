@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Let's Encrypt manual mode (for Reverse Proxy sites)
-sudo mkdir -p $value/.well-known/acme-challenge
-sudo touch $value/.well-known/acme-challenge/$CERTBOT_TOKEN
-sudo echo $CERTBOT_VALIDATION > $value/.well-known/acme-challenge/$CERTBOT_TOKEN
+source /opt/webinoly/lib/general
+sslpath=$(conf_read temp-path)
+sudo mkdir -p $sslpath/.well-known/acme-challenge
+sudo touch $sslpath/.well-known/acme-challenge/$CERTBOT_TOKEN
+sudo echo $CERTBOT_VALIDATION > $sslpath/.well-known/acme-challenge/$CERTBOT_TOKEN
