@@ -172,9 +172,20 @@ messagend_install() {
 	echo "${gre}*****************************************************************************************"
 	echo "************         Save your DB access password in a secure place:         ************"
 	echo "************              root: ${rootpass}        admin: ${adminpass}              ************"
+	echo "*****************************************************************************************${end}"
+	fi
+	echo "${gre}************       Remember to set your firewall to allow these ports:       ************"
+	echo "************-----------------------------------------------------------------************"
+	echo "************    Port   |  Protocol   |   Firewall_Rule   |   Service_Name    ************"
+	echo "************-----------------------------------------------------------------************"
+	echo "************     22         TCP        Inbound/Outbound          SSH         ************"
+	echo "************     25         TCP                Outbound      Email Sending   ************"
+	echo "************     80         TCP        Inbound/Outbound          HTTP        ************"
+	echo "************     443        TCP        Inbound/Outbound          HTTPS       ************"
+	echo "************    11371       TCP                Outbound      PGP Keyserver   ************"
+	echo "************    22222       TCP        Inbound                 Tool Port     ************"
 	echo "*****************************************************************************************"
 	echo "${end}"
-	fi
 }
 
 
