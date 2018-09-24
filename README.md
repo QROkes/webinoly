@@ -2,7 +2,7 @@
 
 Optimized LEMP Web Server.
 
-Linux Ubuntu + Nginx + MySQL (MariaDB) + PHP is one of the most reliable and powerful configurations to host your websites.
+Linux Ubuntu + Nginx + MariaDB (MySQL) + PHP is one of the most reliable and powerful configurations to host your websites.
 
 With Webinoly you can set up your web server in just one step.
 
@@ -31,15 +31,21 @@ sudo site example.com -wp
 ## Documentation
 For complete documentation, please [visit our site](https://webinoly.com/en/).
 
+Also, you can visit our [Community Support Forum](https://webinoly.com/support/)
+
 ## Contributing
 Please open an issue first to discuss what you would like to change.
 
-Also, you can visit our [Community Support Forum](https://webinoly.com/support/)
+You don't need developer skills to help, visit our site to know [How to Contribute to Webinoly](https://webinoly.com/en/contribute/).
 
 ## Donations
+
+[![PayPal Donations](https://cdn.qrokes.com/media/paypal-webinoly-donate.png)](https://www.paypal.me/qrokes)
+[![Bitcoin Donations](https://cdn.qrokes.com/media/bitcoin-webinoly-donate.png)](https://www.blockchain.com/btc/payment_request?address=1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3)
+
 If you like Webinoly, buy me a coffee or a beer to show support.
 
-[![PayPal Donations](https://www.paypalobjects.com/webstatic/en_US/i/btn/png/gold-rect-paypal-60px.png)](https://www.paypal.me/qrokes)
+**_Your regular donations keeps this project moving forward._**
 
 ## License
 [GNU GPLv3](https://choosealicense.com/licenses/gpl-3.0/)
