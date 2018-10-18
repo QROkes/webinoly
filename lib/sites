@@ -12,6 +12,7 @@ wp_cache_plugins() {
 		sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
 		sudo unzip -qq /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
 		sudo rm /var/www/$domain/htdocs/nginx-helper-plugin.zip
+		sudo chown -R www-data: /var/www/$domain/htdocs/wp-content/plugins/nginx-helper
 		echo ""
 		echo "${gre} Nginx Helper Plugin has been installed!"
 		echo " Please, activate this plugin for a better experience with FastCgi Cache."
@@ -29,6 +30,7 @@ wp_cache_plugins() {
 		sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/redis-cache-plugin.zip https://downloads.wordpress.org/plugin/redis-cache.latest-stable.zip
 		sudo unzip -qq /var/www/$domain/htdocs/redis-cache-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
 		sudo rm /var/www/$domain/htdocs/redis-cache-plugin.zip
+		sudo chown -R www-data: /var/www/$domain/htdocs/wp-content/plugins/redis-cache
 		echo ""
 		echo "${gre} Redis Object Cache Plugin has been installed!"
 		echo " Please, activate this plugin for a better experience with WordPress Object Cache."
