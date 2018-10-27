@@ -100,6 +100,11 @@ elif [[ $arg == "-purge" && ( $opt == "-html" || $opt == "-nginx" ) ]]; then
 		api-events_update pn5
 		sudo apt-get -y purge certbot python-boto duplicity duply
 		echo | sudo add-apt-repository --remove 'ppa:certbot/certbot'
+		# Remove SSL Cron
+		if [[ -a /var/spool/cron/crontabs/root ]]; then
+			sudo sed -i '/MAILTO=/d' /var/spool/cron/crontabs/root
+			sudo sed -i '/certbot renew/d' /var/spool/cron/crontabs/root
+		fi
 		sudo apt-get -y autoremove
 		sudo rm $HOME/www
 		sudo rm $HOME/sites-available

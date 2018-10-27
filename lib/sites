@@ -168,7 +168,7 @@ wpinstall() {
 			if [[ $dbhost == "localhost" && $setupmysql == [yY] && $(conf_read mysql) != "true" ]]; then
 				echo "${red} [ERROR] MySQL is not installed or localhost was not found!${blu}"
 				done="0"
-				continue 1;
+				[[ $wp == 1 ]] && continue 1 || exit 1
 			fi
 			# Check if localhost or external DB
 			if [[ $dbhost != "localhost" && $setupmysql == [yY] ]]; then
@@ -467,7 +467,7 @@ deletesite() {
 		fi
 	fi
 	
-	[[ $dbdel == [yY] ]] && db_delete $domain
+	[[ $dbdel == [yY] ]] && db_delete $domain &
 	
 	# Delete site files
 	sudo rm /etc/nginx/sites-available/$domain

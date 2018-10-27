@@ -10,13 +10,6 @@ end=`tput sgr0`
 db_delete() {
 	local domain="$1"
 	
-	if [[ $(conf_read mysql-client) != "true" ]]; then
-		echo "${gre}MySQL Client is not installed and we need it to stablish a connection with your Database."
-		echo "Wait while we install MySQL Client... installing!!!${end}"
-		mysql_client_install > /dev/null 2>&1 &
-		echo "${gre}MySQL Client has been successfully installed!${end}"
-	fi
-	
 	# Get dbname and dbuser of a WP site
 	if [[ -a /var/www/$domain/wp-config.php ]]; then
 		wpconfpath="/var/www/$domain/wp-config.php"
@@ -39,8 +32,10 @@ db_delete() {
 		done="1"
 		if [[ $host == "localhost" ]]; then
 			# Check if MySQL installed
-			if [[ ! -d /etc/mysql || $(conf_read mysql) != "true" ]]; then
-				echo "${red}[ERROR] Seems like MySQL is not installed or Webinoly can not detect it! ( $domain ) ${end}"
+			if [[ ! -d /etc/mysql || $(conf_read mysql) != "true" || $(conf_read mysql-client) != "true" ]]; then
+				echo "${red}[ERROR] Seems like MySQL is not installed or Webinoly can not detect it!"
+				echo " - Database can not be deleted -${blu} $domain ${end}"
+				exit 1
 			fi
 			local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 			sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup"
@@ -52,14 +47,10 @@ db_delete() {
 				echo ""
 				echo "${blu}  Retry [Y/n]? "
 				while read -r -n 1 -s answer; do
-				  answer=${answer:-y}
-				  if [[ $answer = [YyNn] ]]; then
-					break
-				  fi
+					answer=${answer:-y}
+					[[ $answer = [YyNn] ]] && break
 				done
-				if [[ $answer  == [Nn] ]]; then
-					done="1"
-				fi
+				[[ $answer  == [Nn] ]] && done="1"
 			else
 				echo "${gre}Database of your site ${blu}${domain}${gre} has been successfully deleted! ${end}"
 			fi
@@ -79,6 +70,13 @@ db_delete() {
 				echo "${red} Action aborted, database not deleted!"
 				continue 1;
 			else
+				if [[ $(conf_read mysql-client) != "true" ]]; then
+					echo "${gre}MySQL Client is not installed and we need it to stablish a connection with your Database."
+					echo "Wait while we install MySQL Client... installing!!!${end}"
+					mysql_client_install > /dev/null 2>&1 &
+					echo "${gre}MySQL Client has been successfully installed!${end}"
+				fi
+				
 				sudo mysql --connect-timeout=10 -h "$url" -P "$port" -u"$uroot" -p"$proot" -e "$dbsetup"
 				if [ $? != "0" ]; then
 					done="0"
@@ -88,14 +86,10 @@ db_delete() {
 					echo ""
 					echo "${blu}  Retry [Y/n]? "
 					while read -r -n 1 -s answer; do
-					  answer=${answer:-y}
-					  if [[ $answer = [YyNn] ]]; then
-						break
-					  fi
+						answer=${answer:-y}
+						[[ $answer = [YyNn] ]] && break
 					done
-					if [[ $answer  == [Nn] ]]; then
-						done="1"
-					fi
+					[[ $answer  == [Nn] ]] && done="1"
 				else
 					echo "${gre}Database of your site ${blu}${domain}${gre} has been successfully deleted! ${end}"
 				fi

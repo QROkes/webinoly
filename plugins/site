@@ -141,11 +141,14 @@ elif [[ "$domain" == "-delete-all" && -z "$type" && -z "$cache" ]]; then
 		domi=$(echo $site | cut -f 4 -d "/")
 		# List sites then will be deleted
 		if [[ $domi != "html" && $domi != $(conf_read tools-port) ]]; then
+			# Determina if site is WP (so has DB to delete)
+			[[ -a $site/wp-config.php || -a $site/htdocs/wp-config.php ]] && db_delete $domi &
+			
 			sudo rm -rf /etc/nginx/sites-available/$domi
+			sudo rm -rf /etc/nginx/sites-enabled/$domi
+			sudo rm -rf /var/www/$domi
 			echo "${gre}Your site ${blu}${domi}${gre} has been successfully deleted! ${end}"
 		fi
-		# Determina if site is WP (so has DB to delete)
-		[[ -a $site/wp-config.php || -a $site/htdocs/wp-config.php ]] && db_delete $domi
 	done
 
 	# List all remaining sites (parked and proxy)
@@ -153,11 +156,13 @@ elif [[ "$domain" == "-delete-all" && -z "$type" && -z "$cache" ]]; then
 	do
 		domi=$(echo $site | cut -f 5 -d "/")
 		if [[ $domi != "html" && $domi != "default" && $domi != $(conf_read tools-port) ]]; then
+			sudo rm -rf /etc/nginx/sites-available/$domi
+			sudo rm -rf /etc/nginx/sites-enabled/$domi
 			echo "${gre}Your site ${blu}${domi}${gre} has been successfully deleted! ${end}"
 		fi
 	done
 	
-	# Delete all files
+	# Delete all files - double check!
 	# -rf is necessary to not generate an error when is empty.
 	sudo rm -rf /etc/nginx/sites-available/!(default|$(conf_read tools-port))
 	sudo rm -rf /etc/nginx/sites-enabled/!(default|$(conf_read tools-port))
