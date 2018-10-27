@@ -56,18 +56,18 @@ if [[ $2 == "-ver="* ]]; then
 
 	echo "$(tput setaf 1)"
 	if [[ $code == 200 ]]; then
-		sudo wget --timeout=15 -qrO $HOME/webinoly.tar https://qrok.es/webinoly?version=$ver
+		sudo wget --timeout=15 -t 1 -qrO $HOME/webinoly.tar https://qrok.es/webinoly?version=$ver
 		webyversion="$ver"
 		[[ $ver == "beta" ]] && echo "[WARNING] You are installing a BETA version of Webinoly and it's not recommended for production enviroments."
 		# Just for stadistics
-		[[ $statskip == "true" ]] || sudo wget --timeout=15 --spider --referer="https://webinoly.com/?version=${ver}${update}" -q https://qrok.es/wyver
+		[[ $statskip == "true" ]] || sudo wget --timeout=15 -t 1 --spider --referer="https://webinoly.com/?version=${ver}${update}" -q https://qrok.es/wyver
 	else
 		echo "[ERROR] Version not found or not available! ($code) $(tput sgr0)"
 		exit 1
 	fi
 	echo $(tput sgr0)
 else
-	sudo wget --timeout=15 --referer="https://webinoly.com/?option=${setup}${update}" -qrO $HOME/webinoly.tar https://qrok.es/wytar
+	sudo wget --timeout=15 -t 1 --referer="https://webinoly.com/?option=${setup}${update}" -qrO $HOME/webinoly.tar https://qrok.es/wytar
 fi
 
 [[ ! -d /opt/webinoly ]] && sudo mkdir /opt/webinoly
@@ -130,9 +130,13 @@ echo "${blu}"
 echo "****************************************************************************"
 echo "**********************     D O N A T I O N S     ***************************"
 echo "***   If you like Webinoly, buy me a coffee or a beer to show support.   ***"
-echo "************     PayPal: https://www.paypal.me/qrokes     ******************"
 echo "****************************************************************************"
-echo "${end}"	
+echo "**********     Bitcoin: 1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3     *************"
+echo "************    PayPal: https://www.paypal.me/qrokes     *******************"
+echo "****************************************************************************"
+echo "***   Your regular donations is what keep this project moving forward.   ***"
+echo "****************************************************************************"
+echo "${end}"
 
 
 # Remove Installation File

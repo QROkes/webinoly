@@ -234,8 +234,8 @@ elif [ "$type" == "-parked" ]; then
 	sudo sed -i "/server_name/c \	$sername" /etc/nginx/sites-available/$domain
 	sudo sed -i "s/$mapto/$domain/g"  /etc/nginx/sites-available/$domain
 	sudo sed -i "/root/c \	root /var/www/$mapto/htdocs;" /etc/nginx/sites-available/$domain
-	cusconl=$( grep -F "include /var/www/$domain/conf/nginx" /etc/nginx/sites-available/$domain | sed "s/$domain/$mapto/" )
-	sed -i "/include \/var\/www\/$domain\/conf\/nginx/c \	${cusconl}" /etc/nginx/sites-available/$domain
+	cusconl=$( grep -F "include /var/www/$domain/" /etc/nginx/sites-available/$domain | sed "s/$domain/$mapto/" )
+	sed -i "/include \/var\/www\/$domain/c \ ${cusconl}" /etc/nginx/sites-available/$domain
 	
 	echo "${gre}"
 	echo "Parked domain was successfully configured! "

@@ -9,7 +9,7 @@ source /opt/webinoly/lib/general
 wp_cache_plugins() {
 	if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/nginx-helper ]]; then
 		# Download Nginx Helper Plugin
-		sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
+		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
 		sudo unzip -qq /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
 		sudo rm /var/www/$domain/htdocs/nginx-helper-plugin.zip
 		echo ""
@@ -26,7 +26,7 @@ wp_cache_plugins() {
 
 	if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/redis-cache ]]; then
 		# Download Redis Object Cache Plugin
-		sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/redis-cache-plugin.zip https://downloads.wordpress.org/plugin/redis-cache.latest-stable.zip
+		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/redis-cache-plugin.zip https://downloads.wordpress.org/plugin/redis-cache.latest-stable.zip
 		sudo unzip -qq /var/www/$domain/htdocs/redis-cache-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
 		sudo rm /var/www/$domain/htdocs/redis-cache-plugin.zip
 		echo ""
@@ -144,7 +144,7 @@ wpinstall() {
 	
 	# Download WP (latest version)
 	if [[ $wp == [123] ]]; then
-		sudo wget --timeout=15 -qrO /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
+		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
 		sudo tar -xf /var/www/$domain/htdocs/wp.tar.gz -C /var/www/$domain/htdocs/
 		sudo mv /var/www/$domain/htdocs/wordpress/* /var/www/$domain/htdocs/
 		sudo rm -rf /var/www/$domain/htdocs/wordpress
@@ -527,16 +527,16 @@ createsite() {
 			fi
 		fi
 	fi
-	
-	sudo chown -R www-data:www-data /var/www
-	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
-	
+		
 	# Activate FastCgi cache
 	if [[ "$cache" == "-cache" && "$wp" == [123] ]]; then
 		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
 		wp_cache_plugins
 	fi
 	
+	sudo chown -R www-data:www-data /var/www
+	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
+
 	echo "${gre}Site $domain has been successfully created!${end}"
 }
 

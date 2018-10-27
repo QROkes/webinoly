@@ -2,7 +2,7 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option>
-# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-list-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap
+# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap
 
 opt="$1"
 source /opt/webinoly/lib/webin
@@ -20,7 +20,7 @@ fi
 if [[ $opt == "-update" ]]; then
 	echo ""
 	[[ -n $value ]] && branch="-ver=${value}" || branch=""
-	sudo wget --timeout=15 --referer="https://update.webinoly.com/?ver=$(app_version)" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
+	sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=$(app_version)" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
 	echo "${gre}Webinoly App has been updated successfully!${end}"
 
 	
@@ -255,9 +255,9 @@ elif [[ $opt == "-info" ]]; then
 	system_info
 
 	
-elif [[ $opt == "-external-list-update" ]]; then
+elif [[ $opt == "-external-sources-update" ]]; then
 	echo "${blu}- Downloading Public Suffix List!${end}"
-	sudo wget --timeout=15 -qrO /tmp/temp-public_suffix_list.dat https://publicsuffix.org/list/public_suffix_list.dat
+	sudo wget --timeout=15 -t 1 -qrO /tmp/temp-public_suffix_list.dat https://publicsuffix.org/list/public_suffix_list.dat
 	if [[ -s /tmp/temp-public_suffix_list.dat ]]; then
 		echo "${blu}- Processing file!${end}"
 		sudo sed -i '/^\/\// d' /tmp/temp-public_suffix_list.dat
@@ -272,7 +272,7 @@ elif [[ $opt == "-external-list-update" ]]; then
 	
 	echo ""
 	echo "${blu}- Downloading Timezone Database!${end}"
-	sudo wget --timeout=15 -qrO /tmp/temp-timezonedb.zip https://timezonedb.com/files/timezonedb.csv.zip
+	sudo wget --timeout=15 -t 1 -qrO /tmp/temp-timezonedb.zip https://timezonedb.com/files/timezonedb.csv.zip
 	if [[ -s /tmp/temp-timezonedb.zip ]]; then
 		echo "${blu}- Processing file!${end}"
 		sudo unzip -qq /tmp/temp-timezonedb.zip -d /tmp/tz/
@@ -321,7 +321,7 @@ elif [[ $opt == "-clear-cache" ]]; then
 				sudo chown -R www-data:www-data /var/www/$port/htdocs/php/opcache
 				sudo chmod 644 /var/www/$port/htdocs/php/opcache/index.php
 			fi
-			wget --spider --no-check-certificate --timeout=15 localhost:22222/php/opcache/  > /dev/null 2>&1 &
+			wget --spider --no-check-certificate --timeout=15 -t 1 localhost:$port/php/opcache/  > /dev/null 2>&1 &
 			echo "${gre}- OpCache has been successfully cleared!${end}"
 		else
 			echo "${red}[ERROR] We can not clear OpCache because PHP and NGINX are not installed!${end}"

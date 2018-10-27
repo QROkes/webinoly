@@ -10,7 +10,7 @@ Webinoly provides a set of tools and commands that facilitate the web server adm
 - Unique commands to create, delete, disable sites.
 - Free SSL certificates for your sites with Let’s Encrypt and automatic server configuration.
 - HTTP/2 dramatically increase the speed of serving your content.
-- PHP v7.2 and support for previous versions if necessary (5.6, 7.0 and 7.1).
+- PHP v7.2 and support for previous versions if necessary (5.6, 7.0 and 7.1) and the newest 7.3 (Release Candidate).
 - FastCgi Cache and Redis Object Cache for your WordPress sites.
 - Get an A+ grade on [Qualys (SSL Labs) Test](https://www.ssllabs.com/ssltest/).
 - Log viewer in real time.

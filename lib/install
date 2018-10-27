@@ -3,7 +3,7 @@ source /opt/webinoly/lib/general
 
 
 app_version() { 
-	local app_ver="1.6.0"
+	local app_ver="1.6.1-beta"
 	echo $app_ver
 }
 svr_version() { 
@@ -205,7 +205,7 @@ nginx_install() {
 
 php_install() {
 	api-events_update ip1
-	if [[ -n $(conf_read php-ver) && ($(conf_read php-ver) == "7.2" || $(conf_read php-ver) == "7.1" || $(conf_read php-ver) == "7.0" || $(conf_read php-ver) == "5.6") ]]; then
+	if [[ -n $(conf_read php-ver) && ($(conf_read php-ver) == "7.3" || $(conf_read php-ver) == "7.2" || $(conf_read php-ver) == "7.1" || $(conf_read php-ver) == "7.0" || $(conf_read php-ver) == "5.6") ]]; then
 		echo "${gre}Default PHP version '$(conf_read php-ver)' detected!${end}"
 	else
 		# Default PHP version
@@ -214,7 +214,7 @@ php_install() {
 	ver=$(conf_read php-ver)
 	
 	# Multi-PHP
-	if [[ $(conf_read multi-php) == "true" && -n $1 && $1 =~ ^(5.6|7.0|7.1|7.2)$ && $(conf_read php) == "true" && $1 != $ver ]]; then
+	if [[ $(conf_read multi-php) == "true" && -n $1 && $1 =~ ^(5.6|7.0|7.1|7.2|7.3)$ && $(conf_read php) == "true" && $1 != $ver ]]; then
 		ver="$1"
 		echo "${gre}Multi-PHP version is enabled. PHP '$ver' will be installed!${end}"
 	elif [[ $(conf_read multi-php) != "true" && -n $1 ]]; then
@@ -238,7 +238,7 @@ php_install() {
 		# mcrypt deprecated in 7.2
 		sudo apt-get -y install php${ver}-mcrypt
 	fi
-	if [[ -n $ver && ($ver == "7.2" || $ver == "7.1" || $ver == "7.0") ]]; then
+	if [[ -n $ver && ($ver == "7.3" || $ver == "7.2" || $ver == "7.1" || $ver == "7.0") ]]; then
 		# xdebug deprecated in 5.6
 		sudo apt-get -y install php-xdebug
 	fi
@@ -364,10 +364,11 @@ php_optim() {
 	sudo sed -i '/ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
 
 	if [[ $(conf_read multi-php) == "true" ]]; then
-		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9004' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 5.6 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9006' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9004' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9006' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 5.6 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9008' /etc/php/$ver/fpm/pool.d/www.conf
 	else
 		sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
 	fi
@@ -380,15 +381,16 @@ php_optim() {
 	sudo sed -i '/request_slowlog_timeout =/c\request_slowlog_timeout = 10s' /etc/php/$ver/fpm/pool.d/debug.conf
 
 	if [[ $(conf_read multi-php) == "true" ]]; then
-		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
-		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/debug.conf
-		[[ $ver == 7.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9005' /etc/php/$ver/fpm/pool.d/debug.conf
-		[[ $ver == 5.6 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9007' /etc/php/$ver/fpm/pool.d/debug.conf
+		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
+		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/debug.conf
+		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9005' /etc/php/$ver/fpm/pool.d/debug.conf
+		[[ $ver == 7.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9007' /etc/php/$ver/fpm/pool.d/debug.conf
+		[[ $ver == 5.6 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9009' /etc/php/$ver/fpm/pool.d/debug.conf
 	else
 		sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
 	fi
 	
-	if [[ -n $ver && ($ver == "7.2" || $ver == "7.1" || $ver == "7.0") ]]; then
+	if [[ -n $ver && ($ver == "7.3" || $ver == "7.2" || $ver == "7.1" || $ver == "7.0") ]]; then
 		# xdebug deprecated in 5.6
 		sudo echo 'php_admin_flag[xdebug.profiler_enable] = off' >> /etc/php/$ver/fpm/pool.d/debug.conf
 		sudo echo 'php_admin_flag[xdebug.profiler_enable_trigger] = on' >> /etc/php/$ver/fpm/pool.d/debug.conf
@@ -479,7 +481,7 @@ php_tool() {
 mysql_tool() {
 	api-events_update im5
 	sudo mkdir /var/www/$(conf_read tools-port)/htdocs/pma
-	sudo wget --timeout=15 -qrO /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.xz
+	sudo wget --timeout=15 -t 1 -qrO /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.xz
 	sudo tar -xf /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz -C /var/www/$(conf_read tools-port)/htdocs/pma
 	sudo mv /var/www/$(conf_read tools-port)/htdocs/pma/phpMyAdmin-*-all-languages/* /var/www/$(conf_read tools-port)/htdocs/pma/
 	sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma/phpMyAdmin-*-all-languages

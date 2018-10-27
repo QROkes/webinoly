@@ -155,6 +155,7 @@ elif [[ $arg == "-purge" && $opt == "-php" ]]; then
 
 		conf_write php purged
 		conf_write php-optim purged
+		[[ $(conf_read php-v7.3) == "true" ]] && conf_write php-v7.3 purged
 		[[ $(conf_read php-v7.2) == "true" ]] && conf_write php-v7.2 purged
 		[[ $(conf_read php-v7.1) == "true" ]] && conf_write php-v7.1 purged
 		[[ $(conf_read php-v7.0) == "true" ]] && conf_write php-v7.0 purged
@@ -385,7 +386,7 @@ elif [[ $opt == "-php-ver" ]]; then
 		exit 0
 	fi
 	
-	if [[ -n $value && ($value == "7.2" || $value == "7.1" || $value == "7.0" || $value == "5.6") ]]; then
+	if [[ -n $value && ($value == "7.3" || $value == "7.2" || $value == "7.1" || $value == "7.0" || $value == "5.6") ]]; then
 		echo "${blu}New PHP version: '$value' ${end}"
 		if [[ $(conf_read php) == "true" && $(conf_read php-ver) == $value ]]; then
 			echo "${red}PHP $value is currently installed!${end}"
