@@ -38,6 +38,8 @@ wp_cache_plugins() {
 	else
 		echo "${red}Redis Object Cache Plugin is already installed!${end}"
 	fi
+	
+	sudo chown -R www-data:www-data /var/www/$domain/htdocs/wp-content/plugins
 }
 
 domain_check() {

@@ -124,7 +124,7 @@ if [[ "$domain" == "-list" && -z "$type" && -z "$cache" ]]; then
 	for site in "/var/www"/*
 	do
 		domi=$(echo $site | cut -f 4 -d "/")
-		echo "${gre}  -  $domi ${end}"
+		[[ $domi != "html" && $domi != $(conf_read tools-port) ]] && echo "${gre}  -  $domi ${end}"
 	done
 	echo ""
 
@@ -365,6 +365,7 @@ elif [[ "$type" == "-force-redirect" && -a /etc/nginx/sites-available/$domain ]]
 elif [[ ! -a /etc/nginx/sites-available/$domain && $type =~ ^(-nocache|-cache|-delete|-off|-on|-ssl-on|-ssl-off|-force-redirect)$ ]]; then
 	echo "${red}Site $domain doesn't exists!${end}"
 else
+	[[ -z $type ]] && type=$domain
 	echo "${red} Argument '${type}' is not a valid option! ${end}"
 fi
 
