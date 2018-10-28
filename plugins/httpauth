@@ -1,6 +1,6 @@
 #!/bin/bash
 source /opt/webinoly/lib/general
-opt="$1"
+opt=${1,,}
 
 # Http-Authentication Plugin
 # Syntax: httpauth <option>

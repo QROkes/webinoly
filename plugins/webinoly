@@ -4,7 +4,7 @@
 # Syntax: webinoly <option>
 # Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap
 
-opt="$1"
+opt=${1,,}
 source /opt/webinoly/lib/webin
 
 # Extract value if exist
@@ -12,7 +12,7 @@ if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-ca
 	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
 	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
 	# Prevent cases like -conf-value where is valid enter a value without = causing empty opt.
-	[[ -z $opt ]] && opt=$1
+	[[ -z $opt ]] && opt=${1,,}
 fi
 
 
@@ -46,11 +46,15 @@ elif [[ $opt == "-server-update" || $opt == "-server-reset" ]]; then
 	
 	# Regenerate PHP conf files
 	if [[ $(conf_read php-optim) == "true" && ( $value == "php" || $value = "all" ) ]]; then
-		sudo cat /opt/webinoly/templates/source/php.ini > /etc/php/$(conf_read php-ver)/fpm/php.ini
-		sudo cat /opt/webinoly/templates/source/www.conf > /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
-		sudo rm /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
-		php_optim
-		echo "${gre}PHP settings has been updated successfully!${end}"
+		if [[ -a /opt/webinoly/templates/source/php.ini && -a /opt/webinoly/templates/source/www.conf ]]; then
+			sudo cat /opt/webinoly/templates/source/php.ini > /etc/php/$(conf_read php-ver)/fpm/php.ini
+			sudo cat /opt/webinoly/templates/source/www.conf > /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
+			sudo rm -rf /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
+			php_optim
+			echo "${gre}PHP settings has been updated successfully!${end}"
+		else
+			echo "${red}[ERROR] PHP could not been updated, source files not found!${end}"
+		fi
 	elif [[ $(conf_read php-optim) != "true" && ( $value == "php" || $value = "all" ) ]]; then
 		echo "${red}PHP settings couldn't been updated, seems like is not installed in your server!${end}"
 	fi

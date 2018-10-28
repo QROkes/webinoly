@@ -6,8 +6,8 @@
 # Notes: If no domain or option is entered, access logs are displayed.
 
 source /opt/webinoly/lib/general
-domain="$1"
-opt="$2"
+domain=${1,,}
+opt=${2,,}
 
 error() {
 	echo ""
@@ -18,8 +18,8 @@ error() {
 
 # Validations
 if [[ $domain =~ ^(-error|-wp)$ || $domain == "-only-error="* ]]; then
-	domain="$2"
-	opt="$1"
+	domain=${2,,}
+	opt=${1,,}
 fi
 
 # Extract value if exist

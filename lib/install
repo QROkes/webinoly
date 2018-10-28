@@ -480,7 +480,7 @@ php_tool() {
 
 mysql_tool() {
 	api-events_update im5
-	sudo mkdir /var/www/$(conf_read tools-port)/htdocs/pma
+	sudo mkdir -p /var/www/$(conf_read tools-port)/htdocs/pma
 	sudo wget --timeout=15 -t 1 -qrO /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.xz
 	sudo tar -xf /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz -C /var/www/$(conf_read tools-port)/htdocs/pma
 	sudo mv /var/www/$(conf_read tools-port)/htdocs/pma/phpMyAdmin-*-all-languages/* /var/www/$(conf_read tools-port)/htdocs/pma/

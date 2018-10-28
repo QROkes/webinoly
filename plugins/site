@@ -8,9 +8,9 @@
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
 
-domain="$1"
-type="$2"
-cache="$3"
+domain=${1,,}
+type=${2,,}
+cache=${3,,}
 
 source /opt/webinoly/lib/general
 source /opt/webinoly/lib/sites
@@ -25,8 +25,8 @@ fi
 
 # Check if user entered arg before option and correct it.
 if [[ -n $cache && ($type == "-cache" || $type == "-root" || $type == "-root-path" || $type == "-subdomain" || $type == "-ignore-ssl" || $type == "-wildcard") ]]; then
-	type="$3"
-	cache="$2"
+	type=${3,,}
+	cache=${2,,}
 fi
 
 

@@ -7,14 +7,14 @@
 
 source /opt/webinoly/lib/install
 source /opt/webinoly/lib/webin
-opt="$1"
-arg="$2"
+opt=${1,,}
+arg=${2,,}
 
 
 # Check if user entered arg before option and correct it.
 if [[ $opt == "-purge" || $opt == "-notools" || $opt == "-noptim" ]]; then
-	opt="$2"
-	arg="$1"
+	opt=${2,,}
+	arg=${1,,}
 fi
 
 # FORCE - Unattended Purge
