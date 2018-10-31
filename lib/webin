@@ -356,7 +356,7 @@ webinoly_verify() {
 	fi
 	
 	# Web Tools
-	if [[ $(conf_read php_tool) == "true" ]]; then
+	if [[ $(conf_read php-tool) == "true" ]]; then
 		if [[ ! -d /etc/redis ]]; then
 			echo "[ERROR] Folder: /etc/redis not found!"
 			error="1"
@@ -366,7 +366,7 @@ webinoly_verify() {
 			error="1"
 		fi
 	fi
-	if [[ $(conf_read nginx_tool) == "true" ]]; then
+	if [[ $(conf_read nginx-tool) == "true" ]]; then
 		if [[ ! -a /usr/bin/duplicity ]]; then
 			echo "[ERROR] File: /usr/bin/duplicity not found!"
 			error="1"
@@ -376,6 +376,44 @@ webinoly_verify() {
 			error="1"
 		fi
 	fi
+	
+	# Check if services are running and check configurations
+	if ! systemctl is-active --quiet nginx && [[ $(conf_read nginx) == "true" ]]; then
+		echo "[ERROR] Nginx service not running!"
+		error="1"
+	fi
+	if ! systemctl is-active --quiet php$(conf_read php-ver)-fpm && [[ $(conf_read php) == "true" ]]; then
+		echo "[ERROR] PHP service not running!"
+		error="1"
+	fi
+	if ! systemctl is-active --quiet mysql && [[ $(conf_read mysql) == "true" ]]; then
+		echo "[ERROR] MySQL (MariaDB) service not running!"
+		error="1"
+	fi
+	if ! systemctl is-active --quiet redis-server && [[ $(conf_read php-tool) == "true" ]]; then
+		echo "[ERROR] Redis service not running!"
+		error="1"
+	fi
+	if ! systemctl is-active --quiet memcached && [[ $(conf_read php-tool) == "true" ]]; then
+		echo "[ERROR] Memcached service not running!"
+		error="1"
+	fi
+	if ! systemctl is-active --quiet postfix && [[ $(conf_read php-tool) == "true" ]]; then
+		echo "[ERROR] Postfix service not running!"
+		error="1"
+	fi
+	
+	if ! sudo nginx -t 2>/dev/null; then
+		echo "[ERROR] Nginx Configuration check failed!"
+		error="1"
+	fi
+	
+	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+	if ! sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit" 2>/dev/null && [[ $(conf_read mysql) == "true" ]]; then
+		echo "[ERROR] MySQL Connection to localhost failed!"
+		error="1"
+	fi
+	
 	
 	# Linux Optim
 	local swapkb=$(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
