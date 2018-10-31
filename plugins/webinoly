@@ -232,7 +232,7 @@ elif [[ $opt == "-uninstall" ]]; then
 				swap_delete
 			fi
 			if [[ $(conf_read pre-packs) == true ]]; then
-				sudo apt-get -y -qq purge pwgen unzip > /dev/null
+				sudo apt-get -y -qq purge pwgen unzip zip > /dev/null
 				sudo apt-get -y -qq autoremove > /dev/null
 				conf_write pre-packs purged
 			fi
@@ -298,21 +298,21 @@ elif [[ $opt == "-clear-cache" ]]; then
 		exit 1
 	fi
 	if [[ $value == "redis" || $value == "all" ]]; then
-		if [[ $(conf_read php-tool) == "true" ]]; then
+		if [[ $(conf_read php-tool) == "true" && -a /etc/redis/redis.conf ]]; then
 			sudo redis-cli flushall
 			echo "${gre}- Redis Cache has been successfully cleared!${end}"
 		else
-			echo "${red}[ERROR] We can not clear Redis Cache because PHP is not installed!${end}"
+			echo "${red}[ERROR] We can not clear Redis Cache because is not installed!${end}"
 		fi
 	fi
 	if [[ $value == "memcache" || $value == "memcached" || $value == "all" ]]; then
-		if [[ $(conf_read php-tool) == "true" ]]; then
+		if [[ $(conf_read php-tool) == "true" && -a /etc/memcached.conf ]]; then
 			memhost=$(grep ^-l /etc/memcached.conf | cut -f 2 -d ' ')
 			memport=$(grep ^-p /etc/memcached.conf | cut -f 2 -d ' ')
 			echo flush_all > /dev/tcp/$memhost/$memport
 			echo "${gre}- Memcached has been successfully cleared!${end}"
 		else
-			echo "${red}[ERROR] We can not clear Memcache because PHP is not installed!${end}"
+			echo "${red}[ERROR] We can not clear Memcache because is not installed!${end}"
 		fi
 	fi
 	if [[ $value == "opcache" || $value == "all" ]]; then
@@ -355,10 +355,12 @@ elif [[ $opt == "-timezone" ]]; then
 	
 
 elif [[ $opt == "-version" || $opt == "-v" || $opt == "-V" ]]; then
+	[[ -z $(conf_read server-version) ]] && sver="Not installed!" || sver=$(conf_read server-version)
+	
 	echo "${blu}"
 	echo "Webinoly version: $(app_version)"
-	echo "Current stack version: $(conf_read server-version)"
-	echo "Available stack version: $(svr_version)"
+	echo "Current stack version: $sver"
+	[[ $sver != $(svr_version) ]] && echo "Available stack version: $(svr_version)"
 	echo "${end}"
 
 

@@ -80,6 +80,9 @@ site_ssl_on() {
 	# Single cert
 	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
 		sudo certbot certonly --webroot -w /var/www/$root/htdocs/ $domset $param
+	
+	elif [[ -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
+		echo "${blu}Certificate for $domain already exist and found, wait while we configure your server to use it!${end}"
 	fi
 	
 	
