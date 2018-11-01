@@ -3,7 +3,7 @@ source /opt/webinoly/lib/general
 
 
 app_version() { 
-	local app_ver="1.6.1-beta"
+	local app_ver="1.6.1"
 	echo $app_ver
 }
 svr_version() { 

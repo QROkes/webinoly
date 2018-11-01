@@ -403,7 +403,7 @@ webinoly_verify() {
 		error="1"
 	fi
 	
-	if ! sudo nginx -t 2>/dev/null; then
+	if ! sudo nginx -t 2>/dev/null && [[ $(conf_read nginx) == "true" ]]; then
 		echo "[ERROR] Nginx Configuration check failed!"
 		error="1"
 	fi
