@@ -35,7 +35,7 @@ db_delete() {
 			if [[ ! -d /etc/mysql || $(conf_read mysql) != "true" || $(conf_read mysql-client) != "true" ]]; then
 				echo "${red}[ERROR] Seems like MySQL is not installed or Webinoly can not detect it!"
 				echo " - Database can not be deleted -${blu} $domain ${end}"
-				exit 1
+				return
 			fi
 			local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 			sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup"

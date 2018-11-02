@@ -470,7 +470,7 @@ deletesite() {
 		fi
 	fi
 	
-	[[ $dbdel == [yY] ]] && db_delete $domain &
+	[[ $dbdel == [yY] ]] && db_delete $domain
 	
 	# Delete site files
 	sudo rm /etc/nginx/sites-available/$domain

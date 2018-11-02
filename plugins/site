@@ -141,7 +141,7 @@ elif [[ "$domain" == "-delete-all" && -z "$type" && -z "$cache" ]]; then
 		# List sites then will be deleted
 		if [[ $domi != "html" && $domi != $(conf_read tools-port) ]]; then
 			# Determina if site is WP (so has DB to delete)
-			[[ -a $site/wp-config.php || -a $site/htdocs/wp-config.php ]] && db_delete $domi &
+			[[ -a $site/wp-config.php || -a $site/htdocs/wp-config.php ]] && db_delete $domi
 			
 			sudo rm -rf /etc/nginx/sites-available/$domi
 			sudo rm -rf /etc/nginx/sites-enabled/$domi
