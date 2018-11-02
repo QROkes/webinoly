@@ -61,7 +61,7 @@ db_delete() {
 			fi
 			if [[ -z $uroot || -z $proot ]]; then
 				echo ""
-				echo "${gre}External DB found in $domain (Press 'Enter' key twice to skip and not delete)"
+				echo "${gre}External DB found in${blu} $domain ${gre}(Press 'Enter' key twice to skip and not delete)"
 				read -p "${blu}External DB root username [root]: " uroot
 				uroot=${uroot:-root}
 				read -p "External DB root password: " proot

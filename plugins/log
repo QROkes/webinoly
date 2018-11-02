@@ -100,14 +100,14 @@ if [[ $opt == "-only-error" ]]; then
 				sudo sed -i '/access_log/c \	access_log off;' /etc/nginx/sites-available/$domain
 				echo "${gre}Only-Error Log was successfully enabled for ${blu}${domain} ${gre}site!${end}"
 			else	
-				echo "${red}Access Log is already enabled for ${blu}${domain} ${gre}site!${end}"
+				echo "${red}Access Log is already enabled for ${blu}${domain} ${red}site!${end}"
 			fi
 		elif [[ $value == "off" ]]; then
 			if [[ -n $islog ]]; then
 				sudo sed -i "/access_log/c \	access_log \/var\/log\/nginx\/${domain}.access.log we_log;" /etc/nginx/sites-available/$domain
 				echo "${gre}Only-Error Log was successfully disabled for ${blu}${domain} ${gre}site!${end}"
 			else	
-				echo "${red}Access Log is already disabled for ${blu}${domain} ${gre}site!${end}"
+				echo "${red}Access Log is already disabled for ${blu}${domain} ${red}site!${end}"
 			fi
 		fi
 	elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then

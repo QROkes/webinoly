@@ -495,7 +495,7 @@ createsite() {
 	
 	# Check for duplicate sites
 	if [[ -a /etc/nginx/sites-available/$domain ]]; then
-		echo "${red}Site $domain could not be created because already exists!${end}"
+		echo "${red}Site${blu} $domain ${red}could not be created because already exists!${end}"
 		exit 1
 	fi
 	
@@ -518,7 +518,7 @@ createsite() {
 			[[ "$wp" == [123] ]] && wpinstall
 		else
 			echo "${blu}"
-			echo "  We found a folder with $domain site data, do you want to use it [Y/n]? "
+			echo "  We found a folder with${end} $domain ${blu}site data, do you want to use it [Y/n]? "
 			while read -r -n 1 -s wwwexist; do
 			  wwwexist=${wwwexist:-y}
 			  [[ $wwwexist == [YyNn] ]] && break
@@ -542,7 +542,7 @@ createsite() {
 	sudo chown -R www-data:www-data /var/www
 	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
 
-	echo "${gre}Site $domain has been successfully created!${end}"
+	echo "${gre}Site${blu} $domain ${gre}has been successfully created!${end}"
 }
 
 
@@ -581,7 +581,7 @@ force_redirect() {
 				sudo sed -i "/server_name /c \	$sername" /etc/nginx/sites-available/$domain
 				echo "${gre}Force-Redirection has been successfully disabled!${end}"
 			else
-				echo "${red}Force-Redirect is already disabled for site $domain!${end}"
+				echo "${red}Force-Redirect is already disabled for site${blu} $domain ${end}"
 			fi
 		;;
 	esac

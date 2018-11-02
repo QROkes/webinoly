@@ -43,10 +43,11 @@ site_ssl_on() {
 	echo "**                                                                                             **"
 	echo "**  If you are getting errors or having issues when trying to get a new certificate            **"
 	echo "**  read about the Let's Encrypt rate limit - https://letsencrypt.org/docs/rate-limits/        **"
-	echo "**                                                                                             **"
-	echo "**  Please, be sure your domain and www subdomain are currently pointing (DNS) to this server  **"
-	echo "*************************************************************************************************${end}"
-
+	echo "*************************************************************************************************"
+	echo "${end}"
+	[[ $subdomflag == 0 ]] && echo "${blu}Please, be sure that${end} $domain ${blu}and${end} www.$domain ${blu}are both currently pointing (DNS) to this server. ${end}"
+	[[ $subdomflag == 1 ]] && echo "${blu}Please, be sure that the${end} $domain ${blu}subdomain is currently pointing (DNS) to this server. ${end}"
+	
 	# We need an email to notify each renew intent (cron)
 	while [[ -z $cermail ]]
 	do
@@ -82,7 +83,7 @@ site_ssl_on() {
 		sudo certbot certonly --webroot -w /var/www/$root/htdocs/ $domset $param
 	
 	elif [[ -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
-		echo "${blu}Certificate for $domain already exist and found, wait while we configure your server to use it!${end}"
+		echo "${blu}Certificate for echo${end} $domain ${blu}already exist and found, wait while we configure your server to use it!${end}"
 	fi
 	
 	
@@ -111,7 +112,7 @@ site_ssl_on() {
 		cronrene=$( sudo grep -F "certbot renew" /var/spool/cron/crontabs/root )
 		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root
 		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root
-		echo "${gre}SSL have been successfully enabled for site $domain!${end}"
+		echo "${gre}SSL have been successfully enabled for your site -${blu} $domain${end}"
 	else
 		echo "${red}"
 		echo "[ERROR] Unable to create the new certificate!"
@@ -130,7 +131,9 @@ site_ssl_off() {
 	if [[ -n $value && $value == "force" ]]; then
 		answer=="N"
 	else
-		echo "${blu}"
+		echo "${blu}Select 'Y' to revoke and delete all the certificate files."
+		echo "Select 'N' if you only want to deactivate this certificate momentary and you will activate it later again."
+		echo "${gre}"
 		echo "Do you want to delete and revoke this certificate [y/N]? "
 		while read -r -n 1 -s answer; do
 		  answer=${answer:-n}
@@ -142,8 +145,8 @@ site_ssl_off() {
 		[[ $(conf_read debug) == "true" ]] && local param="--test-cert" || local param=""
 		sudo certbot revoke --cert-path /etc/letsencrypt/live/$domain/cert.pem --delete-after-revoke $param
 		echo "${gre}"
-		echo "Certificate for your site $domain has been completely removed!"
+		echo "Certificate for your site${blu} $domain ${gre}has been completely removed!"
 		echo "${end}"
 	fi
-	echo "${gre}SSL has been successfully disabled for site -${blu} $domain!${end}"
+	echo "${gre}SSL has been successfully disabled for your site -${blu} $domain${end}"
 }
