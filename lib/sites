@@ -53,7 +53,10 @@ domain_check() {
 	
 	# Can not start or end with a hyphen
 	[[ $(echo "${din}" | cut -c-1) == "-" || $(echo "${din}" | rev | cut -c-1) == "-" ]] && domfail="true"
-	
+
+	# Can not contain two points together and can not start or end with a point
+	[[ $din == *..* || $(echo "${din}" | cut -c-1) == "." || $(echo "${din}" | rev | cut -c-1) == "." ]] && domfail="true"
+
 	[[ $domfail == "true" ]] && echo "${red}[WARNING] Domain names can only contain letters, numbers or a hyphen; can not start or end with a hyphen and can be up to 67 characters long.${end}"
 }
 
@@ -481,7 +484,7 @@ deletesite() {
 createsite() {
 	# Check domain and then prevent reserved characters for file names.
 	domain_check $domain
-	domain=$(echo $domain | sed "s/[^\.0-9A-Za-z\-]/_/g")
+	domain=$(echo $domain | sed "s/[^\.0-9A-Za-z\-]/_/g" | sed "s/^[\.]/_/g" | sed "s/\.\./_/g")
 	
 	if [[ $(conf_read php) != "true" && ("$wp" == [123] || "$type" == "-php") ]]; then
 		echo "${red}"
