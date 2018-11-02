@@ -7,14 +7,14 @@
 
 source /opt/webinoly/lib/install
 source /opt/webinoly/lib/webin
-opt=${1,,}
-arg=${2,,}
+opt=$1
+arg=$2
 
 
 # Check if user entered arg before option and correct it.
-if [[ $opt == "-purge" || $opt == "-notools" || $opt == "-noptim" ]]; then
-	opt=${2,,}
-	arg=${1,,}
+if [[ $opt =~ ^(-purge|-notools|-noptim)$ ]]; then
+	opt=$2
+	arg=$1
 fi
 
 # FORCE - Unattended Purge
@@ -94,18 +94,18 @@ elif [[ $arg == "-purge" && ( $opt == "-html" || $opt == "-nginx" ) ]]; then
 		fi
 		
 		sudo service nginx stop
-		sudo apt-get -y purge nginx nginx-common
+		sudo apt -y purge nginx nginx-common
 		[[ $(conf_read nginx-ppa) == "mainline" ]] && echo | sudo add-apt-repository --remove 'ppa:nginx/development' || echo | sudo add-apt-repository --remove 'ppa:nginx/stable'
 		api-events_update pn4
 		api-events_update pn5
-		sudo apt-get -y purge certbot python-boto duplicity duply
+		sudo apt -y purge certbot python-boto duplicity duply
 		echo | sudo add-apt-repository --remove 'ppa:certbot/certbot'
 		# Remove SSL Cron
 		if [[ -a /var/spool/cron/crontabs/root ]]; then
 			sudo sed -i '/MAILTO=/d' /var/spool/cron/crontabs/root
 			sudo sed -i '/certbot renew/d' /var/spool/cron/crontabs/root
 		fi
-		sudo apt-get -y autoremove
+		sudo apt -y autoremove
 		sudo rm $HOME/www
 		sudo rm $HOME/sites-available
 		api-events_update pn6
@@ -149,12 +149,12 @@ elif [[ $arg == "-purge" && $opt == "-php" ]]; then
 	if [[ $answer == [Yy] || $(conf_read force-flag) == "true" ]]; then
 		[[ $(conf_read mysql-tool) == "true" ]] && stack -pma -purge
 		sudo service php*-fpm stop
-		sudo apt-get -y purge php*-fpm php*-curl php*-gd php*-imap php*-mcrypt php*-readline php*-common php*-recode php*-mysql php*-cli php*-mbstring php*-bcmath php*-mysql php*-opcache php*-zip php*-xml php*-soap php-imagick graphviz php-pear php-xdebug php-msgpack
-		sudo apt-get -y purge php-memcached php-memcache memcached
-		sudo apt-get -y purge redis-server php-redis postfix
+		sudo apt -y purge php*-fpm php*-curl php*-gd php*-imap php*-mcrypt php*-readline php*-common php*-recode php*-mysql php*-cli php*-mbstring php*-bcmath php*-mysql php*-opcache php*-zip php*-xml php*-soap php-imagick graphviz php-pear php-xdebug php-msgpack
+		sudo apt -y purge php-memcached php-memcache memcached
+		sudo apt -y purge redis-server php-redis postfix
 		echo | sudo add-apt-repository --remove 'ppa:ondrej/php'
 		echo | sudo add-apt-repository --remove 'ppa:chris-lea/redis-server'
-		sudo apt-get -y autoremove
+		sudo apt -y autoremove
 		sudo rm -rf /etc/php
 		sudo rm /opt/webinoly/templates/source/*
 
@@ -212,10 +212,10 @@ elif [[ $arg == "-purge" && $opt == "-mysql" ]]; then
 		fi	
 		sudo service mysql stop
 		echo "mariadb-server-10.2 mariadb-server-10.2/postrm_remove_databases boolean true" | debconf-set-selections
-		sudo apt-get -y purge mariadb-server mariadb-common mysql-common
-		sudo apt-get -y purge mariadb-client
-		sudo apt-get -y purge debconf-utils
-		sudo apt-get -y autoremove
+		sudo apt -y purge mariadb-server mariadb-common mysql-common
+		sudo apt -y purge mariadb-client
+		sudo apt -y purge debconf-utils
+		sudo apt -y autoremove
 		
 		os_name=$(check_osname)
 		sudo add-apt-repository --remove "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu ${os_name} main"

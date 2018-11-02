@@ -3,7 +3,7 @@ source /opt/webinoly/lib/general
 
 
 app_version() { 
-	local app_ver="1.6.1"
+	local app_ver="1.6.2"
 	echo $app_ver
 }
 svr_version() { 
@@ -189,7 +189,7 @@ nginx_install() {
 		conf_write nginx-ppa stable
 	fi
 	pre_install
-	sudo apt-get -y install nginx
+	sudo apt -y install nginx
 
 	if [[ $(conf_read login-www-data) == "true" ]]; then
 		sudo chown -R www-data:www-data /var/www
@@ -228,19 +228,19 @@ php_install() {
 	pre_install
 	if [[ $(conf_read php) != "true" ]]; then
 		# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
-		sudo apt-get install -y language-pack-en-base
+		sudo apt install -y language-pack-en-base
 		sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 	fi
 	pre_install
-	sudo apt-get -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-recode php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
+	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-recode php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
 	
 	if [[ -n $ver && ($ver == "7.1" || $ver == "7.0" || $ver == "5.6") ]]; then
 		# mcrypt deprecated in 7.2
-		sudo apt-get -y install php${ver}-mcrypt
+		sudo apt -y install php${ver}-mcrypt
 	fi
 	if [[ -n $ver && ($ver == "7.3" || $ver == "7.2" || $ver == "7.1" || $ver == "7.0") ]]; then
 		# xdebug deprecated in 5.6
-		sudo apt-get -y install php-xdebug
+		sudo apt -y install php-xdebug
 	fi
 	
 	def=$(conf_read php-ver)
@@ -263,7 +263,7 @@ mysql_install() {
 	
 	# debconf-utils for unattended scripts
 	#  debconf-get-selections | grep phpmyadmin   <<-- list conf variables
-	sudo apt-get -y install debconf-utils
+	sudo apt -y install debconf-utils
 	
 	# Generate mysql user passwords
 	local AUTOGENPASS_ROOT=`pwgen -s -1`
@@ -276,7 +276,7 @@ mysql_install() {
 	# MariaDB Installation
 	echo "mariadb-server-10.2 mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections
 	echo "mariadb-server-10.2 mysql-server/root_password_again password $AUTOGENPASS_ROOT" | debconf-set-selections
-	sudo apt-get -y install mariadb-server
+	sudo apt -y install mariadb-server
 
 	#Instead of mysql_secure_installation we do this: (same but manually, because not acept unattended)
 	#ALTER USER 'root'@'localhost' IDENTIFIED BY '${AUTOGENPASS_ROOT}';   <<<--- For MySQL 5.7.6 and newer as well as MariaDB 10.1.20 and newer instead of UPDATE
@@ -424,10 +424,10 @@ nginx_tool() {
 	# Install LetsEncrypt
 	echo | sudo add-apt-repository ppa:certbot/certbot
 	pre_install
-	sudo apt-get -y install certbot
+	sudo apt -y install certbot
 	
 	# Instalar Duply & Duplicity
-	sudo apt-get -y install python-boto duplicity duply
+	sudo apt -y install python-boto duplicity duply
 	
 	conf_write nginx-tool true
 	api-events_update in10
@@ -462,15 +462,15 @@ php_tool() {
 	# Redis (Object Cache)
 	echo | sudo add-apt-repository ppa:chris-lea/redis-server
 	pre_install
-	sudo apt-get -y install redis-server php-redis
+	sudo apt -y install redis-server php-redis
 	
 	# Memcached (Object Cache)
-	sudo apt-get -y install php-memcached php-memcache memcached
+	sudo apt -y install php-memcached php-memcache memcached
 	
 	# Postfix mail
 	echo "postfix postfix/main_mailer_type        select  Internet Site" | debconf-set-selections
 	echo "postfix postfix/mailname        string  $hostname" | debconf-set-selections
-	sudo apt-get -y install postfix
+	sudo apt -y install postfix
 
 	sudo service php*-fpm reload
 	conf_write php-tool true

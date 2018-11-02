@@ -116,16 +116,16 @@ check_osname() {
 
 
 pre_install() {
-	sudo apt-get -qq update
+	sudo apt -qq update
 	if [[ $(conf_read pre-packs) != true ]]; then
 		# Check for missing essential packages
 		api-events_update i1
-		sudo apt-get -y -qq install dialog
-		sudo apt-get -y -qq install software-properties-common
-		[[ $(check_osname) != "bionic" ]] && sudo apt-get -y -qq install python-software-properties
-		sudo apt-get -y -qq install pwgen
-		sudo apt-get -y -qq install unzip
-		sudo apt-get -y -qq install zip
+		sudo apt -y -qq install dialog
+		sudo apt -y -qq install software-properties-common
+		[[ $(check_osname) != "bionic" ]] && sudo apt -y -qq install python-software-properties
+		sudo apt -y -qq install pwgen
+		sudo apt -y -qq install unzip
+		sudo apt -y -qq install zip
 		conf_write pre-packs true
 		api-events_update i2
 	fi
@@ -147,7 +147,7 @@ mysql_client_install() {
 		;;
 	esac
 	pre_install
-	sudo apt-get -y install mariadb-client
+	sudo apt -y install mariadb-client
 	conf_write mysql-client true
 	echo "${gre}MySQL Client has been successfully installed!${end}"
 	api-events_update im3

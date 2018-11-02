@@ -8,9 +8,9 @@
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
 
-domain=${1,,}
-type=${2,,}
-cache=${3,,}
+domain=$1
+type=$2
+cache=$3
 
 source /opt/webinoly/lib/general
 source /opt/webinoly/lib/sites
@@ -23,6 +23,11 @@ if [[ ! $(conf_read nginx) == "true" ]]; then
 	exit 1
 fi
 
+# Check if user entered arg before option and correct it.
+if [[ -n $cache && $type =~ ^(-cache|-root|-root-path|-subdomain|-ignore-ssl|-wildcard)$ ]]; then
+	type=$3
+	cache=$2
+fi
 
 # Extract value if exist
 if [[ $domain == "-mysql="* ]]; then
@@ -36,12 +41,6 @@ fi
 if [[ $cache == "-root="*  || $cache == "-subdomain="* || $cache == "-root-path="* ]]; then
 	value=$(echo "${cache}" | cut -d'=' -f 2 -s)
 	cache=$(echo "${cache}" | cut -d'=' -f 1 -s)
-fi
-
-# Check if user entered arg before option and correct it.
-if [[ -n $cache && ($type == "-cache" || $type == "-root" || $type == "-root-path" || $type == "-subdomain" || $type == "-ignore-ssl" || $type == "-wildcard") ]]; then
-	type=${3,,}
-	cache=${2,,}
 fi
 
 
