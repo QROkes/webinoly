@@ -120,10 +120,11 @@ fi
 # List Sites
 if [[ "$domain" == "-list" && -z "$type" && -z "$cache" ]]; then
 	echo ""
-	for site in "/var/www"/*
+	for site in "/etc/nginx/sites-available"/*
 	do
-		domi=$(echo $site | cut -f 4 -d "/")
-		[[ $domi != "html" && $domi != $(conf_read tools-port) ]] && echo "${gre}  -  $domi ${end}"
+		domi=$(echo $site | cut -f 5 -d "/")
+		[[ -a /var/www/$domi ]] && sign="${gre} -" || sign="${blu} *${gre}"
+		[[ $domi != "default" && $domi != $(conf_read tools-port) ]] && echo "$sign $domi ${end}"
 	done
 	echo ""
 
