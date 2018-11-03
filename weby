@@ -14,7 +14,7 @@ if ! [[ $distr == "Ubuntu" && $osver =~ ^(xenial|bionic)$ ]]; then
 	read -p "Press [Enter] key to Continue or [Ctrl+C] to Cancel..."
 fi
 # Check for sudo/root privileges
-if ! groups $USERNAME | grep &>/dev/null '\bsudo\b' | groups $USERNAME | grep &>/dev/null '\broot\b'; then
+if ! $(groups $USERNAME | grep &>/dev/null '\bsudo\b' || groups $USERNAME | grep &>/dev/null '\broot\b'); then
 	echo "$(tput setaf 1)"
 	echo "****  [ERROR] sudo/root privileges are required to install Webinoly ****"
 	echo "$(tput sgr0)"
