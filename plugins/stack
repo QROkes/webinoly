@@ -298,7 +298,11 @@ elif [[ $opt == "-html" || $opt == "-nginx" ]]; then
 	if [[ $(conf_read nginx) != "true" ]]; then
 		nginx_install
 		nginx_optim
-		[[ $arg != "-notools" ]] && nginx_tool		
+		[[ $arg != "-notools" ]] && nginx_tool
+		
+		# By default Yoast Plugin support is enabled
+		webinoly -yoast-sitemap=on
+		
 		echo ""
 		echo "${gre}Nginx has been successfully Optimized by Webinoly! ${end}"
 		echo ""

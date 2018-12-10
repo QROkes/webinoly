@@ -3,11 +3,11 @@ source /opt/webinoly/lib/general
 
 
 app_version() { 
-	local app_ver="1.6.2"
+	local app_ver="1.7.0-beta"
 	echo $app_ver
 }
 svr_version() { 
-	local ser_ver="1.2"
+	local ser_ver="1.3"
 	echo $ser_ver
 }
 
@@ -76,51 +76,6 @@ LimitNOFILE=$nginxfd" | tee -a /etc/systemd/system/nginx.service.d/nofile_limit.
 	#echo "tmpfs    /var/run/nginx-cache   tmpfs   size=${cacheram}M,mode=0744,uid=www-data,gid=www-data   0   0" | sudo tee -a /etc/fstab
 	#sudo mount /var/run/nginx-cache
 	
-	sudo echo "# WebinolyStart - Don't delete
-fs.file-max = $newfd
-fs.nr_open=12000000
-vm.min_free_kbytes=65536
-net.core.somaxconn = 65536
-net.core.wmem_max=16777216
-net.core.rmem_max=16777216
-net.core.netdev_max_backlog=8192
-net.core.optmem_max=8192
-net.ipv4.ip_local_port_range=1024 65535
-net.ipv4.icmp_echo_ignore_broadcasts = 1
-net.ipv4.icmp_ignore_bogus_error_responses = 1
-net.ipv4.tcp_max_tw_buckets = 1440000
-net.ipv4.tcp_window_scaling = 1
-net.ipv4.tcp_max_syn_backlog = 3240000
-net.ipv4.tcp_rmem=8192 87380 16777216                                          
-net.ipv4.tcp_wmem=8192 65536 16777216
-net.ipv4.tcp_fin_timeout=10
-net.ipv4.tcp_keepalive_intvl=30
-net.ipv4.tcp_keepalive_probes=3
-net.ipv4.tcp_keepalive_time=240
-net.ipv4.tcp_sack=1
-net.ipv4.tcp_syn_retries=3
-net.ipv4.tcp_synack_retries = 2
-net.ipv4.tcp_tw_recycle = 0
-net.ipv4.tcp_tw_reuse = 0
-net.ipv4.tcp_slow_start_after_idle=0
-net.ipv4.tcp_rfc1337=1
-net.ipv4.tcp_challenge_ack_limit = 999999999
-net.ipv4.tcp_mtu_probing = 1
-net.ipv4.tcp_base_mss = 1024
-net.ipv4.conf.all.accept_redirects = 0
-net.ipv4.conf.all.accept_source_route = 0
-net.ipv4.conf.all.log_martians = 1
-net.ipv4.conf.all.rp_filter = 1
-net.ipv4.conf.all.secure_redirects = 0
-net.ipv4.conf.all.send_redirects = 0
-net.ipv4.conf.default.accept_redirects = 0
-net.ipv4.conf.default.accept_source_route = 0
-net.ipv4.conf.default.log_martians = 1
-net.ipv4.conf.default.rp_filter = 1
-net.ipv4.conf.default.secure_redirects = 0
-net.ipv4.conf.default.send_redirects = 0
-# WebinolyEnd" | tee -a /etc/sysctl.conf
-	
 	# https://www.cyberciti.biz/faq/linux-increase-the-maximum-number-of-open-files/
 	# https://ospi.fi/blog/centos-7-raise-nofile-limit-for-nginx.html
 	# https://www.masv.io/boost-nginx-connection-limits/
@@ -132,6 +87,15 @@ net.ipv4.conf.default.send_redirects = 0
 	sudo sed -i '/End of file/i \* - nofile 4096' /etc/security/limits.conf
 	sudo sed -i "/End of file/i \# WebinolyEnd" /etc/security/limits.conf
 
+	sudo cat /opt/webinoly/templates/general/sysctl >> /etc/sysctl.conf
+	# BBR is only valid in kernel > v4.9, bionic is at least 4.15
+	if [[ $(check_osname) == "bionic" ]]; then
+		sudo modprobe tcp_bbr
+	else
+		sudo sed -i '/tcp_congestion_control/s/^/#/' /etc/sysctl.conf
+		sudo sed -i '/tcp_notsent_lowat/s/^/#/' /etc/sysctl.conf
+	fi
+	
 	swap_create
 	set_timezone
 	
@@ -506,7 +470,6 @@ swap_delete() {
 		sudo swapoff -a -v > /dev/null
 		sudo rm /swapfile
 		sudo sed -i '/\/swapfile/d' /etc/fstab
-		sudo sed -i '/vm.swappiness/d' /etc/sysctl.conf
 		conf_delete swap-owner
 		api-events_update pn10
 	fi
@@ -565,9 +528,6 @@ swap_create() {
 			sudo swapon /swapfile
 
 			sudo sed -i "/LABEL.*/a \/swapfile none swap sw 0 0" /etc/fstab
-
-			echo 10 | sudo tee /proc/sys/vm/swappiness
-			echo vm.swappiness = 10 | sudo tee -a /etc/sysctl.conf 
 
 			# Swap created by Webinoly - so we should remove it in uninstall
 			conf_write swap-owner webinoly
