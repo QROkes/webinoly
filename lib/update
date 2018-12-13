@@ -70,8 +70,11 @@ onetwo_to_onethree() {
 
 # Version numbers without point
 [[ ${oldver//.} -lt 11 ]] && onezero_to_oneone > /dev/null 2>&1 &
+wait $!
 [[ ${oldver//.} -lt 12 ]] && oneone_to_onetwo > /dev/null 2>&1 &
+wait $!
 [[ ${oldver//.} -lt 13 ]] && onetwo_to_onethree > /dev/null 2>&1 &
+wait $!
 
 
 sudo webinoly -server-reset

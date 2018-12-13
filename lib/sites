@@ -587,7 +587,7 @@ force_redirect() {
 	esac
 	
 	# If SSL is enabled insert after that - First redirect should be to HTTPS due to HSTS.
-	isssl=$( grep -F "ssl on;" /etc/nginx/sites-available/$domain )
+	isssl=$( grep -F "ssl_certificate_key" /etc/nginx/sites-available/$domain )
 	if [[ -z $isssl && $value =~ ^(www|root)$ ]]; then
 		sudo sed -i '1r /tmp/template-site-wwwredirect' /etc/nginx/sites-available/$domain
 	elif [[ -n $isssl && $value =~ ^(www|root)$ ]]; then

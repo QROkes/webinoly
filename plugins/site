@@ -314,13 +314,13 @@ elif [[ "$type" == "-delete" && -a /etc/nginx/sites-available/$domain ]]; then
 	
 # SSL enabled (Letsencrypt)	
 elif [[ "$type" == "-ssl-on" && -a /etc/nginx/sites-available/$domain ]]; then
-	isssl=$( grep -F "ssl on;" /etc/nginx/sites-available/$domain )
+	isssl=$( grep -F "ssl_certificate_key" /etc/nginx/sites-available/$domain )
 	[[ -z $isssl ]] && site_ssl_on || echo "${red}SSL is already enabled for your site -${blu} $domain ${end}"
 
 	
 # SSL disabled (Letsencrypt)	
 elif [[ "$type" == "-ssl-off" && -a /etc/nginx/sites-available/$domain ]]; then
-	isssl=$( grep -F "ssl on;" /etc/nginx/sites-available/$domain )
+	isssl=$( grep -F "ssl_certificate_key" /etc/nginx/sites-available/$domain )
 	[[ -n $isssl ]] && site_ssl_off || 	echo "${red}SSL is already disabled for your site -${blu} $domain ${end}"
 
 

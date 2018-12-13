@@ -409,6 +409,11 @@ elif [[ $opt == "-conf-value_"* ]]; then
 
 
 elif [[ $opt == "-yoast-sitemap"* ]]; then
+	if [[ $(conf_read nginx) != "true" ]]; then
+		echo "${red} Nginx not found! ${end}"
+		exit 1
+	fi
+	
 	ystmap=$( grep -F "# YoastSitemapStart - Yoast SEO Plugin" /etc/nginx/common/wpcommon.conf )
 	if [[ $value == "on" ]]; then
 		if [[ -z $ystmap ]]; then
