@@ -38,7 +38,7 @@ elif [[ $opt == "-server-update" || $opt == "-server-reset" ]]; then
 		sudo rm -rf /etc/nginx/conf.d/*
 		linux_purge
 		nginx_optim
-		sleep 1
+		sleep 3
 		echo "${gre}Nginx settings has been updated successfully!${end}"
 	elif [[ $(conf_read nginx-optim) != "true" && ( $value == "nginx" || $value = "all" ) ]]; then
 		echo "${red}Nginx settings couldn't been updated, seems like is not installed in your server!${end}"

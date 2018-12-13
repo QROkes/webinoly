@@ -48,9 +48,30 @@ oneone_to_onetwo() {
 }
 
 
+onetwo_to_onethree() {
+	# Nginx "ssl on" directive is now deprecated - remove it!
+	for site in "/etc/nginx/sites-available"/*
+	do
+		domi=$(echo $site | cut -f 5 -d "/")
+		[[ $domi != "html" && $domi != 22222 ]] && sudo sed -i "/ssl on;/c\	#ssl on;" /etc/nginx/sites-available/$domi
+	done
+	
+	# swappines is now included by default in linux optimization.
+	sudo sed -i '/vm.swappiness/d' /etc/sysctl.conf
+	
+	# Upgrade MariaDB 10.2 to 10.3
+	if [[ $(conf_read mysql) == "true" ]]; then
+		sudo stack -mysql -purge=keep-data
+		sudo stack -mysql
+	fi
+	
+}
+
+
 # Version numbers without point
 [[ ${oldver//.} -lt 11 ]] && onezero_to_oneone > /dev/null 2>&1 &
 [[ ${oldver//.} -lt 12 ]] && oneone_to_onetwo > /dev/null 2>&1 &
+[[ ${oldver//.} -lt 13 ]] && onetwo_to_onethree > /dev/null 2>&1 &
 
 
 sudo webinoly -server-reset

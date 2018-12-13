@@ -225,10 +225,8 @@ elif [[ $arg == "-purge" && $opt == "-mysql" ]]; then
 		
 		sudo service mysql stop
 		if [[ $value == "keep-data" ]]; then
-			echo "mariadb-server-${mysqlver}	mariadb-server-${mysqlver}/postrm_remove_databases	boolean false"
 			echo "mariadb-server-${mysqlver}	mariadb-server-${mysqlver}/postrm_remove_databases	boolean false" | debconf-set-selections
 		else
-			echo "mariadb-server-${mysqlver}	mariadb-server-${mysqlver}/postrm_remove_databases	boolean true"
 			echo "mariadb-server-${mysqlver}	mariadb-server-${mysqlver}/postrm_remove_databases	boolean true" | debconf-set-selections
 		fi
 		sudo apt -y purge mariadb-server mariadb-common mysql-common
