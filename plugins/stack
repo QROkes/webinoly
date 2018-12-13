@@ -17,22 +17,29 @@ if [[ $opt =~ ^(-purge|-notools|-noptim)$ ]]; then
 	arg=$1
 fi
 
+
+# Extract value if exist
+if [[ $opt == "-nginx="* || $opt == "-html="* || $opt == "-lemp="* || $opt == "-php="* || $opt == "-php-ver="* || $opt == "-purge-server-all="* ]]; then
+	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
+	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
+fi
+if [[ $arg == "-purge="* ]]; then
+	value=$(echo "${arg}" | cut -d'=' -f 2 -s)
+	arg=$(echo "${arg}" | cut -d'=' -f 1 -s)
+fi
+
+
 # FORCE - Unattended Purge
 clear_force_flag() {
 	[[ $(conf_read force-flag) == "true" ]] && conf_delete force-flag
 }
-if [[ $arg == "-purge=force" || $opt == "-purge-server-all=force" || $opt == "-php=force" ]]; then
+if [[ $value == "force" && ($arg == "-purge" || $opt == "-purge-server-all" || $opt == "-php") ]]; then
 	conf_write force-flag true
-	[[ $arg == "-purge=force" ]] && arg="-purge"
-	[[ $opt == "-purge-server-all=force" ]] && opt="-purge-server-all"
-	[[ $opt == "-php=force" ]] && opt="-php"
 	force="1"
 fi
-
-# Extract value if exist
-if [[ $opt == "-nginx="* || $opt == "-html="* || $opt == "-lemp="* || $opt == "-php="* || $opt == "-php-ver="* ]]; then
-	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
-	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
+if [[ $value == "keep-data" && $arg == "-purge" && $opt == "-mysql" ]]; then
+	conf_write force-flag true
+	force="1"
 fi
 
 
@@ -209,28 +216,44 @@ elif [[ $arg == "-purge" && $opt == "-mysql" ]]; then
 			conf_write delautopma true
 			stack -pma -purge
 			conf_delete delautopma
-		fi	
+		fi
+		
+		# Determine MySQL version according to stack version.
+		mysqlver="10.3"
+		stackver=$(conf_read server-version)
+		[[ -n $stackver && ${stackver//.} -lt 13 ]] && mysqlver="10.2"
+		
 		sudo service mysql stop
-		echo "mariadb-server-10.2 mariadb-server-10.2/postrm_remove_databases boolean true" | debconf-set-selections
+		if [[ $value == "keep-data" ]]; then
+			echo "mariadb-server-${mysqlver}	mariadb-server-${mysqlver}/postrm_remove_databases	boolean false"
+			echo "mariadb-server-${mysqlver}	mariadb-server-${mysqlver}/postrm_remove_databases	boolean false" | debconf-set-selections
+		else
+			echo "mariadb-server-${mysqlver}	mariadb-server-${mysqlver}/postrm_remove_databases	boolean true"
+			echo "mariadb-server-${mysqlver}	mariadb-server-${mysqlver}/postrm_remove_databases	boolean true" | debconf-set-selections
+		fi
 		sudo apt -y purge mariadb-server mariadb-common mysql-common
 		sudo apt -y purge mariadb-client
 		sudo apt -y purge debconf-utils
 		sudo apt -y autoremove
 		
 		os_name=$(check_osname)
-		sudo add-apt-repository --remove "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.2/ubuntu ${os_name} main"
-		# Cases with MariaDB v10.2 support
+		sudo add-apt-repository --remove "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu ${os_name} main"
+		# Cases with MariaDB v10.3 support
 		case "$os_name" in
 			"trusty")
 				sudo apt-key del 0xcbcb082a1bb943db
 			;;
-			"xenial"|"zesty"|"artful"|"bionic")
+			"xenial"|"artful"|"bionic"|"cosmic")
 				sudo apt-key del 0xF1656F24C74CD1D8
 			;;
 		esac
 		
-		sudo rm -rf /etc/mysql
-		sudo rm -rf /var/lib/mysql
+		if [[ $value != "keep-data" ]]; then
+			sudo rm -rf /etc/mysql
+			sudo rm -rf /var/lib/mysql
+		else
+			echo "${blu}MySQL data was not removed.${end}"
+		fi
 		conf_delete mysql-root
 		conf_delete mysql-admin
 		conf_write mysql-client purged
