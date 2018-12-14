@@ -303,13 +303,20 @@ php_optim() {
 		local maxuploads="50"
 	fi
 	
-	sudo sed -i '/memory_limit =/c\memory_limit = 128M' /etc/php/$ver/fpm/php.ini
+	sudo sed -i '/memory_limit =/c\memory_limit = 196M' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/max_execution_time =/c\max_execution_time = 300' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/expose_php =/c\expose_php = Off' /etc/php/$ver/fpm/php.ini
 	sudo sed -i "/upload_max_filesize =/c\upload_max_filesize = ${maxuploads}M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i "/post_max_size =/c\post_max_size = ${maxuploads}M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/max_file_uploads =/c\max_file_uploads = 20' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/session.cookie_httponly =/c\session.cookie_httponly = 1' /etc/php/$ver/fpm/php.ini
+
+	sudo sed -i '/opcache.memory_consumption=/c\opcache.memory_consumption=196' /etc/php/$ver/fpm/php.ini
+	sudo sed -i '/opcache.interned_strings_buffer=/c\opcache.interned_strings_buffer=8' /etc/php/$ver/fpm/php.ini
+	sudo sed -i '/opcache.max_accelerated_files=/c\opcache.max_accelerated_files=50000' /etc/php/$ver/fpm/php.ini
+	sudo sed -i '/opcache.enable_cli=/c\opcache.enable_cli=1' /etc/php/$ver/fpm/php.ini
+	sudo sed -i '/opcache.enable=/c\opcache.enable=1' /etc/php/$ver/fpm/php.ini
+	
 	set_timezone
 
 	sudo mkdir -p /var/log/php/$ver
