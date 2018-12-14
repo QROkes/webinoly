@@ -18,11 +18,17 @@ fi
 
 
 if [[ $opt == "-update" ]]; then
-	echo ""
-	[[ -n $value ]] && branch="-ver=${value}" || branch=""
-	sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=$(app_version)" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
-	echo "${gre}Webinoly App has been updated successfully!${end}"
-
+	checkver=$(wget -qO- https://api.webinoly.com/check?text=true)
+	currentver=$(conf_read app-version)
+	
+	if [[ ( -n $checkver && ${checkver//.} -gt ${currentver//.} ) || -n $value ]]; then
+		echo ""
+		[[ -n $value ]] && branch="-ver=${value}" || branch=""
+		sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=$(app_version)" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
+		echo "${gre}Webinoly App has been updated successfully!${end}"
+	else
+		echo "${gre}You currently have the latest version!${end}"
+	fi
 	
 elif [[ $opt == "-server-update" || $opt == "-server-reset" ]]; then
 	if [[ -z $value ]]; then
