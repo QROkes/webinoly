@@ -128,7 +128,7 @@ site_ssl_off() {
 	sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$domain
 	sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
 	
-	if [[ -n $value && $value == "force" ]]; then
+	if [[ -n $value && ( $value == "force" || $value == "off-force" ) ]]; then
 		answer=="N"
 	else
 		echo "${blu}Select 'Y' to revoke and delete all the certificate files."

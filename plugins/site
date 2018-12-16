@@ -30,17 +30,19 @@ if [[ -n $cache && $type =~ ^(-cache|-root|-root-path|-subdomain|-ignore-ssl|-wi
 fi
 
 # Extract value if exist
+if [[ $cache == "-root="*  || $cache == "-subdomain="* || $cache == "-root-path="* || $cache == "-cache="* ]]; then
+	value=$(echo "${cache}" | cut -d'=' -f 2 -s)
+	cache=$(echo "${cache}" | cut -d'=' -f 1 -s)
+	cache_enabled
+fi
 if [[ $domain == "-mysql="* ]]; then
 	value=$(echo "${domain}" | cut -d'=' -f 2 -s)
 	domain=$(echo "${domain}" | cut -d'=' -f 1 -s)
 fi
-if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type == "-wpsubdir="* || $type == "-wpsubdom="* || $type == "-ssl-off="* || $type == "-mysql="* || $type == "-delete="* || $type == "-force-redirect="* ]]; then
+if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type == "-wpsubdir="* || $type == "-wpsubdom="* || $type == "-ssl-off="* || $type == "-mysql="* || $type == "-delete="* || $type == "-force-redirect="* || $type == "-cache="* || $type == "-ssl="* ]]; then
 	value=$(echo "${type}" | cut -d'=' -f 2 -s)
 	type=$(echo "${type}" | cut -d'=' -f 1 -s)
-fi
-if [[ $cache == "-root="*  || $cache == "-subdomain="* || $cache == "-root-path="* ]]; then
-	value=$(echo "${cache}" | cut -d'=' -f 2 -s)
-	cache=$(echo "${cache}" | cut -d'=' -f 1 -s)
+	[[ $type == "-cache" ]] && cache_enabled
 fi
 
 
@@ -311,21 +313,21 @@ elif [[ "$type" == "-delete" && -a /etc/nginx/sites-available/$domain ]]; then
 	deletesite
 	echo "${gre}Site${blu} $domain ${gre}has been successfully deleted!${end}"
 
-	
-# SSL enabled (Letsencrypt)	
-elif [[ "$type" == "-ssl-on" && -a /etc/nginx/sites-available/$domain ]]; then
-	isssl=$( grep -F "ssl_certificate_key" /etc/nginx/sites-available/$domain )
-	[[ -z $isssl ]] && site_ssl_on || echo "${red}SSL is already enabled for your site -${blu} $domain ${end}"
 
-	
-# SSL disabled (Letsencrypt)	
-elif [[ "$type" == "-ssl-off" && -a /etc/nginx/sites-available/$domain ]]; then
+# SSL (Letsencrypt)
+elif [[ ( $type == "-ssl-on" || $type == "-ssl-off" || $type == "-ssl" ) && -a /etc/nginx/sites-available/$domain ]]; then
 	isssl=$( grep -F "ssl_certificate_key" /etc/nginx/sites-available/$domain )
-	[[ -n $isssl ]] && site_ssl_off || 	echo "${red}SSL is already disabled for your site -${blu} $domain ${end}"
-
+	if [[ ( $type == "-ssl-on" && -z $value ) || ( $type == "-ssl" && $value == "on" ) ]]; then
+		[[ -z $isssl ]] && site_ssl_on || echo "${red}SSL is already enabled for your site -${blu} $domain ${end}"
+	elif [[ ( $type == "-ssl-off" || ( $type == "-ssl" && ( $value == "off" || $value == "off-force" ))) ]]; then
+		[[ -n $isssl ]] && site_ssl_off || 	echo "${red}SSL is already disabled for your site -${blu} $domain ${end}"
+	else
+		echo "${red}[ERROR] Invalid option for SSL command! ${end}"
+		exit 1
+	fi
 
 # FastCGI Cache disabled
-elif [[ "$type" == "-nocache" && -a /etc/nginx/sites-available/$domain ]]; then
+elif [[ ( $type == "-nocache" || ( $type == "-cache" && $cacheflag == 0 )) && -a /etc/nginx/sites-available/$domain ]]; then
 	isfc=$( grep -F "wpfc.conf" /etc/nginx/sites-available/$domain )
 	if [[ -n $isfc ]]; then
 		sudo sed -i '/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
@@ -336,7 +338,7 @@ elif [[ "$type" == "-nocache" && -a /etc/nginx/sites-available/$domain ]]; then
 	
 	
 # FastCGI Cache enabled
-elif [[ "$type" == "-cache" && -a /etc/nginx/sites-available/$domain ]]; then
+elif [[ (( $type == "-cache" && -z $value ) || ( $type == "-cache" && $cacheflag == 1 )) && -a /etc/nginx/sites-available/$domain ]]; then
 	isphp=$( grep -F "php.conf" /etc/nginx/sites-available/$domain )
 	iswp=$( grep -F "wpcommon.conf" /etc/nginx/sites-available/$domain )
 	if [[ -n $isphp && -n $iswp ]]; then
@@ -367,11 +369,11 @@ elif [[ "$type" == "-force-redirect" && -a /etc/nginx/sites-available/$domain ]]
 	
 	
 # Catch ERROR 
-elif [[ ! -a /etc/nginx/sites-available/$domain && $type =~ ^(-nocache|-cache|-delete|-off|-on|-ssl-on|-ssl-off|-force-redirect)$ ]]; then
+elif [[ ! -a /etc/nginx/sites-available/$domain && $type =~ ^(-nocache|-cache|-delete|-off|-on|-ssl|-ssl-on|-ssl-off|-force-redirect)$ ]]; then
 	echo "${red}Site${blu} $domain ${red}doesn't exists!${end}"
 else
 	[[ -z $type ]] && type=$domain
-	echo "${red} Argument '${type}' is not a valid option! ${end}"
+	echo "${red}Argument '${type}' is not a valid option! ${end}"
 fi
 
 shopt -u extglob

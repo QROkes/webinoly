@@ -14,7 +14,7 @@ if [[ ! $(conf_read nginx) == "true" ]]; then
 fi
 
 # Extract value if exist
-if [[ $opt == "-add="* || $opt == "-delete="* ]]; then
+if [[ $opt == "-add="* || $opt == "-delete="* || $opt == "-wp-admin="* ]]; then
 	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
 	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
 fi
@@ -63,22 +63,29 @@ elif [[ $opt == "-list" ]]; then
 			echo "-  $line" | cut -f 1 -d ':'
 		done
 	echo "${end}"
-elif [[ $opt == "-wp-admin-on" ]]; then
-	iswpadon=$( grep -F "acl.conf;" /etc/nginx/common/wpcommon.conf )
-	if [[ -z $iswpadon ]]; then
-		sudo sed -i "/zone=one/a \  include common/acl.conf;" /etc/nginx/common/wpcommon.conf
+elif [[ $opt == "-wp-admin-on" || $opt == "-wp-admin-off" || $opt == "-wp-admin" ]]; then
+	
+	if [[ $opt == "-wp-admin-on" || ( $opt == "-wp-admin" && $value == "on" ) ]]; then
+		iswpadon=$( grep -F "acl.conf;" /etc/nginx/common/wpcommon.conf )
+		if [[ -z $iswpadon ]]; then
+			sudo sed -i "/zone=one/a \  include common/acl.conf;" /etc/nginx/common/wpcommon.conf
+			sudo service nginx reload
+			conf_write wp-admin-auth true
+			echo "${gre}WordPress admin authentication has been enabled! ${end}"
+		else
+			echo "${gre}HTTP Authentication for WP Admin pages is already enabled! ${end}"
+		fi
+	
+	elif [[ $opt == "-wp-admin-off" || ( $opt == "-wp-admin" && $value == "off" ) ]]; then
+		sudo sed -i "/acl.conf/d" /etc/nginx/common/wpcommon.conf
 		sudo service nginx reload
-		conf_write wp-admin-auth true
-		echo "${gre}  WordPress admin authentication has been enabled! ${end}"
+		conf_write wp-admin-auth purged
+		echo "${gre}WordPress admin authentication has been disabled! ${end}"
 	else
-		echo "${gre} HTTP Authentication for WP Admin pages is already enabled! ${end}"
+		echo "${red}[ERROR] Invalid option! ${end}"
+		exit 1
 	fi
 	
-elif [[ $opt == "-wp-admin-off" ]]; then
-	sudo sed -i "/acl.conf/d" /etc/nginx/common/wpcommon.conf
-	sudo service nginx reload
-	conf_write wp-admin-auth purged
-	echo "${gre}  WordPress admin authentication has been disabled! ${end}"
 else
 	echo "${red}Please enter a valid option!${end}"
 fi

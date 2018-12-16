@@ -534,7 +534,7 @@ createsite() {
 	fi
 		
 	# Activate FastCgi cache
-	if [[ "$cache" == "-cache" && "$wp" == [123] ]]; then
+	if [[ (( $cache == "-cache" && -z $cacheflag ) || ( $cache == "-cache" && $cacheflag == 1 )) && $wp == [123] ]]; then
 		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
 		wp_cache_plugins
 	fi
@@ -608,3 +608,11 @@ force_redirect() {
 
 }
 
+cache_enabled() {
+	if [[ ( $cache == "-cache" || $type == "-cache" ) && $value =~ ^(on|off)$ ]]; then
+		[[ $value == "on" ]] && cacheflag="1" || cacheflag="0"
+	elif [[ ( $cache == "-cache" || $type == "-cache" ) && -n $value ]]; then
+		echo "${red}[ERROR] Invalid value for cache option! ${end}"
+		exit 1
+	fi
+}
