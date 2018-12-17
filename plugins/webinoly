@@ -40,8 +40,9 @@ elif [[ $opt == "-server-update" || $opt == "-server-reset" ]]; then
 	
 	# Regenerate NGINX conf files
 	if [[ $(conf_read nginx-optim) == "true" && ( $value == "nginx" || $value = "all" ) ]]; then
-		# Backup and keep blockip conf
+		# Backup and keep blockip and whitelist
 		sudo cp -p /etc/nginx/conf.d/blockips.conf /tmp/webinoly_blockips_backup
+		sudo cp -p /etc/nginx/common/acl.conf /tmp/webinoly_whitelist_backup
 		
 		sudo rm -rf /etc/nginx/common
 		sudo rm -rf /etc/nginx/conf.d/*
@@ -50,6 +51,7 @@ elif [[ $opt == "-server-update" || $opt == "-server-reset" ]]; then
 		sleep 3
 		
 		sudo mv /tmp/webinoly_blockips_backup /etc/nginx/conf.d/blockips.conf
+		sudo mv /tmp/webinoly_whitelist_backup /etc/nginx/common/acl.conf
 		echo "${gre}Nginx settings has been updated successfully!${end}"
 	elif [[ $(conf_read nginx-optim) != "true" && ( $value == "nginx" || $value = "all" ) ]]; then
 		echo "${red}Nginx settings couldn't been updated, seems like is not installed in your server!${end}"

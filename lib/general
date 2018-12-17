@@ -167,7 +167,7 @@ tools_port() {
 		fi
 	done
 	conf_write tools-port $port
-	echo "${gre} Port $port has been enabled to access all your Tools! ${end}"
+	echo "${gre}Port $port has been enabled to access all your Tools! ${end}"
 }
 
 

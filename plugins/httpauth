@@ -14,7 +14,7 @@ if [[ ! $(conf_read nginx) == "true" ]]; then
 fi
 
 # Extract value if exist
-if [[ $opt == "-add="* || $opt == "-delete="* || $opt == "-wp-admin="* ]]; then
+if [[ $opt == "-add="* || $opt == "-delete="* || $opt == "-wp-admin="* || $opt == "-whitelist="* || $opt == "-whitelist-remove="* ]]; then
 	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
 	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
 fi
@@ -45,6 +45,8 @@ if [[ $opt == "-add" ]]; then
 		echo "${red}User '$user' already exist!${end}"
 	fi
 	echo ""
+
+	
 elif [[ $opt == "-delete" ]]; then
 	[[ -z $value ]] && read -p "${blu}HTTP-Auth User: ${end}" userpurge || userpurge=$value
 	[[ -a /etc/nginx/.htpasswd ]] && exist=$( grep -E "^${userpurge}:" /etc/nginx/.htpasswd )
@@ -54,6 +56,8 @@ elif [[ $opt == "-delete" ]]; then
 	fi
 	sudo sed -i "/^$userpurge:/d" /etc/nginx/.htpasswd
 	echo "${gre}User '$userpurge has been deleted successfully!${end}"
+
+	
 elif [[ $opt == "-list" ]]; then
 	[[ ! -a /etc/nginx/.htpasswd ]] && exit 0
 	echo "${gre}"
@@ -63,6 +67,8 @@ elif [[ $opt == "-list" ]]; then
 			echo "-  $line" | cut -f 1 -d ':'
 		done
 	echo "${end}"
+
+	
 elif [[ $opt == "-wp-admin-on" || $opt == "-wp-admin-off" || $opt == "-wp-admin" ]]; then
 	
 	if [[ $opt == "-wp-admin-on" || ( $opt == "-wp-admin" && $value == "on" ) ]]; then
@@ -85,6 +91,38 @@ elif [[ $opt == "-wp-admin-on" || $opt == "-wp-admin-off" || $opt == "-wp-admin"
 		echo "${red}[ERROR] Invalid option! ${end}"
 		exit 1
 	fi
+
+
+elif [[ $opt == "-whitelist" ]]; then
+	if [[ -a /etc/nginx/common/acl.conf ]]; then
+		[[ -z $value ]] && read -p "${blu}IP address to whitelist: ${end}" value
+		if [[ -n $value && $value =~ ^[\.0-9A-Za-z\/]+$ ]]; then
+			sudo sed -i "/deny all;/i \allow ${value};" /etc/nginx/common/acl.conf
+			sudo service nginx reload
+			echo "${gre}The IP address ${blu}'$value'${gre} was successfully whitelisted!${end}"
+		else	
+			echo "${red}Please, enter a valid value!${end}"
+		fi
+	else
+		echo "${red}[ERROR] Nginx file not found!${end}"
+	fi
+
+
+elif [[ $opt == "-whitelist-remove" ]]; then
+	if [[ -a /etc/nginx/common/acl.conf ]]; then
+		[[ -z $value ]] && read -p "${blu}IP address to remove from whitelist: ${end}" value
+		if [[ -n $value && $value =~ ^[\.0-9A-Za-z\/]+$ ]]; then
+			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
+			sudo sed -i "\#^allow ${value};#d" /etc/nginx/common/acl.conf
+			sudo service nginx reload
+			echo "${gre}The IP address ${blu}'$value'${gre} was successfully removed from whitelist!${end}"
+		else
+			echo "${red}Please, enter a valid value!${end}"
+		fi
+	else
+		echo "${red}[ERROR] Nginx file not found!${end}"
+	fi	
+
 	
 else
 	echo "${red}Please enter a valid option!${end}"

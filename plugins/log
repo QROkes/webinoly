@@ -33,30 +33,32 @@ if [[ -n $opt ]] && ! [[ $opt =~ ^(-error|-wp|-only-error)$ ]]; then
 	exit 1
 fi
 
+# Check for custom "lines" value
+[[ -n $(conf_read log-lines) && $(conf_read log-lines) =~ ^[0-9]+$ && $(conf_read log-lines) -gt 0 ]] && clines=$(conf_read log-lines) || clines=10
 
 if [[ -z $opt ]]; then
 	case "$domain" in
 		"-mail")
 			if [[ -a /var/log/mail.log && -a /var/log/mail.err ]]; then
-				sudo tail -f /var/log/mail.log /var/log/mail.err
+				sudo tail -f --lines=$clines /var/log/mail.log /var/log/mail.err
 			elif [[ -a /var/log/mail.log ]]; then
-				sudo tail -f /var/log/mail.log
+				sudo tail -f --lines=$clines /var/log/mail.log
 			elif [[ -a /var/log/mail.err ]]; then
-				sudo tail -f /var/log/mail.err
+				sudo tail -f --lines=$clines /var/log/mail.err
 			else
 				error
 			fi
 			;;
 		"-fpm"|"-php")
 			if [[ -a /var/log/php/$(conf_read php-ver)/fpm.log ]]; then
-				sudo tail -f /var/log/php/$(conf_read php-ver)/*.log
+				sudo tail -f --lines=$clines /var/log/php/$(conf_read php-ver)/*.log
 			else
 				error
 			fi
 			;;
 		"-mysql")
 			if [[ -a /var/log/mysql/error.log ]]; then
-				sudo tail -f /var/log/mysql/*.log
+				sudo tail -f --lines=$clines /var/log/mysql/*.log
 			else
 				error
 			fi
@@ -121,15 +123,15 @@ fi
 
 # Show the correct log file
 if [[ "$opt" == "-error" && -z "$domain" && -a /var/log/nginx/error.log ]]; then
-	sudo tail -f /var/log/nginx/*error.log
+	sudo tail -f --lines=$clines /var/log/nginx/*error.log
 elif [[ "$opt" == "-error" && -n "$domain" && -a /var/log/nginx/$domain.error.log ]]; then
-	sudo tail -f /var/log/nginx/$domain.error.log
+	sudo tail -f --lines=$clines /var/log/nginx/$domain.error.log
 elif [[ "$opt" == "-wp" && -n "$domain" && -a /var/www/$domain/htdocs/wp-content/debug.log ]]; then
-	sudo tail -f /var/www/$domain/htdocs/wp-content/debug.log
+	sudo tail -f --lines=$clines /var/www/$domain/htdocs/wp-content/debug.log
 elif [[ -z "$domain" && -z "$opt" && -a /var/log/nginx/access.log ]]; then
-	sudo tail -f /var/log/nginx/*access.log
+	sudo tail -f --lines=$clines /var/log/nginx/*access.log
 elif [[ -n "$domain" && -z "$opt" && -a /var/log/nginx/$domain.access.log ]]; then
-	sudo tail -f /var/log/nginx/$domain.access.log
+	sudo tail -f --lines=$clines /var/log/nginx/$domain.access.log
 else
 	error
 fi

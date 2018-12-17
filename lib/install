@@ -303,15 +303,13 @@ nginx_optim() {
 # PHP OPTIM
 php_optim() {
 	api-events_update ip3
-	[[ -n $1 ]] && ver="$1" || ver=$(conf_read php-ver)
-
-	if [[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ ]]; then
-		local maxuploads=$(conf_read max-mb-uploads)
-	else
-		local maxuploads="50"
-	fi
 	
-	sudo sed -i '/memory_limit =/c\memory_limit = 196M' /etc/php/$ver/fpm/php.ini
+	# Check for dynamic variables
+	[[ -n $1 ]] && ver="$1" || ver=$(conf_read php-ver)
+	[[ -n $(conf_read php-max-mem) && $(conf_read php-max-mem) =~ ^[0-9]+$ && $(conf_read php-max-mem) -gt 0 ]] && local maxmem=$(conf_read php-max-mem) || local maxmem=192
+	[[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ && $(conf_read max-mb-uploads) -gt 0 ]] && local maxuploads=$(conf_read max-mb-uploads) || local maxuploads=50
+	
+	sudo sed -i "/memory_limit =/c\memory_limit = ${maxmem}M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/max_execution_time =/c\max_execution_time = 300' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/expose_php =/c\expose_php = Off' /etc/php/$ver/fpm/php.ini
 	sudo sed -i "/upload_max_filesize =/c\upload_max_filesize = ${maxuploads}M" /etc/php/$ver/fpm/php.ini
@@ -319,7 +317,7 @@ php_optim() {
 	sudo sed -i '/max_file_uploads =/c\max_file_uploads = 20' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/session.cookie_httponly =/c\session.cookie_httponly = 1' /etc/php/$ver/fpm/php.ini
 
-	sudo sed -i '/opcache.memory_consumption=/c\opcache.memory_consumption=196' /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/opcache.memory_consumption=/c\opcache.memory_consumption=${maxmem}" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/opcache.interned_strings_buffer=/c\opcache.interned_strings_buffer=8' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/opcache.max_accelerated_files=/c\opcache.max_accelerated_files=50000' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/opcache.enable_cli=/c\opcache.enable_cli=1' /etc/php/$ver/fpm/php.ini

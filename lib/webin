@@ -502,7 +502,7 @@ system_info() {
 	echo "[MYSQL]"
 	if [[ $(conf_read mysql) == "true" ]]; then
 		
-		[[ $(conf_read mysql-tool) == "true" ]] && pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/22222/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'") || pmaver="Not installed!"
+		[[ $(conf_read mysql-tool) == "true" ]] && pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'") || pmaver="Not installed!"
 		
 		sudo mysql --version
 		echo "PhpMyAdmin: $pmaver"
