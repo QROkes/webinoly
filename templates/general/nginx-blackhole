@@ -1,0 +1,14 @@
+# WebinolyStartBlackhole
+server {
+	listen 443 ssl http2 default_server;
+	listen [::]:443 ssl http2 default_server;
+	#ssl_certificate /etc/ssl/certs/blackhole.crt.pem;
+	#ssl_certificate_key /etc/ssl/private/blackhole.key.pem;
+	return 444;
+}
+server {
+	listen 80 default_server;
+	listen [::]:80 default_server;
+	return 444;
+}
+# WebinolyEndBlackhole

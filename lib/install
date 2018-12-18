@@ -160,6 +160,7 @@ nginx_install() {
 		sudo chown root:root /var/www
 	fi
 
+	sudo cp -p /etc/nginx/sites-available/default /opt/webinoly/templates/source/
 	sudo nginx -t && sudo service nginx start
 	conf_write nginx true
 	echo "${gre}Nginx has been installed successfully! ${end}"
@@ -209,8 +210,8 @@ php_install() {
 	
 	def=$(conf_read php-ver)
 	if [[ $(conf_read php-v${def}) != "true" ]]; then
-		sudo cp /etc/php/$ver/fpm/php.ini /opt/webinoly/templates/source/
-		sudo cp /etc/php/$ver/fpm/pool.d/www.conf /opt/webinoly/templates/source/
+		sudo cp -p /etc/php/$ver/fpm/php.ini /opt/webinoly/templates/source/
+		sudo cp -p /etc/php/$ver/fpm/pool.d/www.conf /opt/webinoly/templates/source/
 	fi
 	
 	conf_write php true

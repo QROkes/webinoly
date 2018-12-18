@@ -4,7 +4,7 @@ opt=$1
 
 # Http-Authentication Plugin
 # Syntax: httpauth <option>
-# Options: -add, -delete, -list, -wp-admin-on, -wp-admin-off
+# Options: -add, -delete, -list, -wp-admin-on, -wp-admin-off, -whitelist, -whitelist-remove
 
 if [[ ! $(conf_read nginx) == "true" ]]; then
 	echo ""

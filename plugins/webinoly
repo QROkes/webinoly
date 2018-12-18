@@ -2,13 +2,13 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option>
-# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap
+# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap, -default-site
 
 opt=$1
 source /opt/webinoly/lib/webin
 
 # Extract value if exist
-if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* || $opt == "-timezone="* || $opt == "-update="* || $opt == "-blockip="* || $opt == "-unblockip="* || $opt == "-conf-value_"* || $opt == "-yoast-sitemap="* || $opt == "-login-www-data="* ]]; then
+if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* || $opt == "-timezone="* || $opt == "-update="* || $opt == "-blockip="* || $opt == "-unblockip="* || $opt == "-conf-value_"* || $opt == "-yoast-sitemap="* || $opt == "-login-www-data="* || $opt == "-default-site="* ]]; then
 	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
 	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
 	# Prevent cases like -conf-value where is valid enter a value without = causing empty opt.
@@ -423,7 +423,7 @@ elif [[ $opt == "-conf-value_"* ]]; then
 	fi
 
 
-elif [[ $opt == "-yoast-sitemap"* ]]; then
+elif [[ $opt == "-yoast-sitemap" ]]; then
 	if [[ $(conf_read nginx) != "true" ]]; then
 		echo "${red} Nginx not found! ${end}"
 		exit 1
@@ -451,6 +451,61 @@ elif [[ $opt == "-yoast-sitemap"* ]]; then
 	fi
 
 
+elif [[ $opt == "-default-site" ]]; then
+	if [[ $(conf_read nginx) != "true" ]]; then
+		echo "${red}Nginx not found! ${end}"
+		exit 1
+	fi
+
+	if [[ $value == "default" ]]; then
+		if [[ -a /opt/webinoly/templates/source/default ]]; then
+			# In case we have a domain as default before.
+			if ! [[ $(conf_read default-site) =~ ^(default|blackhole)$ || -z $(conf_read default-site) ]]; then
+				[[ -L /etc/nginx/sites-enabled/default ]] || sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 80 default_server;/listen 80;/}" /etc/nginx/sites-available/$(conf_read default-site)
+				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:80 default_server;/listen [::]:80;/}" /etc/nginx/sites-available/$(conf_read default-site)
+				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 ssl http2 default_server;/listen 443 ssl http2;/}" /etc/nginx/sites-available/$(conf_read default-site)
+				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 ssl http2 default_server;/listen [::]:443 ssl http2;/}" /etc/nginx/sites-available/$(conf_read default-site)
+			fi
+			
+			sudo cat /opt/webinoly/templates/source/default >| /etc/nginx/sites-available/default
+			conf_write default-site default
+			echo "${gre}Default Nginx was successfully assigned as default site!${end}"
+		else
+			echo "${red}[ERROR] Nginx Default file backup not found! ${end}"
+			exit 1
+		fi
+	elif [[ $value == "blackhole" ]]; then
+		# In case we have a domain as default before.
+		if ! [[ $(conf_read default-site) =~ ^(default|blackhole)$ || -z $(conf_read default-site) ]]; then
+				[[ -L /etc/nginx/sites-enabled/default ]] || sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 80 default_server;/listen 80;/}" /etc/nginx/sites-available/$(conf_read default-site)
+				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:80 default_server;/listen [::]:80;/}" /etc/nginx/sites-available/$(conf_read default-site)
+				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 ssl http2 default_server;/listen 443 ssl http2;/}" /etc/nginx/sites-available/$(conf_read default-site)
+				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 ssl http2 default_server;/listen [::]:443 ssl http2;/}" /etc/nginx/sites-available/$(conf_read default-site)
+		fi
+			
+		sudo cat /opt/webinoly/templates/general/nginx-blackhole >| /etc/nginx/sites-available/default
+		conf_write default-site blackhole
+		echo "${gre}Blackhole Nginx site was successfully assigned as default site!${end}"
+	else
+		# Domain option
+		if [[ -L /etc/nginx/sites-enabled/$value ]]; then
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 80;/listen 80 default_server;/}" /etc/nginx/sites-available/$value
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:80;/listen [::]:80 default_server;/}" /etc/nginx/sites-available/$value
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 ssl http2;/listen 443 ssl http2 default_server;/}" /etc/nginx/sites-available/$value
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 ssl http2;/listen [::]:443 ssl http2 default_server;/}" /etc/nginx/sites-available/$value
+			
+			sudo rm -rf /etc/nginx/sites-enabled/default
+			conf_write default-site $value
+		echo "${gre}Site ${blu}- ${value} -${gre} was successfully assigned as default site!${end}"
+		else
+			echo "${red}[ERROR] Please, enter a valid option (default, blackhole or domain.com). ${end}"
+			exit 1
+		fi
+	fi
+	
+	
 else
 	echo "${red}Please enter a valid option!${end}"
 fi
