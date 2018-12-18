@@ -2,13 +2,13 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option>
-# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap, -default-site
+# Options: -update, -server-update or -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site
 
 opt=$1
 source /opt/webinoly/lib/webin
 
 # Extract value if exist
-if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* || $opt == "-timezone="* || $opt == "-update="* || $opt == "-blockip="* || $opt == "-unblockip="* || $opt == "-conf-value_"* || $opt == "-yoast-sitemap="* || $opt == "-login-www-data="* || $opt == "-default-site="* ]]; then
+if [[ $opt == "-tools-port="* || $opt == "-config-cache="* || $opt == "-clear-cache="* || $opt == "-server-update="* || $opt == "-server-reset="* || $opt == "-timezone="* || $opt == "-update="* || $opt == "-blockip="* || $opt == "-unblockip="* || $opt == "-conf-value_"* || $opt == "-yoast-sitemap="* || $opt == "-login-www-data="* || $opt == "-default-site="* || $opt == "-tools-site="* ]]; then
 	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
 	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
 	# Prevent cases like -conf-value where is valid enter a value without = causing empty opt.
@@ -101,7 +101,41 @@ elif [[ $opt == "-tools-port" ]]; then
 		sudo ln -s /etc/nginx/sites-available/$newport /etc/nginx/sites-enabled/$newport
 		sudo sed -i "s/${oldport}/${newport}/g"  /etc/nginx/sites-available/$newport
 	fi
-	
+
+
+elif [[ $opt == "-tools-site" ]]; then
+	if [[ -a /etc/nginx/sites-available/$value ]]; then
+		# Check for previous assigned domain and remove
+		if [[ -n $(conf_read tools-site) ]]; then
+			sudo sed -i '/server_name/d' /etc/nginx/sites-available/$(conf_read tools-port)
+			# In case SSL is enabled
+			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) default_server deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) default_server;" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/headers-https.conf/d' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+		fi
+		
+		# Assign new domain/site
+		sername=$(grep -F "server_name" /etc/nginx/sites-available/$value)
+		sudo sed -i "/error_log/a \	${sername}" /etc/nginx/sites-available/$(conf_read tools-port)
+		isssl=$( grep -F "ssl_certificate_key" /etc/nginx/sites-available/$value )
+		if [[ -n $isssl ]]; then
+			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) ssl default_server deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) ssl default_server;" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$value/}" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/locations.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$(conf_read tools-port)
+			#sudo sed -i "/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/s/\(server_name\).*$/$sername/" /etc/nginx/sites-available/$(conf_read tools-port)
+			#sudo sed -i '/WebinolySSLredirectEnd/r /tmp/template-site-wwwredirect' /etc/nginx/sites-available/$(conf_read tools-port)
+		fi
+		
+		conf_write tools-site $value
+		echo "${gre}Domain ${blu}- ${value}:$(conf_read tools-port) -${gre} was successfully assigned to access your server tools!${end}"
+	else
+		echo "${red}[ERROR] Domain/site not found. ${end}"
+		exit 1
+	fi
+
 	
 elif [[ $opt == "-login-www-data" || $opt == "-nologin-www-data" ]]; then
 	if [[ $(conf_read nginx) != "true" ]]; then
@@ -498,7 +532,7 @@ elif [[ $opt == "-default-site" ]]; then
 			
 			sudo rm -rf /etc/nginx/sites-enabled/default
 			conf_write default-site $value
-		echo "${gre}Site ${blu}- ${value} -${gre} was successfully assigned as default site!${end}"
+			echo "${gre}Site ${blu}- ${value} -${gre} was successfully assigned as default site!${end}"
 		else
 			echo "${red}[ERROR] Please, enter a valid option (default, blackhole or domain.com). ${end}"
 			exit 1

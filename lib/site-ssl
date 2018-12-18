@@ -112,6 +112,10 @@ site_ssl_on() {
 		cronrene=$( sudo grep -F "certbot renew" /var/spool/cron/crontabs/root )
 		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root
 		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root
+		
+		# In case this domain is used as tools-site.
+		[[ $(conf_read tools-site) == $domain ]] && sudo webinoly -tools-site=$domain
+		
 		echo "${gre}SSL have been successfully enabled for your site -${blu} $domain${end}"
 	else
 		echo "${red}"
@@ -127,6 +131,9 @@ site_ssl_off() {
 	sudo sed -i '/headers-https.conf/d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$domain
 	sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
+	
+	# In case this domain is used as tools-site.
+	[[ $(conf_read tools-site) == $domain ]] && sudo webinoly -tools-site=$domain
 	
 	if [[ -n $value && ( $value == "force" || $value == "off-force" ) ]]; then
 		answer=="N"

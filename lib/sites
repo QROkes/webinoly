@@ -488,7 +488,7 @@ createsite() {
 	
 	if [[ $(conf_read php) != "true" && ("$wp" == [123] || "$type" == "-php") ]]; then
 		echo "${red}"
-		echo " [ERROR] PHP must be installed before you can create a WP site!"
+		echo "[ERROR] PHP must be installed before you can create a PHP or WP site!"
 		echo "${end}"
 		exit 1
 	fi
