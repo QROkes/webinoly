@@ -42,5 +42,13 @@ server {
 		fastcgi_pass $1;
 	}
 
+	# phpMyAdmin protection
+	location ~ ^/pma/(libraries|templates) {
+		autoindex off;
+		deny all;
+		access_log off;
+		log_not_found off;
+	}
+	
 }
 # WebinolyNginxServerEnd

@@ -58,6 +58,9 @@ onetwo_to_onethree() {
 	
 	# swappines is now included by default in linux optimization.
 	sudo sed -i '/vm.swappiness/d' /etc/sysctl.conf
+
+	# Now we need a backup of default Nginx file for "default-site" command.
+	[[ -a /etc/nginx/sites-available/default ]] && sudo cp -p /etc/nginx/sites-available/default /opt/webinoly/templates/source/
 	
 	# Upgrade MariaDB 10.2 to 10.3
 	if [[ $(conf_read mysql) == "true" ]]; then

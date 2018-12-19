@@ -289,7 +289,7 @@ nginx_optim() {
 	wait $!
 
 	# Check for dynamic variables.
-	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth wp-admin=off
+	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off
 	[[ $(conf_read global-access-log-off) == "true" ]] && sudo log -only-error=on
 	[[ -n $(conf_read fastcgi-conf) ]] && sudo webinoly -config-cache=[$(conf_read fastcgi-conf)]
 	[[ $(conf_read yoast-sitemap) == "purged" ]] && sudo webinoly -yoast-sitemap=off || sudo webinoly -yoast-sitemap=on
@@ -389,6 +389,13 @@ nginx_tool_site() {
 	sudo cp /opt/webinoly/templates/nginx/22222 /etc/nginx/sites-available/$(conf_read tools-port)
 	sudo sed -i "s/22222/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
 	sudo service nginx reload
+	
+	# Robots.txt file in case someone remove HTTP Auth
+	sudo touch /var/www/$(conf_read tools-port)/htdocs/robots.txt
+	echo '# Just in case someone remove HTTP Auth protection.
+Disallow: /' > /var/www/$(conf_read tools-port)/htdocs/robots.txt
+	sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs/robots.txt
+	sudo chmod 644 /var/www/$(conf_read tools-port)/htdocs/robots.txt
 }
 
 
