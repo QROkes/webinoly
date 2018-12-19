@@ -11,7 +11,7 @@ opt=$2
 
 error() {
 	echo ""
-	echo "${red} Log file not found!!! ${end}"
+	echo "${red}[ERROR] Log file not found!!! ${end}"
 	echo ""
 	exit 1
 }
@@ -76,18 +76,18 @@ if [[ $opt == "-only-error" ]]; then
 	
 	# Global-Conf
 	if [[ -z $domain ]]; then
-		islog=$( grep -F "access_log off;" /etc/nginx/nginx.conf )
+		[[ $(conf_read nginx) == "true" ]] && islog=$( grep -F "access_log off;" /etc/nginx/nginx.conf )
 		if [[ $value == "on" ]]; then
 			if [[ -z $islog ]]; then
-				sudo sed -i '/access_log/c \	access_log off;' /etc/nginx/nginx.conf
+				[[ $(conf_read nginx) == "true" ]] && sudo sed -i '/access_log/c \	access_log off;' /etc/nginx/nginx.conf
 				conf_write global-access-log-off true
 				echo "${gre}Only-Error Log was successfully enabled (global)!${end}"
 			else	
 				echo "${red}Only-Error Log is already enabled (global)!${end}"
 			fi
 		elif [[ $value == "off" ]]; then
-			if [[ -n $islog ]]; then
-				sudo sed -i "/access_log/c \	access_log \/var\/log\/nginx\/access.log;" /etc/nginx/nginx.conf
+			if [[ -n $islog || ( -z $islog && $(conf_read nginx) != "true" ) ]]; then
+				[[ $(conf_read nginx) == "true" ]] && sudo sed -i "/access_log/c \	access_log \/var\/log\/nginx\/access.log;" /etc/nginx/nginx.conf
 				conf_write global-access-log-off purged
 				echo "${gre}Only-Error Log was successfully disabled (global)!${end}"
 			else	
@@ -98,7 +98,13 @@ if [[ $opt == "-only-error" ]]; then
 	
 	# Per site
 	if [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
-		islog=$( grep -F "access_log off;" /etc/nginx/sites-available/$domain )
+		if [[ $(conf_read nginx) == "true" ]]; then
+			islog=$( grep -F "access_log off;" /etc/nginx/sites-available/$domain )
+		else
+			echo "${red}[ERROR] Nginx not found! ${end}"
+			exit 1
+		fi
+		
 		if [[ $value == "on" ]]; then
 			if [[ -z $islog ]]; then
 				sudo sed -i '/access_log/c \	access_log off;' /etc/nginx/sites-available/$domain

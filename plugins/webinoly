@@ -18,7 +18,7 @@ fi
 
 
 if [[ $opt == "-update" ]]; then
-	checkver=$(wget -qO- https://api.webinoly.com/check?text=true)
+	checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
 	currentver=$(conf_read app-version)
 	
 	if [[ ( -n $checkver && ${checkver//.} -gt ${currentver//.} ) || -n $value ]]; then
@@ -139,7 +139,7 @@ elif [[ $opt == "-tools-site" ]]; then
 	
 elif [[ $opt == "-login-www-data" || $opt == "-nologin-www-data" ]]; then
 	if [[ $(conf_read nginx) != "true" ]]; then
-		echo "${red}Nginx not found! ${end}"
+		echo "${red}[ERROR] Nginx not found! ${end}"
 		exit 1
 	fi
 	if [[ -n $value && ! $value =~ ^(on|off)$ ]]; then
@@ -211,19 +211,21 @@ ForceCommand internal-sftp
 
 	
 elif [[ $opt == "-config-cache" ]]; then
-	if [[ $(conf_read nginx) != "true" ]]; then
-		echo "${red} Nginx not found! ${end}"
-		exit 1
+	if [[ $(conf_read nginx) == "true" ]]; then	
+		hitline=$( grep -F "fastcgi_cache_valid 200" /etc/nginx/conf.d/fastcgi.conf )
+		hitval=$(echo "${hitline//;}" | rev | cut -d' ' -f 1 | rev)
+		inaline=$( grep -F "fastcgi_cache_path" /etc/nginx/conf.d/fastcgi.conf )
+		inactive=$(echo "${inaline//;}" | rev | cut -d' ' -f 1 | rev)
+		inaval=$(echo "${inactive}" | cut -d'=' -f 2)
+		maxsize=$(echo "${inaline}" | rev | cut -d' ' -f 2 | rev)
+		othline=$( grep -F "fastcgi_cache_valid 301 302 307 404" /etc/nginx/conf.d/fastcgi.conf )
+		othval=$(echo "${othline//;}" | rev | cut -d' ' -f 1 | rev)
+	else
+		hitval="Not yet defined"
+		inaval="Not yet defined"
+		othval="Not yet defined"
 	fi
-	
-	hitline=$( grep -F "fastcgi_cache_valid 200" /etc/nginx/conf.d/fastcgi.conf )
-	hitval=$(echo "${hitline//;}" | rev | cut -d' ' -f 1 | rev)
-	inaline=$( grep -F "fastcgi_cache_path" /etc/nginx/conf.d/fastcgi.conf )
-	inactive=$(echo "${inaline//;}" | rev | cut -d' ' -f 1 | rev)
-	inaval=$(echo "${inactive}" | cut -d'=' -f 2)
-	maxsize=$(echo "${inaline}" | rev | cut -d' ' -f 2 | rev)
-	othline=$( grep -F "fastcgi_cache_valid 301 302 307 404" /etc/nginx/conf.d/fastcgi.conf )
-	othval=$(echo "${othline//;}" | rev | cut -d' ' -f 1 | rev)
+
 	
 	if [[ -z $value ]]; then
 		echo "${gre}"
@@ -243,6 +245,7 @@ elif [[ $opt == "-config-cache" ]]; then
 		echo "FastCGI Cache Valid for Errors and Redirections (HttpCode: 301, 302, 307, 404) actual value is: $othval"
 		read -p "   Set new value: " oth
 		oth=${oth:-$othval}
+		echo ""
 	else
 		custombegin=$(echo "${value}" | cut -c-1)
 		customlast=$(echo "${value}" | rev | cut -c-1)
@@ -254,17 +257,15 @@ elif [[ $opt == "-config-cache" ]]; then
 	fi
 	
 	if [[ "$hit" =~ ^[0-9]+[smhdwMy]$ && "$ina" =~ ^[0-9]+[smhdwMy]$ && "$oth" =~ ^[0-9]+[smhdwMy]$ ]]; then
-		sudo sed -i "/fastcgi_cache_valid 200/c \fastcgi_cache_valid 200 ${hit};" /etc/nginx/conf.d/fastcgi.conf
-		sudo sed -i "/fastcgi_cache_valid 301 302 307 404/c \fastcgi_cache_valid 301 302 307 404 ${oth};" /etc/nginx/conf.d/fastcgi.conf
-		sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path \/var\/run\/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m ${maxsize} inactive=${ina};" /etc/nginx/conf.d/fastcgi.conf
+		if [[ $(conf_read nginx) == "true" ]]; then	
+			sudo sed -i "/fastcgi_cache_valid 200/c \fastcgi_cache_valid 200 ${hit};" /etc/nginx/conf.d/fastcgi.conf
+			sudo sed -i "/fastcgi_cache_valid 301 302 307 404/c \fastcgi_cache_valid 301 302 307 404 ${oth};" /etc/nginx/conf.d/fastcgi.conf
+			sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path \/var\/run\/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m ${maxsize} inactive=${ina};" /etc/nginx/conf.d/fastcgi.conf
+		fi
 		conf_write fastcgi-conf ${hit},${ina},${oth}
-		echo "${gre}"
-		echo "FastCGI Cache values has been successfully updated!"
-		echo "${end}"
+		echo "${gre}FastCGI Cache values has been successfully updated!${end}"
 	else
-		echo "${red}"
-		echo "  [ERROR] Invalid values!"
-		echo "${end}"
+		echo "${red}[ERROR] Invalid values!${end}"
 	fi
 
 	
@@ -420,7 +421,7 @@ elif [[ $opt == "-blockip" ]]; then
 			sh -c "echo -n 'deny $value;\n' >> /etc/nginx/conf.d/blockips.conf"
 			echo "${gre}The IP address ${blu}'$value'${gre} was successfully blocked!${end}"
 		else	
-			echo "${red}Please, enter a valid value!${end}"
+			echo "${red}[ERROR] Please, enter a valid value!${end}"
 		fi
 	else
 		echo "${red}[ERROR] Nginx file not found!${end}"
@@ -435,7 +436,7 @@ elif [[ $opt == "-unblockip" ]]; then
 			sed -i "\#^deny ${value};#d" /etc/nginx/conf.d/blockips.conf
 			echo "${gre}The IP address ${blu}'$value'${gre} was successfully unblocked!${end}"
 		else
-			echo "${red}Please, enter a valid value!${end}"
+			echo "${red}[ERROR] Please, enter a valid value!${end}"
 		fi
 	else
 		echo "${red}[ERROR] Nginx file not found!${end}"
@@ -453,41 +454,36 @@ elif [[ $opt == "-conf-value_"* ]]; then
 			echo "${red}Please, enter a valid value!${end}"
 		fi
 	else
-		echo "${red}Please, enter a valid variable name!${end}"
+		echo "${red}[ERROR] Please, enter a valid variable name!${end}"
 	fi
 
 
 elif [[ $opt == "-yoast-sitemap" ]]; then
-	if [[ $(conf_read nginx) != "true" ]]; then
-		echo "${red} Nginx not found! ${end}"
-		exit 1
-	fi
-	
-	ystmap=$( grep -F "# YoastSitemapStart - Yoast SEO Plugin" /etc/nginx/common/wpcommon.conf )
+	[[ $(conf_read nginx) == "true" ]] && ystmap=$( grep -F "# YoastSitemapStart - Yoast SEO Plugin" /etc/nginx/common/wpcommon.conf )
 	if [[ $value == "on" ]]; then
 		if [[ -z $ystmap ]]; then
-			sudo cat /opt/webinoly/templates/template-yoast-sitemap >> /etc/nginx/common/wpcommon.conf
+			[[ $(conf_read nginx) == "true" ]] && sudo cat /opt/webinoly/templates/template-yoast-sitemap >> /etc/nginx/common/wpcommon.conf
 			conf_write yoast-sitemap true
 			echo "${gre}Yoast Sitemap Support was successfully enabled!${end}"
 		else
 			echo "${red}Yoast Sitemap Support is already enabled!${end}"
 		fi
 	elif [[ $value == "off" ]]; then
-		if [[ -n $ystmap ]]; then
-			sudo sed -i '/YoastSitemapStart/,/YoastSitemapEnd/{/.*/d}' /etc/nginx/common/wpcommon.conf
+		if [[ -n $ystmap || ( -z $ystmap && $(conf_read nginx) != "true" ) ]]; then
+			[[ $(conf_read nginx) == "true" ]] && sudo sed -i '/YoastSitemapStart/,/YoastSitemapEnd/{/.*/d}' /etc/nginx/common/wpcommon.conf
 			conf_write yoast-sitemap purged
 			echo "${gre}Yoast Sitemap Support was successfully disabled!${end}"
 		else
 			echo "${red}Yoast Sitemap Support is already disabled!${end}"
 		fi
 	else
-		echo "${red}Please, enter a valid option to enable/disable Yoast Sitemap Support!${end}"
+		echo "${red}[ERROR] Please, enter a valid option to enable/disable Yoast Sitemap Support!${end}"
 	fi
 
 
 elif [[ $opt == "-default-site" ]]; then
 	if [[ $(conf_read nginx) != "true" ]]; then
-		echo "${red}Nginx not found! ${end}"
+		echo "${red}[ERROR] Nginx not found! ${end}"
 		exit 1
 	fi
 
@@ -541,7 +537,7 @@ elif [[ $opt == "-default-site" ]]; then
 	
 	
 else
-	echo "${red}Please enter a valid option!${end}"
+	echo "${red}[ERROR] Please enter a valid option!${end}"
 fi
 
 
