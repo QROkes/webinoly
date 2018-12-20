@@ -113,21 +113,29 @@ elif [[ $opt == "-tools-site" ]]; then
 			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) default_server;" /etc/nginx/sites-available/$(conf_read tools-port)
 			sudo sed -i '/headers-https.conf/d' /etc/nginx/sites-available/$(conf_read tools-port)
 			sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
 		fi
 		
 		# Assign new domain/site
-		sername=$(grep -F "server_name" /etc/nginx/sites-available/$value)
+		sername=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$value | grep -F "server_name" | sed -e 's/^[ \t]*//')
 		sudo sed -i "/error_log/a \	${sername}" /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port);" /etc/nginx/sites-available/$(conf_read tools-port)
+		
+		# If SSL is enabled
 		isssl=$( grep -F "ssl_certificate_key" /etc/nginx/sites-available/$value )
 		if [[ -n $isssl ]]; then
-			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) ssl default_server deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) ssl default_server;" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) ssl http2 deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) ssl http2;" /etc/nginx/sites-available/$(conf_read tools-port)
 			sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$(conf_read tools-port)
 			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$value/}" /etc/nginx/sites-available/$(conf_read tools-port)
 			sudo sed -i '/locations.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$(conf_read tools-port)
-			#sudo sed -i "/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/s/\(server_name\).*$/$sername/" /etc/nginx/sites-available/$(conf_read tools-port)
-			#sudo sed -i '/WebinolySSLredirectEnd/r /tmp/template-site-wwwredirect' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/WebinolySSLend/i \	error_page 497  https:\/\/\$host:\$server_port\$request_uri;" /etc/nginx/sites-available/$(conf_read tools-port)
 		fi
+		
+		# Default blackhole for requests different from our assigned Tools-Site
+		sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-blackhole' /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/22222/$(conf_read tools-port)/}" /etc/nginx/sites-available/$(conf_read tools-port)
 		
 		conf_write tools-site $value
 		echo "${gre}Domain ${blu}- ${value}:$(conf_read tools-port) -${gre} was successfully assigned to access your server tools!${end}"
@@ -489,15 +497,7 @@ elif [[ $opt == "-default-site" ]]; then
 
 	if [[ $value == "default" ]]; then
 		if [[ -a /opt/webinoly/templates/source/default ]]; then
-			# In case we have a domain as default before.
-			if ! [[ $(conf_read default-site) =~ ^(default|blackhole)$ || -z $(conf_read default-site) ]]; then
-				[[ -L /etc/nginx/sites-enabled/default ]] || sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
-				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 80 default_server;/listen 80;/}" /etc/nginx/sites-available/$(conf_read default-site)
-				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:80 default_server;/listen [::]:80;/}" /etc/nginx/sites-available/$(conf_read default-site)
-				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 ssl http2 default_server;/listen 443 ssl http2;/}" /etc/nginx/sites-available/$(conf_read default-site)
-				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 ssl http2 default_server;/listen [::]:443 ssl http2;/}" /etc/nginx/sites-available/$(conf_read default-site)
-			fi
-			
+			remove_domain_default_site
 			sudo cat /opt/webinoly/templates/source/default >| /etc/nginx/sites-available/default
 			conf_write default-site default
 			echo "${gre}Default Nginx was successfully assigned as default site!${end}"
@@ -506,15 +506,7 @@ elif [[ $opt == "-default-site" ]]; then
 			exit 1
 		fi
 	elif [[ $value == "blackhole" ]]; then
-		# In case we have a domain as default before.
-		if ! [[ $(conf_read default-site) =~ ^(default|blackhole)$ || -z $(conf_read default-site) ]]; then
-				[[ -L /etc/nginx/sites-enabled/default ]] || sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
-				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 80 default_server;/listen 80;/}" /etc/nginx/sites-available/$(conf_read default-site)
-				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:80 default_server;/listen [::]:80;/}" /etc/nginx/sites-available/$(conf_read default-site)
-				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 ssl http2 default_server;/listen 443 ssl http2;/}" /etc/nginx/sites-available/$(conf_read default-site)
-				sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 ssl http2 default_server;/listen [::]:443 ssl http2;/}" /etc/nginx/sites-available/$(conf_read default-site)
-		fi
-			
+		remove_domain_default_site	
 		sudo cat /opt/webinoly/templates/general/nginx-blackhole >| /etc/nginx/sites-available/default
 		conf_write default-site blackhole
 		echo "${gre}Blackhole Nginx site was successfully assigned as default site!${end}"

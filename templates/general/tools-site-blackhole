@@ -1,0 +1,13 @@
+
+# WebinolyToolsStartBlackhole
+server {
+	listen 11111 ssl default_server;
+	listen [::]:11111 ssl default_server;
+
+	ssl_certificate /etc/ssl/certs/blackhole.crt.pem;
+	ssl_certificate_key /etc/ssl/private/blackhole.key.pem;
+	error_page 497  https://$host:$server_port$request_uri;
+	
+	return 444;
+}
+# WebinolyToolsEndBlackhole

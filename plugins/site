@@ -47,7 +47,7 @@ fi
 
 
 # Check if site is sub-domain
-if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked|-proxy|-ssl-on|-force-redirect)$ ]]; then
+if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked|-proxy|-ssl-on|-ssl|-force-redirect)$ ]]; then
 	count=1
 	while true; do
 		tld=$(echo "${domain}" | rev | cut -d'.' -f -$count -s | rev)
