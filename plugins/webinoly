@@ -123,7 +123,7 @@ elif [[ $opt == "-tools-site" ]]; then
 		sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port);" /etc/nginx/sites-available/$(conf_read tools-port)
 		
 		# If SSL is enabled
-		isssl=$( grep -F "ssl_certificate_key" /etc/nginx/sites-available/$value )
+		isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$value | grep -F "ssl_certificate_key")
 		if [[ -n $isssl ]]; then
 			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) ssl http2 deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
 			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) ssl http2;" /etc/nginx/sites-available/$(conf_read tools-port)
@@ -131,11 +131,18 @@ elif [[ $opt == "-tools-site" ]]; then
 			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$value/}" /etc/nginx/sites-available/$(conf_read tools-port)
 			sudo sed -i '/locations.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$(conf_read tools-port)
 			sudo sed -i "/WebinolySSLend/i \	error_page 497  https:\/\/\$host:\$server_port\$request_uri;" /etc/nginx/sites-available/$(conf_read tools-port)
+			create_blackhole_cert
 		fi
 		
 		# Default blackhole for requests different from our assigned Tools-Site
 		sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-blackhole' /etc/nginx/sites-available/$(conf_read tools-port)
 		sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/22222/$(conf_read tools-port)/}" /etc/nginx/sites-available/$(conf_read tools-port)
+		if [[ -z $isssl ]]; then
+			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/ssl_certificate/d}" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/error_page/d}" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/ssl //}" /etc/nginx/sites-available/$(conf_read tools-port)
+			echo "${red}It's highly recommended having an SSL Cert enabled on this site. ${end}"
+		fi
 		
 		conf_write tools-site $value
 		echo "${gre}Domain ${blu}- ${value}:$(conf_read tools-port) -${gre} was successfully assigned to access your server tools!${end}"
@@ -506,17 +513,27 @@ elif [[ $opt == "-default-site" ]]; then
 			exit 1
 		fi
 	elif [[ $value == "blackhole" ]]; then
-		remove_domain_default_site	
+		remove_domain_default_site
 		sudo cat /opt/webinoly/templates/general/nginx-blackhole >| /etc/nginx/sites-available/default
+		create_blackhole_cert
 		conf_write default-site blackhole
 		echo "${gre}Blackhole Nginx site was successfully assigned as default site!${end}"
 	else
 		# Domain option
 		if [[ -L /etc/nginx/sites-enabled/$value ]]; then
-			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 80;/listen 80 default_server;/}" /etc/nginx/sites-available/$value
-			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:80;/listen [::]:80 default_server;/}" /etc/nginx/sites-available/$value
-			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 ssl http2;/listen 443 ssl http2 default_server;/}" /etc/nginx/sites-available/$value
-			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 ssl http2;/listen [::]:443 ssl http2 default_server;/}" /etc/nginx/sites-available/$value
+			remove_domain_default_site
+			sudo sed -i "s/listen 80;/listen 80 default_server;/" /etc/nginx/sites-available/$value
+			sudo sed -i "s/listen \[::\]:80;/listen [::]:80 default_server;/" /etc/nginx/sites-available/$value
+			sudo sed -i "s/listen 443 ssl http2;/listen 443 ssl http2 default_server;/" /etc/nginx/sites-available/$value
+			sudo sed -i "s/listen \[::\]:443 ssl http2;/listen [::]:443 ssl http2 default_server;/" /etc/nginx/sites-available/$value
+			
+			# If default site is Non-SSL, we need add a blackhole for port 443.
+			isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$value | grep -F "ssl_certificate_key")
+			if [[ -z $isssl ]]; then
+				create_blackhole_cert
+				sudo sed -i '1r /opt/webinoly/templates/general/nginx-blackhole' /etc/nginx/sites-available/$value
+				sudo sed -i '/NonSSL/,/NonSSLend/{/.*/d}' /etc/nginx/sites-available/$value
+			fi
 			
 			sudo rm -rf /etc/nginx/sites-enabled/default
 			conf_write default-site $value

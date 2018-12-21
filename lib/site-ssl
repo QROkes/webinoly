@@ -83,7 +83,7 @@ site_ssl_on() {
 		sudo certbot certonly --webroot -w /var/www/$root/htdocs/ $domset $param
 	
 	elif [[ -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
-		echo "${blu}Certificate for echo${end} $domain ${blu}already exist and found, wait while we configure your server to use it!${end}"
+		echo "${blu}Certificate for${end} $domain ${blu}already exist and found, wait while we configure your server to use it!${end}"
 	fi
 	
 	
@@ -94,15 +94,16 @@ site_ssl_on() {
 		sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$domain
 		sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$domain
 		sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$domain/}" /etc/nginx/sites-available/$domain
-
-		# In case this domain is used as tools-site.
-		[[ $(conf_read tools-site) == $domain ]] && sudo webinoly -tools-site=$domain
 		
 		# HTTP to HTTPS Redirection
 		[[ $subdomflag == 1 ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
 		[[ $cache == "-wildcard" ]] && sername="server_name $domain *.$domain;"
 		sudo sed -i '1r /opt/webinoly/templates/template-site-sslredirect' /etc/nginx/sites-available/$domain
 		sudo sed -i "/#server_name;/c \	$sername" /etc/nginx/sites-available/$domain
+		
+		# In case this domain is used as tools-site or default-site
+		[[ $(conf_read tools-site) == $domain ]] && sudo webinoly -tools-site=$domain
+		[[ $(conf_read default-site) == $domain ]] && sudo webinoly -default-site=$domain
 		
 		# Auto-Renew Certificate
 		if [[ ! -a /var/spool/cron/crontabs/root ]]; then
@@ -116,7 +117,7 @@ site_ssl_on() {
 		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root
 		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root
 		
-		[[ $(conf_read debug) == "true" ]] && echo "${blu}Debug Mode is enabled, this SSL Cert is just for testing purpose and should not be used in production enviroments.{end}"
+		[[ $(conf_read debug) == "true" ]] && echo "${red}Debug Mode is enabled, this SSL Cert is just for testing purpose and should not be used in production enviroments.${end}"
 		echo "${gre}SSL have been successfully enabled for your site -${blu} $domain${end}"
 	else
 		echo "${red}"
@@ -133,8 +134,9 @@ site_ssl_off() {
 	sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$domain
 	sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
 	
-	# In case this domain is used as tools-site.
+	# In case this domain is used as tools-site or default-site
 	[[ $(conf_read tools-site) == $domain ]] && sudo webinoly -tools-site=$domain
+	[[ $(conf_read default-site) == $domain ]] && sudo webinoly -default-site=$domain
 	
 	if [[ -n $value && ( $value == "force" || $value == "off-force" ) ]]; then
 		answer=="N"

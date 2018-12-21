@@ -316,7 +316,7 @@ elif [[ "$type" == "-delete" && -a /etc/nginx/sites-available/$domain ]]; then
 
 # SSL (Letsencrypt)
 elif [[ ( $type == "-ssl-on" || $type == "-ssl-off" || $type == "-ssl" ) && -a /etc/nginx/sites-available/$domain ]]; then
-	isssl=$( grep -F "ssl_certificate_key" /etc/nginx/sites-available/$domain )
+	isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_certificate_key")
 	if [[ ( $type == "-ssl-on" && -z $value ) || ( $type == "-ssl" && $value == "on" ) ]]; then
 		[[ -z $isssl ]] && site_ssl_on || echo "${red}SSL is already enabled for your site -${blu} $domain ${end}"
 	elif [[ ( $type == "-ssl-off" || ( $type == "-ssl" && ( $value == "off" || $value == "off-force" ))) ]]; then

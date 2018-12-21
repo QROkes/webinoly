@@ -539,6 +539,9 @@ createsite() {
 		wp_cache_plugins
 	fi
 	
+	# Check if only-error log is enabled
+	[[ $(conf_read global-access-log-off) == "true" ]] && sudo log $domain -only-error=on
+	
 	sudo chown -R www-data:www-data /var/www
 	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
 
@@ -587,7 +590,7 @@ force_redirect() {
 	esac
 	
 	# If SSL is enabled insert after that - First redirect should be to HTTPS due to HSTS.
-	isssl=$( grep -F "ssl_certificate_key" /etc/nginx/sites-available/$domain )
+	isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_certificate_key")
 	if [[ -z $isssl && $value =~ ^(www|root)$ ]]; then
 		sudo sed -i '1r /tmp/template-site-wwwredirect' /etc/nginx/sites-available/$domain
 	elif [[ -n $isssl && $value =~ ^(www|root)$ ]]; then
