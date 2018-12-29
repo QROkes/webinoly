@@ -3,7 +3,7 @@ source /opt/webinoly/lib/general
 
 
 app_version() { 
-	local app_ver="1.7.0"
+	local app_ver="1.7.1"
 	echo $app_ver
 }
 svr_version() { 
@@ -448,6 +448,7 @@ php_tool() {
 	echo | sudo add-apt-repository ppa:chris-lea/redis-server
 	pre_install
 	sudo apt -y install redis-server php-redis
+	sudo systemctl enable redis-server
 	
 	# Memcached (Object Cache)
 	sudo apt -y install php-memcached php-memcache memcached
@@ -548,7 +549,7 @@ swap_create() {
 			sudo mkswap /swapfile
 			sudo swapon /swapfile
 
-			sudo sed -i "/LABEL.*/a \/swapfile none swap sw 0 0" /etc/fstab
+			sudo echo "/swapfile none swap sw 0 0" >> /etc/fstab
 
 			# Swap created by Webinoly - so we should remove it in uninstall
 			conf_write swap-owner webinoly

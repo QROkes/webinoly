@@ -527,7 +527,7 @@ system_info() {
 remove_domain_default_site() {
 	# In case we have a domain as default before.
 	if ! [[ $(conf_read default-site) =~ ^(default|blackhole)$ || -z $(conf_read default-site) ]]; then
-		[[ -L /etc/nginx/sites-enabled/default ]] || sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+		[[ ! -L /etc/nginx/sites-enabled/default && -a /etc/nginx/sites-available/default ]] && sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 		sudo sed -i "s/listen 80 default_server;/listen 80;/" /etc/nginx/sites-available/$(conf_read default-site)
 		sudo sed -i "s/listen \[::\]:80 default_server;/listen [::]:80;/" /etc/nginx/sites-available/$(conf_read default-site)
 		sudo sed -i "s/listen 443 ssl http2 default_server;/listen 443 ssl http2;/" /etc/nginx/sites-available/$(conf_read default-site)

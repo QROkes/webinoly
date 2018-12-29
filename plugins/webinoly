@@ -504,8 +504,8 @@ elif [[ $opt == "-default-site" ]]; then
 
 	if [[ $value == "default" ]]; then
 		if [[ -a /opt/webinoly/templates/source/default ]]; then
-			remove_domain_default_site
 			sudo cat /opt/webinoly/templates/source/default >| /etc/nginx/sites-available/default
+			remove_domain_default_site
 			conf_write default-site default
 			echo "${gre}Default Nginx was successfully assigned as default site!${end}"
 		else
@@ -513,8 +513,8 @@ elif [[ $opt == "-default-site" ]]; then
 			exit 1
 		fi
 	elif [[ $value == "blackhole" ]]; then
-		remove_domain_default_site
 		sudo cat /opt/webinoly/templates/general/nginx-blackhole >| /etc/nginx/sites-available/default
+		remove_domain_default_site
 		create_blackhole_cert
 		conf_write default-site blackhole
 		echo "${gre}Blackhole Nginx site was successfully assigned as default site!${end}"
@@ -539,6 +539,7 @@ elif [[ $opt == "-default-site" ]]; then
 			conf_write default-site $value
 			echo "${gre}Site ${blu}- ${value} -${gre} was successfully assigned as default site!${end}"
 		else
+			[[ -a /etc/nginx/sites-available/$value ]] && echo "${red}Site found but is disabled.${end}"
 			echo "${red}[ERROR] Please, enter a valid option (default, blackhole or domain.com). ${end}"
 			exit 1
 		fi
