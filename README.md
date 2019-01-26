@@ -4,21 +4,19 @@
 
 A powerful set of commands for doing just about anything you could wish.
 
-Linux Ubuntu + Nginx + MariaDB (MySQL) + PHP is one of the most reliable and powerful configurations to host your websites.
-
-With Webinoly you can set up your web server in just one step.
+Linux Ubuntu + Nginx + MariaDB (MySQL) + PHP is one of the most reliable and powerful configurations to host your websites. **With Webinoly you can set up your web server in just one step.**
 
 Webinoly provides a set of tools and commands that facilitate the web server administration.
 - Unique commands to create, delete, disable sites.
 - Free SSL certificates for your sites with Let’s Encrypt and automatic server configuration.
 - HTTP/2 dramatically increase the speed of serving your content.
-- PHP v7.2 and support for previous versions if necessary (5.6, 7.0 and 7.1) and the newest 7.3.
+- PHP v7.3 and support for previous versions if necessary (5.6, 7.0, 7.1 and 7.2).
 - FastCgi Cache and Redis Object Cache for your WordPress sites.
 - Get an A+ grade on [Qualys (SSL Labs) Test](https://www.ssllabs.com/ssltest/).
 - Log viewer in real time.
 
 ### Requirements
-* Ubuntu 16.04 or 18.04
+* Ubuntu 18.04 or 16.04
 
 ## Usage
 

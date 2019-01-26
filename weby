@@ -108,7 +108,7 @@ if [[ -a /opt/webinoly/webinoly.conf ]]; then
 else
 	[[ -n $2 && $2 != "-ver="* ]] && tools_port $2
 	# Compatibility with old versions - before v1.4.1 we used to declare the tools_port here.
-	[[ $2 == "-ver="* && webyversion == $ver && ${ver//.} -le 140 ]] && tools_port 22222
+	[[ $2 == "-ver="* && $webyversion == $ver && ${ver//.} -le 140 ]] && tools_port 22222
 	newinst="true"
 fi
 
