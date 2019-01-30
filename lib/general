@@ -195,3 +195,34 @@ conf_write() {
 conf_delete() {
 	sed -i "/^${1}:/d" /opt/webinoly/webinoly.conf
 }
+
+
+check_for_parameters() {
+	# Check for domain parameter if is first parameter and have no hyphen at the begining.
+	if [[ -n $1 && $(echo $1 | cut -c-1) != "-"  ]]; then
+		domain=$1
+		shift
+	fi
+
+	for arg in $@; do
+		check=$(echo "${arg}" | cut -c-1)
+		arg=${arg:1}
+		par=$(echo "${arg}" | cut -d'=' -f 1 -s)
+		val=$(echo "${arg}" | cut -d'=' -f 2 -s)
+		[[ -z $val ]] && val=true
+		[[ -z $par ]] && par=$arg
+		
+		# Convert to lowercase and support for hyphen in arguments.
+		par=${par,,}
+		par=$(echo $par | sed "s/-/_/g")
+		
+		# Only valid variables names and check for begin with hyphen.
+		if [[ $check == "-" && $par =~ ^[a-zA-Z_][a-zA-Z_0-9]*$ ]]; then
+			[[ -n $par ]] && eval $par=\$val
+		else
+			echo "${red}[ERROR] Invalid parameters! ${end}"
+			exit 1
+		fi
+	done
+}
+

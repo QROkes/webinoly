@@ -6,70 +6,45 @@
 # Notes: If no domain or option is entered, access logs are displayed.
 
 source /opt/webinoly/lib/general
-domain=$1
-opt=$2
+check_for_parameters $@
 
 error() {
-	echo ""
-	echo "${red}[ERROR] Log file not found!!! ${end}"
-	echo ""
+	echo "${red}[ERROR] Log file not found! ${end}"
 	exit 1
 }
 
-# Validations
-if [[ $domain =~ ^(-error|-wp)$ || $domain == "-only-error="* ]]; then
-	domain=$2
-	opt=$1
-fi
-
-# Extract value if exist
-if [[ $opt == "-only-error="* ]]; then
-	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
-	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
-fi
-
-if [[ -n $opt ]] && ! [[ $opt =~ ^(-error|-wp|-only-error)$ ]]; then
-	echo "${red}[ERROR] Please, enter a valid option!${end}"
-	exit 1
-fi
 
 # Check for custom "lines" value
 [[ -n $(conf_read log-lines) && $(conf_read log-lines) =~ ^[0-9]+$ && $(conf_read log-lines) -gt 0 ]] && clines=$(conf_read log-lines) || clines=10
 
-if [[ -z $opt ]]; then
-	case "$domain" in
-		"-mail")
-			if [[ -a /var/log/mail.log && -a /var/log/mail.err ]]; then
-				sudo tail -f --lines=$clines /var/log/mail.log /var/log/mail.err
-			elif [[ -a /var/log/mail.log ]]; then
-				sudo tail -f --lines=$clines /var/log/mail.log
-			elif [[ -a /var/log/mail.err ]]; then
-				sudo tail -f --lines=$clines /var/log/mail.err
-			else
-				error
-			fi
-			;;
-		"-fpm"|"-php")
-			if [[ -a /var/log/php/$(conf_read php-ver)/fpm.log ]]; then
-				sudo tail -f --lines=$clines /var/log/php/$(conf_read php-ver)/*.log
-			else
-				error
-			fi
-			;;
-		"-mysql")
-			if [[ -a /var/log/mysql/error.log ]]; then
-				sudo tail -f --lines=$clines /var/log/mysql/*.log
-			else
-				error
-			fi
-			;;
-	esac
-fi
+
+if [[ -n $mail ]]; then
+	if [[ -a /var/log/mail.log && -a /var/log/mail.err ]]; then
+		sudo tail -f --lines=$clines /var/log/mail.log /var/log/mail.err
+	elif [[ -a /var/log/mail.log ]]; then
+		sudo tail -f --lines=$clines /var/log/mail.log
+	elif [[ -a /var/log/mail.err ]]; then
+		sudo tail -f --lines=$clines /var/log/mail.err
+	else
+		error
+	fi
+elif [[ -n $fpm || -n $php ]]; then
+	if [[ -a /var/log/php/$(conf_read php-ver)/fpm.log ]]; then
+		sudo tail -f --lines=$clines /var/log/php/$(conf_read php-ver)/*.log
+	else
+		error
+	fi
+elif [[ -n $mysql ]]; then
+	if [[ -a /var/log/mysql/error.log ]]; then
+		sudo tail -f --lines=$clines /var/log/mysql/*.log
+	else
+		error
+	fi
 
 
 # Turn On/Off Access Logs
-if [[ $opt == "-only-error" ]]; then
-	if ! [[ $value =~ ^(on|off)$ ]]; then
+elif [[ -n $only_error ]]; then
+	if ! [[ $only_error =~ ^(on|off)$ ]]; then
 		echo "${red}[ERROR] Empty or not valid parameter for Only-Error!${end}"
 		exit 1
 	fi
@@ -77,7 +52,7 @@ if [[ $opt == "-only-error" ]]; then
 	# Global-Conf
 	if [[ -z $domain ]]; then
 		[[ $(conf_read nginx) == "true" ]] && islog=$( grep -F "access_log off;" /etc/nginx/nginx.conf )
-		if [[ $value == "on" ]]; then
+		if [[ $only_error == "on" ]]; then
 			if [[ -z $islog ]]; then
 				[[ $(conf_read nginx) == "true" ]] && sudo sed -i '/access_log/c \	access_log off;' /etc/nginx/nginx.conf
 				conf_write global-access-log-off true
@@ -85,7 +60,7 @@ if [[ $opt == "-only-error" ]]; then
 			else	
 				echo "${red}Only-Error Log is already enabled (global)!${end}"
 			fi
-		elif [[ $value == "off" ]]; then
+		elif [[ $only_error == "off" ]]; then
 			if [[ -n $islog || ( -z $islog && $(conf_read nginx) != "true" ) ]]; then
 				[[ $(conf_read nginx) == "true" ]] && sudo sed -i "/access_log/c \	access_log \/var\/log\/nginx\/access.log;" /etc/nginx/nginx.conf
 				conf_write global-access-log-off purged
@@ -105,14 +80,14 @@ if [[ $opt == "-only-error" ]]; then
 			exit 1
 		fi
 		
-		if [[ $value == "on" ]]; then
+		if [[ $only_error == "on" ]]; then
 			if [[ -z $islog ]]; then
 				sudo sed -i '/access_log/c \	access_log off;' /etc/nginx/sites-available/$domain
 				echo "${gre}Only-Error Log was successfully enabled for ${blu}${domain} ${gre}site!${end}"
 			else	
 				echo "${red}Access Log is already enabled for ${blu}${domain} ${red}site!${end}"
 			fi
-		elif [[ $value == "off" ]]; then
+		elif [[ $only_error == "off" ]]; then
 			if [[ -n $islog ]]; then
 				sudo sed -i "/access_log/c \	access_log \/var\/log\/nginx\/${domain}.access.log we_log;" /etc/nginx/sites-available/$domain
 				echo "${gre}Only-Error Log was successfully disabled for ${blu}${domain} ${gre}site!${end}"
@@ -123,21 +98,20 @@ if [[ $opt == "-only-error" ]]; then
 	elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
 		echo "${red}[ERROR] Domain not found!${end}"
 	fi
-	exit 0
-fi
 
-
-# Show the correct log file
-if [[ "$opt" == "-error" && -z "$domain" && -a /var/log/nginx/error.log ]]; then
+	
+# Site log files
+elif [[ -n $error && -z $domain && -a /var/log/nginx/error.log ]]; then
 	sudo tail -f --lines=$clines /var/log/nginx/*error.log
-elif [[ "$opt" == "-error" && -n "$domain" && -a /var/log/nginx/$domain.error.log ]]; then
+elif [[ -n $error && -n $domain && -a /var/log/nginx/$domain.error.log ]]; then
 	sudo tail -f --lines=$clines /var/log/nginx/$domain.error.log
-elif [[ "$opt" == "-wp" && -n "$domain" && -a /var/www/$domain/htdocs/wp-content/debug.log ]]; then
+elif [[ -n $wp && -n $domain && -a /var/www/$domain/htdocs/wp-content/debug.log ]]; then
 	sudo tail -f --lines=$clines /var/www/$domain/htdocs/wp-content/debug.log
-elif [[ -z "$domain" && -z "$opt" && -a /var/log/nginx/access.log ]]; then
+elif [[ -z $domain && -a /var/log/nginx/access.log ]]; then
 	sudo tail -f --lines=$clines /var/log/nginx/*access.log
-elif [[ -n "$domain" && -z "$opt" && -a /var/log/nginx/$domain.access.log ]]; then
+elif [[ -n $domain && -a /var/log/nginx/$domain.access.log ]]; then
 	sudo tail -f --lines=$clines /var/log/nginx/$domain.access.log
 else
-	error
+	echo "${red}[ERROR] Please, enter a valid option! ${end}"
+	exit 1
 fi

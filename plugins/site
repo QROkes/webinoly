@@ -30,7 +30,7 @@ if [[ -n $cache && $type =~ ^(-cache|-root|-root-path|-subdomain|-ignore-ssl|-wi
 fi
 
 # Extract value if exist
-if [[ $cache == "-root="*  || $cache == "-subdomain="* || $cache == "-root-path="* || $cache == "-cache="* ]]; then
+if [[ $cache == "-subdomain="* || $cache == "-cache="* ]]; then
 	value=$(echo "${cache}" | cut -d'=' -f 2 -s)
 	cache=$(echo "${cache}" | cut -d'=' -f 1 -s)
 	cache_enabled
@@ -44,7 +44,10 @@ if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type =
 	type=$(echo "${type}" | cut -d'=' -f 1 -s)
 	[[ $type == "-cache" ]] && cache_enabled
 fi
-
+if [[ $cache == "-root="*  || $cache == "-root-path="* ]]; then
+	value=$(echo "${cache}" | cut -d'=' -f 2 -s)
+	cache=$(echo "${cache}" | cut -d'=' -f 1 -s)
+fi
 
 # Check if site is sub-domain
 if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked|-proxy|-ssl-on|-ssl|-force-redirect)$ ]]; then
