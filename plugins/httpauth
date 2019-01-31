@@ -1,32 +1,26 @@
 #!/bin/bash
-source /opt/webinoly/lib/general
-opt=$1
 
 # Http-Authentication Plugin
 # Syntax: httpauth <option>
 # Options: -add, -delete, -list, -wp-admin-on, -wp-admin-off, -whitelist, -whitelist-remove
 
+source /opt/webinoly/lib/general
+check_for_parameters $@
 
-# Extract value if exist
-if [[ $opt == "-add="* || $opt == "-delete="* || $opt == "-wp-admin="* || $opt == "-whitelist="* || $opt == "-whitelist-remove="* ]]; then
-	value=$(echo "${opt}" | cut -d'=' -f 2 -s)
-	opt=$(echo "${opt}" | cut -d'=' -f 1 -s)
-fi
-
-if [[ $(conf_read nginx) != "true" && $opt =~ ^(-add|-delete|-list|-whitelist|-whitelist-remove)$ ]]; then
+if [[ $(conf_read nginx) != "true" && ( -n $add || -n $delete || -n $list || -n $whitelist || -n $whitelist_remove ) ]]; then
 	echo "${red}[ERROR] NGINX is required to get HTTP Authentication working properly! ${end}"
 	exit 1
 fi
 
 
-if [[ $opt == "-add" ]]; then
-	if [[ -z $value ]]; then
+if [[ -n $add ]]; then
+	if [[ $add == true ]]; then
 		echo ""
 		read -p "${blu}HTTP-Auth User: ${end}" user
 		read -p "${blu}HTTP-Auth Password: ${end}" pass
 		echo ""
 	else
-		userdata=${value:1:-1}
+		userdata=${add:1:-1}
 		user=$(echo "${userdata}" | cut -d',' -f 1 -s)
 		pass=$(echo "${userdata}" | cut -d',' -f 2 -s)
 	fi
@@ -46,8 +40,8 @@ if [[ $opt == "-add" ]]; then
 	echo ""
 
 	
-elif [[ $opt == "-delete" ]]; then
-	[[ -z $value ]] && read -p "${blu}HTTP-Auth User: ${end}" userpurge || userpurge=$value
+elif [[ -n $delete ]]; then
+	[[ $delete == true ]] && read -p "${blu}HTTP-Auth User: ${end}" userpurge || userpurge=$delete
 	[[ -a /etc/nginx/.htpasswd ]] && exist=$( grep -E "^${userpurge}:" /etc/nginx/.htpasswd )
 	if [[ -z $exist ]]; then
 		echo "${red}User '$userpurge' does not exist!${end}"
@@ -57,7 +51,7 @@ elif [[ $opt == "-delete" ]]; then
 	echo "${gre}User '$userpurge has been deleted successfully!${end}"
 
 	
-elif [[ $opt == "-list" ]]; then
+elif [[ -n $list ]]; then
 	[[ ! -a /etc/nginx/.htpasswd ]] && exit 0
 	echo "${gre}"
 	cat /etc/nginx/.htpasswd | while read line
@@ -68,9 +62,9 @@ elif [[ $opt == "-list" ]]; then
 	echo "${end}"
 
 	
-elif [[ $opt == "-wp-admin-on" || $opt == "-wp-admin-off" || $opt == "-wp-admin" ]]; then
+elif [[ -n $wp_admin_on || -n $wp_admin_off || -n $wp_admin ]]; then
 	[[ $(conf_read nginx) == "true" ]] && iswpadon=$( grep -F "acl.conf;" /etc/nginx/common/wpcommon.conf )
-	if [[ $opt == "-wp-admin-on" || ( $opt == "-wp-admin" && $value == "on" ) ]]; then
+	if [[ -n $wp_admin_on || $wp_admin == "on" ]]; then
 		if [[ -z $iswpadon ]]; then
 			if [[ $(conf_read nginx) == "true" ]]; then
 				sudo sed -i "/zone=one/a \  include common/acl.conf;" /etc/nginx/common/wpcommon.conf
@@ -82,7 +76,7 @@ elif [[ $opt == "-wp-admin-on" || $opt == "-wp-admin-off" || $opt == "-wp-admin"
 			echo "${gre}HTTP Authentication for WP Admin pages is already enabled! ${end}"
 		fi
 	
-	elif [[ $opt == "-wp-admin-off" || ( $opt == "-wp-admin" && $value == "off" ) ]]; then
+	elif [[ -n $wp_admin_off || $wp_admin == "off" ]]; then
 		if [[ -n $iswpadon || ( -z $iswpadon && $(conf_read nginx) != "true" ) ]]; then
 			if [[ $(conf_read nginx) == "true" ]]; then
 				sudo sed -i "/acl.conf/d" /etc/nginx/common/wpcommon.conf
@@ -99,13 +93,13 @@ elif [[ $opt == "-wp-admin-on" || $opt == "-wp-admin-off" || $opt == "-wp-admin"
 	fi
 
 
-elif [[ $opt == "-whitelist" ]]; then
+elif [[ -n $whitelist ]]; then
 	if [[ -a /etc/nginx/common/acl.conf ]]; then
-		[[ -z $value ]] && read -p "${blu}IP address to whitelist: ${end}" value
-		if [[ -n $value && $value =~ ^[\.0-9A-Za-z\/]+$ ]]; then
-			sudo sed -i "/deny all;/i \allow ${value};" /etc/nginx/common/acl.conf
+		[[ $whitelist == true ]] && read -p "${blu}IP address to whitelist: ${end}" whitelist
+		if [[ -n $whitelist && $whitelist =~ ^[\.0-9A-Za-z\/]+$ ]]; then
+			sudo sed -i "/deny all;/i \allow ${whitelist};" /etc/nginx/common/acl.conf
 			sudo service nginx reload
-			echo "${gre}The IP address ${blu}'$value'${gre} was successfully whitelisted!${end}"
+			echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully whitelisted!${end}"
 		else	
 			echo "${red}Please, enter a valid value!${end}"
 		fi
@@ -114,14 +108,14 @@ elif [[ $opt == "-whitelist" ]]; then
 	fi
 
 
-elif [[ $opt == "-whitelist-remove" ]]; then
+elif [[ -n $whitelist_remove ]]; then
 	if [[ -a /etc/nginx/common/acl.conf ]]; then
-		[[ -z $value ]] && read -p "${blu}IP address to remove from whitelist: ${end}" value
-		if [[ -n $value && $value =~ ^[\.0-9A-Za-z\/]+$ ]]; then
+		[[ $whitelist_remove == true ]] && read -p "${blu}IP address to remove from whitelist: ${end}" whitelist_remove
+		if [[ -n $whitelist_remove && $whitelist_remove =~ ^[\.0-9A-Za-z\/]+$ ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
-			sudo sed -i "\#^allow ${value};#d" /etc/nginx/common/acl.conf
+			sudo sed -i "\#^allow ${whitelist_remove};#d" /etc/nginx/common/acl.conf
 			sudo service nginx reload
-			echo "${gre}The IP address ${blu}'$value'${gre} was successfully removed from whitelist!${end}"
+			echo "${gre}The IP address ${blu}'$whitelist_remove'${gre} was successfully removed from whitelist!${end}"
 		else
 			echo "${red}Please, enter a valid value!${end}"
 		fi
