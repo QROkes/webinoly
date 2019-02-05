@@ -107,7 +107,7 @@ wpinstall() {
 	local dbpref="wp_"
 	
 	# WP with Custom Data
-	if [[ $wp == [35] ]]; then
+	if [[ $type == [35] ]]; then
 		[[ $setmsqcustom == "false" ]] && setupmysql="n"
 		[[ $setpwpcustom == "false" ]] && setupwp="n"
 		
@@ -121,7 +121,7 @@ wpinstall() {
 	fi
 	
 	# Print MySQL default data
-	if [[ $wp == 4 ]]; then
+	if [[ $type == 4 ]]; then
 		echo "${blu}"
 		echo "Host: $dbhost"
 		echo "Database Name: $dbname"
@@ -131,7 +131,7 @@ wpinstall() {
 	fi
 	
 	echo "${blu}"
-	if [[ $wp == 1 ]]; then
+	if [[ $type == 1 ]]; then
 		echo "Do you need to setup new MySQL database? [Y/n]"
 		while read -r -n 1 -s setupmysql; do
 			  setupmysql=${setupmysql:-y}
@@ -145,10 +145,10 @@ wpinstall() {
 	fi
 	
 	# Just create DB, not install WP
-	[[ $wp == [045] ]] && setupwp="n"
+	[[ $type == [045] ]] && setupwp="n"
 	
 	# Download WP (latest version)
-	if [[ $wp == [123] ]]; then
+	if [[ $type == [123] ]]; then
 		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
 		sudo tar -xf /var/www/$domain/htdocs/wp.tar.gz -C /var/www/$domain/htdocs/
 		sudo mv /var/www/$domain/htdocs/wordpress/* /var/www/$domain/htdocs/
@@ -165,13 +165,13 @@ wpinstall() {
 			done="1"
 			# Ask DB data or suggest default values
 			echo ""
-			[[ $wp == [2345] ]] || read -p "Database Host [localhost]:" dbhost
+			[[ $type == [2345] ]] || read -p "Database Host [localhost]:" dbhost
 			dbhost=${dbhost:-localhost}
 			
 			if [[ $dbhost == "localhost" && $setupmysql == [yY] && $(conf_read mysql) != "true" ]]; then
 				echo "${red} [ERROR] MySQL is not installed or localhost was not found!${blu}"
 				done="0"
-				[[ $wp == 1 ]] && continue 1 || exit 1
+				[[ $type == 1 ]] && continue 1 || exit 1
 			fi
 			# Check if localhost or external DB
 			if [[ $dbhost != "localhost" && $setupmysql == [yY] ]]; then
@@ -183,7 +183,7 @@ wpinstall() {
 				fi
 				echo "${blu}"
 				
-				if [[ $wp == 1 || ($wp == [35] && ( -z $dburoot || -z $dbproot )) ]]; then
+				if [[ $type == 1 || ($type == [35] && ( -z $dburoot || -z $dbproot )) ]]; then
 					read -p "External DB root username [root]: " dburoot
 					read -p "External DB root password: " dbproot
 					echo ""
@@ -197,7 +197,7 @@ wpinstall() {
 			
 			# ************* Ask for DB Name and validate data *************** #
 			dom=$(dbword_check $dom)
-			[[ $wp == [2345] ]] || read -p "Database Name [$dom]:" dbname
+			[[ $type == [2345] ]] || read -p "Database Name [$dom]:" dbname
 			dbname=${dbname:-$dom}
 			
 			# Check for duplicate database names, if already exists ask for another dbname to create the new db
@@ -210,7 +210,7 @@ wpinstall() {
 						if [[ $? != "0" ]]; then
 							done="0"
 							# Remove the Unattended feature and ask for values.
-							[[ $wp == [2345] ]] && wp=1
+							[[ $type == [2345] ]] && type=1
 							echo "${red}============================================"
 							echo "    [Error]: Database conection failed."
 							echo "============================================${blu}"
@@ -221,7 +221,7 @@ wpinstall() {
 						sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" -e "quit"
 						if [[ $? != "0" ]]; then
 							done="0"
-							[[ $wp == [2345] ]] && wp=1
+							[[ $type == [2345] ]] && type=1
 							echo "${red}============================================"
 							echo "    [Error]: Database conection failed."
 							echo "============================================${blu}"
@@ -247,7 +247,7 @@ wpinstall() {
 							done
 						fi
 						if [[ $dbname != $(dbword_check $dbname) ]]; then
-							if [[ $wp == [24] ]]; then
+							if [[ $type == [24] ]]; then
 								newdbname="Webinoly_$(pwgen -s -1)"
 								dbname="$newdbname"
 								continue 1;
@@ -270,7 +270,7 @@ wpinstall() {
 			fi
 			
 			# ************* Ask for DB User and validate data *************** #
-			[[ $wp == [2345] ]] || read -p "Database User [$dom]:" dbuser
+			[[ $type == [2345] ]] || read -p "Database User [$dom]:" dbuser
 			dbuser=${dbuser:-$dom}
 			
 			# Check for duplicate database users, if already exists ask for another dbuser to create the new user
@@ -317,7 +317,7 @@ wpinstall() {
 							done
 						fi
 						if [[ $dbuser != $(dbword_check $dbuser user) ]]; then
-							if [[ $wp == [24] ]]; then
+							if [[ $type == [24] ]]; then
 								newdbuser="Webinoly_$(pwgen -s -1)"
 								dbuser="$newdbuser"
 								continue 1;
@@ -339,10 +339,10 @@ wpinstall() {
 				done
 			fi
 			
-			if [[ $wp != [2345] ]]; then
+			if [[ $type != [2345] ]]; then
 				read -p "Database Password [$AUTOGENPASS_WPDB]:" dbpass
-				# Not ask for wp_prefix when wp=0 (mysql only site)
-				[[ $wp == [045] ]] || read -p "Database Prefix [wp_]:" dbpref
+				# Not ask for wp_prefix when type=0 (mysql only site)
+				[[ $type == [045] ]] || read -p "Database Prefix [wp_]:" dbpref
 				echo "${end}"
 				
 				# If empty, assign defalut values
@@ -429,7 +429,7 @@ _EOF_
 		sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'redis_object_cache_for_wp_$domain');" /var/www/$domain/wp-config.php
 		
 		# Multisite wp-config
-		if [[ "$type" == "-wpsubdir" || "$type" == "-wpsubdom" ]]; then
+		if [[ -n $wpsubdir || -n $wpsubdom ]]; then
 			sudo sed -i "/stop editing/i \define('WP_ALLOW_MULTISITE', true);" /var/www/$domain/wp-config.php
 			sudo sed -i "/stop editing/i \#define('MULTISITE', true);" /var/www/$domain/wp-config.php
 			sudo sed -i "/stop editing/i \#define('DOMAIN_CURRENT_SITE', '$domain');" /var/www/$domain/wp-config.php
@@ -437,9 +437,9 @@ _EOF_
 			sudo sed -i "/stop editing/i \#define('SITE_ID_CURRENT_SITE', 1);" /var/www/$domain/wp-config.php
 			sudo sed -i "/stop editing/i \#define('BLOG_ID_CURRENT_SITE', 1);" /var/www/$domain/wp-config.php
 		fi
-		if [ "$type" == "-wpsubdir" ]; then
+		if [ -n $wpsubdir ]; then
 			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', false);" /var/www/$domain/wp-config.php
-		elif [ "$type" == "-wpsubdom" ]; then
+		elif [ -n $wpsubdom ]; then
 			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', true);" /var/www/$domain/wp-config.php
 			sudo sed -i "/server_name /c \	server_name $domain *.$domain;" /etc/nginx/sites-available/$domain
 		fi
@@ -450,11 +450,11 @@ _EOF_
 
 
 deletesite() {
-	if [[ -n $value ]]; then
-		dbdata=${value:1:-1}
+	if [[ $delete != true ]]; then
+		dbdata=${delete:1:-1}
 		local dbdatahost=$(echo "${dbdata}" | cut -d',' -f 1 -s)
 		[[ $dbdatahost == "external" ]] && dbdatadel=$(echo "${dbdata}" | cut -d',' -f 2 -s)
-		[[ $dbdatadel =~ ^(true|false)$ || $value == "force" ]] && local skip="true"
+		[[ $dbdatadel =~ ^(true|false)$ || $delete == "force" ]] && local skip="true"
 	fi
 
 	# Determine if site is WP, so you should delete the DB too.
@@ -486,7 +486,7 @@ createsite() {
 	domain_check $domain
 	domain=$(echo $domain | sed "s/[^\.0-9A-Za-z\-]/_/g" | sed "s/^[\.]/_/g" | sed "s/\.\./_/g")
 	
-	if [[ $(conf_read php) != "true" && ("$wp" == [123] || "$type" == "-php") ]]; then
+	if [[ $(conf_read php) != "true" && ( $type == [123] || -n $php ) ]]; then
 		echo "${red}"
 		echo "[ERROR] PHP must be installed before you can create a PHP or WP site!"
 		echo "${end}"
@@ -512,10 +512,10 @@ createsite() {
 	sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 	
 	# Create data folder for new site
-	if [[ $type != "-proxy" && $type != "-parked" ]]; then
+	if [[ -z $proxy && -z $parked ]]; then
 		if [[ ! -d /var/www/$domain/htdocs || ! -d /var/www/$domain ]]; then
 			sudo mkdir -p /var/www/$domain/htdocs
-			[[ "$wp" == [123] ]] && wpinstall
+			[[ $type == [123] ]] && wpinstall
 		else
 			echo "${blu}"
 			echo "  We found a folder with${end} $domain ${blu}site data, do you want to use it [Y/n]? "
@@ -528,13 +528,13 @@ createsite() {
 			if [[ $wwwexist == [nN] ]]; then
 				sudo rm -rf /var/www/$domain/htdocs
 				sudo mkdir -p /var/www/$domain/htdocs
-				[[ "$wp" == [123] ]] && wpinstall
+				[[ $type == [123] ]] && wpinstall
 			fi
 		fi
 	fi
 		
 	# Activate FastCgi cache
-	if [[ (( $cache == "-cache" && -z $cacheflag ) || ( $cache == "-cache" && $cacheflag == 1 )) && $wp == [123] ]]; then
+	if [[ ( -n $cache || $cache == "on" ) && $type == [123] ]]; then
 		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
 		wp_cache_plugins
 	fi
@@ -550,7 +550,7 @@ createsite() {
 
 
 force_redirect() {
-	if ! [[ $value =~ ^(www|root|off)$ ]]; then
+	if ! [[ $force_redirect =~ ^(www|root|off)$ ]]; then
 		echo "${red}Please, enter a valid argument!${end}"
 		exit 1
 	fi
@@ -563,7 +563,7 @@ force_redirect() {
 	local sername="server_name $domain www.$domain;"
 	cp /opt/webinoly/templates/template-site-wwwredirect /tmp/template-site-wwwredirect
 	
-	case $value in
+	case $force_redirect in
 		"www")
 			[[ -n $rediron ]] && sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
 			sudo sed -i "/#server_name;/c \	server_name $domain;" /tmp/template-site-wwwredirect
@@ -591,9 +591,9 @@ force_redirect() {
 	
 	# If SSL is enabled insert after that - First redirect should be to HTTPS due to HSTS.
 	isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_certificate_key")
-	if [[ -z $isssl && $value =~ ^(www|root)$ ]]; then
+	if [[ -z $isssl && $force_redirect =~ ^(www|root)$ ]]; then
 		sudo sed -i '1r /tmp/template-site-wwwredirect' /etc/nginx/sites-available/$domain
-	elif [[ -n $isssl && $value =~ ^(www|root)$ ]]; then
+	elif [[ -n $isssl && $force_redirect =~ ^(www|root)$ ]]; then
 		sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /tmp/template-site-wwwredirect
 		sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /tmp/template-site-wwwredirect
 	
@@ -609,13 +609,4 @@ force_redirect() {
 	
 	sudo rm /tmp/template-site-wwwredirect
 
-}
-
-cache_enabled() {
-	if [[ ( $cache == "-cache" || $type == "-cache" ) && $value =~ ^(on|off)$ ]]; then
-		[[ $value == "on" ]] && cacheflag="1" || cacheflag="0"
-	elif [[ ( $cache == "-cache" || $type == "-cache" ) && -n $value ]]; then
-		echo "${red}[ERROR] Invalid value for cache option! ${end}"
-		exit 1
-	fi
 }

@@ -205,10 +205,10 @@ check_for_parameters() {
 	fi
 	
 	for arg in $@; do
-		check=$(echo "${arg}" | cut -c-1)
-		arg=${arg:1}
-		par=$(echo "${arg}" | cut -d'=' -f 1 -s)
-		val=$(echo "${arg}" | cut -d'=' -f 2 -s)
+		local check=$(echo "${arg}" | cut -c-1)
+		local arg=${arg:1}
+		local par=$(echo "${arg}" | cut -d'=' -f 1 -s)
+		local val=$(echo "${arg}" | cut -d'=' -f 2 -s)
 		[[ -z $val ]] && val=true
 		[[ -z $par ]] && par=$arg
 		
@@ -231,4 +231,3 @@ check_for_parameters() {
 		fi
 	done
 }
-

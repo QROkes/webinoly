@@ -8,13 +8,11 @@
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
 
-domain=$1
-type=$2
-cache=$3
-
 source /opt/webinoly/lib/general
 source /opt/webinoly/lib/sites
 source /opt/webinoly/lib/site-ssl
+check_for_parameters $@
+
 
 if [[ ! $(conf_read nginx) == "true" ]]; then
 	echo ""
@@ -23,34 +21,8 @@ if [[ ! $(conf_read nginx) == "true" ]]; then
 	exit 1
 fi
 
-# Check if user entered arg before option and correct it.
-if [[ -n $cache && $type =~ ^(-cache|-root|-root-path|-subdomain|-ignore-ssl|-wildcard)$ ]]; then
-	type=$3
-	cache=$2
-fi
-
-# Extract value if exist
-if [[ $cache == "-subdomain="* || $cache == "-cache="* ]]; then
-	value=$(echo "${cache}" | cut -d'=' -f 2 -s)
-	cache=$(echo "${cache}" | cut -d'=' -f 1 -s)
-	cache_enabled
-fi
-if [[ $domain == "-mysql="* ]]; then
-	value=$(echo "${domain}" | cut -d'=' -f 2 -s)
-	domain=$(echo "${domain}" | cut -d'=' -f 1 -s)
-fi
-if [[ $type == "-parked="* || $type == "-proxy="* || $type == "-wp="* || $type == "-wpsubdir="* || $type == "-wpsubdom="* || $type == "-ssl-off="* || $type == "-mysql="* || $type == "-delete="* || $type == "-force-redirect="* || $type == "-cache="* || $type == "-ssl="* ]]; then
-	value=$(echo "${type}" | cut -d'=' -f 2 -s)
-	type=$(echo "${type}" | cut -d'=' -f 1 -s)
-	[[ $type == "-cache" ]] && cache_enabled
-fi
-if [[ $cache == "-root="*  || $cache == "-root-path="* ]]; then
-	value=$(echo "${cache}" | cut -d'=' -f 2 -s)
-	cache=$(echo "${cache}" | cut -d'=' -f 1 -s)
-fi
-
 # Check if site is sub-domain
-if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked|-proxy|-ssl-on|-ssl|-force-redirect)$ ]]; then
+if [[ -n $domain ]]; then
 	count=1
 	while true; do
 		tld=$(echo "${domain}" | rev | cut -d'.' -f -$count -s | rev)
@@ -62,26 +34,31 @@ if [[ -n $domain && $type =~ ^(-html|-php|-mysql|-wp|-wpsubdir|-wpsubdom|-parked
 	[[ -n $(echo "$(echo "${domain}" | rev | cut -d'.' -f $count- -s | rev)" | cut -d'.' -f 2 -s) || $count == 1 ]] && subdomflag="1" || subdomflag="0"
 fi
 # Overwrite value if defined by user
-[[ $cache == "-subdomain" && $value == "true" ]] && subdomflag="1"
-[[ $cache == "-subdomain" && $value == "false" ]] && subdomflag="0"
+[[ $subdomain == "true" ]] && subdomflag="1"
+[[ $subdomain == "false" ]] && subdomflag="0"
 
 
 # Evaluate if site to create is WP ( 0 = noWP, 1 = WP, 2 = WP with default values, 3 = WP with custom values, 4 = MySQL with default values, 5 = MySQL with custom values )
-wp="0"
-if [[ $type == "-wp" || $type == "-wpsubdir" || $type == "-wpsubdom" || $type == "-mysql" || $domain == "-mysql" ]]; then
-	[[ $type == "-mysql" || $domain == "-mysql" ]] || wp="1"
+type="0"
+if [[ -n $wp || -n $wpsubdir || -n $wpsubdom || -n $mysql ]]; then
+	[[ -n $mysql ]] || type="1"
 
-	if [[ -n $value ]]; then
-		if [[ $value == "default" ]]; then
-			[[ $type == "-mysql" || $domain == "-mysql" ]] && wp="4" || wp="2"
+	if [[ $wp != true || $wpsubdir != true || $wpsubdom != true || $mysql != true ]]; then
+		if [[ $wp == "default" || $wpsubdir == "default" || $wpsubdom == "default" || $mysql == "default" ]]; then
+			[[ $mysql == "default" ]] && type="4" || type="2"
 		else
+			[[ -n $wp && $wp != true  ]] && value=$wp
+			[[ -n $wpsubdir && $wpsubdir != true  ]] && value=$wpsubdir
+			[[ -n $wpsubdom && $wpsubdom != true  ]] && value=$wpsubdom
+			[[ -n $mysql && $mysql != true  ]] && value=$mysql
+			
 			# -wp=[setupmysql,setupwp,dbhost,dbname,dbuser,dbpass,dbpref,extdbuser,extdbpass]
 			custombegin=$(echo "${value}" | cut -c-1)
 			customlast=$(echo "${value}" | rev | cut -c-1)
 			wpdata=${value:1:-1}
 			
 			# Because MySQL format not have this parameters at the beggining to match WP format. Insert it!
-			if [[ $type == "-mysql" || $domain == "-mysql" ]]; then
+			if [[ -n $mysql && $mysql != true ]]; then
 				wpdata=${wpdata/#/true,false,}
 				# Insert wp_prefix if external db data is found.
 				extdata=$(echo "${wpdata,,}" | cut -d',' -f 7- -s)
@@ -104,26 +81,16 @@ if [[ $type == "-wp" || $type == "-wpsubdir" || $type == "-wpsubdom" || $type ==
 			exusercustom=$(echo "${wpdata}" | cut -d',' -f 8 -s)
 			expasscustom=$(echo "${wpdata}" | cut -d',' -f 9 -s)
 			
-			if [[ $custombegin == "[" && $customlast == "]" && ((($setmsqcustom == "true" || $setpwpcustom == "true") && -n $dbhostcustom && -n $dbnamecustom && -n $dbusercustom && -n $dbpasscustom && (-n $dbprefcustom || $type == "-mysql" || $domain == "-mysql")) || ($setmsqcustom == "false" && $setpwpcustom == "false")) ]]; then
-				[[ $type == "-mysql" || $domain == "-mysql" ]] && wp="5" || wp="3"
+			if [[ $custombegin == "[" && $customlast == "]" && ((($setmsqcustom == "true" || $setpwpcustom == "true") && -n $dbhostcustom && -n $dbnamecustom && -n $dbusercustom && -n $dbpasscustom && (-n $dbprefcustom || ( -n $mysql && $mysql != true ))) || ($setmsqcustom == "false" && $setpwpcustom == "false")) ]]; then
+				[[ -n $mysql && $mysql != true ]] && type="5" || type="3"
 			fi
 		fi
 	fi
 fi
 
-# Cache validation
-if [[ $cache == "-cache" && $wp == [045] ]]; then
-	echo "${red}Site${blu} $domain ${red}is not a WP site! ${end}"
-	exit 1
-elif [[ -n $cache && ( $cache != "-cache" && $cache != "-root" && $cache != "-root-path" && $cache != "-subdomain" && $cache != "-ignore-ssl" && $cache != "-wildcard" ) && $type != "-parked" ]]; then
-	echo "${red} $cache is not a valid argument! ${end}"
-	exit 1
-fi
-
-
 
 # List Sites
-if [[ "$domain" == "-list" && -z "$type" && -z "$cache" ]]; then
+if [[ -n $list ]]; then
 	echo ""
 	for site in "/etc/nginx/sites-available"/*
 	do
@@ -135,7 +102,7 @@ if [[ "$domain" == "-list" && -z "$type" && -z "$cache" ]]; then
 
 	
 # Delete all sites
-elif [[ "$domain" == "-delete-all" && -z "$type" && -z "$cache" ]]; then
+elif [[ -n $delete_all ]]; then
 	echo "${red}"
 	echo "All your sites files will be removed."
 	echo "This action will only delete Databases attached to a WordPress site, any other Database will not be deleted."
@@ -177,52 +144,51 @@ elif [[ "$domain" == "-delete-all" && -z "$type" && -z "$cache" ]]; then
 
 	
 # Create PHP site
-elif [ "$type" == "-php" ]; then
+elif [[ -n $php && -n $domain ]]; then
 	createsite
 	
 	
 # Create MYSQL site
-elif [ "$type" == "-mysql" ]; then
-	# We use WP function to create DB when wp=0 WP files are not installed.
+elif [[ -n $mysql && -n $domain ]]; then
+	# We use WP function to create DB when type=0 WP files are not installed.
 	createsite
 	wpinstall
-elif [[ "$domain" == "-mysql" && -z "$type" && -z "$cache" ]]; then
+elif [[ -n $mysql && -z $domain ]]; then
 	# Hack to create a DB easily (without site).
 	wpinstall
 
 
 # Create HTML site
-elif [ "$type" == "-html" ]; then
+elif [[ -n $html && -n $domain ]]; then
 	createsite
 	sudo sed -i '/index/c \	index  index.html index.htm;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/index/a \	location / { try_files $uri $uri/ =404; }' /etc/nginx/sites-available/$domain
 	sudo sed -i '/php.conf/d' /etc/nginx/sites-available/$domain
 
 
-# Create WP site	
-elif [ "$type" == "-wp" ]; then
+# Create WP site
+elif [[ -n $wp && -n $domain ]]; then
 	createsite
 	sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
 
 
 # Create WP Multisite (Sub-directory)
-elif [ "$type" == "-wpsubdir" ]; then
+elif [[ -n $wpsubdir && -n $domain ]]; then
 	createsite
 	sudo sed -i '/locations.conf/i \	include common/wpsubdir.conf;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
 
 	
 # Create WP Multisite (Sub-domain)	
-elif [ "$type" == "-wpsubdom" ]; then
+elif [[ -n $wpsubdom && -n $domain ]]; then
 	createsite
 	sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
 
 
 # Parked Domain
-elif [ "$type" == "-parked" ]; then
+elif [[ -n $parked && -n $domain ]]; then
 	createsite
-	mapto="NeverMatchAtFirstDotCom"
-	[[ -n $value ]] && mapto="$value"
+	[[ $parked != true ]] && mapto=$parked || mapto="NeverMatchAtFirstDotCom"
 	
 	while [[ ! -a /etc/nginx/sites-available/$mapto ]]
 	do
@@ -230,7 +196,7 @@ elif [ "$type" == "-parked" ]; then
 		read -p "Main site domain: " mapto
 		mapto=${mapto:-NeverMatchAtFirstDotCom}
 		echo "${end}"
-		[[ ! -a /etc/nginx/sites-available/$mapto ]] && echo "${red} Main site domain not found! ${end}"
+		[[ ! -a /etc/nginx/sites-available/$mapto ]] && echo "${red}Main site domain not found! ${end}"
 	done
 	
 	# Nginx conf file for the new parked domain
@@ -252,11 +218,11 @@ elif [ "$type" == "-parked" ]; then
 	echo "${end}"
 	
 # Reverse proxy
-elif [[ "$type" == "-proxy" ]]; then
-	if [[ -n $value ]]; then
-		firstchar=$(echo "${value}" | cut -c-1)
-		lastchar=$(echo "${value}" | rev | cut -c-1)
-		proxydata=${value:1:-1}
+elif [[ -n $proxy && -n $domain ]]; then
+	if [[ $proxy != true ]]; then
+		firstchar=$(echo "${proxy}" | cut -c-1)
+		lastchar=$(echo "${proxy}" | rev | cut -c-1)
+		proxydata=${proxy:1:-1}
 		rphost=$(echo "${proxydata}" | cut -d':' -f 1 -s)
 		rpport=$(echo "${proxydata}" | cut -d':' -f 2 -s)
 		
@@ -296,33 +262,33 @@ elif [[ "$type" == "-proxy" ]]; then
 	
 	
 # Site disabled	
-elif [[ "$type" == "-off" && ! -L /etc/nginx/sites-enabled/$domain ]]; then
+elif [[ -n $off && ! -L /etc/nginx/sites-enabled/$domain ]]; then
 	echo "${red}Site${blu} $domain ${red}doesn't exist or is already disabled!${end}"
-elif [[ "$type" == "-off" && -L /etc/nginx/sites-enabled/$domain ]]; then
+elif [[ -n $off && -L /etc/nginx/sites-enabled/$domain ]]; then
 	echo "${gre}Site${blu} $domain ${gre}has been successfully disabled!${end}"
 	sudo rm /etc/nginx/sites-enabled/$domain
 
 	
 # Site re-enabled
-elif [[ "$type" == "-on" && -L /etc/nginx/sites-enabled/$domain ]]; then
+elif [[ -n $on && -L /etc/nginx/sites-enabled/$domain ]]; then
 	echo "${gre}Site${blu} $domain ${gre}is already enabled!${end}"
-elif [[ "$type" == "-on" && ! -L /etc/nginx/sites-enabled/$domain && -a /etc/nginx/sites-available/$domain ]]; then
+elif [[ -n $on && ! -L /etc/nginx/sites-enabled/$domain && -a /etc/nginx/sites-available/$domain ]]; then
 	sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 	echo "${gre}Site${blu} $domain ${gre}has been successfully enabled!${end}"
 
 	
 # Delete site	
-elif [[ "$type" == "-delete" && -a /etc/nginx/sites-available/$domain ]]; then
+elif [[ -n $delete && -a /etc/nginx/sites-available/$domain ]]; then
 	deletesite
 	echo "${gre}Site${blu} $domain ${gre}has been successfully deleted!${end}"
 
 
 # SSL (Letsencrypt)
-elif [[ ( $type == "-ssl-on" || $type == "-ssl-off" || $type == "-ssl" ) && -a /etc/nginx/sites-available/$domain ]]; then
+elif [[ ( -n $ssl_on || -n $ssl_off || -n $ssl ) && -a /etc/nginx/sites-available/$domain ]]; then
 	isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_certificate_key")
-	if [[ ( $type == "-ssl-on" ) || ( $type == "-ssl" && $value == "on" ) ]]; then
+	if [[ -n $ssl_on || $ssl == "on" ]]; then
 		[[ -z $isssl ]] && site_ssl_on || echo "${red}SSL is already enabled for your site -${blu} $domain ${end}"
-	elif [[ ( $type == "-ssl-off" || ( $type == "-ssl" && ( $value == "off" || $value == "off-force" ))) ]]; then
+	elif [[ -n $ssl_off || $ssl =~ ^(off|off-force)$ ]]; then
 		[[ -n $isssl ]] && site_ssl_off || 	echo "${red}SSL is already disabled for your site -${blu} $domain ${end}"
 	else
 		echo "${red}[ERROR] Invalid option for SSL command! ${end}"
@@ -330,7 +296,7 @@ elif [[ ( $type == "-ssl-on" || $type == "-ssl-off" || $type == "-ssl" ) && -a /
 	fi
 
 # FastCGI Cache disabled
-elif [[ ( $type == "-nocache" || ( $type == "-cache" && $cacheflag == 0 )) && -a /etc/nginx/sites-available/$domain ]]; then
+elif [[ ( -n $nocache || ( -n $cache && $cache == "off" )) && -a /etc/nginx/sites-available/$domain ]]; then
 	isfc=$( grep -F "wpfc.conf" /etc/nginx/sites-available/$domain )
 	if [[ -n $isfc ]]; then
 		sudo sed -i '/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
@@ -341,7 +307,7 @@ elif [[ ( $type == "-nocache" || ( $type == "-cache" && $cacheflag == 0 )) && -a
 	
 	
 # FastCGI Cache enabled
-elif [[ (( $type == "-cache" && -z $value ) || ( $type == "-cache" && $cacheflag == 1 )) && -a /etc/nginx/sites-available/$domain ]]; then
+elif [[ ( -n $cache || $cache == "on" ) && -a /etc/nginx/sites-available/$domain ]]; then
 	isphp=$( grep -F "php.conf" /etc/nginx/sites-available/$domain )
 	iswp=$( grep -F "wpcommon.conf" /etc/nginx/sites-available/$domain )
 	if [[ -n $isphp && -n $iswp ]]; then
@@ -367,16 +333,15 @@ elif [[ (( $type == "-cache" && -z $value ) || ( $type == "-cache" && $cacheflag
 
 	
 # Force www or non-www redirect (www, root, off)
-elif [[ "$type" == "-force-redirect" && -a /etc/nginx/sites-available/$domain ]]; then
+elif [[ -n $force_redirect && -a /etc/nginx/sites-available/$domain ]]; then
 	force_redirect
 	
 	
 # Catch ERROR 
-elif [[ ! -a /etc/nginx/sites-available/$domain && $type =~ ^(-nocache|-cache|-delete|-off|-on|-ssl|-ssl-on|-ssl-off|-force-redirect)$ ]]; then
+elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
 	echo "${red}Site${blu} $domain ${red}doesn't exists!${end}"
 else
-	[[ -z $type ]] && type=$domain
-	echo "${red}Argument '${type}' is not a valid option! ${end}"
+	echo "${red}[ERROR] Please, enter a valid option! ${end}"
 fi
 
 shopt -u extglob
