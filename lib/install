@@ -145,7 +145,7 @@ messagend_install() {
 nginx_install() {
 	api-events_update in1
 	pre_install
-	if [[ ($(conf_read nginx-ppa) == "mainline" || $value == "mainline") && $value != "stable" ]]; then
+	if [[ ($(conf_read nginx-ppa) == "mainline" || $nginx == "mainline") && $nginx != "stable" ]]; then
 		echo | sudo add-apt-repository ppa:nginx/development
 		conf_write nginx-ppa mainline
 	else
