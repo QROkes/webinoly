@@ -135,13 +135,17 @@ pre_install() {
 mysql_client_install() {
 	api-events_update im2
 	local osname=$(check_osname)
-	# Cases with MariaDB v10.3 support
+	# Cases with MariaDB v10.3 support - https://downloads.mariadb.org/mariadb/repositories/
 	case "$osname" in
 		"trusty")
 			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
-			sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.3/ubuntu $osname main"
+			sudo add-apt-repository "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.3/ubuntu $osname main"
 		;;
-		"xenial"|"artful"|"bionic"|"cosmic")
+		"xenial")
+			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+			sudo add-apt-repository "deb [arch=amd64,arm64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.3/ubuntu $osname main"
+		;;
+		"bionic"|"cosmic")
 			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
 			sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.3/ubuntu $osname main"
 		;;
