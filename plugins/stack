@@ -198,18 +198,14 @@ elif [[ -n $purge && -n $mysql ]]; then
 		
 		# Cases with MariaDB v10.3 support
 		os_name=$(check_osname)
+		sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
 		case "$osname" in
 			"trusty")
 				sudo apt-key del 0xcbcb082a1bb943db
-				sudo add-apt-repository --remove "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu $osname main"
 			;;
-			"xenial")
+			"xenial"|"bionic"|"cosmic")
 				sudo apt-key del 0xF1656F24C74CD1D8
-				sudo add-apt-repository --remove "deb [arch=amd64,arm64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu $osname main"
-			;;
-			"bionic"|"cosmic")
-				sudo apt-key del 0xF1656F24C74CD1D8
-				sudo add-apt-repository --remove "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu $osname main"
+				
 			;;
 		esac
 		
