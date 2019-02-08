@@ -21,8 +21,21 @@ if ! $(groups $USERNAME | grep &>/dev/null '\bsudo\b' || groups $USERNAME | grep
 	read -p "Press [Enter] key to Continue or [Ctrl+C] to Cancel..."
 fi
 
+# Prevent "compulsive" re-installation if you currently have the latest version installed.
+if [[ -a /opt/webinoly/webinoly.conf && $2 != "-ver=beta" && $2 != "-ver=alpha" ]]; then
+	source /opt/webinoly/lib/general
+	checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
+	currentver=$(conf_read app-version)
+	
+	if [[ -n $checkver && -n $currentver && ${checkver//.} -le ${currentver//.} ]]; then
+		echo "${gre}You currently have the latest version!${end}"
+		exit 1
+	fi
+fi
+
 # In case client is just Updating Webinoly and not fresh-installing we need accurate statistics.
-[[ -n "$1" ]] && setup="$1" || setup=9
+[[ -n $1 ]] && setup=$1 || setup=9
+[[ $setup == "api" ]] && setup=3
 if [[ $setup == "upd" ]]; then
 	setup=0
 	update="&update=true"
@@ -68,12 +81,12 @@ if [[ $2 == "-ver="* ]]; then
 		[[ $ver == "beta" ]] && echo "[WARNING] You are installing a BETA version of Webinoly and it's not recommended for production enviroments."
 	else
 		echo "[ERROR] Version not found or not available! ($code) $(tput sgr0)"
-		exit 1
+		[[ $1 != "api" ]] && exit 1
 	fi
 	echo $(tput sgr0)
-else
-	sudo wget --timeout=15 -t 1 --referer="https://webinoly.com/?option=${setup}${update}" -qrO $HOME/webinoly.tar https://qrok.es/wytar
 fi
+[[ -z $webyversion ]] && sudo wget --timeout=15 -t 1 --referer="https://webinoly.com/?option=${setup}${update}" -qrO $HOME/webinoly.tar https://qrok.es/wytar
+
 
 [[ ! -d /opt/webinoly ]] && sudo mkdir /opt/webinoly
 sudo tar -xf $HOME/webinoly.tar -C /opt/webinoly
@@ -120,9 +133,16 @@ conf_write app-version $webyversion
 
 # Ping to Webinoly Stats
 opt=$setup
-if [[ $2 == "-ver="* && $webyversion == $ver && $statskip != "true" ]]; then
+branch="Public"
+if [[ $2 == "-ver="* && $statskip != "true" ]]; then
 	type="Custom"
-elif [[ -n $update && -n $oldapp ]]; then
+	if ! [[ $ver =~ ^[0-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
+		branch=$ver
+		conf_write branch $ver
+	fi
+fi
+
+if [[ -n $update && -n $oldapp ]]; then
 	type="Updates"
 	opt=$oldapp
 elif [[ -z $update && -n $oldapp ]]; then
@@ -130,10 +150,11 @@ elif [[ -z $update && -n $oldapp ]]; then
 	opt=$oldapp
 elif [[ $newinst == "true" ]]; then
 	type="New"
+	[[ $1 == "api" ]] && type="API"
 else
 	type="Error"
 fi
-[[ $statskip == "true" ]] || wget https://api.webinoly.com/stats/?install=Public:${webyversion}:${type}:${opt} --referer="Webinoly-Internal-Verified-Stats" --spider --timeout=15 -t 1 -q
+[[ $statskip == "true" ]] || wget https://api.webinoly.com/stats/?install=${branch}:${webyversion}:${type}:${opt} --referer="Webinoly-Internal-Verified-Stats-TestingEnviroment" --spider --timeout=15 -t 1 -q
 
 
 # Stack installation
