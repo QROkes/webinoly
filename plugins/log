@@ -79,6 +79,10 @@ elif [[ -n $only_error ]]; then
 			echo "${red}[ERROR] Nginx not found! ${end}"
 			exit 1
 		fi
+		if [[ $domain == "default" || $domain == $(conf_read tools-port) ]]; then
+			echo "${red}[ERROR] Only-Error is not allowed to be used in Tools-Port or Default Nginx site! ${end}"
+			exit 1
+		fi
 		
 		if [[ $only_error == "on" ]]; then
 			if [[ -z $islog ]]; then
