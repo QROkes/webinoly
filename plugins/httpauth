@@ -67,7 +67,8 @@ elif [[ -n $wp_admin_on || -n $wp_admin_off || -n $wp_admin ]]; then
 	if [[ -n $wp_admin_on || $wp_admin == "on" ]]; then
 		if [[ -z $iswpadon ]]; then
 			if [[ $(conf_read nginx) == "true" ]]; then
-				sudo sed -i "/zone=one/a \  include common/acl.conf;" /etc/nginx/common/wpcommon.conf
+				sudo sed -i "/\/wp-login\.php/a \include common/acl.conf;" /etc/nginx/common/wpcommon.conf
+				sudo sed -i "/\/wp-admin\/\./a \include common/acl.conf;" /etc/nginx/common/wpcommon.conf
 				sudo service nginx reload
 			fi
 			conf_write wp-admin-auth true
