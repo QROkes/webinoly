@@ -5,6 +5,9 @@
 # Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off, -force-redirect
 # Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard
 
+# shopt is necessary for this kind !(html|22222) of patterns
+shopt -s extglob
+
 source /opt/webinoly/lib/general
 source /opt/webinoly/lib/sites
 source /opt/webinoly/lib/site-ssl
@@ -133,12 +136,9 @@ elif [[ -n $delete_all ]]; then
 	
 	# Delete all files - double check!
 	# -rf is necessary to not generate an error when is empty.
-	# shopt is necessary for this kind !(html|22222) of patterns
-	shopt -s extglob
 	sudo rm -rf /etc/nginx/sites-available/!(default|$(conf_read tools-port))
 	sudo rm -rf /etc/nginx/sites-enabled/!(default|$(conf_read tools-port))
 	sudo rm -rf /var/www/!(html|$(conf_read tools-port))
-	shopt -u extglob
 	echo ""
 	echo "${gre}All sites and data has been deleted successfully!${end}"
 
@@ -349,4 +349,5 @@ else
 	exit 1
 fi
 
+shopt -u extglob
 [[ $(conf_read nginx) == "true" ]] && sudo service nginx reload
