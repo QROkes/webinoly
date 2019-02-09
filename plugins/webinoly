@@ -461,7 +461,7 @@ elif [[ -n $unblockip ]]; then
 
 elif [[ -n $conf_value ]]; then
 	if [[ -n $dyn_var && $dyn_var =~ ^[A-Za-z\-]+$ ]]; then
-		[[ $conf_value == true ]] && read -p "${blu}Enter a value for '${dyn_var}': ${end}" conf_value
+		[[ $conf_value == "NeverMatchString" ]] && read -p "${blu}Enter a value for '${dyn_var}': ${end}" conf_value
 		if [[ -n $conf_value ]]; then
 			conf_write $dyn_var $conf_value
 			echo "${gre}Configuration successfully updated!${end}"

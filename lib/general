@@ -213,8 +213,9 @@ check_for_parameters() {
 		local arg=${arg:1}
 		local par=$(echo "${arg}" | cut -d'=' -f 1 -s)
 		local val=$(echo "${arg}" | cut -d'=' -f 2 -s)
-		[[ -z $val ]] && val=true
 		[[ -z $par ]] && par=$arg
+		[[ -z $val && $par == "conf-value_"* ]] && val="NeverMatchString" #Special value to allow the string "true" as a valid value.
+		[[ -z $val ]] && val=true
 		
 		# Check for Webinoly -conf-value_
 		if [[ $par == "conf-value_"* ]]; then
