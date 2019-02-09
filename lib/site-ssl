@@ -123,6 +123,7 @@ site_ssl_on() {
 		echo "${red}"
 		echo "[ERROR] Unable to create the new certificate!"
 		echo "${end}"
+		exit 1
 	fi
 }
 

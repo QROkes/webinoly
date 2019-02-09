@@ -97,6 +97,7 @@ elif [[ -n $only_error ]]; then
 		fi
 	elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
 		echo "${red}[ERROR] Domain not found!${end}"
+		exit 1
 	fi
 
 	

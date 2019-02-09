@@ -1,7 +1,6 @@
 #!/bin/bash
 # Webinoly Installation Script.
 
-
 # Check OS support
 distr=`echo $(lsb_release -i | cut -d':' -f 2)`
 osver=`echo $(lsb_release -c | cut -d':' -f 2)`
@@ -29,6 +28,7 @@ if [[ -a /opt/webinoly/webinoly.conf && $2 != "-ver=beta" && $2 != "-ver=alpha" 
 	
 	if [[ -n $checkver && -n $currentver && ${checkver//.} -le ${currentver//.} ]]; then
 		echo "${gre}You currently have the latest version!${end}"
+		sudo rm weby
 		exit 1
 	fi
 fi
@@ -81,7 +81,10 @@ if [[ $2 == "-ver="* ]]; then
 		[[ $ver == "beta" ]] && echo "[WARNING] You are installing a BETA version of Webinoly and it's not recommended for production enviroments."
 	else
 		echo "[ERROR] Version not found or not available! ($code) $(tput sgr0)"
-		[[ $1 != "api" ]] && exit 1
+		if [[ $1 != "api" ]]; then
+			sudo rm weby
+			exit 1
+		fi
 	fi
 	echo $(tput sgr0)
 fi
@@ -105,7 +108,11 @@ if [[ -a $HOME/.webinoly-conf-restore_dont-remove ]]; then
 	echo "${gre}Seems like Webinoly was installed previously, we will try to recover your old configuration!${end}"
 	sudo mv $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf
 	sudo webinoly -verify
-	[[ $? == 1 ]] && exit 1
+	if [[ $? == 1 ]]; then
+		sudo rm weby
+		app_purge
+		exit 1
+	fi
 fi
 
 # Check for Server Conf Updates and Save Tools Port after library is available.
@@ -134,7 +141,7 @@ conf_write app-version $webyversion
 # Ping to Webinoly Stats
 opt=$setup
 branch="Public"
-if [[ $2 == "-ver="* && $statskip != "true" ]]; then
+if [[ $2 == "-ver="* ]]; then
 	type="Custom"
 	if ! [[ $ver =~ ^[0-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
 		branch=$ver

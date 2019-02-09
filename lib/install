@@ -38,7 +38,7 @@ set_timezone() {
 linux_optim() {
 	api-events_update in4
 	if [[ $(conf_read linux-optim) == "true" ]]; then
-		exit 1
+		return
 	fi
 	
 	if [[ -n $(conf_read fd-ratio) && $(conf_read fd-ratio) =~ ^[0-9]+$ && $(conf_read fd-ratio) -le "100" ]]; then
@@ -184,10 +184,8 @@ php_install() {
 		echo "${gre}Multi-PHP version is enabled. PHP '$ver' will be installed!${end}"
 	elif [[ $(conf_read multi-php) != "true" && -n $1 ]]; then
 		echo "${red}Multi-PHP is not enabled! ${end}"
-		exit 1
 	elif [[ $(conf_read multi-php) == "true" && -n $1 ]]; then
 		echo "${red}Please, enter a valid PHP version or default PHP is not installed yet! ${end}"
-		exit 1
 	fi
 	
 	pre_install

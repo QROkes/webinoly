@@ -46,6 +46,7 @@ elif [[ -n $server_reset ]]; then
 		echo "${gre}Nginx settings has been updated successfully!${end}"
 	elif [[ $(conf_read nginx-optim) != "true" && $server_reset =~ ^(nginx|all)$ ]]; then
 		echo "${red}Nginx settings couldn't been updated, seems like is not installed in your server!${end}"
+		err_cont=true
 	fi
 	
 	# Regenerate PHP conf files
@@ -58,9 +59,11 @@ elif [[ -n $server_reset ]]; then
 			echo "${gre}PHP settings has been updated successfully!${end}"
 		else
 			echo "${red}[ERROR] PHP could not been updated, source files not found!${end}"
+			exit 1
 		fi
 	elif [[ $(conf_read php-optim) != "true" && $server_reset =~ ^(nginx|all)$ ]]; then
 		echo "${red}PHP settings couldn't been updated, seems like is not installed in your server!${end}"
+		exit 1
 	fi
 	
 	
@@ -78,6 +81,7 @@ elif [[ -n $dbpass ]]; then
 		echo "${red}"
 		echo "DB Passwords not found!"
 		echo "${end}"
+		exit 1
 	fi
 	
 	
@@ -156,7 +160,6 @@ elif [[ -n $login_www_data || -n $nologin_www_data ]]; then
 	if [[ $login_www_data == true || $login_www_data == "on" ]]; then
 		if [[ $(conf_read login-www-data) == "true" ]]; then
 			echo "${red}User www-data already have SFTP access! ${end}"
-			exit 1
 		fi
 		
 		# Allow access for www-data user
@@ -192,7 +195,6 @@ ForceCommand internal-sftp
 	elif [[ $nologin_www_data == true || $login_www_data == "off" ]]; then
 		if [[ $(conf_read login-www-data) != "true" ]]; then
 			echo "${red}User www-data already have no SFTP access! ${end}"
-			exit 1
 		fi
 		
 		sudo rm -rf /var/www/.ssh
@@ -272,6 +274,7 @@ elif [[ -n $config_cache ]]; then
 		echo "${gre}FastCGI Cache values has been successfully updated!${end}"
 	else
 		echo "${red}[ERROR] Invalid values!${end}"
+		exit 1
 	fi
 
 	
@@ -299,12 +302,9 @@ elif [[ -n $uninstall ]]; then
 			sudo rm /usr/bin/site
 			sudo rm /usr/bin/httpauth
 			sudo rm /usr/bin/log			
-			echo "${gre}  Webinoly App has been removed successfully from your server!"
-			echo "${end}"
-			exit 1;
+			echo "${gre}Webinoly App has been removed successfully from your server!${end}"
 		else
-			echo "${gre}  Action aborted!"
-			echo "${end}"
+			echo "${gre}Action aborted!${end}"
 		fi
 		break
 	  fi
@@ -328,6 +328,7 @@ elif [[ -n $external_sources_update ]]; then
 		echo "${gre}Domain list has been successfully updated!${end}"
 	else
 		echo "${red}[ERROR] Domain list not updated!${end}"
+		err_cont=true
 	fi
 	
 	echo ""
@@ -344,13 +345,14 @@ elif [[ -n $external_sources_update ]]; then
 		echo "${gre}Timezone Database has been successfully updated!${end}"
 	else
 		echo "${red}[ERROR] Timezone Database not updated!${end}"
+		exit 1
 	fi
 	
 	
 elif [[ -n $clear_cache ]]; then
 	[[ $clear_cache == true ]] && clear_cache="all"
 	if ! [[ $clear_cache =~ ^(redis|memcache|memcached|opcache|fastcgi|all)$ ]]; then
-		echo "${red}[ERROR] $clear_cache is not a valid option!${end}"
+		echo "${red}[ERROR] Please, enter a valid option!${end}"
 		exit 1
 	fi
 	if [[ $clear_cache =~ ^(redis|all)$ ]]; then
@@ -359,6 +361,7 @@ elif [[ -n $clear_cache ]]; then
 			echo "${gre}- Redis Cache has been successfully cleared!${end}"
 		else
 			echo "${red}[ERROR] We can not clear Redis Cache because is not installed!${end}"
+			err_cont=true
 		fi
 	fi
 	if [[ $clear_cache =~ ^(memcache|memcached|all)$ ]]; then
@@ -369,6 +372,7 @@ elif [[ -n $clear_cache ]]; then
 			echo "${gre}- Memcached has been successfully cleared!${end}"
 		else
 			echo "${red}[ERROR] We can not clear Memcache because is not installed!${end}"
+			err_cont=true
 		fi
 	fi
 	if [[ $clear_cache =~ ^(opcache|all)$ ]]; then
@@ -384,7 +388,8 @@ elif [[ -n $clear_cache ]]; then
 			wget --spider --no-check-certificate --timeout=15 -t 1 localhost:$port/php/opcache/  > /dev/null 2>&1 &
 			echo "${gre}- OpCache has been successfully cleared!${end}"
 		else
-			echo "${red}[ERROR] We can not clear OpCache because PHP and NGINX are not installed!${end}"
+			echo "${red}[ERROR] We can not clear OpCache because PHP or NGINX are not installed!${end}"
+			err_cont=true
 		fi
 	fi
 	if [[ $clear_cache =~ ^(fastcgi|all)$ ]]; then
@@ -393,6 +398,7 @@ elif [[ -n $clear_cache ]]; then
 			echo "${gre}- FastCgi Cache has been successfully cleared!${end}"
 		else	
 			echo "${red}[ERROR] We can not clear FastCGI Cache because NGINX is not installed!${end}"
+			err_cont=true
 		fi
 	fi
 
@@ -428,9 +434,11 @@ elif [[ -n $blockip ]]; then
 			echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully blocked!${end}"
 		else	
 			echo "${red}[ERROR] Please, enter a valid value!${end}"
+			exit 1
 		fi
 	else
 		echo "${red}[ERROR] Nginx file not found!${end}"
+		exit 1
 	fi
 
 
@@ -443,9 +451,11 @@ elif [[ -n $unblockip ]]; then
 			echo "${gre}The IP address ${blu}'$unblockip'${gre} was successfully unblocked!${end}"
 		else
 			echo "${red}[ERROR] Please, enter a valid value!${end}"
+			exit 1
 		fi
 	else
 		echo "${red}[ERROR] Nginx file not found!${end}"
+		exit 1
 	fi
 	
 
@@ -457,9 +467,11 @@ elif [[ -n $conf_value ]]; then
 			echo "${gre}Configuration successfully updated!${end}"
 		else
 			echo "${red}Please, enter a valid value!${end}"
+			exit 1
 		fi
 	else
 		echo "${red}[ERROR] Please, enter a valid variable name!${end}"
+		exit 1
 	fi
 
 
@@ -483,6 +495,7 @@ elif [[ -n $yoast_sitemap ]]; then
 		fi
 	else
 		echo "${red}[ERROR] Please, enter a valid option to enable/disable Yoast Sitemap Support!${end}"
+		exit 1
 	fi
 
 
@@ -538,7 +551,8 @@ elif [[ -n $default_site ]]; then
 	
 else
 	echo "${red}[ERROR] Please enter a valid option!${end}"
+	exit 1
 fi
 
-
+[[ -n $err_cont ]] && exit 1
 [[ $(conf_read nginx) == "true" ]] && sudo service nginx reload
