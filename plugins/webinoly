@@ -160,6 +160,7 @@ elif [[ -n $login_www_data || -n $nologin_www_data ]]; then
 	if [[ $login_www_data == true || $login_www_data == "on" ]]; then
 		if [[ $(conf_read login-www-data) == "true" ]]; then
 			echo "${red}User www-data already have SFTP access! ${end}"
+			exit 1
 		fi
 		
 		# Allow access for www-data user
@@ -195,6 +196,7 @@ ForceCommand internal-sftp
 	elif [[ $nologin_www_data == true || $login_www_data == "off" ]]; then
 		if [[ $(conf_read login-www-data) != "true" ]]; then
 			echo "${red}User www-data already have no SFTP access! ${end}"
+			exit 1
 		fi
 		
 		sudo rm -rf /var/www/.ssh

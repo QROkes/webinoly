@@ -161,7 +161,7 @@ elif [[ $newinst == "true" ]]; then
 else
 	type="Error"
 fi
-[[ $statskip == "true" ]] || wget https://api.webinoly.com/stats/?install=${branch}:${webyversion}:${type}:${opt} --referer="Webinoly-Internal-Verified-Stats-TestingEnviroment" --spider --timeout=15 -t 1 -q
+[[ $statskip == "true" ]] || wget https://api.webinoly.com/stats/?install=${branch}:${webyversion}:${type}:${opt} --referer="Webinoly-Internal-Verified-Stats" --spider --timeout=15 -t 1 -q
 
 
 # Stack installation

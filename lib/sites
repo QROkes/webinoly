@@ -95,7 +95,7 @@ dbword_check() {
 
 
 wpinstall() {
-	[[ $domain == "-mysql" ]] && local dom="Webinoly_$(pwgen -s -1)" || local dom=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
+	[[ -z $domain && -n $mysql ]] && local dom="Webinoly_$(pwgen -s -1)" || local dom=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
 	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 	local AUTOGENPASS_WPDB=`pwgen -s -1`
 	local setupmysql="y"
@@ -363,13 +363,14 @@ wpinstall() {
 						echo ""
 					fi
 				else
+					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
 					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
 CREATE DATABASE ${dbname};
 grant usage on ${dbname}.* to ${dbuser}@\`%\` identified by '${dbpass}';
-grant all privileges on ${dbname}.* to ${dbuser}@\`%\`;
+GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to ${dbuser}@\`%\`;
 FLUSH PRIVILEGES;
 _EOF_
-					
+
 					if [ $? != "0" ]; then
 						done="0"
 						echo "${red}============================================"
@@ -437,9 +438,9 @@ _EOF_
 			sudo sed -i "/stop editing/i \#define('SITE_ID_CURRENT_SITE', 1);" /var/www/$domain/wp-config.php
 			sudo sed -i "/stop editing/i \#define('BLOG_ID_CURRENT_SITE', 1);" /var/www/$domain/wp-config.php
 		fi
-		if [ -n $wpsubdir ]; then
+		if [[ -n $wpsubdir ]]; then
 			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', false);" /var/www/$domain/wp-config.php
-		elif [ -n $wpsubdom ]; then
+		elif [[ -n $wpsubdom ]]; then
 			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', true);" /var/www/$domain/wp-config.php
 			sudo sed -i "/server_name /c \	server_name $domain *.$domain;" /etc/nginx/sites-available/$domain
 		fi
