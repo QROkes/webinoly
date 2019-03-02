@@ -19,10 +19,13 @@ if [[ -n $add ]]; then
 		read -p "${blu}HTTP-Auth User: ${end}" user
 		read -p "${blu}HTTP-Auth Password: ${end}" pass
 		echo ""
-	else
+	elif [[ $(echo "${add}" | cut -c-1) == "[" && $(echo "${add}" | rev | cut -c-1) == "]" ]]; then
 		userdata=${add:1:-1}
 		user=$(echo "${userdata}" | cut -d',' -f 1 -s)
 		pass=$(echo "${userdata}" | cut -d',' -f 2 -s)
+	else
+		echo "${red}[ERROR] Please enter a valid value for username and password!${end}"
+		exit 1
 	fi
 	
 	if ! [[ -n $user && -n $pass && $user =~ ^[^:]+$ && $pass =~ ^[^:]+$ ]]; then
@@ -42,7 +45,7 @@ if [[ -n $add ]]; then
 	
 elif [[ -n $delete ]]; then
 	[[ $delete == true ]] && read -p "${blu}HTTP-Auth User: ${end}" userpurge || userpurge=$delete
-	[[ -a /etc/nginx/.htpasswd ]] && exist=$( grep -E "^${userpurge}:" /etc/nginx/.htpasswd )
+	[[ -a /etc/nginx/.htpasswd ]] && exist=$( grep -F "${userpurge}:" /etc/nginx/.htpasswd )
 	if [[ -z $exist ]]; then
 		echo "${red}User '$userpurge' does not exist!${end}"
 		exit 1
