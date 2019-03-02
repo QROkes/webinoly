@@ -16,7 +16,7 @@ if [[ -n $update ]]; then
 		echo ""
 		[[ -n $update && $update != true ]] && branch="-ver=${update}" || branch=""
 		sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=$(app_version)" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
-		echo "${gre}Webinoly App has been updated successfully!${end}"
+		[[ $? == 0 ]] && echo "${gre}Webinoly App has been updated successfully!${end}"
 	else
 		echo "${gre}You currently have the latest version!${end}"
 	fi
@@ -256,7 +256,7 @@ elif [[ -n $config_cache ]]; then
 		read -p "   Set new value: " oth
 		oth=${oth:-$othval}
 		echo ""
-	else
+	elif [[ $(echo "${config_cache}" | cut -c-1) == "[" && $(echo "${config_cache}" | rev | cut -c-1) == "]" ]]; then
 		custombegin=$(echo "${config_cache}" | cut -c-1)
 		customlast=$(echo "${config_cache}" | rev | cut -c-1)
 		cachedata=${config_cache:1:-1}
@@ -264,6 +264,9 @@ elif [[ -n $config_cache ]]; then
 		hit=$(echo "${cachedata}" | cut -d',' -f 1 )
 		ina=$(echo "${cachedata}" | cut -d',' -f 2 )
 		oth=$(echo "${cachedata}" | cut -d',' -f 3 )
+	else
+		echo "${red}[ERROR] Please enter a valid value!${end}"
+		exit 1
 	fi
 	
 	if [[ "$hit" =~ ^[0-9]+[smhdwMy]$ && "$ina" =~ ^[0-9]+[smhdwMy]$ && "$oth" =~ ^[0-9]+[smhdwMy]$ ]]; then

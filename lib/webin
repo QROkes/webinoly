@@ -464,6 +464,7 @@ system_info() {
 	
 	echo "[NGINX]"
 	if [[ $(conf_read nginx) == "true" ]]; then
+		echo "nginx branch: $(conf_read nginx-ppa)"
 		sudo nginx -v
 		echo "nginx file descriptors: $(grep 'Max open files' /proc/$(cat /run/nginx.pid)/limits | cut -f 15 -d ' ') "
 		echo "worker_processes: $(grep worker_processes /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';') "
