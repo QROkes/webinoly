@@ -18,7 +18,7 @@ error() {
 [[ -n $(conf_read log-lines) && $(conf_read log-lines) =~ ^[0-9]+$ && $(conf_read log-lines) -gt 0 ]] && clines=$(conf_read log-lines) || clines=10
 
 
-if [[ -n $mail ]]; then
+if [[ -n $mail || -n $email ]]; then
 	if [[ -a /var/log/mail.log && -a /var/log/mail.err ]]; then
 		sudo tail -f --lines=$clines /var/log/mail.log /var/log/mail.err
 	elif [[ -a /var/log/mail.log ]]; then
@@ -106,16 +106,32 @@ elif [[ -n $only_error ]]; then
 
 	
 # Site log files
-elif [[ -n $error && -z $domain && -a /var/log/nginx/error.log ]]; then
-	sudo tail -f --lines=$clines /var/log/nginx/*error.log
-elif [[ -n $error && -n $domain && -a /var/log/nginx/$domain.error.log ]]; then
-	sudo tail -f --lines=$clines /var/log/nginx/$domain.error.log
-elif [[ -n $wp && -n $domain && -a /var/www/$domain/htdocs/wp-content/debug.log ]]; then
-	sudo tail -f --lines=$clines /var/www/$domain/htdocs/wp-content/debug.log
-elif [[ -z $domain && -a /var/log/nginx/access.log ]]; then
-	sudo tail -f --lines=$clines /var/log/nginx/*access.log
-elif [[ -n $domain && -a /var/log/nginx/$domain.access.log ]]; then
-	sudo tail -f --lines=$clines /var/log/nginx/$domain.access.log
+elif [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
+	if [[ -n $error && -a /var/log/nginx/$domain.error.log ]]; then
+		sudo tail -f --lines=$clines /var/log/nginx/$domain.error.log
+	elif [[ -n $wp && -a /var/www/$domain/htdocs/wp-content/debug.log ]]; then
+		sudo tail -f --lines=$clines /var/www/$domain/htdocs/wp-content/debug.log
+	elif [[ -a /var/log/nginx/$domain.access.log && -z $error && -z $wp ]]; then
+		sudo tail -f --lines=$clines /var/log/nginx/$domain.access.log
+	else
+		echo "${red}[ERROR] Log file not found!${end}"
+		exit 1
+	fi
+
+elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
+	echo "${red}[ERROR] Domain not found!${end}"
+	exit 1
+
+elif [[ -z $domain ]]; then
+	if [[ -n $error && -a /var/log/nginx/error.log ]]; then
+		sudo tail -f --lines=$clines /var/log/nginx/*error.log
+	elif [[ -a /var/log/nginx/access.log && -z $1 ]]; then
+		sudo tail -f --lines=$clines /var/log/nginx/*access.log
+	else
+		echo "${red}[ERROR] Please, enter a valid option! ${end}"
+		exit 1
+	fi
+	
 else
 	echo "${red}[ERROR] Please, enter a valid option! ${end}"
 	exit 1
