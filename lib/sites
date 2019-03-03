@@ -120,16 +120,6 @@ wpinstall() {
 		dbproot="$expasscustom"
 	fi
 	
-	# Print MySQL default data
-	if [[ $type == 4 ]]; then
-		echo "${blu}"
-		echo "Host: $dbhost"
-		echo "Database Name: $dbname"
-		echo "Database User: $dbuser"
-		echo "Password: $dbpass"
-		echo "${end}"
-	fi
-	
 	echo "${blu}"
 	if [[ $type == 1 ]]; then
 		echo "Do you need to setup new MySQL database? [Y/n]"
@@ -157,7 +147,7 @@ wpinstall() {
 	fi
 	
 	# Generate and auto-fill wp-config.php and also create database
-	if [[ $setupmysql == [yY] || $setupwp == [yY] ]] ; then
+	if [[ $setupmysql == [yY] || $setupwp == [yY] ]]; then
 		local done="0"
 		
 		while [[ $done != "1" ]]
@@ -340,7 +330,7 @@ wpinstall() {
 			fi
 			
 			if [[ $type != [2345] ]]; then
-				read -p "Database Password [$AUTOGENPASS_WPDB]:" dbpass
+				read -p "Password [$AUTOGENPASS_WPDB]:" dbpass
 				# Not ask for wp_prefix when type=0 (mysql only site)
 				[[ $type == [045] ]] || read -p "Database Prefix [wp_]:" dbpref
 				echo "${end}"
@@ -392,8 +382,18 @@ _EOF_
 			fi
 		done
 	fi
-	echo "${end}"
 	
+	# Display data just to confirm the DB creation.
+	if [[ $type == [45] ]]; then
+		echo "${blu}"
+		echo "Database Host: $dbhost"
+		echo "Database Name: $dbname"
+		echo "Database User: $dbuser"
+		echo "Password: $dbpass"
+		echo "${gre}"
+		echo "Database successfully created!"
+	fi
+	echo "${end}"
 	
 	#WP-Config.php auto-setup
 	if [[ $setupwp == [yY] ]] ; then

@@ -55,7 +55,12 @@ if [[ -n $wp || -n $wpsubdir || -n $wpsubdom || -n $mysql ]]; then
 			# -wp=[setupmysql,setupwp,dbhost,dbname,dbuser,dbpass,dbpref,extdbuser,extdbpass]
 			custombegin=$(echo "${value}" | cut -c-1)
 			customlast=$(echo "${value}" | rev | cut -c-1)
-			wpdata=${value:1:-1}
+			if [[ $custombegin == "[" && $customlast == "]" || $mysql == true ]]; then
+				wpdata=${value:1:-1}
+			else
+				echo "${red}[ERROR] Please enter a valid custom value!${end}"
+				exit 1
+			fi
 			
 			# Because MySQL format not have this parameters at the beggining to match WP format. Insert it!
 			if [[ -n $mysql && $mysql != true ]]; then
@@ -80,6 +85,12 @@ if [[ -n $wp || -n $wpsubdir || -n $wpsubdom || -n $mysql ]]; then
 			dbprefcustom=$(echo "${wpdata}" | cut -d',' -f 7 -s)
 			exusercustom=$(echo "${wpdata}" | cut -d',' -f 8 -s)
 			expasscustom=$(echo "${wpdata}" | cut -d',' -f 9 -s)
+			
+			# Check if we have ALL the parameters.
+			if [[ $mysql != true && ( -z $setmsqcustom || -z $setpwpcustom || -z $dbhostcustom || -z $dbnamecustom || -z $dbusercustom || -z $dbpasscustom || ( -z $dbprefcustom && -z $mysql && -z $extdata ) || ( -n $exusercustom && -z $expasscustom )) ]]; then
+				echo "${red}[ERROR] Missing parameters!${end}"
+				exit 1
+			fi
 			
 			if [[ $custombegin == "[" && $customlast == "]" && ((($setmsqcustom == "true" || $setpwpcustom == "true") && -n $dbhostcustom && -n $dbnamecustom && -n $dbusercustom && -n $dbpasscustom && (-n $dbprefcustom || ( -n $mysql && $mysql != true ))) || ($setmsqcustom == "false" && $setpwpcustom == "false")) ]]; then
 				[[ -n $mysql && $mysql != true ]] && type="5" || type="3"
