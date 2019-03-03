@@ -458,6 +458,12 @@ deletesite() {
 		[[ $dbdatadel =~ ^(true|false)$ || $delete == "force" ]] && local skip="true"
 	fi
 
+	if [[ $domain == $(conf_read tools-site) || $domain == $(conf_read default-site) ]]; then
+		echo "${red}[WARNING] This site is set as default site or used to access your server tools."
+		echo "Deleting this site can cause unexpected behaviour in your server, please reassign your default/tools site to an existing domain."
+		echo "${end}"
+	fi
+
 	# Determine if site is WP, so you should delete the DB too.
 	if [[ -a /var/www/$domain/wp-config.php || -a /var/www/$domain/htdocs/wp-config.php ]]; then
 		if [[ $skip != "true" ]]; then

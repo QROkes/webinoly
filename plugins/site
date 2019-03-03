@@ -314,7 +314,7 @@ elif [[ ( -n $nocache || ( -n $cache && $cache == "off" )) && -a /etc/nginx/site
 		sudo sed -i '/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
 		echo "${gre}FastCGI Cache in${blu} $domain ${gre}has been disabled!${end}"
 	else
-		echo "${red}Site${blu} $domain ${red}is not a WP site or FastCGI were not enabled!${end}"
+		echo "${red}Site${blu} $domain ${red}is not a WP site or FastCGI is already disabled!${end}"
 		exit 1
 	fi
 	
