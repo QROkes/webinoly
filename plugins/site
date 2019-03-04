@@ -268,6 +268,8 @@ elif [[ -n $proxy && -n $domain ]]; then
 	fi
 	
 	# Check host and port
+	[[ -z $rphost ]] && rphost="localhost"
+	[[ -z $rpport ]] && rpport="8080"
 	code=$(wget -t 1 --timeout=5 --server-response --spider ${rphost}:${rpport} 2>&1 | awk '/^  HTTP/{print $2}')
 	code="${code##*$'\n'}"
 	echo "${red}"
