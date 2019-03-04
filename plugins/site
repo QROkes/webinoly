@@ -107,9 +107,13 @@ if [[ -n $list ]]; then
 	do
 		domi=$(echo $site | cut -f 5 -d "/")
 		[[ -a /var/www/$domi ]] && sign="${gre} -" || sign="${blu} *${gre}"
-		[[ $domi != "default" && $domi != $(conf_read tools-port) ]] && echo "$sign $domi ${end}"
+		if [[ $domi != "default" && $domi != $(conf_read tools-port) ]]; then
+			echo "$sign $domi"
+			nonemptylist=true
+		fi
 	done
-	echo ""
+	[[ -z $nonemptylist ]] && echo "${blu}[Empty] No sites were found!"
+	echo "${end}"
 
 	
 # Delete all sites
