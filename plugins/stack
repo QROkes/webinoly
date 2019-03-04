@@ -31,11 +31,12 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 	fi
 	
 	echo ""
-	echo "${red} ¡ C A U T I O N !  You are about to remove NGINX from your server!"
+	echo "${red}¡ C A U T I O N !  You are about to remove NGINX from your server!"
+	[[ $(conf_read mysql-tool) == "true" ]] && echo "phpMyAdmin will be removed too because depends on Nginx."
 	echo ""
 	
 	if [[ $(conf_read force-flag) != "true" ]]; then
-		echo " ${blu} Are you sure [y/N]? ${end}"
+		echo " ${blu}Are you sure [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
 		  answer=${answer:-n}
 		  [[ $answer = [YyNn] ]] && break
@@ -54,7 +55,7 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			done
 		fi
 		if [[ $answer == [Yy] ]]; then
-			[[ $(conf_read mysql-tool) == "true" ]] && stack -pma -purge
+			[[ $(conf_read mysql-tool) == "true" ]] && stack -pma -purge=force
 			api-events_update pn2
 			site -delete-all
 			sudo rm -rf /var/www/$(conf_read tools-port)

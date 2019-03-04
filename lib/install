@@ -283,8 +283,10 @@ nginx_optim() {
 		sudo chmod 600 /etc/ssl/dhparam.pem
 	fi
 
+	echo "${gre}Wait while Webinoly optimize your Ubuntu Operating System...${end}"
 	linux_optim > /dev/null 2>&1 &
 	wait $!
+	[[ $(conf_read swap-owner) == "webinoly" ]] && echo "${gre}SWAP file created!${end}"
 
 	# Check for dynamic variables.
 	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off
@@ -552,13 +554,13 @@ swap_create() {
 			# Swap created by Webinoly - so we should remove it in uninstall
 			conf_write swap-owner webinoly
 
-			echo "${gre} A new SWAP Partion (${newswap}Gb) has been created! ${end}"
+			echo "${gre}A new SWAP file (${newswap}Gb) has been created! ${end}"
 		fi
 		api-events_update in6
 	else
 		if [[ $(conf_read swap-owner) != "webinoly" ]]; then
 			conf_write swap-owner system
 		fi
-		echo "${gre} SWAP Memory (${swap}Gb) detected!${end}"
+		echo "${gre}SWAP Memory (${swap}Gb) detected!${end}"
 	fi
 }
