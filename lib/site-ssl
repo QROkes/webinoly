@@ -15,17 +15,15 @@ site_ssl_on() {
 	elif [[ -n $root && ! -a /etc/nginx/sites-available/$root ]]; then
 		echo "${red}Root path domain is not a valid domain or is not found/hosted in this server!${end}"
 		exit 1
-	elif [[ -n $root && $root == true ]]; then
-		echo "${red}Please, enter a valid root path domain!${end}"
-		exit 1
 	fi
 	
 	if [[ ! -d /var/www/$path/htdocs && -z $root_path ]]; then
-		echo "${red}Seems like you are trying to request an SSL Certificate for a Parked/Mapped Domain.${end}"
-		echo "${red}Please, use the '-root=domain.com' parameter to specify the main domain.${end}"
+		echo "${red}[ERROR] Seems like you are trying to request an SSL Certificate for a Parked/Mapped Domain."
+		echo "$Please, use the '-root=domain.com' parameter to specify the main domain."
+		echo ""
+		echo "$If your site is using the Reverse Proxy configuration, please use the '-root-path=/opt/app' option.{end}"
 		exit 1
-	fi
-	if [[ -n $root_path && ! -d $root_path ]]; then
+	elif [[ -n $root_path && ! -d $root_path ]]; then
 		echo "${red}[ERROR] Invalid root path!${end}"
 		exit 1
 	fi
