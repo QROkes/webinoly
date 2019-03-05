@@ -204,4 +204,3 @@ echo "${end}"
 # Remove Installation File
 sudo rm weby
 app_purge
-echo "b:$branch w:$webyversion t:$type o:$opt"
