@@ -21,9 +21,9 @@ if ! $(groups $USERNAME | grep &>/dev/null '\bsudo\b' || groups $USERNAME | grep
 fi
 
 # Prevent "compulsive" re-installation if you currently have the latest version installed.
+checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
 if [[ -a /opt/webinoly/webinoly.conf && $2 != "-ver=beta" && $2 != "-ver=alpha" ]]; then
 	source /opt/webinoly/lib/general
-	checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
 	currentver=$(conf_read app-version)
 	
 	if [[ -n $checkver && -n $currentver && ${checkver//.} -le ${currentver//.} ]]; then
@@ -84,11 +84,14 @@ if [[ $2 == "-ver="* ]]; then
 		if [[ $1 != "api" ]]; then
 			sudo rm weby
 			exit 1
+		else
+			webyversion="$checkver"
+			apiskip=true
 		fi
 	fi
 	echo $(tput sgr0)
 fi
-[[ -z $webyversion ]] && sudo wget --timeout=15 -t 1 --referer="https://webinoly.com/?option=${setup}${update}" -qrO $HOME/webinoly.tar https://qrok.es/wytar
+[[ -z $webyversion || $apiskip == true ]] && sudo wget --timeout=15 -t 1 --referer="https://webinoly.com/?option=${setup}${update}" -qrO $HOME/webinoly.tar https://qrok.es/wytar
 
 
 [[ ! -d /opt/webinoly ]] && sudo mkdir /opt/webinoly
@@ -141,25 +144,32 @@ conf_write app-version $webyversion
 # Ping to Webinoly Stats
 opt=$setup
 branch="Public"
-if [[ $2 == "-ver="* ]]; then
-	type="Custom"
+if [[ $2 == "-ver="* && -z $apiskip ]]; then
 	if ! [[ $ver =~ ^[0-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
 		branch=$ver
 		conf_write branch $ver
+	else
+		type="Custom"
+		webyversion="$checkver"
+		opt=$ver
 	fi
 fi
 
-if [[ -n $update && -n $oldapp ]]; then
-	type="Updates"
-	opt=$oldapp
-elif [[ -z $update && -n $oldapp ]]; then
-	type="Reinstall"
-	opt=$oldapp
-elif [[ $newinst == "true" ]]; then
-	type="New"
-	[[ $1 == "api" ]] && type="API"
-else
-	type="Error"
+if [[ $type != "Custom" ]]; then
+	if [[ -n $update && -n $oldapp ]]; then
+		type="Updates"
+		opt=$oldapp
+	elif [[ -z $update && -n $oldapp ]]; then
+		type="Reinstall"
+		opt=$oldapp
+	elif [[ $newinst == "true" ]]; then
+		type="New"
+		[[ $1 == "api" ]] && type="API"
+	else
+		type="Error"
+	fi
+elif [[ $type == "Custom" && $1 == "api" ]]; then
+	type="API"
 fi
 [[ $statskip == "true" ]] || wget https://api.webinoly.com/stats/?install=${branch}:${webyversion}:${type}:${opt} --referer="Webinoly-Internal-Verified-Stats" --spider --timeout=15 -t 1 -q
 
@@ -194,3 +204,4 @@ echo "${end}"
 # Remove Installation File
 sudo rm weby
 app_purge
+echo "b:$branch w:$webyversion t:$type o:$opt"

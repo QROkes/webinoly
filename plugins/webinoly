@@ -308,6 +308,7 @@ elif [[ -n $uninstall ]]; then
 			sudo rm /usr/bin/httpauth
 			sudo rm /usr/bin/log			
 			echo "${gre}Webinoly App has been removed successfully from your server!${end}"
+			exit 0
 		else
 			echo "${gre}Action aborted!${end}"
 		fi
