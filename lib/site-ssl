@@ -19,9 +19,9 @@ site_ssl_on() {
 	
 	if [[ ! -d /var/www/$path/htdocs && -z $root_path ]]; then
 		echo "${red}[ERROR] Seems like you are trying to request an SSL Certificate for a Parked/Mapped Domain."
-		echo "$Please, use the '-root=domain.com' parameter to specify the main domain."
+		echo "Please, use the '-root=domain.com' parameter to specify the main domain."
 		echo ""
-		echo "$If your site is using the Reverse Proxy configuration, please use the '-root-path=/opt/app' option.{end}"
+		echo "If your site is using the Reverse Proxy configuration, please use the '-root-path=/opt/app' option.${end}"
 		exit 1
 	elif [[ -n $root_path && ! -d $root_path ]]; then
 		echo "${red}[ERROR] Invalid root path!${end}"
