@@ -43,7 +43,7 @@ type="0"
 if [[ -n $wp || -n $wpsubdir || -n $wpsubdom || -n $mysql ]]; then
 	[[ -n $mysql ]] || type="1"
 
-	if [[ $wp != true || $wpsubdir != true || $wpsubdom != true || $mysql != true ]]; then
+	if [[ ( -n $wp && $wp != true ) || ( -n $wpsubdir && $wpsubdir != true ) || ( -n $wpsubdom && $wpsubdom != true ) || ( -n $mysql && $mysql != true ) ]]; then
 		if [[ $wp == "default" || $wpsubdir == "default" || $wpsubdom == "default" || $mysql == "default" ]]; then
 			[[ $mysql == "default" ]] && type="4" || type="2"
 		else
