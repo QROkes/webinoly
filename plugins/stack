@@ -18,8 +18,6 @@ if [[ $purge == "force" || $purge_server_all == "force" || $php == "force" ]]; t
 	conf_write force-flag true
 	force="1"
 fi
-# We need clear the php var for compatibility with the multi-php feature
-[[ -n $php && $php != true && $(conf_read multi-php) != "true" ]] && php=true
 
 
 # Delete/Purge some stack
@@ -302,6 +300,12 @@ elif [[ -n $html || -n $nginx ]]; then
 	fi
 	
 elif [[ -n $php ]]; then
+	# Check for a valid custom value.
+	if [[ -n $php && $php != true && $(conf_read multi-php) != "true" && $php != "force" ]]; then
+		echo "${red}Please, enter a valid PHP custom value!${end}"
+		exit 1
+	fi
+	
 	if [[ $(conf_read php) != "true" || ( $php != true && $(conf_read php-v${php}) != "true" ) ]]; then
 		if [[ $(conf_read nginx) != "true" && $(conf_read force-flag) != "true" ]]; then
 			echo ""
@@ -313,7 +317,7 @@ elif [[ -n $php ]]; then
 			[[ $answer != [Nn] ]] && stack -nginx $2
 		fi
 		
-		[[ $php != true ]] && php_install $php || php_install
+		[[ $php != true && $(conf_read multi-php) == "true" ]] && php_install $php || php_install
 		[[ $php != true && $(conf_read php-v${php}) == "true" ]] && php_optim $php || php_optim
 		[[ -z $notools && $(conf_read php-tool) != "true" ]] && php_tool
 		echo ""
