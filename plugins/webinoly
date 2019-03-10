@@ -339,15 +339,13 @@ elif [[ -n $external_sources_update ]]; then
 	
 	echo ""
 	echo "${blu}- Downloading Timezone Database!${end}"
-	sudo wget --timeout=15 -t 1 -qrO /tmp/temp-timezonedb.zip https://timezonedb.com/files/timezonedb.csv.zip
-	if [[ -s /tmp/temp-timezonedb.zip ]]; then
+	sudo wget --timeout=15 -t 1 -qrO /tmp/timezonedb.tgz https://pecl.php.net/get/timezonedb
+	if [[ -s /tmp/timezonedb.tgz ]]; then
 		echo "${blu}- Processing file!${end}"
-		sudo unzip -qq /tmp/temp-timezonedb.zip -d /tmp/tz/
-		sudo cut -d',' -f3 /tmp/tz/zone.csv >> timezone.dat
-		sudo sed -i 's/"//g' timezone.dat
-		sudo mv timezone.dat /opt/webinoly/lib/
-		sudo rm -rf /tmp/tz
-		sudo rm /tmp/temp-timezonedb.zip
+		sudo tar -xf /tmp/timezonedb.tgz -C /tmp/ --wildcards --no-anchored timezonedb-*/timezonedb.h --strip-components=1
+		sudo sed -i '/^\t{.*},$/!d' /tmp/timezonedb.h
+		sudo cut -d'"' -f2 /tmp/timezonedb.h > /opt/webinoly/lib/timezone.dat
+		sudo rm /tmp/timezonedb.*
 		echo "${gre}Timezone Database has been successfully updated!${end}"
 	else
 		echo "${red}[ERROR] Timezone Database not updated!${end}"
