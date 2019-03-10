@@ -434,8 +434,14 @@ elif [[ -n $blockip ]]; then
 	if [[ -a /etc/nginx/conf.d/blockips.conf ]]; then
 		[[ $blockip == true ]] && read -p "${blu}IP address to block: ${end}" blockip
 		if [[ $blockip =~ ^[\.0-9A-Za-z\/]+$ ]]; then
-			sh -c "echo -n 'deny $blockip;\n' >> /etc/nginx/conf.d/blockips.conf"
-			echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully blocked!${end}"
+			exist=$( grep -E "^deny $blockip;$" /etc/nginx/conf.d/blockips.conf )
+			if [[ -z $exist ]]; then
+				sh -c "echo -n 'deny $blockip;\n' >> /etc/nginx/conf.d/blockips.conf"
+				echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully blocked!${end}"
+			else
+				echo "${red}IP '$blockip' is already blocked!${end}"
+				exit 1
+			fi
 		else	
 			echo "${red}[ERROR] Please, enter a valid value!${end}"
 			exit 1

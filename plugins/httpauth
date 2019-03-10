@@ -101,9 +101,15 @@ elif [[ -n $whitelist ]]; then
 	if [[ -a /etc/nginx/common/acl.conf ]]; then
 		[[ $whitelist == true ]] && read -p "${blu}IP address to whitelist: ${end}" whitelist
 		if [[ -n $whitelist && $whitelist =~ ^[\.0-9A-Za-z\/]+$ ]]; then
-			sudo sed -i "/deny all;/i \allow ${whitelist};" /etc/nginx/common/acl.conf
-			sudo service nginx reload
-			echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully whitelisted!${end}"
+			exist=$( grep -E "^allow $whitelist;$" /etc/nginx/common/acl.conf )
+			if [[ -z $exist ]]; then
+				sudo sed -i "/deny all;/i \allow ${whitelist};" /etc/nginx/common/acl.conf
+				sudo service nginx reload
+				echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully whitelisted!${end}"
+			else
+				echo "${red}IP '$whitelist' is already whitelisted!${end}"
+				exit 1
+			fi
 		else	
 			echo "${red}[ERROR] Please, enter a valid value!${end}"
 			exit 1
