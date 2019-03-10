@@ -433,7 +433,7 @@ elif [[ -n $version || -n $v || -n $V ]]; then
 elif [[ -n $blockip ]]; then
 	if [[ -a /etc/nginx/conf.d/blockips.conf ]]; then
 		[[ $blockip == true ]] && read -p "${blu}IP address to block: ${end}" blockip
-		if [[ $blockip =~ ^[\.0-9A-Za-z\/]+$ ]]; then
+		if [[ $(ip_check $blockip) == "true" ]]; then
 			exist=$( grep -E "^deny $blockip;$" /etc/nginx/conf.d/blockips.conf )
 			if [[ -z $exist ]]; then
 				sh -c "echo -n 'deny $blockip;\n' >> /etc/nginx/conf.d/blockips.conf"
@@ -443,7 +443,7 @@ elif [[ -n $blockip ]]; then
 				exit 1
 			fi
 		else	
-			echo "${red}[ERROR] Please, enter a valid value!${end}"
+			echo "${red}[ERROR] Please, enter a valid IP value!${end}"
 			exit 1
 		fi
 	else
@@ -455,12 +455,12 @@ elif [[ -n $blockip ]]; then
 elif [[ -n $unblockip ]]; then
 	if [[ -a /etc/nginx/conf.d/blockips.conf ]]; then
 		[[ $unblockip == true ]] && read -p "${blu}IP address to unblock: ${end}" unblockip
-		if [[ $unblockip =~ ^[\.0-9A-Za-z\/]+$ ]]; then
+		if [[ $(ip_check $unblockip) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
 			sed -i "\#^deny ${unblockip};#d" /etc/nginx/conf.d/blockips.conf
 			echo "${gre}The IP address ${blu}'$unblockip'${gre} was successfully unblocked!${end}"
 		else
-			echo "${red}[ERROR] Please, enter a valid value!${end}"
+			echo "${red}[ERROR] Please, enter a valid IP value!${end}"
 			exit 1
 		fi
 	else

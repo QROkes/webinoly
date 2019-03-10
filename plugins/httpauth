@@ -100,7 +100,7 @@ elif [[ -n $wp_admin_on || -n $wp_admin_off || -n $wp_admin ]]; then
 elif [[ -n $whitelist ]]; then
 	if [[ -a /etc/nginx/common/acl.conf ]]; then
 		[[ $whitelist == true ]] && read -p "${blu}IP address to whitelist: ${end}" whitelist
-		if [[ -n $whitelist && $whitelist =~ ^[\.0-9A-Za-z\/]+$ ]]; then
+		if [[ $(ip_check $whitelist) == "true" ]]; then
 			exist=$( grep -E "^allow $whitelist;$" /etc/nginx/common/acl.conf )
 			if [[ -z $exist ]]; then
 				sudo sed -i "/deny all;/i \allow ${whitelist};" /etc/nginx/common/acl.conf
@@ -111,7 +111,7 @@ elif [[ -n $whitelist ]]; then
 				exit 1
 			fi
 		else	
-			echo "${red}[ERROR] Please, enter a valid value!${end}"
+			echo "${red}[ERROR] Please, enter a valid IP value!${end}"
 			exit 1
 		fi
 	else
@@ -123,13 +123,13 @@ elif [[ -n $whitelist ]]; then
 elif [[ -n $whitelist_remove ]]; then
 	if [[ -a /etc/nginx/common/acl.conf ]]; then
 		[[ $whitelist_remove == true ]] && read -p "${blu}IP address to remove from whitelist: ${end}" whitelist_remove
-		if [[ -n $whitelist_remove && $whitelist_remove =~ ^[\.0-9A-Za-z\/]+$ ]]; then
+		if [[ $(ip_check $whitelist_remove) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
 			sudo sed -i "\#^allow ${whitelist_remove};#d" /etc/nginx/common/acl.conf
 			sudo service nginx reload
 			echo "${gre}The IP address ${blu}'$whitelist_remove'${gre} was successfully removed from whitelist!${end}"
 		else
-			echo "${red}Please, enter a valid value!${end}"
+			echo "${red}Please, enter a valid IP value!${end}"
 			exit 1
 		fi
 	else
