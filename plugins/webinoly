@@ -537,8 +537,8 @@ elif [[ -n $default_site ]]; then
 			remove_domain_default_site
 			sudo sed -i "s/listen 80;/listen 80 default_server;/" /etc/nginx/sites-available/$default_site
 			sudo sed -i "s/listen \[::\]:80;/listen [::]:80 default_server;/" /etc/nginx/sites-available/$default_site
-			sudo sed -i "s/listen 443 ssl http2;/listen 443 ssl http2 default_server;/" /etc/nginx/sites-available/$default_site
-			sudo sed -i "s/listen \[::\]:443 ssl http2;/listen [::]:443 ssl http2 default_server;/" /etc/nginx/sites-available/$default_site
+			sudo sed -i '/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 ssl http2;/listen 443 ssl http2 default_server;/}' /etc/nginx/sites-available/$default_site
+			sudo sed -i '/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 ssl http2;/listen [::]:443 ssl http2 default_server;/}' /etc/nginx/sites-available/$default_site
 			
 			# If default site is Non-SSL, we need add a blackhole for port 443.
 			isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$default_site | grep -F "ssl_certificate_key")

@@ -306,7 +306,7 @@ elif [[ -n $php ]]; then
 		exit 1
 	fi
 	
-	if [[ $(conf_read php) != "true" || ( $php != true && $(conf_read php-v${php}) != "true" ) ]]; then
+	if [[ $(conf_read php) != "true" || ( $(conf_read multi-php) == "true" && $php != true && $(conf_read php-v${php}) != "true" ) ]]; then
 		if [[ $(conf_read nginx) != "true" && $(conf_read force-flag) != "true" ]]; then
 			echo ""
 			echo "${blu}Nginx is not installed, do you want to install it too [Y/n]?${end} "
