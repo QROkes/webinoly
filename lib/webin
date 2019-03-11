@@ -428,7 +428,7 @@ webinoly_verify() {
 		warning="1"
 	fi
 	if [[ -n $(conf_read tools-site) && ! -L /etc/nginx/sites-enabled/$(conf_read tools-site) ]]; then
-		echo "[WARNING] Default site not found or is not enabled!"
+		echo "[WARNING] Tools site not found or is not enabled!"
 		warning="1"
 	fi
 	
@@ -563,11 +563,14 @@ remove_domain_default_site() {
 	# In case we have a domain as default before.
 	if ! [[ $(conf_read default-site) =~ ^(default|blackhole)$ || -z $(conf_read default-site) ]]; then
 		[[ ! -L /etc/nginx/sites-enabled/default && -a /etc/nginx/sites-available/default ]] && sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
-		sudo sed -i "s/listen 80 default_server;/listen 80;/" /etc/nginx/sites-available/$(conf_read default-site)
-		sudo sed -i "s/listen \[::\]:80 default_server;/listen [::]:80;/" /etc/nginx/sites-available/$(conf_read default-site)
-		sudo sed -i "s/listen 443 ssl http2 default_server;/listen 443 ssl http2;/" /etc/nginx/sites-available/$(conf_read default-site)
-		sudo sed -i "s/listen \[::\]:443 ssl http2 default_server;/listen [::]:443 ssl http2;/" /etc/nginx/sites-available/$(conf_read default-site)
-		sudo sed -i '/WebinolyStartBlackhole/,/WebinolyEndBlackhole/{/.*/d}' /etc/nginx/sites-available/$(conf_read default-site)
+		# Check in case site was deleted!
+		if [[ -a /etc/nginx/sites-available/$(conf_read default-site) ]]; then
+			sudo sed -i "s/listen 80 default_server;/listen 80;/" /etc/nginx/sites-available/$(conf_read default-site)
+			sudo sed -i "s/listen \[::\]:80 default_server;/listen [::]:80;/" /etc/nginx/sites-available/$(conf_read default-site)
+			sudo sed -i "s/listen 443 ssl http2 default_server;/listen 443 ssl http2;/" /etc/nginx/sites-available/$(conf_read default-site)
+			sudo sed -i "s/listen \[::\]:443 ssl http2 default_server;/listen [::]:443 ssl http2;/" /etc/nginx/sites-available/$(conf_read default-site)
+			sudo sed -i '/WebinolyStartBlackhole/,/WebinolyEndBlackhole/{/.*/d}' /etc/nginx/sites-available/$(conf_read default-site)
+		fi
 	fi
 }
 
