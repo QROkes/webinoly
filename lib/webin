@@ -422,6 +422,40 @@ webinoly_verify() {
 		error="1"
 	fi
 
+	# Check for Tools and Default site.
+	if [[ -n $(conf_read default-site) && ! -L /etc/nginx/sites-enabled/$(conf_read default-site) ]]; then
+		echo "[WARNING] Default site not found or is not enabled!"
+		warning="1"
+	fi
+	if [[ -n $(conf_read tools-site) && ! -L /etc/nginx/sites-enabled/$(conf_read tools-site) ]]; then
+		echo "[WARNING] Default site not found or is not enabled!"
+		warning="1"
+	fi
+	
+	# Check for PHP and MySQL version
+	if [[ $(conf_read php) == "true" && $(php -v | grep -m1 "" | sed 's/PHP \([^\-]*\).*/\1/' | cut -f 1-2 -d'.') != "7.3" ]]; then
+		echo "[INFO] PHP v7.3 is recommended to get an optimal perfomance!"
+	fi
+	if [[ $(conf_read mysql) == "true" && $(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.') != "10.3" ]]; then
+		echo "[INFO] MariaDB (MySQL) v10.3 is recommended to get an optimal perfomance!"
+	fi
+	
+	# Check OS support
+	distr=`echo $(lsb_release -i | cut -d':' -f 2)`
+	osver=`echo $(lsb_release -c | cut -d':' -f 2)`
+	if [[ $distr != "Ubuntu" ]]; then
+		echo "[ERROR] This Operating System is not supported!"
+		error="1"
+	elif ! [[ $osver =~ ^(xenial|bionic)$ ]]; then
+		echo "[ERROR] This Ubuntu Distro is not supported!"
+		error="1"
+	fi
+	# Check for sudo/root privileges
+	if ! $(groups $USERNAME | grep &>/dev/null '\bsudo\b' || groups $USERNAME | grep &>/dev/null '\broot\b'); then
+		echo "[WARNING] This user has no Sudo/Root privileges!"
+		warning="1"
+	fi
+
 	
 	echo ""
 	if [ $error != 0 ]; then
