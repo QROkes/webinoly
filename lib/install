@@ -170,7 +170,7 @@ nginx_install() {
 
 php_install() {
 	api-events_update ip1
-	if [[ -n $(conf_read php-ver) && ($(conf_read php-ver) == "7.3" || $(conf_read php-ver) == "7.2" || $(conf_read php-ver) == "7.1" || $(conf_read php-ver) == "7.0" || $(conf_read php-ver) == "5.6") ]]; then
+	if [[ -n $(conf_read php-ver) && ($(conf_read php-ver) == "7.3" || $(conf_read php-ver) == "7.2" || $(conf_read php-ver) == "7.1" ]]; then
 		echo "${gre}PHP version '$(conf_read php-ver)' is set as default.${end}"
 	else
 		# Default PHP version
@@ -179,7 +179,7 @@ php_install() {
 	ver=$(conf_read php-ver)
 	
 	# Multi-PHP
-	if [[ $(conf_read multi-php) == "true" && -n $1 && $1 =~ ^(5.6|7.0|7.1|7.2|7.3)$ && $(conf_read php) == "true" && $1 != $ver ]]; then
+	if [[ $(conf_read multi-php) == "true" && -n $1 && $1 =~ ^(7.1|7.2|7.3)$ && $(conf_read php) == "true" && $1 != $ver ]]; then
 		ver="$1"
 		echo "${gre}Multi-PHP version is enabled. PHP '$ver' will be installed!${end}"
 	elif [[ $(conf_read multi-php) != "true" && -n $1 ]]; then
@@ -197,11 +197,11 @@ php_install() {
 	pre_install
 	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-recode php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
 	
-	if [[ -n $ver && ($ver == "7.1" || $ver == "7.0" || $ver == "5.6") ]]; then
+	if [[ -n $ver && $ver == "7.1" ]]; then
 		# mcrypt deprecated in 7.2
 		sudo apt -y install php${ver}-mcrypt
 	fi
-	if [[ -n $ver && ($ver == "7.3" || $ver == "7.2" || $ver == "7.1" || $ver == "7.0") ]]; then
+	if [[ -n $ver && ($ver == "7.3" || $ver == "7.2" || $ver == "7.1" ) ]]; then
 		# xdebug deprecated in 5.6
 		sudo apt -y install php-xdebug
 	fi
@@ -345,8 +345,6 @@ php_optim() {
 		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
 		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
 		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9004' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9006' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 5.6 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9008' /etc/php/$ver/fpm/pool.d/www.conf
 	else
 		sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
 	fi
@@ -362,13 +360,11 @@ php_optim() {
 		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
 		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/debug.conf
 		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9005' /etc/php/$ver/fpm/pool.d/debug.conf
-		[[ $ver == 7.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9007' /etc/php/$ver/fpm/pool.d/debug.conf
-		[[ $ver == 5.6 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9009' /etc/php/$ver/fpm/pool.d/debug.conf
 	else
 		sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
 	fi
 	
-	if [[ -n $ver && ($ver == "7.3" || $ver == "7.2" || $ver == "7.1" || $ver == "7.0") ]]; then
+	if [[ -n $ver && ($ver == "7.3" || $ver == "7.2" || $ver == "7.1") ]]; then
 		# xdebug deprecated in 5.6
 		sudo echo 'php_admin_flag[xdebug.profiler_enable] = off' >> /etc/php/$ver/fpm/pool.d/debug.conf
 		sudo echo 'php_admin_flag[xdebug.profiler_enable_trigger] = on' >> /etc/php/$ver/fpm/pool.d/debug.conf
