@@ -3,7 +3,7 @@ source /opt/webinoly/lib/general
 
 
 app_version() { 
-	local app_ver="1.7.4"
+	local app_ver="1.8.0"
 	echo $app_ver
 }
 svr_version() { 
@@ -170,7 +170,7 @@ nginx_install() {
 
 php_install() {
 	api-events_update ip1
-	if [[ -n $(conf_read php-ver) && ($(conf_read php-ver) == "7.3" || $(conf_read php-ver) == "7.2" || $(conf_read php-ver) == "7.1" ]]; then
+	if [[ -n $(conf_read php-ver) && ($(conf_read php-ver) == "7.3" || $(conf_read php-ver) == "7.2" || $(conf_read php-ver) == "7.1") ]]; then
 		echo "${gre}PHP version '$(conf_read php-ver)' is set as default.${end}"
 	else
 		# Default PHP version

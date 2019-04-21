@@ -423,7 +423,7 @@ webinoly_verify() {
 	fi
 
 	# Check for Tools and Default site.
-	if [[ -n $(conf_read default-site) && ! -L /etc/nginx/sites-enabled/$(conf_read default-site) ]]; then
+	if [[ -n $(conf_read default-site) && ! ( $(conf_read default-site) =~ ^(default|blackhole)$ ) && ! -L /etc/nginx/sites-enabled/$(conf_read default-site) ]]; then
 		echo "[WARNING] Default site not found or is not enabled!"
 		warning="1"
 	fi
@@ -477,10 +477,11 @@ webinoly_verify() {
 
 
 system_info() {
-	ramv=$(($(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024))
-	[[ $ramv -ge 1024 ]] && ramv="$(($ramv/1024))Gb" || ramv="${ramv}Mb"
-	swapv=$(($(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024))
-	[[ $swapv -ge 1024 ]] && swapv="$(($swapv/1024))Gb" || swapv="${swapv}Mb"
+	# We use 1000 instead of 1024 for better accuracy in the real world, I don't know why!
+	ramv=$(($(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1000))
+	[[ $ramv -ge 1000 ]] && ramv="$(($ramv/1000))Gb" || ramv="${ramv}Mb"
+	swapv=$(($(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1000))
+	[[ $swapv -ge 1000 ]] && swapv="$(($swapv/1000))Gb" || swapv="${swapv}Mb"
 	
 	echo "${blu}"
 	echo "[SYSTEM]"
