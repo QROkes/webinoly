@@ -63,10 +63,10 @@ elif [[ -n $list ]]; then
 		while read line
 		do
 			# Show only the user_name part, cut encrypted password string
-			[[ -z $raw ]] && echo "${gre}+ $(echo $line | cut -f 1 -d ':') ${end}" || echo "$line" | cut -f 1 -d ':'
+			[[ $list == "raw" || -n $raw ]] && echo "$line" | cut -f 1 -d ':' || echo "${gre}+ $(echo $line | cut -f 1 -d ':') ${end}"
 			nonemptylist=true
 		done
-		[[ -z $nonemptylist && -z $raw ]] && echo "${blu}[Empty] No users were found!${end}"
+		[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No users were found!${end}"
 		}
 	fi
 	echo ""

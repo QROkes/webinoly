@@ -77,8 +77,8 @@ elif [[ -n $dbpass ]]; then
 		rpass=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 		apass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 		echo ""
-		[[ -z $raw ]] && echo "${gre}  root: $rpass" || echo "root:$rpass"
-		[[ -z $raw ]] && echo "  admin: $apass ${end}" || echo "admin:$apass"
+		[[ $dbpass == "raw" || -n $raw ]] && echo "root:$rpass" || echo "${gre}  root: $rpass"
+		[[ $dbpass == "raw" || -n $raw ]] && echo "admin:$apass" || echo "  admin: $apass ${end}"
 		echo ""
 	else
 		echo "${red}"

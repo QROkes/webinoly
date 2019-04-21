@@ -111,7 +111,7 @@ if [[ -n $list ]]; then
 			[[ ! -L /etc/nginx/sites-enabled/$domi ]] && sign="${red} -"
 			outlist="$sign $domi ${end}"
 			
-			if [[ -n $raw && $raw =~ ^(all|parked|disabled|main|true)$ ]]; then
+			if [[ $list == "raw" || $raw =~ ^(all|parked|disabled|main|true)$ ]]; then
 				outlist="$domi"
 				[[ $raw == "parked" && -a /var/www/$domi ]] && outlist=""
 				[[ $raw == "disabled" && -L /etc/nginx/sites-enabled/$domi ]] && outlist=""
@@ -127,7 +127,7 @@ if [[ -n $list ]]; then
 			fi
 		fi
 	done
-	[[ -z $nonemptylist && -z $raw ]] && echo "${blu}[Empty] No sites were found!${end}"
+	[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No sites were found!${end}"
 	echo ""
 
 	
