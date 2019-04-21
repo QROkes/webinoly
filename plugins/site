@@ -106,13 +106,28 @@ if [[ -n $list ]]; then
 	for site in "/etc/nginx/sites-available"/*
 	do
 		domi=$(echo $site | cut -f 5 -d "/")
-		[[ -a /var/www/$domi ]] && sign="${gre} -" || sign="${blu} *${gre}"
 		if [[ $domi != "default" && $domi != $(conf_read tools-port) ]]; then
-			echo "$sign $domi"
-			nonemptylist=true
+			[[ -a /var/www/$domi ]] && sign="${gre} +" || sign="${blu} *${gre}"
+			[[ ! -L /etc/nginx/sites-enabled/$domi ]] && sign="${red} -"
+			outlist="$sign $domi"
+			
+			if [[ -n $raw && $raw =~ ^(all|parked|disabled|main|true)$ ]]; then
+				outlist="$domi"
+				[[ $raw == "parked" && -a /var/www/$domi ]] && outlist=""
+				[[ $raw == "disabled" && -L /etc/nginx/sites-enabled/$domi ]] && outlist=""
+				[[ $raw == "main" && ( ! -L /etc/nginx/sites-enabled/$domi || ! -a /var/www/$domi ) ]] && outlist=""
+			elif [[ -n $raw ]]; then
+				echo "${red}[ERROR] Please, enter a valid value for RAW!${end}"
+				exit 1
+			fi
+			
+			if [[ -n $outlist ]]; then
+				echo "$outlist"
+				nonemptylist=true
+			fi
 		fi
 	done
-	[[ -z $nonemptylist ]] && echo "${blu}[Empty] No sites were found!"
+	[[ -z $nonemptylist && -z $raw ]] && echo "${blu}[Empty] No sites were found!"
 	echo "${end}"
 
 	
