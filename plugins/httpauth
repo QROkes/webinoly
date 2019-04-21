@@ -54,24 +54,7 @@ elif [[ -n $delete ]]; then
 	sudo sed -i "/^$userpurge:/d" /etc/nginx/.htpasswd
 	echo "${gre}User '$userpurge has been deleted successfully!${end}"
 
-	
-elif [[ -n $list ]]; then
-	echo ""
-	if [[ -a /etc/nginx/.htpasswd ]]; then
-		cat /etc/nginx/.htpasswd | 
-		{
-		while read line
-		do
-			# Show only the user_name part, cut encrypted password string
-			[[ $list == "raw" || -n $raw ]] && echo "$line" | cut -f 1 -d ':' || echo "${gre}+ $(echo $line | cut -f 1 -d ':') ${end}"
-			nonemptylist=true
-		done
-		[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No users were found!${end}"
-		}
-	fi
-	echo ""
-
-	
+		
 elif [[ -n $wp_admin_on || -n $wp_admin_off || -n $wp_admin ]]; then
 	[[ $(conf_read nginx) == "true" ]] && iswpadon=$( grep -F "acl.conf;" /etc/nginx/common/wpcommon.conf )
 	if [[ -n $wp_admin_on || $wp_admin == "on" ]]; then
@@ -106,20 +89,26 @@ elif [[ -n $wp_admin_on || -n $wp_admin_off || -n $wp_admin ]]; then
 
 elif [[ -n $whitelist ]]; then
 	if [[ -a /etc/nginx/common/acl.conf ]]; then
-		[[ $whitelist == true ]] && read -p "${blu}IP address to whitelist: ${end}" whitelist
-		if [[ $(ip_check $whitelist) == "true" ]]; then
-			exist=$( grep -E "^allow $whitelist;$" /etc/nginx/common/acl.conf )
-			if [[ -z $exist ]]; then
-				sudo sed -i "/deny all;/i \allow ${whitelist};" /etc/nginx/common/acl.conf
-				sudo service nginx reload
-				echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully whitelisted!${end}"
-			else
-				echo "${red}IP '$whitelist' is already whitelisted!${end}"
+		if [[ -n $list ]]; then
+			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${blu}"
+			sudo sed -n 's/^allow //p;' /etc/nginx/common/acl.conf | sudo sed -n 's/;$//p'
+			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
+		else
+			[[ $whitelist == true ]] && read -p "${blu}IP address to whitelist: ${end}" whitelist
+			if [[ $(ip_check $whitelist) == "true" ]]; then
+				exist=$( grep -E "^allow $whitelist;$" /etc/nginx/common/acl.conf )
+				if [[ -z $exist ]]; then
+					sudo sed -i "/deny all;/i \allow ${whitelist};" /etc/nginx/common/acl.conf
+					sudo service nginx reload
+					echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully whitelisted!${end}"
+				else
+					echo "${red}IP '$whitelist' is already whitelisted!${end}"
+					exit 1
+				fi
+			else	
+				echo "${red}[ERROR] Please, enter a valid IP value!${end}"
 				exit 1
 			fi
-		else	
-			echo "${red}[ERROR] Please, enter a valid IP value!${end}"
-			exit 1
 		fi
 	else
 		echo "${red}[ERROR] Nginx file not found!${end}"
@@ -145,6 +134,23 @@ elif [[ -n $whitelist_remove ]]; then
 	fi	
 
 	
+elif [[ -n $list ]]; then
+	echo ""
+	if [[ -a /etc/nginx/.htpasswd ]]; then
+		cat /etc/nginx/.htpasswd | 
+		{
+		while read line
+		do
+			# Show only the user_name part, cut encrypted password string
+			[[ $list == "raw" || -n $raw ]] && echo "$line" | cut -f 1 -d ':' || echo "${gre}+ $(echo $line | cut -f 1 -d ':') ${end}"
+			nonemptylist=true
+		done
+		[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No users were found!${end}"
+		}
+	fi
+	echo ""
+
+
 else
 	echo "${red}[ERROR] Please enter a valid option!${end}"
 	exit 1

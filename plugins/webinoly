@@ -435,19 +435,25 @@ elif [[ -n $version || -n $v || -n $V ]]; then
 
 elif [[ -n $blockip ]]; then
 	if [[ -a /etc/nginx/conf.d/blockips.conf ]]; then
-		[[ $blockip == true ]] && read -p "${blu}IP address to block: ${end}" blockip
-		if [[ $(ip_check $blockip) == "true" ]]; then
-			exist=$( grep -E "^deny $blockip;$" /etc/nginx/conf.d/blockips.conf )
-			if [[ -z $exist ]]; then
-				sh -c "echo -n 'deny $blockip;\n' >> /etc/nginx/conf.d/blockips.conf"
-				echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully blocked!${end}"
-			else
-				echo "${red}IP '$blockip' is already blocked!${end}"
+		if [[ -n $list ]]; then
+			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${blu}"
+			sudo sed -n 's/^deny //p;' /etc/nginx/conf.d/blockips.conf | sudo sed -n 's/;$//p'
+			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
+		else
+			[[ $blockip == true ]] && read -p "${blu}IP address to block: ${end}" blockip
+			if [[ $(ip_check $blockip) == "true" ]]; then
+				exist=$( grep -E "^deny $blockip;$" /etc/nginx/conf.d/blockips.conf )
+				if [[ -z $exist ]]; then
+					sh -c "echo -n 'deny $blockip;\n' >> /etc/nginx/conf.d/blockips.conf"
+					echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully blocked!${end}"
+				else
+					echo "${red}IP '$blockip' is already blocked!${end}"
+					exit 1
+				fi
+			else	
+				echo "${red}[ERROR] Please, enter a valid IP value!${end}"
 				exit 1
 			fi
-		else	
-			echo "${red}[ERROR] Please, enter a valid IP value!${end}"
-			exit 1
 		fi
 	else
 		echo "${red}[ERROR] Nginx file not found!${end}"
