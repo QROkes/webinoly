@@ -3,7 +3,7 @@
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
 # Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off, -force-redirect
-# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard
+# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw
 
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
@@ -16,7 +16,7 @@ check_for_parameters $@
 
 if [[ ! $(conf_read nginx) == "true" ]]; then
 	echo ""
-	echo "${red} NGINX is required to create a site! ${end}"
+	echo "${red}[ERROR] NGINX is required to create a site! ${end}"
 	echo ""
 	exit 1
 fi
@@ -109,7 +109,7 @@ if [[ -n $list ]]; then
 		if [[ $domi != "default" && $domi != $(conf_read tools-port) ]]; then
 			[[ -a /var/www/$domi ]] && sign="${gre} +" || sign="${blu} *${gre}"
 			[[ ! -L /etc/nginx/sites-enabled/$domi ]] && sign="${red} -"
-			outlist="$sign $domi"
+			outlist="$sign $domi ${end}"
 			
 			if [[ -n $raw && $raw =~ ^(all|parked|disabled|main|true)$ ]]; then
 				outlist="$domi"
@@ -127,8 +127,8 @@ if [[ -n $list ]]; then
 			fi
 		fi
 	done
-	[[ -z $nonemptylist && -z $raw ]] && echo "${blu}[Empty] No sites were found!"
-	echo "${end}"
+	[[ -z $nonemptylist && -z $raw ]] && echo "${blu}[Empty] No sites were found!${end}"
+	echo ""
 
 	
 # Delete all sites

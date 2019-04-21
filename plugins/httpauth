@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Http-Authentication Plugin
-# Syntax: httpauth <option>
-# Options: -add, -delete, -list, -wp-admin-on, -wp-admin-off, -whitelist, -whitelist-remove
+# Syntax: httpauth <option> <argument>
+# Options: -add, -delete, -list, -wp-admin, -whitelist, -whitelist-remove
+# Arguments: -raw
 
 source /opt/webinoly/lib/general
 check_for_parameters $@
@@ -55,14 +56,20 @@ elif [[ -n $delete ]]; then
 
 	
 elif [[ -n $list ]]; then
-	[[ ! -a /etc/nginx/.htpasswd ]] && exit 0
-	echo "${gre}"
-	cat /etc/nginx/.htpasswd | while read line
+	echo ""
+	if [[ -a /etc/nginx/.htpasswd ]]; then
+		cat /etc/nginx/.htpasswd | 
+		{
+		while read line
 		do
 			# Show only the user_name part, cut encrypted password string
-			echo "-  $line" | cut -f 1 -d ':'
+			[[ -z $raw ]] && echo "${gre}+ $(echo $line | cut -f 1 -d ':') ${end}" || echo "$line" | cut -f 1 -d ':'
+			nonemptylist=true
 		done
-	echo "${end}"
+		[[ -z $nonemptylist && -z $raw ]] && echo "${blu}[Empty] No users were found!${end}"
+		}
+	fi
+	echo ""
 
 	
 elif [[ -n $wp_admin_on || -n $wp_admin_off || -n $wp_admin ]]; then

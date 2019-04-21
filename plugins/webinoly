@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Webinoly Server Manager Plugin
-# Syntax: webinoly <option>
+# Syntax: webinoly <option> <argument>
 # Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site
+# Arguments: -raw
 
 source /opt/webinoly/lib/webin
 check_for_parameters $@
@@ -73,13 +74,15 @@ elif [[ -n $verify ]]; then
 	
 elif [[ -n $dbpass ]]; then
 	if [[ -n $(conf_read mysql-root) || -n $(conf_read mysql-admin) ]]; then
-		echo "${gre}"
-		echo "  root: $( echo $(conf_read mysql-root) | openssl enc -d -a -salt )"
-		echo "  admin: $( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )"
-		echo "${end}"
+		rpass=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+		apass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+		echo ""
+		[[ -z $raw ]] && echo "${gre}  root: $rpass" || echo "root:$rpass"
+		[[ -z $raw ]] && echo "  admin: $apass ${end}" || echo "admin:$apass"
+		echo ""
 	else
 		echo "${red}"
-		echo "DB Passwords not found!"
+		echo "[ERROR] DB Passwords not found!"
 		echo "${end}"
 		exit 1
 	fi
