@@ -7,6 +7,7 @@
 
 source /opt/webinoly/lib/general
 check_for_parameters $@
+api-events_update has
 
 if [[ $(conf_read nginx) != "true" && ( -n $add || -n $delete || -n $list || -n $whitelist || -n $whitelist_remove ) ]]; then
 	echo "${red}[ERROR] NGINX is required to get HTTP Authentication working properly! ${end}"
@@ -155,3 +156,5 @@ else
 	echo "${red}[ERROR] Please enter a valid option!${end}"
 	exit 1
 fi
+
+api-events_update hae

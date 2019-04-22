@@ -12,7 +12,7 @@ source /opt/webinoly/lib/general
 source /opt/webinoly/lib/sites
 source /opt/webinoly/lib/site-ssl
 check_for_parameters $@
-
+api-events_update sis
 
 if [[ ! $(conf_read nginx) == "true" ]]; then
 	echo ""
@@ -383,3 +383,4 @@ fi
 
 shopt -u extglob
 [[ $(conf_read nginx) == "true" ]] && sudo service nginx reload
+api-events_update sie

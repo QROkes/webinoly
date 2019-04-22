@@ -7,7 +7,7 @@
 
 source /opt/webinoly/lib/webin
 check_for_parameters $@
-
+api-events_update wys
 
 if [[ -n $update ]]; then
 	checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
@@ -575,3 +575,4 @@ fi
 
 [[ -n $err_cont ]] && exit 1
 [[ $(conf_read nginx) == "true" ]] && sudo service nginx reload
+api-events_update wye

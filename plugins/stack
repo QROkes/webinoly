@@ -8,7 +8,7 @@
 source /opt/webinoly/lib/install
 source /opt/webinoly/lib/webin
 check_for_parameters $@
-
+api-events_update sts
 
 # FORCE - Unattended Purge
 clear_force_flag() {
@@ -364,6 +364,7 @@ elif [[ -n $pma ]]; then
 	[[ $(conf_read mysql-tool) != "true" ]] && mysql_tool || echo "${red}PhpMyAdmin is already installed!${end}"
 
 elif [[ -n $lemp ]]; then
+	api-events_update st1
 	[[ $lemp =~ ^(stable|mainline)$ ]] && stack -nginx=$lemp $2 || stack -nginx $2
 	stack -php $2
 	stack -mysql $2
@@ -372,6 +373,7 @@ elif [[ -n $lemp ]]; then
 	echo ""
 	
 elif [[ -n $php_ver ]]; then
+	api-events_update st3
 	if [[ $(conf_read multi-php) == "true" ]]; then
 		echo "${red}This command is disabled because Multi-PHP is enabled!${end}"
 		exit 1
@@ -409,6 +411,7 @@ elif [[ -n $php_ver ]]; then
 elif [[ -n $info ]]; then
 	system_info
 elif [[ -n $purge_server_all ]]; then
+	api-events_update st2
 	echo ""
 	echo "${red} ¡ C A U T I O N !  You are about to remove Webinoly Stack completely from your server!"
 	echo " This action will remove Nginx, PHP, MySQL and all the other tools, all your sites will remain in the server but will be publicly unavailable after this action."
@@ -454,3 +457,4 @@ if [[ $force == 1 ]]; then
 	clear_force_flag
 	force="0"
 fi
+api-events_update ste
