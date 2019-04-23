@@ -10,6 +10,7 @@ check_for_parameters $@
 api-events_update wys
 
 if [[ -n $update ]]; then
+	api-events_update wy1
 	checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
 	currentver=$(conf_read app-version)
 	
@@ -23,6 +24,7 @@ if [[ -n $update ]]; then
 	fi
 	
 elif [[ -n $server_reset ]]; then
+	api-events_update wy2
 	if [[ $server_reset == true ]]; then
 		server_reset="all"
 	elif ! [[ $server_reset =~ ^(all|nginx|php)$ ]]; then
@@ -287,6 +289,7 @@ elif [[ -n $config_cache ]]; then
 
 	
 elif [[ -n $uninstall ]]; then
+	api-events_update wy4
 	echo "${red}"
 	echo " You are about to remove completely Webinoly App from your server!!"
 	echo "${blu}     Are you sure [y/N]? "
@@ -357,6 +360,7 @@ elif [[ -n $external_sources_update ]]; then
 	
 	
 elif [[ -n $clear_cache ]]; then
+	api-events_update wy3
 	[[ $clear_cache == true ]] && clear_cache="all"
 	if ! [[ $clear_cache =~ ^(redis|memcache|memcached|opcache|fastcgi|all)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid option!${end}"

@@ -7,6 +7,7 @@ source /opt/webinoly/lib/general
 
 
 wp_cache_plugins() {
+	api-events_update si3
 	if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/nginx-helper ]]; then
 		# Download Nginx Helper Plugin
 		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
@@ -95,6 +96,7 @@ dbword_check() {
 
 
 wpinstall() {
+	api-events_update si2
 	[[ -z $domain && -n $mysql ]] && local dom="Webinoly_$(pwgen -s -1)" || local dom=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
 	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 	local AUTOGENPASS_WPDB=`pwgen -s -1`
@@ -489,6 +491,7 @@ deletesite() {
 
 
 createsite() {
+	api-events_update si1
 	# Check domain and then prevent reserved characters for file names.
 	domain_check $domain
 	domain=$(echo $domain | sed "s/[^\.0-9A-Za-z\-]/_/g" | sed "s/^[\.]/_/g" | sed "s/\.\./_/g")

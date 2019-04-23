@@ -133,6 +133,7 @@ if [[ -n $list ]]; then
 	
 # Delete all sites
 elif [[ -n $delete_all ]]; then
+	api-events_update si7
 	echo "${red}"
 	echo "All your sites files will be removed."
 	echo "This action will only delete Databases attached to a WordPress site, any other Database will not be deleted."
@@ -298,6 +299,7 @@ elif [[ -n $off && ! -L /etc/nginx/sites-enabled/$domain ]]; then
 	echo "${red}Site${blu} $domain ${red}doesn't exist or is already disabled!${end}"
 	exit 1
 elif [[ -n $off && -L /etc/nginx/sites-enabled/$domain ]]; then
+	api-events_update si5
 	echo "${gre}Site${blu} $domain ${gre}has been successfully disabled!${end}"
 	sudo rm /etc/nginx/sites-enabled/$domain
 
@@ -306,12 +308,14 @@ elif [[ -n $off && -L /etc/nginx/sites-enabled/$domain ]]; then
 elif [[ -n $on && -L /etc/nginx/sites-enabled/$domain ]]; then
 	echo "${gre}Site${blu} $domain ${gre}is already enabled!${end}"
 elif [[ -n $on && ! -L /etc/nginx/sites-enabled/$domain && -a /etc/nginx/sites-available/$domain ]]; then
+	api-events_update si4
 	sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 	echo "${gre}Site${blu} $domain ${gre}has been successfully enabled!${end}"
 
 	
 # Delete site	
 elif [[ -n $delete && -a /etc/nginx/sites-available/$domain ]]; then
+	api-events_update si6
 	deletesite
 	echo "${gre}Site${blu} $domain ${gre}has been successfully deleted!${end}"
 
@@ -320,8 +324,10 @@ elif [[ -n $delete && -a /etc/nginx/sites-available/$domain ]]; then
 elif [[ ( -n $ssl_on || -n $ssl_off || -n $ssl ) && -a /etc/nginx/sites-available/$domain ]]; then
 	isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_certificate_key")
 	if [[ -n $ssl_on || $ssl == "on" ]]; then
+		api-events_update si10
 		[[ -z $isssl ]] && site_ssl_on || echo "${red}SSL is already enabled for your site -${blu} $domain ${end}"
 	elif [[ -n $ssl_off || $ssl =~ ^(off|off-force)$ ]]; then
+		api-events_update si11
 		[[ -n $isssl ]] && site_ssl_off || 	echo "${red}SSL is already disabled for your site -${blu} $domain ${end}"
 	else
 		echo "${red}[ERROR] Invalid option for SSL command! ${end}"
@@ -330,6 +336,7 @@ elif [[ ( -n $ssl_on || -n $ssl_off || -n $ssl ) && -a /etc/nginx/sites-availabl
 
 # FastCGI Cache disabled
 elif [[ ( -n $nocache || ( -n $cache && $cache == "off" )) && -a /etc/nginx/sites-available/$domain ]]; then
+	api-events_update si9
 	isfc=$( grep -F "wpfc.conf" /etc/nginx/sites-available/$domain )
 	if [[ -n $isfc ]]; then
 		sudo sed -i '/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
@@ -342,6 +349,7 @@ elif [[ ( -n $nocache || ( -n $cache && $cache == "off" )) && -a /etc/nginx/site
 	
 # FastCGI Cache enabled
 elif [[ ( -n $cache || $cache == "on" ) && -a /etc/nginx/sites-available/$domain ]]; then
+	api-events_update si8
 	isphp=$( grep -F "php.conf" /etc/nginx/sites-available/$domain )
 	iswp=$( grep -F "wpcommon.conf" /etc/nginx/sites-available/$domain )
 	if [[ -n $isphp && -n $iswp ]]; then

@@ -54,6 +54,7 @@ elif [[ -n $only_error ]]; then
 	if [[ -z $domain ]]; then
 		[[ $(conf_read nginx) == "true" ]] && islog=$( grep -F "access_log off;" /etc/nginx/nginx.conf )
 		if [[ $only_error == "on" ]]; then
+			api-events_update lg1
 			if [[ -z $islog ]]; then
 				[[ $(conf_read nginx) == "true" ]] && sudo sed -i '/access_log/c \	access_log off;' /etc/nginx/nginx.conf
 				conf_write global-access-log-off true
@@ -62,6 +63,7 @@ elif [[ -n $only_error ]]; then
 				echo "${red}Only-Error Log is already enabled (global)!${end}"
 			fi
 		elif [[ $only_error == "off" ]]; then
+			api-events_update lg2
 			if [[ -n $islog || ( -z $islog && $(conf_read nginx) != "true" ) ]]; then
 				[[ $(conf_read nginx) == "true" ]] && sudo sed -i "/access_log/c \	access_log \/var\/log\/nginx\/access.log;" /etc/nginx/nginx.conf
 				conf_write global-access-log-off purged
@@ -86,6 +88,7 @@ elif [[ -n $only_error ]]; then
 		fi
 		
 		if [[ $only_error == "on" ]]; then
+			api-events_update lg3
 			if [[ -z $islog ]]; then
 				sudo sed -i '/access_log/c \	access_log off;' /etc/nginx/sites-available/$domain
 				echo "${gre}Only-Error Log was successfully enabled for ${blu}${domain} ${gre}site!${end}"
@@ -93,6 +96,7 @@ elif [[ -n $only_error ]]; then
 				echo "${red}Access Log is already enabled for ${blu}${domain} ${red}site!${end}"
 			fi
 		elif [[ $only_error == "off" ]]; then
+			api-events_update lg4
 			if [[ -n $islog ]]; then
 				sudo sed -i "/access_log/c \	access_log \/var\/log\/nginx\/${domain}.access.log we_log;" /etc/nginx/sites-available/$domain
 				echo "${gre}Only-Error Log was successfully disabled for ${blu}${domain} ${gre}site!${end}"
