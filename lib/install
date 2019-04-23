@@ -453,6 +453,7 @@ php_tool() {
 	echo "postfix postfix/main_mailer_type        select  Internet Site" | debconf-set-selections
 	echo "postfix postfix/mailname        string  $hostname" | debconf-set-selections
 	sudo apt -y install postfix
+	sudo cp -p /etc/postfix/main.cf /opt/webinoly/templates/source/
 
 	sudo service php*-fpm reload
 	conf_write php-tool true

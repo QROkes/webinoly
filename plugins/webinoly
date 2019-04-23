@@ -573,6 +573,11 @@ elif [[ -n $default_site ]]; then
 	
 	
 elif [[ -n $mysql_password ]]; then
+	if [[ $(conf_read mysql) != "true" ]]; then
+		echo "${red}[ERROR] Seems like MySQL is not installed!${end}"
+		exit 1
+	fi
+	
 	if [[ $mysql_password == true ]]; then
 		echo ""
 		read -p "${blu}MySQL User: ${end}" user
@@ -610,6 +615,86 @@ elif [[ -n $mysql_password ]]; then
 		echo "${red}[ERROR] Unexpected error!${end}"
 		exit 1
 	fi
+
+
+elif [[ -n $smtp && -n $purge ]]; then
+	if [[ $(conf_read smtp) != "true" ]]; then
+		echo "${red}[ERROR] SMTP configuration not found!${end}"
+		exit 1
+	fi
+	if [[ $(conf_read php-tool) != "true" ]]; then
+		echo "${red}[ERROR] Seems like PHP and Postfix are not installed!${end}"
+		exit 1
+	fi
+	
+	sudo cat /opt/webinoly/templates/source/main.cf >| /etc/postfix/main.cf
+	rm -rf /etc/postfix/sasl_passwd.db
+	rm -rf /etc/postfix/sasl_passwd
+	rm -rf /etc/mailname
+	conf_write smtp purged
+	sudo service postfix restart
+elif [[ -n $smtp ]]; then
+	if [[ $(conf_read php-tool) != "true" ]]; then
+		echo "${red}[ERROR] Seems like PHP and Postfix are not installed!${end}"
+		exit 1
+	fi
+	if [[ $(conf_read smtp) == "true" ]]; then
+		echo "${gre}SMTP is already configured!${end}"
+		exit 0
+	fi
+	
+	if [[ $smtp == true ]]; then
+		echo ""
+		read -p "${blu} + SMTP Host: ${end}" host
+		read -p "${blu} + User: ${end}" user
+		read -p "${blu} + Password: ${end}" pass
+		read -p "${blu} + Main Hostname/Domain: ${end}" mainhost
+		echo ""
+	elif [[ $(echo "${smtp}" | cut -c-1) == "[" && $(echo "${smtp}" | rev | cut -c-1) == "]" ]]; then
+		userdata=${smtp:1:-1}
+		host=$(echo "${userdata}" | cut -d',' -f 1 -s)
+		user=$(echo "${userdata}" | cut -d',' -f 2 -s)
+		pass=$(echo "${userdata}" | cut -d',' -f 3 -s)
+		mainhost=$(echo "${userdata}" | cut -d',' -f 4 -s)
+	else
+		echo "${red}[ERROR] Invalid SMTP data!${end}"
+		exit 1
+	fi
+	
+	if [[ -z $user || -z $pass || -z $host || -z $mainhost || ! -a /etc/nginx/sites-available/$mainhost ]]; then
+		echo "${red}[ERROR] Invalid SMTP data!${end}"
+		exit 1
+	fi
+	
+	[[ ! -a /opt/webinoly/templates/source/main.cf ]] && sudo cp -p /etc/postfix/main.cf /opt/webinoly/templates/source/
+
+	sudo touch /etc/mailname
+	echo "$mainhost" > /etc/mailname
+	sudo chown root:root /etc/mailname
+	sudo chmod 0644 /etc/mailname
+	
+	sudo sed -i '/myorigin =/c \myorigin = /etc/mailname' /etc/postfix/main.cf
+	sudo sed -i "/myhostname =/c\myhostname = $mainhost" /etc/postfix/main.cf
+	sudo sed -i "/relayhost/c\relayhost = $host:587" /etc/postfix/main.cf
+	sudo sed -i '/relayhost/a \smtp_tls_note_starttls_offer = yes' /etc/postfix/main.cf
+	sudo sed -i '/relayhost/a \smtp_tls_security_level = encrypt' /etc/postfix/main.cf
+	sudo sed -i '/relayhost/a \smtp_use_tls = yes' /etc/postfix/main.cf
+	sudo sed -i '/relayhost/a \smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd' /etc/postfix/main.cf
+	sudo sed -i '/relayhost/a \smtp_sasl_security_options = noanonymous' /etc/postfix/main.cf
+	sudo sed -i '/relayhost/a \smtp_sasl_auth_enable = yes' /etc/postfix/main.cf
+	sudo sed -i 's/mydestination = , $myhostname, /mydestination = /' /etc/postfix/main.cf
+	sudo postconf -e 'smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt'
+
+	echo "$host:587 $user:$pass" > /etc/postfix/sasl_passwd
+	sudo chown root:root /etc/postfix/sasl_passwd
+	sudo chmod 0600 /etc/postfix/sasl_passwd
+	sudo postmap hash:/etc/postfix/sasl_passwd
+	sudo chown root:root /etc/postfix/sasl_passwd.db
+	sudo chmod 0600 /etc/postfix/sasl_passwd.db
+	
+	conf_write smtp true
+	sudo service postfix restart
+	echo "${gre}SMTP was successfully enabled!${end}"
 
 
 else
