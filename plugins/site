@@ -86,6 +86,8 @@ if [[ -n $wp || -n $wpsubdir || -n $wpsubdom || -n $mysql ]]; then
 			exusercustom=$(echo "${wpdata}" | cut -d',' -f 8 -s)
 			expasscustom=$(echo "${wpdata}" | cut -d',' -f 9 -s)
 			
+			[[ ${dbpasscustom,,} == "random" ]] && dbpasscustom=`pwgen -s -1 16`
+			
 			# Check if we have ALL the parameters.
 			if [[ $mysql != true && ( -z $setmsqcustom || -z $setpwpcustom || -z $dbhostcustom || -z $dbnamecustom || -z $dbusercustom || -z $dbpasscustom || ( -z $dbprefcustom && -z $mysql && -z $extdata ) || ( -n $exusercustom && -z $expasscustom )) ]]; then
 				echo "${red}[ERROR] Missing parameters!${end}"
