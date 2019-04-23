@@ -99,7 +99,7 @@ wpinstall() {
 	api-events_update si2
 	[[ -z $domain && -n $mysql ]] && local dom="Webinoly_$(pwgen -s -1)" || local dom=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
 	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-	local AUTOGENPASS_WPDB=`pwgen -s -1`
+	local AUTOGENPASS_WPDB=`pwgen -s -1 16`
 	local setupmysql="y"
 	local setupwp="y"
 	local dbhost="localhost"

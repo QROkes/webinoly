@@ -135,7 +135,7 @@ messagend_install() {
 	local adminpass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 	echo "${gre}*****************************************************************************************"
 	echo "************         Save your DB access password in a secure place:         ************"
-	echo "************              root: ${rootpass}        admin: ${adminpass}              ************"
+	echo "************      root: ${rootpass}        admin: ${adminpass}      ************"
 	echo "*****************************************************************************************"
 	echo "${end}"
 	fi
@@ -229,8 +229,8 @@ mysql_install() {
 	sudo apt -y install debconf-utils
 	
 	# Generate mysql user passwords
-	local AUTOGENPASS_ROOT=`pwgen -s -1`
-	local AUTOGENPASS_ADMIN=`pwgen -s -1`
+	local AUTOGENPASS_ROOT=`pwgen -s -1 16`
+	local AUTOGENPASS_ADMIN=`pwgen -s -1 16`
 	local enc_pass_root=$( echo $AUTOGENPASS_ROOT | openssl enc -a -salt )
 	local enc_pass_admin=$( echo $AUTOGENPASS_ADMIN | openssl enc -a -salt )
 	conf_write mysql-root $enc_pass_root
