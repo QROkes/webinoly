@@ -2,7 +2,7 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
-# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site
+# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site, -mysql-password
 # Arguments: -raw
 
 source /opt/webinoly/lib/webin
@@ -572,6 +572,46 @@ elif [[ -n $default_site ]]; then
 	fi
 	
 	
+elif [[ -n $mysql_password ]]; then
+	if [[ $mysql_password == true ]]; then
+		echo ""
+		read -p "${blu}MySQL User: ${end}" user
+		read -p "${blu}New Password: ${end}" pass
+		echo ""
+	elif [[ $(echo "${mysql_password}" | cut -c-1) == "[" && $(echo "${mysql_password}" | rev | cut -c-1) == "]" ]]; then
+		userdata=${mysql_password:1:-1}
+		user=$(echo "${userdata}" | cut -d',' -f 1 -s)
+		pass=$(echo "${userdata}" | cut -d',' -f 2 -s)
+	else
+		echo "${red}[ERROR] Please enter a valid value for username and password!${end}"
+		exit 1
+	fi
+	
+	if [[ -z $user || -z $pass || $user == *"'"* || $pass == *"'"* || ! ( $user =~ ^(root|admin)$  ) ]]; then
+		echo "${red}[ERROR] Please, enter a valid username and password!"
+		echo "Only 'root and admin' users allowed and password can not contain a 'single quote' character.${end}"
+		exit 1
+	fi
+	
+	sudo mysql --connect-timeout=10 --user=root -p$( echo $(conf_read mysql-root) | openssl enc -d -a -salt ) -e "ALTER USER '${user}'@'localhost' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
+	[[ $? != 0 ]] && catcherror=true
+	
+	if [[ $user == "root" && -z $catcherror ]]; then
+		sudo mysql --connect-timeout=10 --user=root -p$pass -e "ALTER USER '${user}'@'127.0.0.1' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
+		[[ $? != 0 ]] && catcherror=true
+		sudo mysql --connect-timeout=10 --user=root -p$pass -e "ALTER USER '${user}'@'::1' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
+		[[ $? != 0 ]] && catcherror=true
+	fi
+	
+	if [[ -z $catcherror ]]; then
+		conf_write mysql-${user} $( echo $pass | openssl enc -a -salt )
+		echo "${gre}MySQL Password successfully changed!${end}"
+	else
+		echo "${red}[ERROR] Unexpected error!${end}"
+		exit 1
+	fi
+
+
 else
 	echo "${red}[ERROR] Please enter a valid option!${end}"
 	exit 1
