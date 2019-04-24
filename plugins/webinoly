@@ -577,44 +577,7 @@ elif [[ -n $mysql_password ]]; then
 		echo "${red}[ERROR] Seems like MySQL is not installed!${end}"
 		exit 1
 	fi
-	
-	if [[ $mysql_password == true ]]; then
-		echo ""
-		read -p "${blu}MySQL User: ${end}" user
-		read -p "${blu}New Password: ${end}" pass
-		echo ""
-	elif [[ $(echo "${mysql_password}" | cut -c-1) == "[" && $(echo "${mysql_password}" | rev | cut -c-1) == "]" ]]; then
-		userdata=${mysql_password:1:-1}
-		user=$(echo "${userdata}" | cut -d',' -f 1 -s)
-		pass=$(echo "${userdata}" | cut -d',' -f 2 -s)
-	else
-		echo "${red}[ERROR] Please enter a valid value for username and password!${end}"
-		exit 1
-	fi
-	
-	if [[ -z $user || -z $pass || $user == *"'"* || $pass == *"'"* || ! ( $user =~ ^(root|admin)$  ) ]]; then
-		echo "${red}[ERROR] Please, enter a valid username and password!"
-		echo "Only 'root and admin' users allowed and password can not contain a 'single quote' character.${end}"
-		exit 1
-	fi
-	
-	sudo mysql --connect-timeout=10 --user=root -p$( echo $(conf_read mysql-root) | openssl enc -d -a -salt ) -e "ALTER USER '${user}'@'localhost' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
-	[[ $? != 0 ]] && catcherror=true
-	
-	if [[ $user == "root" && -z $catcherror ]]; then
-		sudo mysql --connect-timeout=10 --user=root -p$pass -e "ALTER USER '${user}'@'127.0.0.1' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
-		[[ $? != 0 ]] && catcherror=true
-		sudo mysql --connect-timeout=10 --user=root -p$pass -e "ALTER USER '${user}'@'::1' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
-		[[ $? != 0 ]] && catcherror=true
-	fi
-	
-	if [[ -z $catcherror ]]; then
-		conf_write mysql-${user} $( echo $pass | openssl enc -a -salt )
-		echo "${gre}MySQL Password successfully changed!${end}"
-	else
-		echo "${red}[ERROR] Unexpected error!${end}"
-		exit 1
-	fi
+	mysql_change_password
 
 
 elif [[ -n $smtp && -n $purge ]]; then
@@ -642,59 +605,7 @@ elif [[ -n $smtp ]]; then
 		echo "${gre}SMTP is already configured!${end}"
 		exit 0
 	fi
-	
-	if [[ $smtp == true ]]; then
-		echo ""
-		read -p "${blu} + SMTP Host: ${end}" host
-		read -p "${blu} + User: ${end}" user
-		read -p "${blu} + Password: ${end}" pass
-		read -p "${blu} + Main Hostname/Domain: ${end}" mainhost
-		echo ""
-	elif [[ $(echo "${smtp}" | cut -c-1) == "[" && $(echo "${smtp}" | rev | cut -c-1) == "]" ]]; then
-		userdata=${smtp:1:-1}
-		host=$(echo "${userdata}" | cut -d',' -f 1 -s)
-		user=$(echo "${userdata}" | cut -d',' -f 2 -s)
-		pass=$(echo "${userdata}" | cut -d',' -f 3 -s)
-		mainhost=$(echo "${userdata}" | cut -d',' -f 4 -s)
-	else
-		echo "${red}[ERROR] Invalid SMTP data!${end}"
-		exit 1
-	fi
-	
-	if [[ -z $user || -z $pass || -z $host || -z $mainhost || ! -a /etc/nginx/sites-available/$mainhost ]]; then
-		echo "${red}[ERROR] Invalid SMTP data!${end}"
-		exit 1
-	fi
-	
-	[[ ! -a /opt/webinoly/templates/source/main.cf ]] && sudo cp -p /etc/postfix/main.cf /opt/webinoly/templates/source/
-
-	sudo touch /etc/mailname
-	echo "$mainhost" > /etc/mailname
-	sudo chown root:root /etc/mailname
-	sudo chmod 0644 /etc/mailname
-	
-	sudo sed -i '/myorigin =/c \myorigin = /etc/mailname' /etc/postfix/main.cf
-	sudo sed -i "/myhostname =/c\myhostname = $mainhost" /etc/postfix/main.cf
-	sudo sed -i "/relayhost/c\relayhost = $host:587" /etc/postfix/main.cf
-	sudo sed -i '/relayhost/a \smtp_tls_note_starttls_offer = yes' /etc/postfix/main.cf
-	sudo sed -i '/relayhost/a \smtp_tls_security_level = encrypt' /etc/postfix/main.cf
-	sudo sed -i '/relayhost/a \smtp_use_tls = yes' /etc/postfix/main.cf
-	sudo sed -i '/relayhost/a \smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd' /etc/postfix/main.cf
-	sudo sed -i '/relayhost/a \smtp_sasl_security_options = noanonymous' /etc/postfix/main.cf
-	sudo sed -i '/relayhost/a \smtp_sasl_auth_enable = yes' /etc/postfix/main.cf
-	sudo sed -i 's/mydestination = , $myhostname, /mydestination = /' /etc/postfix/main.cf
-	sudo postconf -e 'smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt'
-
-	echo "$host:587 $user:$pass" > /etc/postfix/sasl_passwd
-	sudo chown root:root /etc/postfix/sasl_passwd
-	sudo chmod 0600 /etc/postfix/sasl_passwd
-	sudo postmap hash:/etc/postfix/sasl_passwd
-	sudo chown root:root /etc/postfix/sasl_passwd.db
-	sudo chmod 0600 /etc/postfix/sasl_passwd.db
-	
-	conf_write smtp true
-	sudo service postfix restart
-	echo "${gre}SMTP was successfully enabled!${end}"
+	smtp_setup
 
 
 else
