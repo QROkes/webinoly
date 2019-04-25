@@ -2,7 +2,7 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
-# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site, -mysql-password
+# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -nologin-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site, -mysql-password, -smtp
 # Arguments: -raw
 
 source /opt/webinoly/lib/webin

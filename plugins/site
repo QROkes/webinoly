@@ -3,7 +3,7 @@
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
 # Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off, -force-redirect
-# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw
+# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db
 
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
@@ -143,17 +143,9 @@ elif [[ -n $delete_all ]]; then
 	# List all sites in /var/www/ folder
 	for site in "/var/www"/*
 	do
-		domi=$(echo $site | cut -f 4 -d "/")
-		# List sites then will be deleted
-		if [[ $domi != "html" && $domi != $(conf_read tools-port) ]]; then
-			# Determina if site is WP (so has DB to delete)
-			[[ -a $site/wp-config.php || -a $site/htdocs/wp-config.php ]] && db_delete $domi
-			
-			sudo rm -rf /etc/nginx/sites-available/$domi
-			sudo rm -rf /etc/nginx/sites-enabled/$domi
-			sudo rm -rf /var/www/$domi
-			echo "${gre}Your site ${blu}${domi}${gre} has been successfully deleted! ${end}"
-		fi
+		delete="force"
+		domain=$(echo $site | cut -f 4 -d "/")
+		[[ $domain != "html" && $domain != $(conf_read tools-port) ]] && deletesite
 	done
 
 	# List all remaining sites (parked and proxy)
@@ -319,7 +311,6 @@ elif [[ -n $on && ! -L /etc/nginx/sites-enabled/$domain && -a /etc/nginx/sites-a
 elif [[ -n $delete && -a /etc/nginx/sites-available/$domain ]]; then
 	api-events_update si6
 	deletesite
-	echo "${gre}Site${blu} $domain ${gre}has been successfully deleted!${end}"
 
 
 # SSL (Letsencrypt)

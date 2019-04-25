@@ -453,39 +453,32 @@ _EOF_
 
 
 deletesite() {
-	if [[ $delete != true ]]; then
-		dbdata=${delete:1:-1}
-		local dbdatahost=$(echo "${dbdata}" | cut -d',' -f 1 -s)
-		[[ $dbdatahost == "external" ]] && dbdatadel=$(echo "${dbdata}" | cut -d',' -f 2 -s)
-		[[ $dbdatadel =~ ^(true|false)$ || $delete == "force" ]] && local skip="true"
-	fi
-
 	if [[ $domain == $(conf_read tools-site) || $domain == $(conf_read default-site) ]]; then
 		echo "${red}[WARNING] This site is set as default site or used to access your server tools."
 		echo "Deleting this site can cause unexpected behaviour in your server, please reassign your default/tools site to an existing domain."
 		echo "${end}"
 	fi
 
+	[[ $delete == "force" ]] && local dbdel="Y"
+	[[ $delete == "keep-db" ]] && local dbdel="N"
+	
 	# Determine if site is WP, so you should delete the DB too.
-	if [[ -a /var/www/$domain/wp-config.php || -a /var/www/$domain/htdocs/wp-config.php ]]; then
-		if [[ $skip != "true" ]]; then
-			echo "${blu}Delete Database [Y/n]?${end}"
-			while read -r -n 1 -s dbdel; do
-			  local dbdel=${dbdel:-y}
-			  [[ $dbdel = [YyNn] ]] && break
-			done
-		else
-			[[ $dbdatadel != "false" ]] && dbdel="Y"
-		fi
+	if [[ -z $dbdel && ( -a /var/www/$domain/wp-config.php || -a /var/www/$domain/htdocs/wp-config.php ) ]]; then
+		echo "${blu}Delete Database [Y/n]?${end}"
+		while read -r -n 1 -s dbdel; do
+		  local dbdel=${dbdel:-y}
+		  [[ $dbdel = [YyNn] ]] && break
+		done
 	fi
 	
 	[[ $dbdel == [yY] ]] && db_delete $domain
 	
 	# Delete site files
-	sudo rm /etc/nginx/sites-available/$domain
-	# Check to avoid error when site is disabled.
-	[[ -L /etc/nginx/sites-enabled/$domain ]] && sudo rm /etc/nginx/sites-enabled/$domain
+	sudo rm -rf /etc/nginx/sites-available/$domain
+	sudo rm -rf /etc/nginx/sites-enabled/$domain
 	sudo rm -rf /var/www/$domain
+	
+	echo "${gre}Site${blu} $domain ${gre}has been successfully deleted!${end}"
 }
 
 
