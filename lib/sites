@@ -108,7 +108,7 @@ wpinstall() {
 	local dbpass=$AUTOGENPASS_WPDB
 	local dbpref="wp_"
 	
-	# WP with Custom Data
+	# WP Unattended
 	if [[ $type == [35] ]]; then
 		[[ $setmsqcustom == "false" ]] && setupmysql="n"
 		[[ $setpwpcustom == "false" ]] && setupwp="n"

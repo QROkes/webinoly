@@ -38,14 +38,20 @@ fi
 [[ $subdomain == "false" ]] && subdomflag="0"
 
 
-# Evaluate if site to create is WP ( 0 = noWP, 1 = WP, 2 = WP with default values, 3 = WP with custom values, 4 = MySQL with default values, 5 = MySQL with custom values )
+# Evaluate if site to create is WP ( 0 = noWP, 1 = WP ask, 2 = WP default, 3 = WP unattended, 4 = MySQL default, 5 = MySQL unattended )
 type="0"
 if [[ -n $wp || -n $wpsubdir || -n $wpsubdom || -n $mysql ]]; then
-	[[ -n $mysql ]] || type="1"
+	[[ -n $mysql ]] && type="4" || type="2"
+
+	# For legacy support
+	[[ $wp == "default"  ]] && wp=true
+	[[ $wpsubdir == "default"  ]] && wpsubdir=true
+	[[ $wpsubdom == "default"  ]] && wpsubdom=true
+	[[ $mysql == "default"  ]] && mysql=true
 
 	if [[ ( -n $wp && $wp != true ) || ( -n $wpsubdir && $wpsubdir != true ) || ( -n $wpsubdom && $wpsubdom != true ) || ( -n $mysql && $mysql != true ) ]]; then
-		if [[ $wp == "default" || $wpsubdir == "default" || $wpsubdom == "default" || $mysql == "default" ]]; then
-			[[ $mysql == "default" ]] && type="4" || type="2"
+		if [[ $wp == "custom" || $wpsubdir == "custom" || $wpsubdom == "custom" || $mysql == "custom" ]]; then
+			[[ -n $mysql ]] && type="0" || type="1"
 		else
 			[[ -n $wp && $wp != true  ]] && value=$wp
 			[[ -n $wpsubdir && $wpsubdir != true  ]] && value=$wpsubdir
