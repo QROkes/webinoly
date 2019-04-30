@@ -320,11 +320,13 @@ elif [[ -n $delete && -a /etc/nginx/sites-available/$domain ]]; then
 
 
 # SSL (Letsencrypt)
+elif [[ $ssl == "renew" && -z $domain ]]; then
+		sudo certbot renew --post-hook "service nginx restart"
 elif [[ ( -n $ssl_on || -n $ssl_off || -n $ssl ) && -a /etc/nginx/sites-available/$domain ]]; then
 	isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_certificate_key")
-	if [[ -n $ssl_on || $ssl == "on" ]]; then
+	if [[ -n $ssl_on || $ssl == "on" || $ssl == "force-renewal" ]]; then
 		api-events_update si10
-		if [[ -n $isssl ]]; then
+		if [[ -n $isssl && $ssl != "force-renewal" ]]; then
 			echo "${red}SSL is already enabled for your site -${blu} $domain ${end}"
 		elif [[ -n $ssl_crt || -n $ssl_key ]]; then
 			if [[ -a $ssl_crt && -a $ssl_key ]]; then

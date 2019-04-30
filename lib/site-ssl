@@ -68,6 +68,11 @@ site_ssl_on() {
 		exit 1
 	fi
 	
+	if [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
+		echo "${red}[ERROR] Cert you're trying to renew not found!${end}"
+		exit 1
+	fi
+	
 	# Check if Letsencrypt is installed
 	if [[ $(conf_read nginx-tool) != "true" || ! -a /usr/bin/letsencrypt ]]; then
 		echo "${red}[ERROR] Seems like Let's Encrypt tool is not installed!${end}"
@@ -104,20 +109,21 @@ site_ssl_on() {
 	# Create new certificate
 	local param="--email $cermail --no-eff-email --agree-tos --staple-ocsp --must-staple"
 	[[ $(conf_read debug) == "true" ]] && param="$param --test-cert"
+	[[ $ssl == "force-renewal" ]] && param="$param --force-renewal"
 	[[ $subdomflag == 1 ]] && local domset="-d $domain" || local domset="-d $domain -d www.$domain"
 	
 	# Wildcard
-	if [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && -n $wildcard ]]; then
+	if [[ ( ! -a /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ) && -n $wildcard ]]; then
 		sudo certbot certonly --manual --preferred-challenges=dns --manual-public-ip-logging-ok -d $domain -d *.$domain $param
 	
 	# Manual mode for Reverse Proxy sites
-	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && -n $root_path ]]; then
+	elif [[ ( ! -a /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ) && -n $root_path ]]; then
 		conf_write temp-path $root_path
 		sudo certbot certonly --manual --preferred-challenges=http --manual-auth-hook /opt/webinoly/lib/ex-ssl-authentication --manual-cleanup-hook /opt/webinoly/lib/ex-ssl-cleanup --manual-public-ip-logging-ok $domset $param
 		conf_delete temp-path
 	
 	# Single cert
-	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
+	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ]]; then
 		sudo certbot certonly --webroot -w /var/www/$path/htdocs/ $domset $param
 	
 	elif [[ -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
@@ -126,7 +132,7 @@ site_ssl_on() {
 	
 	
 	# SSL Nginx Conf
-	if [[ -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
+	if [[ -a /etc/letsencrypt/live/$domain/fullchain.pem && $ssl != "force-renewal" ]]; then
 		ssl_nginx
 
 		# Auto-Renew Certificate
@@ -141,14 +147,16 @@ site_ssl_on() {
 		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root
 		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root
 		
-		[[ $(conf_read debug) == "true" ]] && echo "${red}Debug Mode is enabled, this SSL Cert is just for testing purpose and should not be used in production enviroments.${end}"
 		echo "${gre}SSL have been successfully enabled for your site -${blu} $domain${end}"
-	else
+	elif [[ -a /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
+		echo "${gre}SSL Cert -${blu} $domain$ -${gre}has been Forced to Renew!${end}"
+	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
 		echo "${red}"
 		echo "[ERROR] Unable to create the new certificate!"
 		echo "${end}"
 		exit 1
 	fi
+	[[ $(conf_read debug) == "true" ]] && echo "${red}Debug Mode is enabled, this SSL Cert is just for testing purpose and should not be used in production enviroments.${end}"
 }
 
 
