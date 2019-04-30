@@ -176,7 +176,7 @@ webinoly_verify() {
 			echo "[ERROR] File: /etc/nginx/fastcgi_params not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/.htpasswd ]]; then
+		if [[ ! -a /etc/nginx/.htpasswd && $(conf_read php) == "true" ]]; then
 			echo "[INFO] File: /etc/nginx/.htpasswd not found!"
 			info="1"
 		fi
@@ -232,11 +232,11 @@ webinoly_verify() {
 	
 	# NGINX Tools
 	if [[ $(conf_read nginx-tool) == "true" ]]; then
-		if [[ ! -a /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
+		if [[ ! -a /etc/nginx/sites-available/$(conf_read tools-port) && $(conf_read php) == "true" ]]; then
 			echo "[ERROR] File: /etc/nginx/sites-available/$(conf_read tools-port) not found!"
 			error="1"
 		fi
-		if [[ ! -d /var/www/$(conf_read tools-port) ]]; then
+		if [[ ! -d /var/www/$(conf_read tools-port) && $(conf_read php) == "true" ]]; then
 			echo "[ERROR] Folder: /var/www/$(conf_read tools-port) not found!"
 			error="1"
 		fi
@@ -456,6 +456,16 @@ webinoly_verify() {
 		warning="1"
 	fi
 
+	# Check for SSL Orphan-Certs
+	for cert in "/etc/letsencrypt/live"/*
+	do
+		domain=$(echo $cert | cut -f 5 -d "/")
+		if [[ -d $cert && ! -a /etc/nginx/sites-available/$domain ]]; then
+			echo "[INFO] SSL Orphan-Cert found ($domain)!"
+			info="1"
+		fi
+	done
+	
 	
 	echo ""
 	if [ $error != 0 ]; then

@@ -160,6 +160,13 @@ site_ssl_on() {
 }
 
 
+ssl_revoke() {
+	[[ $(conf_read debug) == "true" ]] && local param="--test-cert" || local param=""
+	sudo certbot revoke --cert-path /etc/letsencrypt/live/$domain/cert.pem --delete-after-revoke $param
+	echo "${gre}"
+	echo "SSL Cert for your site${blu} $domain ${gre}has been completely removed and revoked!${end}"
+}
+
 site_ssl_off() {
 	# Don't ask if SSL is Custom
 	[[ -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "WebinolySSLCustomCert") ]] && revoke="off"
@@ -187,12 +194,6 @@ site_ssl_off() {
 		done
 		echo "${end}"
 	fi
-	if [[ $answer == [Yy] ]]; then
-		[[ $(conf_read debug) == "true" ]] && local param="--test-cert" || local param=""
-		sudo certbot revoke --cert-path /etc/letsencrypt/live/$domain/cert.pem --delete-after-revoke $param
-		echo "${gre}"
-		echo "Certificate for your site${blu} $domain ${gre}has been completely removed!"
-		echo "${end}"
-	fi
+	[[ $answer == [Yy] ]] && ssl_revoke
 	echo "${gre}SSL has been successfully disabled for your site -${blu} $domain${end}"
 }

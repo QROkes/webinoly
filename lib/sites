@@ -4,6 +4,7 @@
 # Functions for site creation and delete
 
 source /opt/webinoly/lib/general
+source /opt/webinoly/lib/site-ssl
 
 
 wp_cache_plugins() {
@@ -459,10 +460,9 @@ deletesite() {
 		echo "${end}"
 	fi
 
+	# Determine if site is WP, so you should delete the DB too.
 	[[ $delete == "force" ]] && local dbdel="Y"
 	[[ $delete == "keep-db" ]] && local dbdel="N"
-	
-	# Determine if site is WP, so you should delete the DB too.
 	if [[ -z $dbdel && ( -a /var/www/$domain/wp-config.php || -a /var/www/$domain/htdocs/wp-config.php ) ]]; then
 		echo "${blu}Delete Database [Y/n]?${end}"
 		while read -r -n 1 -s dbdel; do
@@ -470,8 +470,18 @@ deletesite() {
 		  [[ $dbdel = [YyNn] ]] && break
 		done
 	fi
-	
 	[[ $dbdel == [yY] ]] && db_delete $domain
+	
+	# Revoke SSL Cert
+	if [[ -d /etc/letsencrypt/live/$domain && -z $revoke && $delete != "force" ]]; then
+		echo "${blu}Revoke SSL Cert [Y/n]?${end}"
+		while read -r -n 1 -s revoke; do
+		  local revoke=${revoke:-y}
+		  [[ $revoke = [YyNn] ]] && break
+		done
+	fi
+	[[ $revoke =~ ^(on|y|Y)$ ]] && ssl_revoke
+	
 	
 	# Delete site files
 	sudo rm -rf /etc/nginx/sites-available/$domain

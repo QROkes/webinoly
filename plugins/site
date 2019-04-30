@@ -10,7 +10,6 @@ shopt -s extglob
 
 source /opt/webinoly/lib/general
 source /opt/webinoly/lib/sites
-source /opt/webinoly/lib/site-ssl
 check_for_parameters $@
 api-events_update sis
 
@@ -157,12 +156,9 @@ elif [[ -n $delete_all ]]; then
 	# List all remaining sites (parked and proxy)
 	for site in "/etc/nginx/sites-available"/*
 	do
+		delete="force"
 		domi=$(echo $site | cut -f 5 -d "/")
-		if [[ $domi != "html" && $domi != "default" && $domi != $(conf_read tools-port) ]]; then
-			sudo rm -rf /etc/nginx/sites-available/$domi
-			sudo rm -rf /etc/nginx/sites-enabled/$domi
-			echo "${gre}Your site ${blu}${domi}${gre} has been successfully deleted! ${end}"
-		fi
+		[[ $domi != "html" && $domi != "default" && $domi != $(conf_read tools-port) ]] && deletesite
 	done
 	
 	# Delete all files - double check!
@@ -322,6 +318,9 @@ elif [[ -n $delete && -a /etc/nginx/sites-available/$domain ]]; then
 # SSL (Letsencrypt)
 elif [[ $ssl == "renew" && -z $domain ]]; then
 		sudo certbot renew --post-hook "service nginx restart"
+elif [[ ( -n $ssl_off || $ssl == "off" ) && ! -a /etc/nginx/sites-available/$domain && -a /etc/letsencrypt/live/$domain/cert.pem ]]; then
+	echo "${red}[WARNING] SSL Orphan-Cert found and will be revoked automatically!${end}"
+	ssl_revoke
 elif [[ ( -n $ssl_on || -n $ssl_off || -n $ssl ) && -a /etc/nginx/sites-available/$domain ]]; then
 	isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_certificate_key")
 	if [[ -n $ssl_on || $ssl == "on" || $ssl == "force-renewal" ]]; then
