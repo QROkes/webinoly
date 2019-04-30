@@ -3,7 +3,7 @@
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
 # Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -nocache, -cache, -ssl-on, ssl-off, -force-redirect
-# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db
+# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp
 
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
@@ -324,7 +324,19 @@ elif [[ ( -n $ssl_on || -n $ssl_off || -n $ssl ) && -a /etc/nginx/sites-availabl
 	isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_certificate_key")
 	if [[ -n $ssl_on || $ssl == "on" ]]; then
 		api-events_update si10
-		[[ -z $isssl ]] && site_ssl_on || echo "${red}SSL is already enabled for your site -${blu} $domain ${end}"
+		if [[ -n $isssl ]]; then
+			echo "${red}SSL is already enabled for your site -${blu} $domain ${end}"
+		elif [[ -n $ssl_crt || -n $ssl_key ]]; then
+			if [[ -a $ssl_crt && -a $ssl_key ]]; then
+				ssl_nginx
+				echo "${gre}Your Custom SSL Cert have been successfully enabled on your site -${blu} $domain${end}"
+			else
+				echo "${red}[ERROR] Custom SSL cert files not found! ${end}"
+				exit 1
+			fi
+		else
+			site_ssl_on
+		fi
 	elif [[ -n $ssl_off || $ssl =~ ^(off|off-force)$ ]]; then
 		api-events_update si11
 		[[ -n $isssl ]] && site_ssl_off || 	echo "${red}SSL is already disabled for your site -${blu} $domain ${end}"

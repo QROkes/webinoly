@@ -5,6 +5,45 @@
 
 source /opt/webinoly/lib/general
 
+ssl_nginx() {
+	sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /etc/nginx/sites-available/$domain
+	sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /etc/nginx/sites-available/$domain
+	sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$domain
+	sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$domain
+	sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$domain/}" /etc/nginx/sites-available/$domain
+	
+	# Custom SSL files
+	if [[ -n $ssl_crt && -n $ssl_key ]]; then
+		sudo sed -i '/WebinolySSLstart/a \	# WebinolySSLCustomCert' /etc/nginx/sites-available/$domain
+		sudo sed -i "/fullchain.pem/c \	ssl_certificate $ssl_crt;" /etc/nginx/sites-available/$domain
+		sudo sed -i "/privkey.pem/c \	ssl_certificate_key $ssl_key;" /etc/nginx/sites-available/$domain
+		
+		sudo chmod 777 $ssl_crt
+		sudo chmod 777 $ssl_key
+		sudo chmod 755 $(dirname -- $ssl_crt)
+		sudo chmod 755 $(dirname -- $ssl_key)
+		if [[ -n $ssl_ocsp && -a $ssl_ocsp ]]; then
+			sudo sed -i "/ssl_trusted_certificate/c \	ssl_trusted_certificate $ssl_ocsp;" /etc/nginx/sites-available/$domain
+			sudo chmod 777 $ssl_ocsp
+			sudo chmod 755 $(dirname -- $ssl_ocsp)
+		else
+			sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/ssl_stapling/d}' /etc/nginx/sites-available/$domain
+			sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/ssl_trusted_certificate/d}' /etc/nginx/sites-available/$domain
+		fi
+	fi
+
+	# HTTP to HTTPS Redirection
+	[[ $subdomflag == 1 ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
+	[[ -n $wildcard ]] && sername="server_name $domain *.$domain;"
+	sudo sed -i '1r /opt/webinoly/templates/template-site-sslredirect' /etc/nginx/sites-available/$domain
+	sudo sed -i "/#server_name;/c \	$sername" /etc/nginx/sites-available/$domain
+
+	# In case this domain is used as tools-site or default-site
+	[[ $(conf_read tools-site) == $domain ]] && sudo webinoly -tools-site=$domain
+	[[ $(conf_read default-site) == $domain ]] && sudo webinoly -default-site=$domain
+}
+
+
 site_ssl_on() {
 	local cermail=$(conf_read mail)
 	local path=$domain
@@ -87,22 +126,8 @@ site_ssl_on() {
 	
 	# SSL Nginx Conf
 	if [[ -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
-		sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /etc/nginx/sites-available/$domain
-		sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /etc/nginx/sites-available/$domain
-		sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$domain
-		sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$domain
-		sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$domain/}" /etc/nginx/sites-available/$domain
-		
-		# HTTP to HTTPS Redirection
-		[[ $subdomflag == 1 ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
-		[[ -n $wildcard ]] && sername="server_name $domain *.$domain;"
-		sudo sed -i '1r /opt/webinoly/templates/template-site-sslredirect' /etc/nginx/sites-available/$domain
-		sudo sed -i "/#server_name;/c \	$sername" /etc/nginx/sites-available/$domain
-		
-		# In case this domain is used as tools-site or default-site
-		[[ $(conf_read tools-site) == $domain ]] && sudo webinoly -tools-site=$domain
-		[[ $(conf_read default-site) == $domain ]] && sudo webinoly -default-site=$domain
-		
+		ssl_nginx
+
 		# Auto-Renew Certificate
 		if [[ ! -a /var/spool/cron/crontabs/root ]]; then
 			sudo touch /var/spool/cron/crontabs/root
@@ -127,6 +152,9 @@ site_ssl_on() {
 
 
 site_ssl_off() {
+	# Don't ask if SSL is Custom
+	[[ -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "WebinolySSLCustomCert") ]] && revoke="off"
+	
 	sudo sed -i '/listen 443/c \	listen 80;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/listen \[::\]:443/c \	listen [::]:80;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/headers-https.conf/d' /etc/nginx/sites-available/$domain
@@ -137,8 +165,8 @@ site_ssl_off() {
 	[[ $(conf_read tools-site) == $domain ]] && sudo webinoly -tools-site=$domain
 	[[ $(conf_read default-site) == $domain ]] && sudo webinoly -default-site=$domain
 	
-	if [[ -n $cache && $cache =~ ^(force|off-force)$ ]]; then
-		answer=="N"
+	if [[ -n $revoke && $revoke =~ ^(on|off)$ ]]; then
+		[[ $revoke == "on" ]] && answer="Y" || answer="N"
 	else
 		echo "${blu}Select 'Y' to revoke and delete all the certificate files."
 		echo "Select 'N' if you only want to deactivate this certificate momentary and you will activate it later again."
