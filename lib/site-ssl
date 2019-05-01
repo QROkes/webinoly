@@ -10,7 +10,9 @@ ssl_nginx() {
 	sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$domain
-	sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$domain/}" /etc/nginx/sites-available/$domain
+	
+	[[ -n $add_to_wildcard ]] && cert=$add_to_wildcard || cert=$domain
+	sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$cert/}" /etc/nginx/sites-available/$domain
 	
 	# Custom SSL files
 	if [[ -n $ssl_crt && -n $ssl_key ]]; then

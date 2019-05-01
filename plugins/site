@@ -335,6 +335,26 @@ elif [[ ( -n $ssl_on || -n $ssl_off || -n $ssl ) && -a /etc/nginx/sites-availabl
 				echo "${red}[ERROR] Custom SSL cert files not found! ${end}"
 				exit 1
 			fi
+		elif [[ -n $add_to_wildcard ]]; then
+			if [[ $add_to_wildcard == true ]]; then
+				echo "${red}[ERROR] Please, enter a valid wildcard SSL domain! ${end}"
+				exit 1
+			else
+				# Check if domain is a subdomain that can be used in the wildcard cert.
+				if [[ $domain == *.*."$add_to_wildcard" ]]; then
+					echo "${red}[ERROR] Wildcard Certs only support first-level subdomains!${end}"
+					exit 1
+				elif [[ ! -d /etc/letsencrypt/live/$add_to_wildcard ]]; then
+					echo "${red}[ERROR] Wildcard Cert not found!${end}"
+					exit 1
+				elif [[ $domain == *."$add_to_wildcard" ]]; then
+					ssl_nginx
+					echo "${gre}Your site ${blu}- $domain -${gre} have been successfully added to the ${blu}- $add_to_wildcard -${gre} wildcard cert.${end}"
+				else
+					echo "${red}[ERROR] Seems like your site is not a valid subdomain!${end}"
+					exit 1
+				fi
+			fi
 		else
 			site_ssl_on
 		fi
