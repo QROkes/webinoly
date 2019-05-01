@@ -146,12 +146,12 @@ site_ssl_on() {
 		
 		cronmail=$( sudo grep -F "MAILTO=" /var/spool/cron/crontabs/root )
 		cronrene=$( sudo grep -F "certbot renew" /var/spool/cron/crontabs/root )
-		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root
-		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root
+		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
+		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
 		
 		echo "${gre}SSL have been successfully enabled for your site -${blu} $domain${end}"
 	elif [[ -a /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
-		echo "${gre}SSL Cert -${blu} $domain$ -${gre}has been Forced to Renew!${end}"
+		echo "${gre}SSL Cert ${blu}- $domain$ - ${gre}has been Forced to Renew!${end}"
 	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
 		echo "${red}"
 		echo "[ERROR] Unable to create the new certificate!"

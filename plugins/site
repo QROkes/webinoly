@@ -145,20 +145,13 @@ elif [[ -n $delete_all ]]; then
 	echo "All your sites files will be removed."
 	echo "This action will only delete Databases attached to a WordPress site, any other Database will not be deleted."
 	echo "${end}"
-	# List all sites in /var/www/ folder
-	for site in "/var/www"/*
-	do
-		delete="force"
-		domain=$(echo $site | cut -f 4 -d "/")
-		[[ $domain != "html" && $domain != $(conf_read tools-port) ]] && deletesite
-	done
-
+	
 	# List all remaining sites (parked and proxy)
 	for site in "/etc/nginx/sites-available"/*
 	do
 		delete="force"
-		domi=$(echo $site | cut -f 5 -d "/")
-		[[ $domi != "html" && $domi != "default" && $domi != $(conf_read tools-port) ]] && deletesite
+		domain=$(echo $site | cut -f 5 -d "/")
+		[[ $domain != "html" && $domi != "default" && $domain != $(conf_read tools-port) ]] && deletesite
 	done
 	
 	# Delete all files - double check!

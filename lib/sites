@@ -480,7 +480,7 @@ deletesite() {
 		  [[ $revoke = [YyNn] ]] && break
 		done
 	fi
-	[[ $revoke =~ ^(on|y|Y)$ ]] && ssl_revoke
+	[[ $revoke =~ ^(on|y|Y)$ && -d /etc/letsencrypt/live/$domain ]] && ssl_revoke
 	
 	
 	# Delete site files
