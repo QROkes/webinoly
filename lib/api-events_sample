@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Internal API or Events
-# Docs: https://webinoly.com/en/documentation/internal-api-events/
+# Docs: https://webinoly.com/en/api/internal-api-events/
 
 # Description: Execute actions at certain points or events, for example at the end of the "stack" command each time is executed 
 # or after Nginx is installed. Just rename this file to "api-events" and check for the complete list of status codes in the documentation.

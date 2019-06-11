@@ -3,7 +3,7 @@
 # Http-Authentication Plugin
 # Syntax: httpauth <option> <argument>
 # Options: -add, -delete, -list, -wp-admin, -whitelist, -whitelist-remove
-# Arguments: -raw
+# Arguments: -raw, -list
 
 source /opt/webinoly/lib/general
 check_for_parameters $@
