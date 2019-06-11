@@ -177,7 +177,7 @@ webinoly_verify() {
 			error="1"
 		fi
 		if [[ ! -a /etc/nginx/.htpasswd && $(conf_read php) == "true" ]]; then
-			echo "[INFO] File: /etc/nginx/.htpasswd not found! (Create your HTTP Auth Credentials)"
+			echo "[INFO] File: /etc/nginx/.htpasswd not found! (Create your HTTP Auth Credentials to remove this message)"
 			info="1"
 		fi
 		if [[ ! -a /etc/nginx/conf.d/blockips.conf ]]; then

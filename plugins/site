@@ -32,6 +32,11 @@ if [[ -n $domain ]]; then
 	done
 	[[ -n $(echo "$(echo "${domain}" | rev | cut -d'.' -f $count- -s | rev)" | cut -d'.' -f 2 -s) || $count == 1 ]] && subdomflag="1" || subdomflag="0"
 fi
+# Get variables with sub-domain info
+if [[ $subdomflag == 1 ]]; then
+	main_domain=$(echo "$(echo "${domain}" | rev | cut -d'.' -f -$count -s | rev)")
+	sub_domain=$(echo "$(echo "${domain}" | rev | cut -d'.' -f $[$count+1]- -s | rev)")
+fi
 # Overwrite value if defined by user
 [[ $subdomain == "true" ]] && subdomflag="1"
 [[ $subdomain == "false" ]] && subdomflag="0"

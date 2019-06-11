@@ -514,8 +514,17 @@ createsite() {
 	
 	sudo cp /opt/webinoly/templates/template-site-php /etc/nginx/sites-available/$domain
 	
-	# Remove www support for subdomains - only main domain will support both www and non-www.
-	[[ $subdomflag == 1 ]] && sudo sed -i "s/ www.domain.com;/;/g"  /etc/nginx/sites-available/$domain
+	if [[ $subdomflag == 1 ]]; then
+		# Remove www support for subdomains - only main domain will support both www and non-www.
+		sudo sed -i "s/ www.domain.com;/;/g"  /etc/nginx/sites-available/$domain
+		
+		# WWW Subdomain Warning!
+		if [[ ${sub_domain,,} == "www" ]]; then
+			echo "${red}[WARNING] You're creating a site with a WWW subdomain and it won't respond to main domain ${blu}'$main_domain'${red} requests."
+			echo "Sites created with the main domain are automatically configured to respond to both www and non-www requests."
+			echo "${end}"
+		fi
+	fi
 
 	# Nginx conf file for the new site (-php conf is default)
 	sudo sed -i "s/domain.com/$domain/g"  /etc/nginx/sites-available/$domain
