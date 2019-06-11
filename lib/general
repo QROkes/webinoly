@@ -190,19 +190,28 @@ api-events_update() {
 
 
 conf_read() {
+	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
+		echo "${red}[ERROR] Config file not found!${end}"
+		exit 1
+	fi
+	
 	local val=$(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf | cut -f 2 -d ':')
 	echo $val
 }
 
-conf_write() {
-	[[ ! -a /opt/webinoly/webinoly.conf ]] && sudo touch /opt/webinoly/webinoly.conf
-	#if requested VAR exists overwrite it, if not, create it.
+conf_delete() {
+	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
+		echo "${red}[ERROR] Config file not found!${end}"
+		exit 1
+	fi
+	
 	sed -i "/^${1}:/d" /opt/webinoly/webinoly.conf
-	sh -c "echo -n '$1:$2\n' >> /opt/webinoly/webinoly.conf"
 }
 
-conf_delete() {
-	sed -i "/^${1}:/d" /opt/webinoly/webinoly.conf
+conf_write() {
+	[[ ! -a /opt/webinoly/webinoly.conf ]] && sudo touch /opt/webinoly/webinoly.conf
+	conf_delete $1
+	echo "$1:$2" >> /opt/webinoly/webinoly.conf
 }
 
 
