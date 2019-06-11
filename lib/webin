@@ -177,7 +177,7 @@ webinoly_verify() {
 			error="1"
 		fi
 		if [[ ! -a /etc/nginx/.htpasswd && $(conf_read php) == "true" ]]; then
-			echo "[INFO] File: /etc/nginx/.htpasswd not found!"
+			echo "[INFO] File: /etc/nginx/.htpasswd not found! (Create your HTTP Auth Credentials)"
 			info="1"
 		fi
 		if [[ ! -a /etc/nginx/conf.d/blockips.conf ]]; then
@@ -371,8 +371,16 @@ webinoly_verify() {
 			echo "[ERROR] File: /usr/bin/duplicity not found!"
 			error="1"
 		fi
-		if [[ ! -a /usr/bin/letsencrypt ]]; then
+		if [[ ! -a /usr/bin/duply ]]; then
+			echo "[ERROR] File: /usr/bin/duply not found!"
+			error="1"
+		fi
+		if [[ ! -L /usr/bin/letsencrypt ]]; then
 			echo "[ERROR] File: /usr/bin/letsencrypt not found!"
+			error="1"
+		fi
+		if [[ ! -a /usr/bin/certbot ]]; then
+			echo "[ERROR] File: /usr/bin/certbot not found!"
 			error="1"
 		fi
 	fi
