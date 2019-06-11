@@ -34,8 +34,8 @@ if [[ -n $domain ]]; then
 fi
 # Get variables with sub-domain info
 if [[ $subdomflag == 1 ]]; then
-	main_domain=$(echo "$(echo "${domain}" | rev | cut -d'.' -f -$count -s | rev)")
-	sub_domain=$(echo "$(echo "${domain}" | rev | cut -d'.' -f $[$count+1]- -s | rev)")
+	main_domain=$(echo "${domain}" | rev | cut -d'.' -f -$count -s | rev)
+	sub_domain=$(echo "${domain}" | rev | cut -d'.' -f $[$count+1]- -s | rev)
 fi
 # Overwrite value if defined by user
 [[ $subdomain == "true" ]] && subdomflag="1"
@@ -156,7 +156,7 @@ elif [[ -n $delete_all ]]; then
 	do
 		delete="force"
 		domain=$(echo $site | cut -f 5 -d "/")
-		[[ $domain != "html" && $domi != "default" && $domain != $(conf_read tools-port) ]] && deletesite
+		[[ $domain != "default" && $domain != $(conf_read tools-port) ]] && deletesite
 	done
 	
 	# Delete all files - double check!
@@ -310,7 +310,7 @@ elif [[ -n $on && ! -L /etc/nginx/sites-enabled/$domain && -a /etc/nginx/sites-a
 # Delete site	
 elif [[ -n $delete && -a /etc/nginx/sites-available/$domain ]]; then
 	api-events_update si6
-	deletesite
+	[[ $domain == "default" || $domain == $(conf_read tools-port) ]] && echo "${red}[ERROR] System sites can not be removed!${end}" || deletesite
 
 
 # SSL (Letsencrypt)
