@@ -1,10 +1,69 @@
 #!/bin/bash
 
+readonly app_version="1.8.1"
+readonly svr_version="1.3"
+readonly os_ubuntu_supported=(xenial bionic)
+readonly os_mariadb_supported=(trusty xenial artful bionic cosmic disco)
+readonly php_supported=(7.1 7.2 7.3)
+
 # echo colors
-red=`tput setaf 1`
-gre=`tput setaf 2`
-blu=`tput setaf 6`
-end=`tput sgr0`
+readonly red=`tput setaf 1`
+readonly gre=`tput setaf 2`
+readonly blu=`tput setaf 6`
+readonly end=`tput sgr0`
+
+
+
+check_ubuntu_release() {
+	local check="false"
+	for val in "${os_ubuntu_supported[@]}"
+	do 
+		[[ $val == $1 ]] && check="true"
+	done
+	echo $check
+}
+check_mariadb_os() {
+	local check="false"
+	for val in "${os_mariadb_supported[@]}"
+	do 
+		[[ $val == $1 ]] && check="true"
+	done
+	echo $check
+}
+check_php_version() {
+	local check="false"
+	for val in "${php_supported[@]}"
+	do 
+		[[ $val == $1 ]] && check="true"
+	done
+	echo $check
+}
+
+
+conf_read() {
+	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
+		echo "${red}[ERROR] Config file not found!${end}"
+		exit 1
+	fi
+	
+	local val=$(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf | cut -f 2 -d ':')
+	echo $val
+}
+
+conf_delete() {
+	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
+		echo "${red}[ERROR] Config file not found!${end}"
+		exit 1
+	fi
+	
+	sed -i "/^${1}:/d" /opt/webinoly/webinoly.conf
+}
+
+conf_write() {
+	[[ ! -a /opt/webinoly/webinoly.conf ]] && sudo touch /opt/webinoly/webinoly.conf
+	conf_delete $1
+	echo "$1:$2" >> /opt/webinoly/webinoly.conf
+}
 
 
 db_delete() {
@@ -186,32 +245,6 @@ api-events_update() {
 		source /opt/webinoly/lib/api-events
 		api-events_catch_status $1
 	fi
-}
-
-
-conf_read() {
-	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
-		echo "${red}[ERROR] Config file not found!${end}"
-		exit 1
-	fi
-	
-	local val=$(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf | cut -f 2 -d ':')
-	echo $val
-}
-
-conf_delete() {
-	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
-		echo "${red}[ERROR] Config file not found!${end}"
-		exit 1
-	fi
-	
-	sed -i "/^${1}:/d" /opt/webinoly/webinoly.conf
-}
-
-conf_write() {
-	[[ ! -a /opt/webinoly/webinoly.conf ]] && sudo touch /opt/webinoly/webinoly.conf
-	conf_delete $1
-	echo "$1:$2" >> /opt/webinoly/webinoly.conf
 }
 
 
