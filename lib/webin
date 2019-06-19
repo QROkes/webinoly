@@ -454,8 +454,8 @@ webinoly_verify() {
 	if [[ $distr != "Ubuntu" ]]; then
 		echo "[ERROR] This Operating System is not supported!"
 		error="1"
-	elif ! [[ $osver =~ ^(xenial|bionic)$ ]]; then
-		echo "[ERROR] This Ubuntu Distro is not supported!"
+	elif [[ $(check_ubuntu_release $osver) != "true" ]]; then
+		echo "[ERROR] This Ubuntu version is not supported!"
 		error="1"
 	fi
 	# Check for sudo/root privileges

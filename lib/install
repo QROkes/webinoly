@@ -170,7 +170,7 @@ nginx_install() {
 
 php_install() {
 	api-events_update ip1
-	if [[ -n $(conf_read php-ver) && ($(conf_read php-ver) == "7.3" || $(conf_read php-ver) == "7.2" || $(conf_read php-ver) == "7.1") ]]; then
+	if [[ -n $(conf_read php-ver) && $(check_php_version $(conf_read php-ver)) == "true" ]]; then
 		echo "${gre}PHP version '$(conf_read php-ver)' is set as default.${end}"
 	else
 		# Default PHP version
@@ -179,7 +179,7 @@ php_install() {
 	ver=$(conf_read php-ver)
 	
 	# Multi-PHP
-	if [[ $(conf_read multi-php) == "true" && -n $1 && $1 =~ ^(7.1|7.2|7.3)$ && $(conf_read php) == "true" && $1 != $ver ]]; then
+	if [[ $(conf_read multi-php) == "true" && -n $1 && $(check_php_version $1) == "true" && $(conf_read php) == "true" && $1 != $ver ]]; then
 		ver="$1"
 		echo "${gre}Multi-PHP version is enabled. PHP '$ver' will be installed!${end}"
 	elif [[ $(conf_read multi-php) != "true" && -n $1 ]]; then

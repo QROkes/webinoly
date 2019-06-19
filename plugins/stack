@@ -379,7 +379,7 @@ elif [[ -n $php_ver ]]; then
 		exit 1
 	fi
 	
-	if [[ $php_ver != true && $php_ver =~ ^(7.3|7.2|7.1)$ ]]; then
+	if [[ $php_ver != true && $(check_php_version $php_ver) == "true" ]]; then
 		echo "${blu}New PHP version: '$php_ver' ${end}"
 		if [[ $(conf_read php) == "true" && $(conf_read php-ver) == $php_ver ]]; then
 			echo "${red}PHP $php_ver is currently installed!${end}"

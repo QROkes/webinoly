@@ -3,7 +3,6 @@
 readonly app_version="1.8.1"
 readonly svr_version="1.3"
 readonly os_ubuntu_supported=(xenial bionic)
-readonly os_mariadb_supported=(trusty xenial artful bionic cosmic disco)
 readonly php_supported=(7.1 7.2 7.3)
 
 # echo colors
@@ -22,14 +21,6 @@ check_ubuntu_release() {
 	done
 	echo $check
 }
-check_mariadb_os() {
-	local check="false"
-	for val in "${os_mariadb_supported[@]}"
-	do 
-		[[ $val == $1 ]] && check="true"
-	done
-	echo $check
-}
 check_php_version() {
 	local check="false"
 	for val in "${php_supported[@]}"
@@ -37,6 +28,19 @@ check_php_version() {
 		[[ $val == $1 ]] && check="true"
 	done
 	echo $check
+}
+
+check_osname() {
+	local distr=`echo $(lsb_release -i | cut -d':' -f 2)`
+	local osver=`echo $(lsb_release -c | cut -d':' -f 2)`
+	if ! [[ $distr == "Ubuntu" && $(check_ubuntu_release $osver) == "true" ]]; then
+		echo "${red}" >&2
+		echo "****************************************************************************" >&2
+		echo "****  This OS is not supported by Webinoly and could not work properly  ****" >&2
+		echo "****************************************************************************" >&2
+		echo "${end}" >&2
+	fi
+	echo $osver
 }
 
 
@@ -165,20 +169,6 @@ db_delete() {
 }
 
 
-check_osname() {
-	local distr=`echo $(lsb_release -i | cut -d':' -f 2)`
-	local osver=`echo $(lsb_release -c | cut -d':' -f 2)`
-	if ! [[ $distr == "Ubuntu" && $osver =~ ^(trusty|xenial|artful|bionic|cosmic)$ ]]; then
-		echo "${red}" >&2
-		echo "****************************************************************************" >&2
-		echo "****  This OS is not supported by Webinoly and could not work properly  ****" >&2
-		echo "****************************************************************************" >&2
-		echo "${end}" >&2
-	fi
-	echo $osver
-}
-
-
 pre_install() {
 	sudo apt -qq update
 	if [[ $(conf_read pre-packs) != true ]]; then
@@ -201,17 +191,17 @@ mysql_client_install() {
 	local osname=$(check_osname)
 	# Cases with MariaDB v10.3 support - https://downloads.mariadb.org/mariadb/repositories/
 	case "$osname" in
-		"trusty")
-			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
-			sudo add-apt-repository "deb [arch=amd64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.3/ubuntu $osname main"
-		;;
 		"xenial")
 			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
 			sudo add-apt-repository "deb [arch=amd64,arm64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.3/ubuntu $osname main"
 		;;
-		"bionic"|"cosmic")
+		"bionic")
 			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
 			sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.3/ubuntu $osname main"
+		;;
+		"cosmic"|"disco")
+			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+			sudo add-apt-repository "deb [arch=amd64] http://mirrors.syringanetworks.net/mariadb/repo/10.3/ubuntu $osname main"
 		;;
 	esac
 	pre_install
