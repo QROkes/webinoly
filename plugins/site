@@ -141,6 +141,7 @@ if [[ -n $list ]]; then
 	done
 	[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No sites were found!${end}"
 	echo ""
+	nginx_not="true" # Nginx-Reload not-needed.
 
 	
 # Delete all sites
@@ -310,12 +311,18 @@ elif [[ -n $on && ! -L /etc/nginx/sites-enabled/$domain && -a /etc/nginx/sites-a
 # Delete site	
 elif [[ -n $delete && -a /etc/nginx/sites-available/$domain ]]; then
 	api-events_update si6
-	[[ $domain == "default" || $domain == $(conf_read tools-port) ]] && echo "${red}[ERROR] System sites can not be removed!${end}" || deletesite
+	if [[ $domain == "default" || $domain == $(conf_read tools-port) ]]; then
+		echo "${red}[ERROR] System sites can not be removed!${end}"
+		exit 1
+	else
+		deletesite
+	fi
 
 
 # SSL (Letsencrypt)
 elif [[ $ssl == "renew" && -z $domain ]]; then
-		sudo certbot renew --post-hook "service nginx restart"
+		# Post-Hook removed because we always restar nginx at the end of site command
+		sudo certbot renew
 elif [[ ( -n $ssl_off || $ssl == "off" ) && ! -a /etc/nginx/sites-available/$domain && -a /etc/letsencrypt/live/$domain/cert.pem ]]; then
 	echo "${red}[WARNING] SSL Orphan-Cert found and will be revoked automatically!${end}"
 	ssl_revoke
@@ -420,5 +427,5 @@ else
 fi
 
 shopt -u extglob
-[[ $(conf_read nginx) == "true" ]] && sudo service nginx reload
+[[ $(conf_read nginx) == "true" && -z $nginx_not ]] && sudo service nginx reload
 api-events_update sie
