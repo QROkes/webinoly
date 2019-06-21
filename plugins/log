@@ -78,12 +78,8 @@ elif [[ -n $only_error ]]; then
 	
 	# Per site
 	if [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
-		if [[ $(conf_read nginx) == "true" ]]; then
-			islog=$( grep -F "access_log off;" /etc/nginx/sites-available/$domain )
-		else
-			echo "${red}[ERROR] Nginx not found! ${end}"
-			exit 1
-		fi
+		check_for_nginx
+		islog=$( grep -F "access_log off;" /etc/nginx/sites-available/$domain )
 		if [[ $domain == "default" || $domain == $(conf_read tools-port) ]]; then
 			echo "${red}[ERROR] Only-Error is not allowed to be used in Tools-Port or Default Nginx site! ${end}"
 			exit 1

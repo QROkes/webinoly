@@ -157,10 +157,7 @@ elif [[ -n $tools_site ]]; then
 
 	
 elif [[ -n $login_www_data || -n $nologin_www_data ]]; then
-	if [[ $(conf_read nginx) != "true" ]]; then
-		echo "${red}[ERROR] Nginx not found! ${end}"
-		exit 1
-	fi
+	check_for_nginx
 	if [[ -n $login_www_data && ! $login_www_data =~ ^(on|off|true)$ ]]; then
 		echo "${red}[ERROR] Invalid option! ${end}"
 		exit 1
@@ -535,11 +532,7 @@ elif [[ -n $yoast_sitemap ]]; then
 
 
 elif [[ -n $default_site ]]; then
-	if [[ $(conf_read nginx) != "true" ]]; then
-		echo "${red}[ERROR] Nginx not found! ${end}"
-		exit 1
-	fi
-
+	check_for_nginx
 	if [[ $default_site == "default" ]]; then
 		if [[ -a /opt/webinoly/templates/source/default ]]; then
 			sudo cat /opt/webinoly/templates/source/default >| /etc/nginx/sites-available/default

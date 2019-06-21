@@ -2,8 +2,6 @@
 
 # This is a library for Site Manager Plugin
 # Functions for site creation and delete
-
-source /opt/webinoly/lib/general
 source /opt/webinoly/lib/site-ssl
 
 
@@ -485,17 +483,12 @@ deletesite() {
 
 createsite() {
 	api-events_update si1
+	[[ $type == [123] || -n $php ]] && check_for_php
+	
 	# Check domain and then prevent reserved characters for file names.
 	domain_check $domain
 	domain=$(echo $domain | sed "s/[^\.0-9A-Za-z\-]/_/g" | sed "s/^[\.]/_/g" | sed "s/\.\./_/g")
-	
-	if [[ $(conf_read php) != "true" && ( $type == [123] || -n $php ) ]]; then
-		echo "${red}"
-		echo "[ERROR] PHP must be installed before you can create a PHP or WP site!"
-		echo "${end}"
-		exit 1
-	fi
-	
+		
 	# Check for duplicate sites
 	if [[ -a /etc/nginx/sites-available/$domain ]]; then
 		echo "${red}[ERROR] Can not create site${blu} $domain ${red}because already exists!${end}"

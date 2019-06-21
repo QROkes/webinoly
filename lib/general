@@ -44,6 +44,20 @@ check_osname() {
 }
 
 
+check_for_nginx() {
+	if [[ $(conf_read nginx) != "true" ]]; then
+		echo "${red}[ERROR] NGINX is required and not found! ${end}"
+		exit 1
+	fi
+}
+check_for_php() {
+	if [[ $(conf_read php) != "true" ]]; then
+		echo "${red}[ERROR] PHP is required and not found! ${end}"
+		exit 1
+	fi
+}
+
+
 conf_read() {
 	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
 		echo "${red}[ERROR] Config file not found!${end}"

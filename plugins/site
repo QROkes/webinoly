@@ -8,17 +8,11 @@
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
 
-source /opt/webinoly/lib/general
 source /opt/webinoly/lib/sites
 check_for_parameters $@
 api-events_update sis
+check_for_nginx
 
-if [[ ! $(conf_read nginx) == "true" ]]; then
-	echo ""
-	echo "${red}[ERROR] NGINX is required to create a site! ${end}"
-	echo ""
-	exit 1
-fi
 
 # Check if site is sub-domain
 if [[ -n $domain ]]; then
