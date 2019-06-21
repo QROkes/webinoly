@@ -300,14 +300,6 @@ elif [[ -n $uninstall ]]; then
 	  echo ""
 	  if [[ $answer = [YyNn] ]]; then
 		if [[ $answer == [Yy] ]]; then
-			if [[ $(conf_read linux-optim) == "purged" ]]; then
-				swap_delete
-			fi
-			if [[ $(conf_read pre-packs) == true ]]; then
-				sudo apt-get -y -qq purge pwgen unzip zip > /dev/null
-				sudo apt-get -y -qq autoremove > /dev/null
-				conf_write pre-packs purged
-			fi
 			sudo mv /opt/webinoly/webinoly.conf $HOME/.webinoly-conf-restore_dont-remove
 			sudo rm -rf /opt/webinoly
 			sudo rm /usr/bin/webinoly

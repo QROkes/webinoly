@@ -5,7 +5,6 @@
 # Options: -html, -nginx, -php, -lemp, -mysql, -pma, -info, -purge-server-all, -php-ver
 # Arguments: -purge, -notools
 
-source /opt/webinoly/lib/install
 source /opt/webinoly/lib/webin
 check_for_parameters $@
 api-events_update sts
@@ -434,6 +433,14 @@ elif [[ -n $purge_server_all ]]; then
 		[[ $force == 1 ]] && stack -mysql -purge=force || stack -mysql -purge
 		[[ $force == 1 ]] && stack -php -purge=force || stack -php -purge
 		clear_force_flag
+		
+		# Remove remanent packages and things!
+		[[ $(conf_read linux-optim) == "purged" ]] && swap_delete
+		if [[ $(conf_read pre-packs) == true ]]; then
+			sudo apt-get -y -qq purge pwgen unzip zip > /dev/null
+			sudo apt-get -y -qq autoremove > /dev/null
+			conf_write pre-packs purged
+		fi	
 		
 		echo "${gre}"
 		echo "****************************************************************************"
