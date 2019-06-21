@@ -290,9 +290,8 @@ elif [[ -n $proxy && -n $domain ]]; then
 	
 	
 # Site disabled	
-elif [[ -n $off && ! -L /etc/nginx/sites-enabled/$domain ]]; then
-	echo "${red}Site${blu} $domain ${red}doesn't exist or is already disabled!${end}"
-	exit 1
+elif [[ -n $off && ! -L /etc/nginx/sites-enabled/$domain && -a /etc/nginx/sites-available/$domain ]]; then
+		echo "${gre}Seems like your site${blu} $domain ${red}is already disabled!${end}"
 elif [[ -n $off && -L /etc/nginx/sites-enabled/$domain ]]; then
 	api-events_update si5
 	echo "${gre}Site${blu} $domain ${gre}has been successfully disabled!${end}"
@@ -321,7 +320,7 @@ elif [[ -n $delete && -a /etc/nginx/sites-available/$domain ]]; then
 
 # SSL (Letsencrypt)
 elif [[ $ssl == "renew" && -z $domain ]]; then
-		# Post-Hook removed because we always restar nginx at the end of site command
+		# Post-Hook removed because we always restart nginx at the end of site command
 		sudo certbot renew
 elif [[ ( -n $ssl_off || $ssl == "off" ) && ! -a /etc/nginx/sites-available/$domain && -a /etc/letsencrypt/live/$domain/cert.pem ]]; then
 	echo "${red}[WARNING] SSL Orphan-Cert found and will be revoked automatically!${end}"
@@ -379,7 +378,7 @@ elif [[ ( -n $nocache || ( -n $cache && $cache == "off" )) && -a /etc/nginx/site
 		sudo sed -i '/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
 		echo "${gre}FastCGI Cache in${blu} $domain ${gre}has been disabled!${end}"
 	else
-		echo "${red}Site${blu} $domain ${red}is not a WP site or FastCGI is already disabled!${end}"
+		echo "${red}[ERROR] Site${blu} $domain ${red}is not a WP site or FastCGI is already disabled!${end}"
 		exit 1
 	fi
 	
@@ -404,14 +403,14 @@ elif [[ ( -n $cache || $cache == "on" ) && -a /etc/nginx/sites-available/$domain
 			done
 		fi
 		echo "${gre}"
-		echo " FastCGI Cache in${blu} $domain ${gre}has been successfully enabled! "
+		echo "FastCGI Cache in${blu} $domain ${gre}has been successfully enabled! "
 		echo "${end}"
 	else
-		echo "${red}Site${blu} $domain ${red}is not a WP site or FastCGI is already enabled!${end}"
+		echo "${red}[ERROR] Site${blu} $domain ${red}is not a WP site or FastCGI is already enabled!${end}"
 		exit 1
 	fi
 
-	
+
 # Force www or non-www redirect (www, root, off)
 elif [[ -n $force_redirect && -a /etc/nginx/sites-available/$domain ]]; then
 	force_redirect
@@ -419,7 +418,7 @@ elif [[ -n $force_redirect && -a /etc/nginx/sites-available/$domain ]]; then
 	
 # Catch ERROR 
 elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
-	echo "${red}Site${blu} $domain ${red}doesn't exists!${end}"
+	echo "${red}[ERROR] Site${blu} $domain ${red}doesn't exists, please enter a valid domain name!${end}"
 	exit 1
 else
 	echo "${red}[ERROR] Please, enter a valid option! ${end}"

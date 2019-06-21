@@ -29,7 +29,7 @@ if [[ -a /opt/webinoly/webinoly.conf && $2 != "-ver=beta" && $2 != "-ver=alpha" 
 	if [[ -n $checkver && -n $currentver && ${checkver//.} -le ${currentver//.} ]]; then
 		echo "${gre}You currently have the latest version!${end}"
 		sudo rm weby
-		exit 1
+		exit 0
 	fi
 fi
 

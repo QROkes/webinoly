@@ -30,7 +30,7 @@ elif [[ -n $server_reset ]]; then
 	if [[ $server_reset == true ]]; then
 		server_reset="all"
 	elif ! [[ $server_reset =~ ^(all|nginx|php)$ ]]; then
-		echo "${red}Please, enter a valid option to update/reset your server configuration!${end}"
+		echo "${red}[ERROR] Please, enter a valid option to update/reset your server configuration!${end}"
 		exit 1
 	fi
 	
@@ -50,7 +50,7 @@ elif [[ -n $server_reset ]]; then
 		sudo mv /tmp/webinoly_whitelist_backup /etc/nginx/common/acl.conf
 		echo "${gre}Nginx settings has been updated successfully!${end}"
 	elif [[ $(conf_read nginx-optim) != "true" && $server_reset =~ ^(nginx|all)$ ]]; then
-		echo "${red}Nginx settings couldn't been updated, seems like is not installed in your server!${end}"
+		echo "${red}[ERROR] Nginx settings couldn't been updated, seems like is not installed in your server!${end}"
 		err_cont=true
 	fi
 	
@@ -67,7 +67,7 @@ elif [[ -n $server_reset ]]; then
 			exit 1
 		fi
 	elif [[ $(conf_read php-optim) != "true" && $server_reset =~ ^(nginx|all)$ ]]; then
-		echo "${red}PHP settings couldn't been updated, seems like is not installed in your server!${end}"
+		echo "${red}[ERROR] PHP settings couldn't been updated, seems like is not installed in your server!${end}"
 		exit 1
 	fi
 	
@@ -168,8 +168,8 @@ elif [[ -n $login_www_data || -n $nologin_www_data ]]; then
 	
 	if [[ $login_www_data == true || $login_www_data == "on" ]]; then
 		if [[ $(conf_read login-www-data) == "true" ]]; then
-			echo "${red}User www-data already have SFTP access! ${end}"
-			exit 1
+			echo "${gre}SFTP access for www-data user is already enabled! ${end}"
+			exit 0
 		fi
 		
 		# Allow access for www-data user
@@ -204,8 +204,8 @@ ForceCommand internal-sftp
 	
 	elif [[ $nologin_www_data == true || $login_www_data == "off" ]]; then
 		if [[ $(conf_read login-www-data) != "true" ]]; then
-			echo "${red}User www-data already have no SFTP access! ${end}"
-			exit 1
+			echo "${gre}SFTP access for www-data user is already disabled! ${end}"
+			exit 0
 		fi
 		
 		sudo rm -rf /var/www/.ssh
@@ -296,8 +296,8 @@ elif [[ -n $config_cache ]]; then
 elif [[ -n $uninstall ]]; then
 	api-events_update wy4
 	echo "${red}"
-	echo " You are about to remove completely Webinoly App from your server!!"
-	echo "${blu}     Are you sure [y/N]? "
+	echo "You are about to completely remove Webinoly App from your server!!"
+	echo "${blu}Are you sure [y/N]? "
 	while read -r -n 1 -s answer; do
 	  answer=${answer:-n}
 	  echo ""
@@ -462,8 +462,8 @@ elif [[ -n $blockip ]]; then
 					sh -c "echo -n 'deny $blockip;\n' >> /etc/nginx/conf.d/blockips.conf"
 					echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully blocked!${end}"
 				else
-					echo "${red}IP '$blockip' is already blocked!${end}"
-					exit 1
+					echo "${gre}IP '$blockip' is already blocked!${end}"
+					exit 0
 				fi
 			else	
 				echo "${red}[ERROR] Please, enter a valid IP value!${end}"
@@ -500,7 +500,7 @@ elif [[ -n $conf_value ]]; then
 			conf_write $dyn_var $conf_value
 			echo "${gre}Configuration successfully updated!${end}"
 		else
-			echo "${red}Please, enter a valid value!${end}"
+			echo "${red}[ERROR] Please, enter a valid value!${end}"
 			exit 1
 		fi
 	else
@@ -518,7 +518,7 @@ elif [[ -n $yoast_sitemap ]]; then
 			conf_write yoast-sitemap true
 			echo "${gre}Yoast Sitemap Support was successfully enabled!${end}"
 		else
-			echo "${red}Yoast Sitemap Support is already enabled!${end}"
+			echo "${gre}Yoast Sitemap Support is already enabled!${end}"
 		fi
 	elif [[ $yoast_sitemap == "off" ]]; then
 		if [[ -n $ystmap || ( -z $ystmap && $(conf_read nginx) != "true" ) ]]; then
@@ -526,7 +526,7 @@ elif [[ -n $yoast_sitemap ]]; then
 			conf_write yoast-sitemap purged
 			echo "${gre}Yoast Sitemap Support was successfully disabled!${end}"
 		else
-			echo "${red}Yoast Sitemap Support is already disabled!${end}"
+			echo "${gre}Yoast Sitemap Support is already disabled!${end}"
 		fi
 	else
 		echo "${red}[ERROR] Please, enter a valid option to enable/disable Yoast Sitemap Support!${end}"

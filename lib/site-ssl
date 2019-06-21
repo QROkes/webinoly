@@ -55,7 +55,7 @@ site_ssl_on() {
 	if [[ -n $root && -a /etc/nginx/sites-available/$root ]]; then
 		path=$root
 	elif [[ -n $root && ! -a /etc/nginx/sites-available/$root ]]; then
-		echo "${red}Root path domain is not a valid domain or is not found/hosted in this server!${end}"
+		echo "${red}[ERROR] Root path domain is not a valid domain or is not found/hosted in this server!${end}"
 		exit 1
 	fi
 	

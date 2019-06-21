@@ -535,7 +535,7 @@ swap_create() {
 		fi
 
 		if [[ -z $newswap || $newswap == 0 ]]; then
-			echo "${red} [ERROR] Webinoly could not create a new Swap Partition! ${end}"
+			echo "${red}[ERROR] Webinoly could not create a new Swap Partition! ${end}"
 		else
 			# Create SWAP Partition
 			sudo dd if=/dev/zero of=/swapfile bs=${newswap}M count=1024

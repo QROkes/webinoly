@@ -32,7 +32,7 @@ if [[ -n $add ]]; then
 	fi
 	
 	if ! [[ -n $user && -n $pass && $user =~ ^[^:]+$ && $pass =~ ^[^:]+$ ]]; then
-		echo "${red}Please, enter a valid username and password!${end}"
+		echo "${red}[ERROR] Please, enter a valid username and password!${end}"
 		exit 1
 	fi
 	
@@ -41,7 +41,8 @@ if [[ -n $add ]]; then
 		sudo sh -c "echo -n '$user:$(openssl passwd -1 $pass)\n' >> /etc/nginx/.htpasswd"
 		echo "${gre}User '$user' has been added successfully!${end}"
 	else
-		echo "${red}User '$user' already exist!${end}"
+		echo "${red}[ERROR] Can not create '$user' user because already exist!${end}"
+		exit 1
 	fi
 	echo ""
 
@@ -51,7 +52,7 @@ elif [[ -n $delete ]]; then
 	[[ $delete == true ]] && read -p "${blu}HTTP-Auth User: ${end}" userpurge || userpurge=$delete
 	[[ -a /etc/nginx/.htpasswd ]] && exist=$( grep -F "${userpurge}:" /etc/nginx/.htpasswd )
 	if [[ -z $exist ]]; then
-		echo "${red}User '$userpurge' does not exist!${end}"
+		echo "${red}[ERROR] User '$userpurge' does not exist!${end}"
 		exit 1
 	fi
 	sudo sed -i "/^$userpurge:/d" /etc/nginx/.htpasswd
@@ -107,8 +108,8 @@ elif [[ -n $whitelist ]]; then
 					sudo service nginx reload
 					echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully whitelisted!${end}"
 				else
-					echo "${red}IP '$whitelist' is already whitelisted!${end}"
-					exit 1
+					echo "${gre}IP '$whitelist' is already whitelisted!${end}"
+					exit 0
 				fi
 			else	
 				echo "${red}[ERROR] Please, enter a valid IP value!${end}"
@@ -130,7 +131,7 @@ elif [[ -n $whitelist_remove ]]; then
 			sudo service nginx reload
 			echo "${gre}The IP address ${blu}'$whitelist_remove'${gre} was successfully removed from whitelist!${end}"
 		else
-			echo "${red}Please, enter a valid IP value!${end}"
+			echo "${red}[ERROR] Please, enter a valid IP value!${end}"
 			exit 1
 		fi
 	else

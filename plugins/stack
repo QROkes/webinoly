@@ -24,7 +24,7 @@ fi
 if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 	api-events_update pn1
 	if [[ $(conf_read nginx) != "true" ]]; then
-		echo "${red}Nginx is not installed, hence can not be deleted! ${end}"
+		echo "${red}[ERROR] Nginx is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 		# Use "0" because any other number cause running commands twice when using "force" in -purge-server-all
 		exit 0
@@ -90,7 +90,7 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 		echo ""
 	else
 		echo ""
-		echo " ${gre} Action aborted!!!  ${end}"
+		echo " ${gre}Action aborted!!!  ${end}"
 		echo ""
 	fi
 	echo ""
@@ -98,7 +98,7 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 elif [[ -n $purge && -n $php ]]; then
 	api-events_update pp1
 	if [[ $(conf_read php) != "true" ]]; then
-		echo "${red}PHP is not installed, hence can not be deleted! ${end}"
+		echo "${red}[ERROR] PHP is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 		exit 0
 	fi
@@ -109,7 +109,7 @@ elif [[ -n $purge && -n $php ]]; then
 	echo ""
 
 	if [[ $(conf_read force-flag) != "true" ]]; then
-		echo " ${blu} Are you sure [y/N]? ${end}"
+		echo " ${blu}Are you sure [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
 			answer=${answer:-n}
 			[[ $answer = [YyNn] ]] && break
@@ -148,7 +148,7 @@ elif [[ -n $purge && -n $php ]]; then
 		echo ""
 	else
 		echo ""
-		echo " ${gre} Action aborted!!!  ${end}"
+		echo " ${gre}Action aborted!!!  ${end}"
 		echo ""
 	fi
 	echo ""
@@ -158,17 +158,17 @@ elif [[ -n $purge && -n $php ]]; then
 elif [[ -n $purge && -n $mysql ]]; then
 	api-events_update pm1
 	if [[ $(conf_read mysql) != "true" ]]; then
-		echo "${red}MySQL is not installed, hence can not be deleted! ${end}"
+		echo "${red}[ERROR] MySQL is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 		exit 0
 	fi
 	
 	echo ""
-	echo "${red} ¡ C A U T I O N !  You are about to remove MySQL from your server! ${end}"
+	echo "${red}¡ C A U T I O N !  You are about to remove MySQL from your server! ${end}"
 	echo ""
 
 	if [[ $(conf_read force-flag) != "true" ]]; then
-		echo " ${blu} Are you sure [y/N]? ${end}"
+		echo " ${blu}Are you sure [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
 		  answer=${answer:-n}
 		  [[ $answer = [YyNn] ]] && break
@@ -226,7 +226,7 @@ elif [[ -n $purge && -n $mysql ]]; then
 		echo ""
 	else
 		echo ""
-		echo " ${gre} Action aborted!!!  ${end}"
+		echo " ${gre}Action aborted!!!  ${end}"
 		echo ""
 	fi
 	echo ""
@@ -235,17 +235,17 @@ elif [[ -n $purge && -n $mysql ]]; then
 elif [[ -n $purge && -n $pma ]]; then
 	api-events_update pm2
 	if [[ $(conf_read mysql-tool) != "true" ]]; then
-		echo "${red} PhpMyAdmin is not installed, hence can not be deleted! ${end}"
+		echo "${red}[ERROR] PhpMyAdmin is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 		exit 0
 	fi
 	
 	echo ""
-	echo "${red} ¡ C A U T I O N !  You are about to remove PhpMyAdmin from your server! ${end}"
+	echo "${red}¡ C A U T I O N !  You are about to remove PhpMyAdmin from your server! ${end}"
 	echo ""
 
 	if [[ $(conf_read force-flag) != "true" && $(conf_read delautopma) != "true" ]]; then
-		echo " ${blu} Are you sure [y/N]? ${end} "
+		echo " ${blu}Are you sure [y/N]? ${end} "
 		while read -r -n 1 -s answer; do
 		  answer=${answer:-n}
 		  if [[ $answer = [YyNn] ]]; then
@@ -262,7 +262,7 @@ elif [[ -n $purge && -n $pma ]]; then
 		echo ""
 	else
 		echo ""
-		echo " ${gre} Action aborted!!!  ${end}"
+		echo " ${gre}Action aborted!!!  ${end}"
 		echo ""
 	fi
 	echo ""
@@ -303,7 +303,7 @@ elif [[ -n $html || -n $nginx ]]; then
 elif [[ -n $php ]]; then
 	# Check for a valid custom value.
 	if [[ -n $php && $php != true && $(conf_read multi-php) != "true" && $php != "force" ]]; then
-		echo "${red}Please, enter a valid PHP custom value!${end}"
+		echo "${red}[ERROR] Please, enter a valid PHP custom value!${end}"
 		exit 1
 	fi
 	
@@ -357,7 +357,7 @@ elif [[ -n $mysql ]]; then
 
 elif [[ -n $pma ]]; then
 	if [[ $(conf_read mysql) != "true" || $(conf_read php) != "true" || $(conf_read nginx) != "true" || $(conf_read nginx-tool) != "true" ]]; then
-		echo "${red}You need to have MySQL, PHP and NGINX installed before you can install PhpMyAdmin! ${end}"
+		echo "${red}[ERROR] You need to have MySQL, PHP and NGINX installed before you can install PhpMyAdmin! ${end}"
 		clear_force_flag
 		exit 0
 	fi
@@ -375,15 +375,15 @@ elif [[ -n $lemp ]]; then
 elif [[ -n $php_ver ]]; then
 	api-events_update st3
 	if [[ $(conf_read multi-php) == "true" ]]; then
-		echo "${red}This command is disabled because Multi-PHP is enabled!${end}"
+		echo "${red}[ERROR] This command is disabled because Multi-PHP is enabled!${end}"
 		exit 1
 	fi
 	
 	if [[ $php_ver != true && $(check_php_version $php_ver) == "true" ]]; then
 		echo "${blu}New PHP version: '$php_ver' ${end}"
 		if [[ $(conf_read php) == "true" && $(conf_read php-ver) == $php_ver ]]; then
-			echo "${red}PHP $php_ver is currently installed!${end}"
-			exit 1
+			echo "${gre}PHP $php_ver is currently installed!${end}"
+			exit 0
 		elif [[ $(conf_read php) == "true" && $(conf_read mysql-tool) == "true" ]]; then
 			sudo stack -php -purge=force
 			conf_write php-ver $php_ver
@@ -402,7 +402,7 @@ elif [[ -n $php_ver ]]; then
 		fi
 		clear_force_flag
 	else
-		echo "${red}Please, enter a valid PHP version!${end}"
+		echo "${red}[ERROR] Please, enter a valid PHP version!${end}"
 		exit 1
 	fi
 
@@ -413,13 +413,13 @@ elif [[ -n $info ]]; then
 elif [[ -n $purge_server_all ]]; then
 	api-events_update st2
 	echo ""
-	echo "${red} ¡ C A U T I O N !  You are about to remove Webinoly Stack completely from your server!"
-	echo " This action will remove Nginx, PHP, MySQL and all the other tools, all your sites will remain in the server but will be publicly unavailable after this action."
+	echo "${red}¡ C A U T I O N !  You are about to remove Webinoly Stack completely from your server!"
+	echo "This action will remove Nginx, PHP, MySQL and all the other tools, all your sites will remain in the server but will be publicly unavailable after this action."
 	echo ""
-	echo " If you want to remove your sites data use the webinoly command: 'sudo webinoly -delete-all'"
+	echo "If you want to remove your sites data use the webinoly command: 'sudo webinoly -delete-all'"
 	echo ""
 	if [[ $(conf_read force-flag) != "true" && $force != 1 ]]; then
-		echo " ${blu} Are you sure [y/N]? ${end}"
+		echo " ${blu}Are you sure [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
 		  answer=${answer:-n}
 		  [[ $answer = [YyNn] ]] && break

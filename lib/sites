@@ -23,7 +23,7 @@ wp_cache_plugins() {
 		echo "- The Purge Method should be set to “Delete local server cache file” "
 		echo "${end}"
 	else
-		echo "${red}Nginx Helper Plugin is already installed!${end}"
+		echo "${gre}Nginx Helper Plugin is already installed!${end}"
 	fi
 
 	if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/redis-cache ]]; then
@@ -38,7 +38,7 @@ wp_cache_plugins() {
 		echo "- Go to “Menu > Settings > Redis” and be sure that Object Cache is enabled. "
 		echo "${end}"
 	else
-		echo "${red}Redis Object Cache Plugin is already installed!${end}"
+		echo "${gre}Redis Object Cache Plugin is already installed!${end}"
 	fi
 	
 	sudo chown -R www-data:www-data /var/www/$domain/htdocs/wp-content/plugins
@@ -162,7 +162,7 @@ wpinstall() {
 			dbhost=${dbhost:-localhost}
 			
 			if [[ $dbhost == "localhost" && $setupmysql == [yY] && $(conf_read mysql) != "true" ]]; then
-				echo "${red} [ERROR] MySQL is not installed or localhost was not found!${blu}"
+				echo "${red}[ERROR] MySQL is not installed or localhost was not found!${blu}"
 				done="0"
 				[[ $type == 1 ]] && continue 1 || exit 1
 			fi
@@ -375,8 +375,8 @@ _EOF_
 			fi
 			
 			if [[ $done != "1" ]]; then
-				echo "${red} Some error ocurred during Database Configuration."
-				echo "${blu}  Retry [Y/n]?"
+				echo "${red}Some error ocurred during Database Configuration."
+				echo "${blu}Retry [Y/n]?"
 				while read -r -n 1 -s done; do
 				  done=${done:-y}
 				  [[ $done = [YyNn] ]] && break
@@ -498,7 +498,7 @@ createsite() {
 	
 	# Check for duplicate sites
 	if [[ -a /etc/nginx/sites-available/$domain ]]; then
-		echo "${red}Site${blu} $domain ${red}could not be created because already exists!${end}"
+		echo "${red}[ERROR] Can not create site${blu} $domain ${red}because already exists!${end}"
 		exit 1
 	fi
 	
@@ -563,11 +563,11 @@ createsite() {
 
 force_redirect() {
 	if ! [[ $force_redirect =~ ^(www|root|off)$ ]]; then
-		echo "${red}Please, enter a valid argument!${end}"
+		echo "${red}[ERROR] Please, enter a valid argument!${end}"
 		exit 1
 	fi
 	if [[ $subdomflag == 1 ]]; then
-		echo "${red}Please, use the main/root domain, Force-Redirection should not be used in Subdomains!${end}"
+		echo "${red}[ERROR] Please, use the main/root domain, Force-Redirection should not be used in Subdomains!${end}"
 		exit 1
 	fi
 	
