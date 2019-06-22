@@ -35,7 +35,15 @@ fi
 
 # In case client is just Updating Webinoly and not fresh-installing we need accurate statistics.
 [[ -n $1 ]] && setup=$1 || setup=9
-[[ $setup == "api" ]] && setup=3
+if [[ $setup == "api="* ]]; then
+	api_paas=$(echo "${setup}" | cut -d'=' -f 2 -s)
+	api="true"
+	setup=3
+fi
+if [[ $setup == "api" ]]; then
+	api="true"
+	setup=3
+fi
 if [[ $setup == "upd" ]]; then
 	setup=0
 	update="&update=true"
@@ -164,12 +172,14 @@ if [[ $type != "Custom" ]]; then
 		opt=$oldapp
 	elif [[ $newinst == "true" ]]; then
 		type="New"
-		[[ $1 == "api" ]] && type="API"
+		[[ $api == "true" ]] && type="API"
+		[[ -n $api_paas ]] && opt=$api_paas
 	else
 		type="Error"
 	fi
-elif [[ $type == "Custom" && $1 == "api" ]]; then
+elif [[ $type == "Custom" && $api == "true" ]]; then
 	type="API"
+	[[ -n $api_paas ]] && opt=$api_paas
 fi
 [[ $statskip == "true" ]] || wget https://api.webinoly.com/stats/?install=${branch}:${webyversion}:${type}:${opt} --referer="Webinoly-Internal-Verified-Stats" --spider --timeout=15 -t 1 -q
 
