@@ -300,7 +300,7 @@ elif [[ -n $uninstall ]]; then
 	  echo ""
 	  if [[ $answer = [YyNn] ]]; then
 		if [[ $answer == [Yy] ]]; then
-			sudo mv /opt/webinoly/webinoly.conf $HOME/.webinoly-conf-restore_dont-remove
+			sudo tar -Pcf $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf /opt/webinoly/templates/source
 			sudo rm -rf /opt/webinoly
 			sudo rm /usr/bin/webinoly
 			sudo rm /usr/bin/stack

@@ -35,21 +35,19 @@ fi
 
 # In case client is just Updating Webinoly and not fresh-installing we need accurate statistics.
 [[ -n $1 ]] && setup=$1 || setup=9
-if [[ $setup == "api="* ]]; then
-	api_paas=$(echo "${setup}" | cut -d'=' -f 2 -s)
-	api="true"
-	setup=3
-fi
-if [[ $setup == "api" ]]; then
-	api="true"
-	setup=3
-fi
 if [[ $setup == "upd" ]]; then
 	setup=0
 	update="&update=true"
 else
 	update=""
 fi
+
+if [[ $setup == "api="* ]]; then
+	api_paas=$(echo "${setup}" | cut -d'=' -f 2 -s)
+	api="true"
+	setup=3
+fi
+
 
 # Diplay menu to select type of server
 while ! [[ $setup -ge 0 && $setup -le 3 && $setup =~ ^[0-9]+$ ]] 2>/dev/null
@@ -102,8 +100,9 @@ fi
 [[ -z $webyversion || $apiskip == true ]] && sudo wget --timeout=15 -t 1 --referer="https://webinoly.com/?option=${setup}${update}" -qrO $HOME/webinoly.tar https://qrok.es/wytar
 
 
-[[ ! -d /opt/webinoly ]] && sudo mkdir /opt/webinoly
+sudo mkdir -p /opt/webinoly
 sudo tar -xf $HOME/webinoly.tar -C /opt/webinoly
+sudo mkdir -p /opt/webinoly/templates/source
 sudo find /opt/webinoly -type d -exec chmod 755 {} \;
 sudo find /opt/webinoly -type f -exec chmod 644 {} \;
 sudo chmod -f 744 /opt/webinoly/lib/ex-*
@@ -117,7 +116,8 @@ source /opt/webinoly/lib/install
 # Check for uninstalled Webinoly conf file
 if [[ -a $HOME/.webinoly-conf-restore_dont-remove ]]; then
 	echo "${gre}Seems like Webinoly was installed previously, we will try to recover your old configuration!${end}"
-	sudo mv $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf
+	sudo tar -Pxf $HOME/.webinoly-conf-restore_dont-remove -C /
+	sudo rm -rf $HOME/.webinoly-conf-restore_dont-remove
 	sudo webinoly -verify
 	if [[ $? == 1 ]]; then
 		sudo rm weby
@@ -172,14 +172,16 @@ if [[ $type != "Custom" ]]; then
 		opt=$oldapp
 	elif [[ $newinst == "true" ]]; then
 		type="New"
-		[[ $api == "true" ]] && type="API"
-		[[ -n $api_paas ]] && opt=$api_paas
+		if [[ $api == "true" ]]; then
+			type="API"
+			opt=$api_paas
+		fi
 	else
 		type="Error"
 	fi
 elif [[ $type == "Custom" && $api == "true" ]]; then
 	type="API"
-	[[ -n $api_paas ]] && opt=$api_paas
+	opt=$api_paas
 fi
 [[ $statskip == "true" ]] || wget https://api.webinoly.com/stats/?install=${branch}:${webyversion}:${type}:${opt} --referer="Webinoly-Internal-Verified-Stats" --spider --timeout=15 -t 1 -q
 
