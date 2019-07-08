@@ -303,3 +303,20 @@ ip_check() {
 		echo "false"
 	fi
 }
+
+
+is_ssl() {
+	[[ -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "ssl_certificate_key") ]] && echo "true" || echo "false"
+}
+
+is_php() {
+	[[ -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "php.conf;") ]] && echo "true" || echo "false"
+}
+
+is_wp() {
+	[[ -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpcommon.conf;") ]] && echo "true" || echo "false"
+}
+
+is_wp_cache() {
+	[[ -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpfc.conf;") ]] && echo "true" || echo "false"
+}

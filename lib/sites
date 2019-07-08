@@ -591,10 +591,9 @@ force_redirect() {
 	esac
 	
 	# If SSL is enabled insert after that - First redirect should be to HTTPS due to HSTS.
-	isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_certificate_key")
-	if [[ -z $isssl && $force_redirect =~ ^(www|root)$ ]]; then
+	if [[ $(is_ssl $domain) == "false" && $force_redirect =~ ^(www|root)$ ]]; then
 		sudo sed -i '1r /tmp/template-site-wwwredirect' /etc/nginx/sites-available/$domain
-	elif [[ -n $isssl && $force_redirect =~ ^(www|root)$ ]]; then
+	elif [[ $(is_ssl $domain) == "true" && $force_redirect =~ ^(www|root)$ ]]; then
 		sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /tmp/template-site-wwwredirect
 		sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /tmp/template-site-wwwredirect
 	

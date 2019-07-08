@@ -320,10 +320,9 @@ elif [[ ( -n $ssl_off || $ssl == "off" ) && ! -a /etc/nginx/sites-available/$dom
 	echo "${red}[WARNING] SSL Orphan-Cert found and will be revoked automatically!${end}"
 	ssl_revoke
 elif [[ ( -n $ssl_on || -n $ssl_off || -n $ssl ) && -a /etc/nginx/sites-available/$domain ]]; then
-	isssl=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_certificate_key")
 	if [[ -n $ssl_on || $ssl == "on" || $ssl == "force-renewal" ]]; then
 		api-events_update si10
-		if [[ -n $isssl && $ssl != "force-renewal" ]]; then
+		if [[ $(is_ssl $domain) == "true" && $ssl != "force-renewal" ]]; then
 			echo "${red}SSL is already enabled for your site -${blu} $domain ${end}"
 		elif [[ -n $ssl_crt || -n $ssl_key ]]; then
 			if [[ -a $ssl_crt && -a $ssl_key ]]; then
@@ -358,7 +357,7 @@ elif [[ ( -n $ssl_on || -n $ssl_off || -n $ssl ) && -a /etc/nginx/sites-availabl
 		fi
 	elif [[ -n $ssl_off || $ssl =~ ^(off|off-force)$ ]]; then
 		api-events_update si11
-		[[ -n $isssl ]] && site_ssl_off || 	echo "${red}SSL is already disabled for your site -${blu} $domain ${end}"
+		[[ $(is_ssl $domain) == "true" ]] && site_ssl_off || echo "${red}SSL is already disabled for your site${blu} $domain ${end}"
 	else
 		echo "${red}[ERROR] Invalid option for SSL command! ${end}"
 		exit 1
@@ -367,12 +366,11 @@ elif [[ ( -n $ssl_on || -n $ssl_off || -n $ssl ) && -a /etc/nginx/sites-availabl
 # FastCGI Cache disabled
 elif [[ ( -n $nocache || ( -n $cache && $cache == "off" )) && -a /etc/nginx/sites-available/$domain ]]; then
 	api-events_update si9
-	isfc=$( grep -F "wpfc.conf" /etc/nginx/sites-available/$domain )
-	if [[ -n $isfc ]]; then
+	if [[ $(is_wp_cache $domain) == "true" ]]; then
 		sudo sed -i '/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
 		echo "${gre}FastCGI Cache in${blu} $domain ${gre}has been disabled!${end}"
 	else
-		echo "${red}[ERROR] Site${blu} $domain ${red}is not a WP site or FastCGI is already disabled!${end}"
+		[[ $(is_wp $domain) == "false" ]] && echo "${red}[ERROR] Site${blu} $domain ${red}is not a WP site!${end}" || echo "${red}[ERROR] FastCGI Cache is already disabled on your site${blu} $domain${end}"
 		exit 1
 	fi
 	
@@ -380,9 +378,7 @@ elif [[ ( -n $nocache || ( -n $cache && $cache == "off" )) && -a /etc/nginx/site
 # FastCGI Cache enabled
 elif [[ ( -n $cache || $cache == "on" ) && -a /etc/nginx/sites-available/$domain ]]; then
 	api-events_update si8
-	isphp=$( grep -F "php.conf" /etc/nginx/sites-available/$domain )
-	iswp=$( grep -F "wpcommon.conf" /etc/nginx/sites-available/$domain )
-	if [[ -n $isphp && -n $iswp ]]; then
+	if [[ $(is_php $domain) == "true" && $(is_wp $domain) == "true" ]]; then
 		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
 		if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/nginx-helper || ! -d /var/www/$domain/htdocs/wp-content/plugins/redis-cache ]]; then
 			echo "${gre}"
@@ -400,7 +396,7 @@ elif [[ ( -n $cache || $cache == "on" ) && -a /etc/nginx/sites-available/$domain
 		echo "FastCGI Cache in${blu} $domain ${gre}has been successfully enabled! "
 		echo "${end}"
 	else
-		echo "${red}[ERROR] Site${blu} $domain ${red}is not a WP site or FastCGI is already enabled!${end}"
+		[[ $(is_wp $domain) == "false" ]] && echo "${red}[ERROR] Site${blu} $domain ${red}is not a WP site!${end}" || echo "${red}[ERROR] FastCGI Cache is already enabled on your site${blu} $domain${end}"
 		exit 1
 	fi
 
