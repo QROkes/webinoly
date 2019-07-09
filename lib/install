@@ -31,6 +31,7 @@ set_timezone() {
 	else
 		conf_delete timezone
 		echo "${red}Timezone not found or not valid!${end}"
+		exit 1
 	fi
 }
 
@@ -97,7 +98,7 @@ LimitNOFILE=$nginxfd" | tee -a /etc/systemd/system/nginx.service.d/nofile_limit.
 	fi
 	
 	swap_create
-	set_timezone
+	set_timezone &
 	
 	sudo sysctl -p -q
 	sudo systemctl daemon-reload
@@ -183,9 +184,11 @@ php_install() {
 		ver="$1"
 		echo "${gre}Multi-PHP version is enabled. PHP '$ver' will be installed!${end}"
 	elif [[ $(conf_read multi-php) != "true" && -n $1 ]]; then
-		echo "${red}Multi-PHP is not enabled! ${end}"
+		echo "${red}[ERROR] Multi-PHP is not enabled! ${end}"
+		exit 1
 	elif [[ $(conf_read multi-php) == "true" && -n $1 ]]; then
-		echo "${red}Please, enter a valid PHP version or default PHP is not installed yet! ${end}"
+		echo "${red}[ERROR] Please, enter a valid PHP version or default PHP is not installed yet! ${end}"
+		exit 1
 	fi
 	
 	pre_install
@@ -324,7 +327,7 @@ php_optim() {
 	sudo sed -i '/opcache.enable_cli=/c\opcache.enable_cli=1' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/opcache.enable=/c\opcache.enable=1' /etc/php/$ver/fpm/php.ini
 	
-	set_timezone
+	set_timezone &
 
 	sudo mkdir -p /var/log/php/$ver
 	sudo touch /var/log/php/$ver/fpm.log

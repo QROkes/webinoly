@@ -370,8 +370,13 @@ elif [[ ( -n $nocache || ( -n $cache && $cache == "off" )) && -a /etc/nginx/site
 		sudo sed -i '/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
 		echo "${gre}FastCGI Cache in${blu} $domain ${gre}has been disabled!${end}"
 	else
-		[[ $(is_wp $domain) == "false" ]] && echo "${red}[ERROR] Site${blu} $domain ${red}is not a WP site!${end}" || echo "${red}[ERROR] FastCGI Cache is already disabled on your site${blu} $domain${end}"
-		exit 1
+		if [[ $(is_wp $domain) == "false" ]]; then
+			echo "${red}[ERROR] Site${blu} $domain ${red}is not a WP site!${end}"
+			exit 1
+		else
+			echo "${red}[ERROR] FastCGI Cache is already disabled on your site${blu} $domain${end}"
+			exit 0
+		fi
 	fi
 	
 	
@@ -396,8 +401,13 @@ elif [[ ( -n $cache || $cache == "on" ) && -a /etc/nginx/sites-available/$domain
 		echo "FastCGI Cache in${blu} $domain ${gre}has been successfully enabled! "
 		echo "${end}"
 	else
-		[[ $(is_wp $domain) == "false" ]] && echo "${red}[ERROR] Site${blu} $domain ${red}is not a WP site!${end}" || echo "${red}[ERROR] FastCGI Cache is already enabled on your site${blu} $domain${end}"
-		exit 1
+		if [[ $(is_wp $domain) == "false" ]]; then
+			echo "${red}[ERROR] Site${blu} $domain ${red}is not a WP site!${end}"
+			exit 1
+		else
+			echo "${red}[ERROR] FastCGI Cache is already enabled on your site${blu} $domain${end}"
+			exit 0
+		fi
 	fi
 
 
