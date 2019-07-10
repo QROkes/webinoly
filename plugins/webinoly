@@ -295,25 +295,25 @@ elif [[ -n $uninstall ]]; then
 	echo "You are about to completely remove Webinoly App from your server!!"
 	echo "${blu}Are you sure [y/N]? "
 	while read -r -n 1 -s answer; do
-	  answer=${answer:-n}
-	  echo ""
-	  if [[ $answer = [YyNn] ]]; then
-		if [[ $answer == [Yy] ]]; then
-			sudo tar -Pcf $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf /opt/webinoly/templates/source
-			sudo rm -rf /opt/webinoly
-			sudo rm /usr/bin/webinoly
-			sudo rm /usr/bin/stack
-			sudo rm /usr/bin/site
-			sudo rm /usr/bin/httpauth
-			sudo rm /usr/bin/log			
-			echo "${gre}Webinoly App has been removed successfully from your server!${end}"
-			exit 0
-		else
-			echo "${gre}Action aborted!${end}"
-		fi
-		break
-	  fi
+		answer=${answer:-n}
+		echo ""
+		[[ $answer = [YyNn] ]] && break
 	done
+	
+	if [[ $answer == [Yy] ]]; then
+		sudo tar -Pcf $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf /opt/webinoly/templates/source
+		sudo rm -rf /opt/webinoly
+		sudo rm /usr/bin/webinoly
+		sudo rm /usr/bin/stack
+		sudo rm /usr/bin/site
+		sudo rm /usr/bin/httpauth
+		sudo rm /usr/bin/log			
+		echo "${gre}Webinoly App has been removed successfully from your server!${end}"
+		exit 0
+	else
+		echo "${red}Action aborted!${end}"
+		exit 1
+	fi
 	nginx_not="true" # Nginx-Reload not-needed.
 
 

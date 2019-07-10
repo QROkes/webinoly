@@ -23,7 +23,7 @@ fi
 if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 	api-events_update pn1
 	if [[ $(conf_read nginx) != "true" ]]; then
-		echo "${red}[ERROR] Nginx is not installed, hence can not be deleted! ${end}"
+		echo "${gre}Nginx is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 		exit 0
 	fi
@@ -96,7 +96,7 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 elif [[ -n $purge && -n $php ]]; then
 	api-events_update pp1
 	if [[ $(conf_read php) != "true" ]]; then
-		echo "${red}[ERROR] PHP is not installed, hence can not be deleted! ${end}"
+		echo "${gre}PHP is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 		exit 0
 	fi
@@ -156,7 +156,7 @@ elif [[ -n $purge && -n $php ]]; then
 elif [[ -n $purge && -n $mysql ]]; then
 	api-events_update pm1
 	if [[ $(conf_read mysql) != "true" ]]; then
-		echo "${red}[ERROR] MySQL is not installed, hence can not be deleted! ${end}"
+		echo "${gre}MySQL is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 		exit 0
 	fi
@@ -233,7 +233,7 @@ elif [[ -n $purge && -n $mysql ]]; then
 elif [[ -n $purge && -n $pma ]]; then
 	api-events_update pm2
 	if [[ $(conf_read mysql-tool) != "true" ]]; then
-		echo "${red}[ERROR] PhpMyAdmin is not installed, hence can not be deleted! ${end}"
+		echo "${gre}PhpMyAdmin is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 		exit 0
 	fi
