@@ -109,6 +109,12 @@ elif [[ -n $tools_port ]]; then
 
 elif [[ -n $tools_site ]]; then
 	check_for_nginx -ask
+	if [[ $tools_site == true ]]; then
+		echo "${gre}Please, enter a valid domain to access the Tools Section! ${end}"
+		read -p "${blu}Domain: ${end}" tools_site
+		tools_site=${tools_site:-NeverMatchDotCom}
+	fi	
+	
 	if [[ -a /etc/nginx/sites-available/$tools_site ]]; then
 		# Check for previous assigned domain and remove
 		if [[ -n $(conf_read tools-site) ]]; then
@@ -527,6 +533,12 @@ elif [[ -n $yoast_sitemap ]]; then
 
 elif [[ -n $default_site ]]; then
 	check_for_nginx -ask
+	if [[ $default_site == true ]]; then
+		echo "${gre}Please, enter a valid option to set the Default-Site server response! ${end}"
+		read -p "${blu}default/blackhole or any existing domain: ${end}" default_site
+		default_site=${default_site:-NeverMatchDotCom}
+	fi
+	
 	if [[ $default_site == "default" ]]; then
 		if [[ -a /opt/webinoly/templates/source/default ]]; then
 			sudo cat /opt/webinoly/templates/source/default >| /etc/nginx/sites-available/default
