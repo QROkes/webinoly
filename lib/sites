@@ -479,8 +479,6 @@ deletesite() {
 
 createsite() {
 	api-events_update si1
-	[[ $type == [123] || -n $php ]] && check_for_php
-	
 	# Check domain and then prevent reserved characters for file names.
 	domain_check $domain
 	domain=$(echo $domain | sed "s/[^\.0-9A-Za-z\-]/_/g" | sed "s/^[\.]/_/g" | sed "s/\.\./_/g")

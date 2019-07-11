@@ -55,7 +55,7 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 		if [[ $answer == [Yy] ]]; then
 			[[ $(conf_read mysql-tool) == "true" ]] && stack -pma -purge=force
 			api-events_update pn2
-			site -delete-all
+			site -delete-all=force
 			sudo rm -rf /var/www/$(conf_read tools-port)
 			sudo rm -rf /var/www/html
 			api-events_update pn3

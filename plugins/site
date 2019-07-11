@@ -11,7 +11,7 @@ shopt -s extglob
 source /opt/webinoly/lib/sites
 check_for_parameters $@
 api-events_update sis
-check_for_nginx
+check_for_nginx -ask
 
 
 # Check if site is sub-domain
@@ -104,6 +104,8 @@ if [[ -n $wp || -n $wpsubdir || -n $wpsubdom || -n $mysql ]]; then
 		fi
 	fi
 fi
+[[ $type == [123] || -n $php ]] && check_for_php -ask
+[[ $type == [24] ]] && check_for_mysql -ask
 
 
 # List Sites
@@ -144,7 +146,21 @@ elif [[ -n $delete_all ]]; then
 	echo "${red}"
 	echo "All your sites files will be removed."
 	echo "This action will only delete Databases attached to a WordPress site, any other Database will not be deleted."
-	echo "${end}"
+	
+	if [[ $delete_all != "force" ]]; then
+		echo "${blu}"
+		echo "Are you sure [y/N]? ${end}"
+		while read -r -n 1 -s answer; do
+			answer=${answer:-n}
+			echo ""
+			[[ $answer = [YyNn] ]] && break
+		done
+		
+		if [[ $answer == [Nn] ]]; then
+			echo "${red}Action aborted!${end}"
+			exit 1
+		fi
+	fi
 	
 	# List all remaining sites (parked and proxy)
 	for site in "/etc/nginx/sites-available"/*

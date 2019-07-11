@@ -108,6 +108,7 @@ elif [[ -n $tools_port ]]; then
 
 
 elif [[ -n $tools_site ]]; then
+	check_for_nginx -ask
 	if [[ -a /etc/nginx/sites-available/$tools_site ]]; then
 		# Check for previous assigned domain and remove
 		if [[ -n $(conf_read tools-site) ]]; then
@@ -156,7 +157,7 @@ elif [[ -n $tools_site ]]; then
 
 	
 elif [[ -n $login_www_data || -n $nologin_www_data ]]; then
-	check_for_nginx
+	check_for_nginx -ask
 	if [[ -n $login_www_data && ! $login_www_data =~ ^(on|off|true)$ ]]; then
 		echo "${red}[ERROR] Invalid option! ${end}"
 		exit 1
@@ -437,6 +438,7 @@ elif [[ -n $version || -n $v || -n $V ]]; then
 
 
 elif [[ -n $blockip ]]; then
+	check_for_nginx -ask
 	if [[ -a /etc/nginx/conf.d/blockips.conf ]]; then
 		if [[ -n $list ]]; then
 			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${blu}"
@@ -465,6 +467,7 @@ elif [[ -n $blockip ]]; then
 
 
 elif [[ -n $unblockip ]]; then
+	check_for_nginx -ask
 	if [[ -a /etc/nginx/conf.d/blockips.conf ]]; then
 		[[ $unblockip == true ]] && read -p "${blu}IP address to unblock: ${end}" unblockip
 		if [[ $(ip_check $unblockip) == "true" ]]; then
@@ -523,7 +526,7 @@ elif [[ -n $yoast_sitemap ]]; then
 
 
 elif [[ -n $default_site ]]; then
-	check_for_nginx
+	check_for_nginx -ask
 	if [[ $default_site == "default" ]]; then
 		if [[ -a /opt/webinoly/templates/source/default ]]; then
 			sudo cat /opt/webinoly/templates/source/default >| /etc/nginx/sites-available/default
