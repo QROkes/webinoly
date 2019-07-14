@@ -226,8 +226,9 @@ wpinstall() {
 					if [[ $newdbname == $dbname || $dbname != $(dbword_check $dbname) ]]; then
 						echo ""
 						if [[ $newdbname == $dbname ]]; then
-							echo "${red}Database $dbname already exists!${blu}"
-							echo "Do you want to use this DB in your new site? [y/N]"
+							echo "${red}[ERROR] Database ${blu}$dbname ${red}already exists!${end}"
+							[[ $type == [35] ]] && exit 1 # Unattended sites should exit instead of asking
+							echo "${blu}Do you want to use this DB in your new site? [y/N]"
 							while read -r -n 1 -s dbreuse; do
 							  local dbreuse=${dbreuse:-n}
 							  [[ $dbreuse == [YyNn] ]] && break
@@ -239,7 +240,7 @@ wpinstall() {
 								dbname="$newdbname"
 								continue 1;
 							fi
-							echo "${red}The DB Name can not be a reserved word or should only contain allowed characters!${blu}"
+							echo "${red}[ERROR] The DB Name can not be a reserved word or should only contain allowed characters!${blu}"
 							dbreuse="n"
 						fi
 						
@@ -296,8 +297,9 @@ wpinstall() {
 					if [[ $newdbuser == $dbuser || $dbuser != $(dbword_check $dbuser user) ]]; then
 						echo ""
 						if [[ $newdbuser == $dbuser ]]; then
-							echo "${red}User $dbuser already exists!${blu}"
-							echo "Do you want to use this DB User for your new site? [y/N]"
+							echo "${red}[ERROR] User ${blu}$dbuser ${red}already exists!${end}"
+							[[ $type == [35] ]] && exit 1 # Unattended sites should exit instead of asking
+							echo "${blu}Do you want to use this DB User for your new site? [y/N]"
 							while read -r -n 1 -s dbureuse; do
 							  local dbureuse=${dbureuse:-n}
 							  [[ $dbureuse == [YyNn] ]] && break
@@ -309,7 +311,7 @@ wpinstall() {
 								dbuser="$newdbuser"
 								continue 1;
 							fi
-							echo "${red}The DB User can not be a reserved word or should only contain allowed characters!${blu}"
+							echo "${red}[ERROR] The DB User can not be a reserved word or should only contain allowed characters!${blu}"
 							dbureuse="n"
 						fi
 						
