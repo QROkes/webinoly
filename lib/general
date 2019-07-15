@@ -1,6 +1,6 @@
 #!/bin/bash
 
-readonly app_version="1.8.2"
+readonly app_version="1.8.3"
 readonly svr_version="1.3"
 readonly os_ubuntu_supported=(xenial bionic)
 readonly php_supported=(7.1 7.2 7.3)

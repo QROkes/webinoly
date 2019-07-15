@@ -23,8 +23,7 @@ fi
 # Prevent "compulsive" re-installation if you currently have the latest version installed.
 checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
 if [[ -a /opt/webinoly/webinoly.conf && $2 != "-ver=beta" && $2 != "-ver=alpha" ]]; then
-	source /opt/webinoly/lib/general
-	currentver=$(conf_read app-version)
+	currentver=$(grep -w "^app-version:.*" /opt/webinoly/webinoly.conf | cut -f 2 -d ':')
 	
 	if [[ -n $checkver && -n $currentver && ${checkver//.} -le ${currentver//.} ]]; then
 		echo "${gre}You currently have the latest version!${end}"
