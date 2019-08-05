@@ -73,6 +73,7 @@ LimitNOFILE=$nginxfd" | tee -a /etc/systemd/system/nginx.service.d/nofile_limit.
 	sudo sed -i "/client_max_body_size/c \	client_max_body_size ${maxuploads}m;" /etc/nginx/nginx.conf
 	sudo sed -i "/open_file_cache max/c \	open_file_cache max=$cachefd inactive=5m;" /etc/nginx/nginx.conf
 	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /var/run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=${cacheram}m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
+	echo "tmpfs	/run	tmpfs	nodev,nosuid,size=25%,mode=755	0	0" | sudo tee -a /etc/fstab
 	#mkdir -p /var/run/nginx-cache
 	#echo "tmpfs    /var/run/nginx-cache   tmpfs   size=${cacheram}M,mode=0744,uid=www-data,gid=www-data   0   0" | sudo tee -a /etc/fstab
 	#sudo mount /var/run/nginx-cache
@@ -82,14 +83,15 @@ LimitNOFILE=$nginxfd" | tee -a /etc/systemd/system/nginx.service.d/nofile_limit.
 	# https://underyx.me/2015/05/18/raising-the-maximum-number-of-file-descriptors
 	# sudo cat /proc/$(cat /run/nginx.pid)/limits   -  ver los recursos actuales del proceso main de nginx
 	# sudo ps aux | grep nginx  ---  ver todos lo procesos corriendo con nginx user
+	[[ $newfd -gt $(ulimit -Hn) ]] && rootfd=$newfd || rootfd=$(ulimit -Hn)
 	sudo sed -i "/End of file/i \# WebinolyStart - Don't delete" /etc/security/limits.conf
-	sudo sed -i "/End of file/i \* soft  nofile ${nginxfd}" /etc/security/limits.conf
-	sudo sed -i "/End of file/i \* hard  nofile ${nginxfd}" /etc/security/limits.conf
+	sudo sed -i "/End of file/i \root	-	nofile	${rootfd}" /etc/security/limits.conf
+	sudo sed -i "/End of file/i \*	-	nofile	${newfd}" /etc/security/limits.conf
 	sudo sed -i "/End of file/i \# WebinolyEnd" /etc/security/limits.conf
 
 	sudo cat /opt/webinoly/templates/general/sysctl >> /etc/sysctl.conf
-	sudo sed -i "/fs.file-max =/c \ fs.file-max = ${newfd};" /etc/sysctl.conf
-	sudo sed -i "/vm.max_map_count =/c \ vm.max_map_count = ${newfd};" /etc/sysctl.conf
+	sudo sed -i "/fs.file-max =/c \ fs.file-max = ${newfd}" /etc/sysctl.conf
+	sudo sed -i "/vm.max_map_count =/c \ vm.max_map_count = ${newfd}" /etc/sysctl.conf
 	# BBR is only valid in kernel > v4.9, bionic is at least 4.15
 	if [[ $(check_osname) == "bionic" ]]; then
 		sudo modprobe tcp_bbr
@@ -102,6 +104,7 @@ LimitNOFILE=$nginxfd" | tee -a /etc/systemd/system/nginx.service.d/nofile_limit.
 	set_timezone &
 	
 	sudo sysctl -p -q
+	sudo mount -o remount tmpfs
 	sudo systemctl daemon-reload
 	sudo kill $(cat /run/nginx.pid)
 	conf_write linux-optim true
@@ -116,9 +119,11 @@ linux_purge() {
 		sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/security/limits.conf
 		sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/sysctl.conf
 		sudo rm -rf /etc/systemd/system/nginx.service.d
-		sudo sed -i '/\/var\/run\/nginx-cache/d' /etc/fstab
+		sudo sed -i '\/run/d' /etc/fstab
 		#sudo umount /var/run/nginx-cache
+		swap_delete
 		sudo sysctl -p -q
+		sudo mount -o remount tmpfs
 		sudo systemctl daemon-reload
 		conf_write linux-optim purged
 		api-events_update pn8
@@ -502,12 +507,6 @@ swap_create() {
 	local ramkb=$(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
 	local ram=$(($ramkb/1048000))
 	
-	# Delete if new custom swap is found.
-	if [[ -n $(conf_read swap-mem) && $(conf_read swap-mem) =~ ^[0-9]+$ && $(conf_read swap-mem) != $swapkb ]]; then
-		swap_delete
-		swapkb=$(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
-	fi
-
 	# https://help.ubuntu.com/community/SwapFaq
 	if [[ -z $swapkb || $swapkb == "0" ]]; then
 		api-events_update in5
