@@ -181,8 +181,9 @@ elif [[ -n $purge && -n $mysql ]]; then
 		fi
 		
 		# Determine MySQL version according to stack version.
-		mysqlver="10.3"
+		mysqlver="10.4"
 		stackver=$(conf_read server-version)
+		[[ -n $stackver && ${stackver//.} -lt 14 ]] && mysqlver="10.3"
 		[[ -n $stackver && ${stackver//.} -lt 13 ]] && mysqlver="10.2"
 		
 		sudo service mysql stop
@@ -196,14 +197,14 @@ elif [[ -n $purge && -n $mysql ]]; then
 		sudo apt -y purge debconf-utils
 		sudo apt -y autoremove
 		
-		# Cases with MariaDB v10.3 support
+		# Cases with MariaDB v10.4 support
 		os_name=$(check_osname)
 		sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
 		case "$osname" in
 			"trusty")
 				sudo apt-key del 0xcbcb082a1bb943db
 			;;
-			"xenial"|"bionic"|"cosmic")
+			"xenial"|"bionic"|"cosmic"|"disco")
 				sudo apt-key del 0xF1656F24C74CD1D8
 				
 			;;

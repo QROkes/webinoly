@@ -1,7 +1,7 @@
 #!/bin/bash
 
-readonly app_version="1.8.3"
-readonly svr_version="1.3"
+readonly app_version="1.9.0"
+readonly svr_version="1.4"
 readonly os_ubuntu_supported=(xenial bionic)
 readonly php_supported=(7.1 7.2 7.3)
 
@@ -248,19 +248,19 @@ pre_install() {
 mysql_client_install() {
 	api-events_update im2
 	local osname=$(check_osname)
-	# Cases with MariaDB v10.3 support - https://downloads.mariadb.org/mariadb/repositories/
+	# Cases with MariaDB v10.4 support - https://downloads.mariadb.org/mariadb/repositories/
 	case "$osname" in
 		"xenial")
 			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
-			sudo add-apt-repository "deb [arch=amd64,arm64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.3/ubuntu $osname main"
+			sudo add-apt-repository "deb [arch=amd64,arm64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.4/ubuntu $osname main"
 		;;
 		"bionic")
 			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
-			sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.3/ubuntu $osname main"
+			sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.4/ubuntu $osname main"
 		;;
 		"cosmic"|"disco")
 			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
-			sudo add-apt-repository "deb [arch=amd64] http://mirrors.syringanetworks.net/mariadb/repo/10.3/ubuntu $osname main"
+			sudo add-apt-repository "deb [arch=amd64] http://mirrors.syringanetworks.net/mariadb/repo/10.4/ubuntu $osname main"
 		;;
 	esac
 	pre_install
