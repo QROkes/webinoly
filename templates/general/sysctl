@@ -45,6 +45,7 @@ kernel.kptr_restrict = 1
 
 # Increase size of file handles and inode cache
 fs.file-max = 147433
+vm.max_map_count = 250000
 
 # Do less swapping
 vm.swappiness = 10
@@ -135,7 +136,7 @@ net.ipv4.icmp_echo_ignore_broadcasts = 1
 net.ipv4.icmp_ignore_bogus_error_responses = 1
 
 # Allowed local port range
-net.ipv4.ip_local_port_range = 16384 65535
+net.ipv4.ip_local_port_range = 1024 65535
 
 # Enable a fix for RFC1337 - time-wait assassination hazards in TCP
 net.ipv4.tcp_rfc1337 = 1

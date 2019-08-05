@@ -63,7 +63,7 @@ linux_optim() {
 	local nginxfd=$((($newfd*$nginxfdratio)/100))
 	local cachefd=$(($nginxfd/3))
 	local cacheram=$(($nginxfd/1024))
-	sudo sysctl -w fs.file-max=$newfd
+	
 	[ -d /etc/systemd/system/nginx.service.d ] || sudo mkdir /etc/systemd/system/nginx.service.d
 	[ -a /etc/systemd/system/nginx.service.d/nofile_limit.conf ] || sudo touch /etc/systemd/system/nginx.service.d/nofile_limit.conf
 	sudo echo "[Service]
@@ -79,16 +79,17 @@ LimitNOFILE=$nginxfd" | tee -a /etc/systemd/system/nginx.service.d/nofile_limit.
 	
 	# https://www.cyberciti.biz/faq/linux-increase-the-maximum-number-of-open-files/
 	# https://ospi.fi/blog/centos-7-raise-nofile-limit-for-nginx.html
-	# https://www.masv.io/boost-nginx-connection-limits/
 	# https://underyx.me/2015/05/18/raising-the-maximum-number-of-file-descriptors
 	# sudo cat /proc/$(cat /run/nginx.pid)/limits   -  ver los recursos actuales del proceso main de nginx
 	# sudo ps aux | grep nginx  ---  ver todos lo procesos corriendo con nginx user
 	sudo sed -i "/End of file/i \# WebinolyStart - Don't delete" /etc/security/limits.conf
-	sudo sed -i '/End of file/i \root - nofile 4096' /etc/security/limits.conf
-	sudo sed -i '/End of file/i \* - nofile 4096' /etc/security/limits.conf
+	sudo sed -i "/End of file/i \* soft  nofile ${nginxfd}" /etc/security/limits.conf
+	sudo sed -i "/End of file/i \* hard  nofile ${nginxfd}" /etc/security/limits.conf
 	sudo sed -i "/End of file/i \# WebinolyEnd" /etc/security/limits.conf
 
 	sudo cat /opt/webinoly/templates/general/sysctl >> /etc/sysctl.conf
+	sudo sed -i "/fs.file-max =/c \ fs.file-max = ${newfd};" /etc/sysctl.conf
+	sudo sed -i "/vm.max_map_count =/c \ vm.max_map_count = ${newfd};" /etc/sysctl.conf
 	# BBR is only valid in kernel > v4.9, bionic is at least 4.15
 	if [[ $(check_osname) == "bionic" ]]; then
 		sudo modprobe tcp_bbr
@@ -198,15 +199,11 @@ php_install() {
 		sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 	fi
 	pre_install
-	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-recode php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
+	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-recode php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack php-xdebug
 	
 	if [[ -n $ver && $ver == "7.1" ]]; then
 		# mcrypt deprecated in 7.2
 		sudo apt -y install php${ver}-mcrypt
-	fi
-	if [[ -n $ver && ($ver == "7.3" || $ver == "7.2" || $ver == "7.1" ) ]]; then
-		# xdebug deprecated in 5.6
-		sudo apt -y install php-xdebug
 	fi
 	
 	def=$(conf_read php-ver)
@@ -320,7 +317,8 @@ php_optim() {
 	sudo sed -i "/post_max_size =/c\post_max_size = ${maxuploads}M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/max_file_uploads =/c\max_file_uploads = 20' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/session.cookie_httponly =/c\session.cookie_httponly = 1' /etc/php/$ver/fpm/php.ini
-
+	sudo sed -i "/max_input_vars =/c\max_input_vars = 3000" /etc/php/$ver/fpm/php.ini
+	
 	sudo sed -i "/opcache.memory_consumption=/c\opcache.memory_consumption=${maxmem}" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/opcache.interned_strings_buffer=/c\opcache.interned_strings_buffer=8' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/opcache.max_accelerated_files=/c\opcache.max_accelerated_files=50000' /etc/php/$ver/fpm/php.ini
