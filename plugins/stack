@@ -433,7 +433,6 @@ elif [[ -n $purge_server_all ]]; then
 		clear_force_flag
 		
 		# Remove remanent packages and things!
-		[[ $(conf_read linux-optim) == "purged" ]] && swap_delete
 		[[ -a /etc/ssl/certs/webinoly-blackhole.crt.pem ]] && sudo rm -rf /etc/ssl/certs/webinoly-blackhole.crt.pem
 		[[ -a /etc/ssl/dhparam.pem ]] && sudo rm -rf /etc/ssl/dhparam.pem
 		if [[ $(conf_read pre-packs) == true ]]; then
