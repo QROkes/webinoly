@@ -268,11 +268,15 @@ elif [[ -n $proxy && -n $domain ]]; then
 		fi
 	fi
 	
+	# Support for custom nginx rules.
+	sudo mkdir -p /var/www/.proxy
+	
 	createsite
 	sudo sed -i '/include /d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/root /d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/index /d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/error_log /r /opt/webinoly/templates/template-site-proxy' /etc/nginx/sites-available/$domain
+	sudo sed -i "s/domain.com/$domain/g"  /etc/nginx/sites-available/$domain
 		
 	echo "${gre}"
 	if [[ -n $rphost ]]; then
