@@ -241,7 +241,7 @@ elif [[ -n $config_cache ]]; then
 		inactive=$(echo "${inaline//;}" | rev | cut -d' ' -f 1 | rev)
 		inaval=$(echo "${inactive}" | cut -d'=' -f 2)
 		maxsize=$(echo "${inaline}" | rev | cut -d' ' -f 2 | rev)
-		othline=$( grep -F "fastcgi_cache_valid 301 302 307 404" /etc/nginx/conf.d/fastcgi.conf )
+		othline=$( grep -F "fastcgi_cache_valid 301 302 307 404 410" /etc/nginx/conf.d/fastcgi.conf )
 		othval=$(echo "${othline//;}" | rev | cut -d' ' -f 1 | rev)
 	else
 		hitval="Not yet defined"
@@ -265,7 +265,7 @@ elif [[ -n $config_cache ]]; then
 		read -p "   Set new value: " ina
 		ina=${ina:-$inaval}
 		echo ""
-		echo "FastCGI Cache Valid for Errors and Redirections (HttpCode: 301, 302, 307, 404) actual value is: $othval"
+		echo "FastCGI Cache Valid for Errors and Redirections (HttpCode: 301, 302, 307, 404, 410) actual value is: $othval"
 		read -p "   Set new value: " oth
 		oth=${oth:-$othval}
 		echo ""
@@ -285,7 +285,7 @@ elif [[ -n $config_cache ]]; then
 	if [[ "$hit" =~ ^[0-9]+[smhdwMy]$ && "$ina" =~ ^[0-9]+[smhdwMy]$ && "$oth" =~ ^[0-9]+[smhdwMy]$ ]]; then
 		if [[ $(conf_read nginx) == "true" ]]; then	
 			sudo sed -i "/fastcgi_cache_valid 200/c \fastcgi_cache_valid 200 ${hit};" /etc/nginx/conf.d/fastcgi.conf
-			sudo sed -i "/fastcgi_cache_valid 301 302 307 404/c \fastcgi_cache_valid 301 302 307 404 ${oth};" /etc/nginx/conf.d/fastcgi.conf
+			sudo sed -i "/fastcgi_cache_valid 301 302 307 404 410/c \fastcgi_cache_valid 301 302 307 404 410 ${oth};" /etc/nginx/conf.d/fastcgi.conf
 			sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path \/var\/run\/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m ${maxsize} inactive=${ina};" /etc/nginx/conf.d/fastcgi.conf
 		fi
 		conf_write fastcgi-conf ${hit},${ina},${oth}

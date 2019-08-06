@@ -295,7 +295,7 @@ nginx_optim() {
 
 	# Check for dynamic variables.
 	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off
-	[[ $(conf_read global-access-log-off) == "true" ]] && sudo log -only-error=on
+	[[ $(conf_read global-access-log-off) == "purged" ]] && sudo log -only-error=off || sudo log -only-error=on
 	[[ -n $(conf_read fastcgi-conf) ]] && sudo webinoly -config-cache=[$(conf_read fastcgi-conf)]
 	[[ $(conf_read yoast-sitemap) == "purged" ]] && sudo webinoly -yoast-sitemap=off || sudo webinoly -yoast-sitemap=on
 
