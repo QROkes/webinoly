@@ -307,6 +307,15 @@ nginx_optim() {
 
 
 # PHP OPTIM
+redis_optim() {
+	[[ -n $(conf_read redis-max-mem) && $(conf_read redis-max-mem) =~ ^[0-9]+$ && $(conf_read redis-max-mem) -le 100 ]] && per=$(conf_read redis-max-mem) || per=10
+	local maxmem=$((($(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')*$per)/100000))
+	sudo sed -i "/# maxmemory <bytes>/c\maxmemory ${maxmem}mb" /etc/redis/redis.conf
+	sudo sed -i "/^maxmemory /c\maxmemory ${maxmem}mb" /etc/redis/redis.conf
+	sudo sed -i "/# maxmemory-policy/c\maxmemory-policy allkeys-lfu" /etc/redis/redis.conf
+	sudo service redis-server restart
+}
+
 php_optim() {
 	api-events_update ip3
 	
@@ -379,6 +388,7 @@ php_optim() {
 		sudo sed -i '/zend_extension=/c\;zend_extension=xdebug.so' /etc/php/$ver/mods-available/xdebug.ini
 	fi
 	
+	[[ $(conf_read php-tool) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
 	conf_write php-optim true
 	sudo service php*-fpm reload
 	api-events_update ip4
@@ -439,12 +449,8 @@ php_tool_site() {
 php_tool() {
 	api-events_update ip5
 	# in case nginx was installed before php
-	if [[ $(conf_read nginx-tool) == "true" && ! -a /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
-		nginx_tool_site
-	fi
-	if [[ $(conf_read nginx) == "true" ]]; then
-		php_tool_site
-	fi
+	[[ $(conf_read nginx-tool) == "true" && ! -a /etc/nginx/sites-available/$(conf_read tools-port) ]] && nginx_tool_site
+	[[ $(conf_read nginx) == "true" ]] && php_tool_site
 
 	# Redis (Object Cache)
 	echo | sudo add-apt-repository ppa:chris-lea/redis-server
@@ -461,6 +467,7 @@ php_tool() {
 	sudo apt -y install postfix
 	sudo cp -p /etc/postfix/main.cf /opt/webinoly/templates/source/
 
+	redis_optim
 	sudo service php*-fpm reload
 	conf_write php-tool true
 	api-events_update ip8
