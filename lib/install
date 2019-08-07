@@ -307,15 +307,6 @@ nginx_optim() {
 
 
 # PHP OPTIM
-redis_optim() {
-	[[ -n $(conf_read redis-max-mem) && $(conf_read redis-max-mem) =~ ^[0-9]+$ && $(conf_read redis-max-mem) -le 100 ]] && per=$(conf_read redis-max-mem) || per=10
-	local maxmem=$((($(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')*$per)/100000))
-	sudo sed -i "/# maxmemory <bytes>/c\maxmemory ${maxmem}mb" /etc/redis/redis.conf
-	sudo sed -i "/^maxmemory /c\maxmemory ${maxmem}mb" /etc/redis/redis.conf
-	sudo sed -i "/# maxmemory-policy/c\maxmemory-policy allkeys-lfu" /etc/redis/redis.conf
-	sudo service redis-server restart
-}
-
 php_optim() {
 	api-events_update ip3
 	
@@ -443,6 +434,16 @@ php_tool_site() {
 	sudo touch /var/www/$(conf_read tools-port)/htdocs/php/index.php
 	sudo echo '<?php phpinfo(); ?>' >> /var/www/$(conf_read tools-port)/htdocs/php/index.php
 	api-events_update ip7
+}
+
+
+redis_optim() {
+	[[ -n $(conf_read redis-max-mem) && $(conf_read redis-max-mem) =~ ^[0-9]+$ && $(conf_read redis-max-mem) -le 100 ]] && per=$(conf_read redis-max-mem) || per=10
+	local maxmem=$((($(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')*$per)/100000))
+	sudo sed -i "/# maxmemory <bytes>/c\maxmemory ${maxmem}mb" /etc/redis/redis.conf
+	sudo sed -i "/^maxmemory /c\maxmemory ${maxmem}mb" /etc/redis/redis.conf
+	sudo sed -i "/# maxmemory-policy/c\maxmemory-policy allkeys-lfu" /etc/redis/redis.conf
+	sudo service redis-server restart
 }
 
 
