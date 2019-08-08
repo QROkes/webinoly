@@ -2,7 +2,7 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
-# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -unblockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site, -mysql-password, -smtp
+# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site, -mysql-password, -smtp
 # Arguments: -raw
 
 source /opt/webinoly/lib/webin
@@ -445,7 +445,7 @@ elif [[ -n $version || -n $v || -n $V ]]; then
 
 elif [[ -n $blockip ]]; then
 	check_for_nginx -ask
-	if [[ -a /etc/nginx/conf.d/blockips.conf ]]; then
+	if [[ -z $purge && -a /etc/nginx/conf.d/blockips.conf ]]; then
 		if [[ -n $list ]]; then
 			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${blu}"
 			sudo sed -n 's/^deny //p;' /etc/nginx/conf.d/blockips.conf | sudo sed -n 's/;$//p'
@@ -466,20 +466,12 @@ elif [[ -n $blockip ]]; then
 				exit 1
 			fi
 		fi
-	else
-		echo "${red}[ERROR] Nginx file not found!${end}"
-		exit 1
-	fi
-
-
-elif [[ -n $unblockip ]]; then
-	check_for_nginx -ask
-	if [[ -a /etc/nginx/conf.d/blockips.conf ]]; then
-		[[ $unblockip == true ]] && read -p "${blu}IP address to unblock: ${end}" unblockip
-		if [[ $(ip_check $unblockip) == "true" ]]; then
+	elif [[ -n $purge && -a /etc/nginx/conf.d/blockips.conf ]]; then
+		[[ $blockip == true ]] && read -p "${blu}IP address to unblock: ${end}" blockip
+		if [[ $(ip_check $blockip) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
-			sed -i "\#^deny ${unblockip};#d" /etc/nginx/conf.d/blockips.conf
-			echo "${gre}The IP address ${blu}'$unblockip'${gre} was successfully unblocked!${end}"
+			sed -i "\#^deny ${blockip};#d" /etc/nginx/conf.d/blockips.conf
+			echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully unblocked!${end}"
 		else
 			echo "${red}[ERROR] Please, enter a valid IP value!${end}"
 			exit 1
@@ -488,7 +480,7 @@ elif [[ -n $unblockip ]]; then
 		echo "${red}[ERROR] Nginx file not found!${end}"
 		exit 1
 	fi
-	
+
 
 elif [[ -n $conf_value ]]; then
 	if [[ -n $dyn_var && $dyn_var =~ ^[A-Za-z\-]+$ ]]; then

@@ -2,14 +2,14 @@
 
 # Http-Authentication Plugin
 # Syntax: httpauth <option> <argument>
-# Options: -add, -delete, -list, -wp-admin, -whitelist, -whitelist-remove
+# Options: -add, -delete, -list, -wp-admin, -whitelist
 # Arguments: -raw, -list
 
 source /opt/webinoly/lib/general
 check_for_parameters $@
 api-events_update has
 
-[[ -n $add || -n $delete || -n $list || -n $whitelist || -n $whitelist_remove ]] && check_for_nginx -ask
+[[ -n $add || -n $delete || -n $list || -n $whitelist ]] && check_for_nginx -ask
 
 
 if [[ -n $add ]]; then
@@ -91,7 +91,7 @@ elif [[ -n $wp_admin_on || -n $wp_admin_off || -n $wp_admin ]]; then
 
 elif [[ -n $whitelist ]]; then
 	api-events_update ha4
-	if [[ -a /etc/nginx/common/acl.conf ]]; then
+	if [[ -z $purge && -a /etc/nginx/common/acl.conf ]]; then
 		if [[ -n $list ]]; then
 			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${blu}"
 			sudo sed -n 's/^allow //p;' /etc/nginx/common/acl.conf | sudo sed -n 's/;$//p'
@@ -113,20 +113,13 @@ elif [[ -n $whitelist ]]; then
 				exit 1
 			fi
 		fi
-	else
-		echo "${red}[ERROR] Nginx file not found!${end}"
-		exit 1
-	fi
-
-
-elif [[ -n $whitelist_remove ]]; then
-	if [[ -a /etc/nginx/common/acl.conf ]]; then
-		[[ $whitelist_remove == true ]] && read -p "${blu}IP address to remove from whitelist: ${end}" whitelist_remove
-		if [[ $(ip_check $whitelist_remove) == "true" ]]; then
+	elif [[ -n $purge && -a /etc/nginx/common/acl.conf ]]; then
+		[[ $whitelist == true ]] && read -p "${blu}IP address to remove from whitelist: ${end}" whitelist
+		if [[ $(ip_check $whitelist) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
-			sudo sed -i "\#^allow ${whitelist_remove};#d" /etc/nginx/common/acl.conf
+			sudo sed -i "\#^allow ${whitelist};#d" /etc/nginx/common/acl.conf
 			sudo service nginx reload
-			echo "${gre}The IP address ${blu}'$whitelist_remove'${gre} was successfully removed from whitelist!${end}"
+			echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully removed from whitelist!${end}"
 		else
 			echo "${red}[ERROR] Please, enter a valid IP value!${end}"
 			exit 1
@@ -134,7 +127,7 @@ elif [[ -n $whitelist_remove ]]; then
 	else
 		echo "${red}[ERROR] Nginx file not found!${end}"
 		exit 1
-	fi	
+	fi
 
 	
 elif [[ -n $list ]]; then
