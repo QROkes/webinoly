@@ -56,10 +56,10 @@ elif [[ -n $delete ]]; then
 	echo "${gre}User '$userpurge has been deleted successfully!${end}"
 
 		
-elif [[ -n $wp_admin_on || -n $wp_admin_off || -n $wp_admin ]]; then
+elif [[ -n $wp_admin ]]; then
 	api-events_update ha3
 	[[ $(conf_read nginx) == "true" ]] && iswpadon=$( grep -F "acl.conf;" /etc/nginx/common/wpcommon.conf )
-	if [[ -n $wp_admin_on || $wp_admin == "on" ]]; then
+	if [[ $wp_admin == "on" ]]; then
 		if [[ -z $iswpadon ]]; then
 			if [[ $(conf_read nginx) == "true" ]]; then
 				sudo sed -i "/\/wp-login\.php/a \include common/acl.conf;" /etc/nginx/common/wpcommon.conf
@@ -72,7 +72,7 @@ elif [[ -n $wp_admin_on || -n $wp_admin_off || -n $wp_admin ]]; then
 			echo "${gre}HTTP Authentication for WP Admin pages is already enabled! ${end}"
 		fi
 	
-	elif [[ -n $wp_admin_off || $wp_admin == "off" ]]; then
+	elif [[ $wp_admin == "off" ]]; then
 		if [[ -n $iswpadon || ( -z $iswpadon && $(conf_read nginx) != "true" ) ]]; then
 			if [[ $(conf_read nginx) == "true" ]]; then
 				sudo sed -i "/acl.conf/d" /etc/nginx/common/wpcommon.conf
@@ -84,7 +84,7 @@ elif [[ -n $wp_admin_on || -n $wp_admin_off || -n $wp_admin ]]; then
 			echo "${gre}HTTP Authentication for WP Admin pages is already disabled! ${end}"
 		fi
 	else
-		echo "${red}[ERROR] Invalid option! ${end}"
+		echo "${red}[ERROR] Invalid value for wp-admin! ${end}"
 		exit 1
 	fi
 
