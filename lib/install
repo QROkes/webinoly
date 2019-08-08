@@ -247,9 +247,8 @@ mysql_install() {
 	sudo apt -y install mariadb-server
 
 	#Instead of mysql_secure_installation we do this: (same but manually, because not acept unattended)
-	#ALTER USER 'root'@'localhost' IDENTIFIED BY '${AUTOGENPASS_ROOT}';   <<<--- For MySQL 5.7.6 and newer as well as MariaDB 10.1.20 and newer instead of UPDATE
 	sudo mysql --user=root -p$AUTOGENPASS_ROOT <<_EOF_
-UPDATE mysql.user SET authentication_string = PASSWORD('${AUTOGENPASS_ROOT}') WHERE User = 'root' AND Host = 'localhost';
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${AUTOGENPASS_ROOT}';
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;

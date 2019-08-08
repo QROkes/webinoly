@@ -49,7 +49,7 @@ elif [[ -n $server_reset ]]; then
 		sudo mv /tmp/webinoly_blockips_backup /etc/nginx/conf.d/blockips.conf
 		sudo mv /tmp/webinoly_whitelist_backup /etc/nginx/common/acl.conf
 		echo "${gre}Nginx settings has been updated successfully!${end}"
-	elif [[ $(conf_read nginx-optim) != "true" && $server_reset =~ ^(nginx|all)$ ]]; then
+	elif [[ $(conf_read nginx-optim) != "true" && $server_reset == "nginx" ]]; then
 		echo "${red}[ERROR] Nginx settings couldn't been updated, seems like is not installed in your server!${end}"
 		err_cont=true
 	fi
@@ -66,7 +66,7 @@ elif [[ -n $server_reset ]]; then
 			echo "${red}[ERROR] PHP could not been updated, source files not found!${end}"
 			exit 1
 		fi
-	elif [[ $(conf_read php-optim) != "true" && $server_reset =~ ^(php|all)$ ]]; then
+	elif [[ $(conf_read php-optim) != "true" && $server_reset == "php" ]]; then
 		echo "${red}[ERROR] PHP settings couldn't been updated, seems like is not installed in your server!${end}"
 		exit 1
 	fi
