@@ -2,16 +2,6 @@
 source /opt/webinoly/lib/general
 
 
-# We keep this functions just for legacy support, now we take the value from global variables.
-# Will be removed in the future!
-app_version() { 
-	echo $app_version
-}
-svr_version() { 
-	echo $svr_version
-}
-
-
 # Remove Intallation Files
 app_purge() {
 	sudo rm $HOME/webinoly.tar

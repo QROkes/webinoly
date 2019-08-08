@@ -24,9 +24,8 @@ fi
 checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
 if [[ -a /opt/webinoly/webinoly.conf && $2 != "-ver=beta" && $2 != "-ver=alpha" ]]; then
 	currentver=$(grep -w "^app-version:.*" /opt/webinoly/webinoly.conf | cut -f 2 -d ':')
-	
 	if [[ -n $checkver && -n $currentver && ${checkver//.} -le ${currentver//.} ]]; then
-		echo "${gre}You currently have the latest version!${end}"
+		echo "$(tput setaf 2)You currently have the latest version!$(tput sgr0)"
 		sudo rm weby
 		exit 0
 	fi
@@ -67,7 +66,6 @@ done
 # Download and install Webinoly
 if [[ $2 == "-ver="* ]]; then
 	ver=$(echo "$2" | cut -d'=' -f 2 -s)
-	
 	# Skip stadistics counters for dev and testing (custom version stats).
 	if [[ $(echo "${ver}" | rev | cut -c-1) == "*" || $ver == "alpha" ]]; then
 		ver=${ver//'*'}
@@ -129,22 +127,17 @@ fi
 if [[ -a /opt/webinoly/webinoly.conf ]]; then
 	echo "${gre}Webinoly Configuration file was found, so we will use it!${end}"
 	oldapp=$(conf_read app-version)
-	# svr_version function was created at the same time as the first update of server-version. Not check before!
-	if declare -F svr_version > /dev/null 2>&1; then
-		newver=$(svr_version)
-		oldver=$(conf_read server-version)
-		[[ -n $oldver && ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
-	fi
+	oldver=$(conf_read server-version)
+	newver=$svr_version
+	[[ -n $oldver && ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
 else
 	[[ -n $2 && $2 != "-ver="* ]] && tools_port $2
-	# Compatibility with old versions - before v1.4.1 we used to declare the tools_port here.
-	[[ $2 == "-ver="* && $webyversion == $ver && ${ver//.} -le 140 ]] && tools_port 22222
 	newinst="true"
 fi
 
 
 # Write app version
-declare -F app_version > /dev/null 2>&1 && webyversion=$(app_version)
+webyversion=$app_version
 [[ -z $webyversion ]] && webyversion="undetermined"
 conf_write app-version $webyversion
 

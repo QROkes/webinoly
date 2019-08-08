@@ -245,12 +245,8 @@ webinoly_verify() {
 			error="1"
 		fi
 	fi
-	if [[ $(conf_read nginx-tool) != "true" ]]; then
-		if [[ -a /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
-			echo "[WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!"
-			warning="1"
-		fi
-		if [[ -d /var/www/$(conf_read tools-port) ]]; then
+	if [[ $(conf_read nginx-tool) != "true" && -n $(conf_read tools-port) ]]; then
+		if [[ -a /etc/nginx/sites-available/$(conf_read tools-port) || -d /var/www/$(conf_read tools-port) ]]; then
 			echo "[WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!"
 			warning="1"
 		fi
