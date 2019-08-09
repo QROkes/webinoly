@@ -206,6 +206,7 @@ elif [[ -n $html && -n $domain ]]; then
 elif [[ -n $wp && -n $domain ]]; then
 	createsite
 	sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
+	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off -site=$domain
 
 
 # Create WP Multisite (Sub-directory)
@@ -213,12 +214,14 @@ elif [[ -n $wpsubdir && -n $domain ]]; then
 	createsite
 	sudo sed -i '/locations.conf/i \	include common/wpsubdir.conf;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
+	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off -site=$domain
 
 	
 # Create WP Multisite (Sub-domain)	
 elif [[ -n $wpsubdom && -n $domain ]]; then
 	createsite
 	sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
+	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off -site=$domain
 
 
 # Parked Domain

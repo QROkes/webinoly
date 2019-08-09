@@ -87,8 +87,8 @@ webinoly_verify() {
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/conf.d/upstream.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/common/acl.conf ]]; then
-		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/acl.conf not found!"
+	if [[ ! -a /opt/webinoly/templates/nginx/common/htauth-acl.conf ]]; then
+		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/htauth-acl.conf not found!"
 		error="1"
 	fi
 	if [[ ! -a /opt/webinoly/templates/nginx/common/locations.conf ]]; then
@@ -192,8 +192,8 @@ webinoly_verify() {
 			echo "[ERROR] File: /etc/nginx/conf.d/upstream.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/common/acl.conf ]]; then
-			echo "[ERROR] File: /etc/nginx/common/acl.conf not found!"
+		if [[ ! -a /etc/nginx/common/htauth-acl.conf ]]; then
+			echo "[ERROR] File: /etc/nginx/common/htauth-acl.conf not found!"
 			error="1"
 		fi
 		if [[ ! -a /etc/nginx/common/locations.conf ]]; then
