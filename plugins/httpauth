@@ -20,15 +20,6 @@ elif [[ -n $site && ! -a /etc/nginx/sites-available/$site ]]; then
 else
 	authfile=".htpasswd"
 fi
-if [[ ! -a /etc/nginx/$authfile ]]; then
-	if [[ -n $site && ! -d /etc/nginx/apps.d ]]; then
-		sudo mkdir -p /etc/nginx/apps.d
-		sudo chmod 755 /etc/nginx/apps.d
-	fi
-	sudo touch /etc/nginx/$authfile
-	sudo chmod 644 /etc/nginx/$authfile
-	sudo chown -R root:root /etc/nginx/$authfile
-fi
 
 
 if [[ -n $add ]]; then
@@ -50,6 +41,17 @@ if [[ -n $add ]]; then
 	if ! [[ -n $user && -n $pass && $user =~ ^[^:]+$ && $pass =~ ^[^:]+$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid username and password!${end}"
 		exit 1
+	fi
+	
+	# Create pass-file if not-exist.
+	if [[ ! -a /etc/nginx/$authfile ]]; then
+		if [[ -n $site && ! -d /etc/nginx/apps.d ]]; then
+			sudo mkdir -p /etc/nginx/apps.d
+			sudo chmod 755 /etc/nginx/apps.d
+		fi
+		sudo touch /etc/nginx/$authfile
+		sudo chmod 644 /etc/nginx/$authfile
+		sudo chown -R root:root /etc/nginx/$authfile
 	fi
 	
 	exist=$( grep -E "^${user}:" /etc/nginx/$authfile )
@@ -167,9 +169,9 @@ elif [[ -n $list ]]; then
 			[[ $list == "raw" || -n $raw ]] && echo "$line" | cut -f 1 -d ':' || echo "${gre}+ $(echo $line | cut -f 1 -d ':') ${end}"
 			nonemptylist=true
 		done
-		[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No users were found!${end}"
 		}
 	fi
+	[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No users were found!${end}"
 	echo ""
 
 
