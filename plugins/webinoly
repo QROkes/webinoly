@@ -17,7 +17,7 @@ if [[ -n $update ]]; then
 	if [[ ( -n $checkver && ${checkver//.} -gt ${currentver//.} ) || ( -n $update && $update != true ) ]]; then
 		echo ""
 		[[ -n $update && $update != true ]] && branch="-ver=${update}" || branch=""
-		sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=$(app_version)" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
+		sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=${app_version}" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
 		[[ $? == 0 ]] && echo "${gre}Webinoly App has been updated successfully!${end}"
 	else
 		echo "${gre}You currently have the latest version!${end}"
@@ -434,9 +434,9 @@ elif [[ -n $version || -n $v || -n $V ]]; then
 	[[ -z $(conf_read server-version) ]] && sver="Not installed!" || sver=$(conf_read server-version)
 	
 	echo "${blu}"
-	echo "Webinoly version: $(app_version)"
+	echo "Webinoly version: $app_version"
 	echo "Current stack version: $sver"
-	[[ $sver != $(svr_version) ]] && echo "Available stack version: $(svr_version)"
+	[[ $sver != $svr_version ]] && echo "Available stack version: $svr_version"
 	echo "${end}"
 	nginx_not="true" # Nginx-Reload not-needed.
 
