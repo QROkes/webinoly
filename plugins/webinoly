@@ -496,23 +496,12 @@ elif [[ -n $conf_value ]]; then
 
 
 elif [[ -n $yoast_sitemap ]]; then
-	[[ $(conf_read nginx) == "true" ]] && ystmap=$( grep -F "# YoastSitemapStart - Yoast SEO Plugin" /etc/nginx/common/wpcommon.conf )
 	if [[ $yoast_sitemap == "on" ]]; then
-		if [[ -z $ystmap ]]; then
-			[[ $(conf_read nginx) == "true" ]] && sudo cat /opt/webinoly/templates/template-yoast-sitemap >> /etc/nginx/common/wpcommon.conf
-			conf_write yoast-sitemap true
-			echo "${gre}Yoast Sitemap Support was successfully enabled!${end}"
-		else
-			echo "${gre}Yoast Sitemap Support is already enabled!${end}"
-		fi
+		conf_write yoast-sitemap true
+		echo "${gre}Yoast Sitemap Support was successfully enabled!${end}"
 	elif [[ $yoast_sitemap == "off" ]]; then
-		if [[ -n $ystmap || ( -z $ystmap && $(conf_read nginx) != "true" ) ]]; then
-			[[ $(conf_read nginx) == "true" ]] && sudo sed -i '/YoastSitemapStart/,/YoastSitemapEnd/{/.*/d}' /etc/nginx/common/wpcommon.conf
-			conf_write yoast-sitemap purged
-			echo "${gre}Yoast Sitemap Support was successfully disabled!${end}"
-		else
-			echo "${gre}Yoast Sitemap Support is already disabled!${end}"
-		fi
+		conf_write yoast-sitemap purged
+		echo "${gre}Yoast Sitemap Support was successfully disabled!${end}"
 	else
 		echo "${red}[ERROR] Please, enter a valid option to enable/disable Yoast Sitemap Support!${end}"
 		exit 1

@@ -12,7 +12,10 @@ server {
 	root /var/www/domain.com/htdocs;
 		
 	index  index.php index.html index.htm;
-		
+	
+	# WebinolyCustom
+	# WebinolyCustomEnd
+	
 	include common/php.conf;
 	include common/locations.conf;
 	include common/headers-http.conf;
