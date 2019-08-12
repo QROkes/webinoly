@@ -15,7 +15,8 @@ set_timezone() {
 		# It's not compatible with multi-php feature.
 		if [[ $(conf_read php) == "true" ]]; then
 			sudo sed -i "/date.timezone =/c\date.timezone = $(conf_read timezone)" /etc/php/$(conf_read php-ver)/fpm/php.ini
-			sudo service php*-fpm reload
+			# Don't reload if running inside php-optim process.
+			[[ $(conf_read status-api) != "ip3" ]] && sudo service php*-fpm reload
 		fi
 		echo "${gre}Timezone: $(conf_read timezone) ${end}"
 	else
@@ -296,6 +297,7 @@ nginx_optim() {
 # PHP OPTIM
 php_optim() {
 	api-events_update ip3
+	sudo service php*-fpm stop
 	
 	# Check for dynamic variables
 	[[ -n $1 ]] && ver="$1" || ver=$(conf_read php-ver)
@@ -368,7 +370,7 @@ php_optim() {
 	
 	[[ $(conf_read php-tool) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
 	conf_write php-optim true
-	sudo service php*-fpm reload
+	sudo service php*-fpm start
 	api-events_update ip4
 }
 
@@ -488,8 +490,8 @@ swap_delete() {
 	if [[ -n $swapkb && $swapkb =~ ^[0-9]+$ && $swapkb -gt 0 && $(conf_read swap-owner) == "webinoly" ]]; then
 		api-events_update pn9
 		sudo swapoff -a -v > /dev/null
-		sudo rm /swapfile
 		sudo sed -i '/\/swapfile/d' /etc/fstab
+		sudo rm /swapfile
 		conf_delete swap-owner
 		api-events_update pn10
 	fi
@@ -534,6 +536,7 @@ swap_create() {
 		else
 			# Create SWAP Partition
 			sudo dd if=/dev/zero of=/swapfile bs=${newswap}M count=1024
+			sudo echo "/swapfile none swap sw 0 0" >> /etc/fstab
 			
 			sudo chown root:root /swapfile
 			sudo chmod 0600 /swapfile
@@ -541,11 +544,7 @@ swap_create() {
 			sudo mkswap /swapfile
 			sudo swapon /swapfile
 
-			sudo echo "/swapfile none swap sw 0 0" >> /etc/fstab
-
-			# Swap created by Webinoly - so we should remove it in uninstall
 			conf_write swap-owner webinoly
-
 			echo "${gre}A new SWAP file (${newswap}Gb) has been created! ${end}"
 		fi
 		api-events_update in6
