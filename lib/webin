@@ -75,10 +75,6 @@ webinoly_verify() {
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/22222 not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/conf.d/blockips.conf ]]; then
-			echo "[WARNING] File: /opt/webinoly/templates/nginx/conf.d/blockips.conf not found!"
-			warning="1"
-		fi
 	if [[ ! -a /opt/webinoly/templates/nginx/conf.d/fastcgi.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/conf.d/fastcgi.conf not found!"
 		error="1"
@@ -176,13 +172,9 @@ webinoly_verify() {
 			echo "[ERROR] File: /etc/nginx/fastcgi_params not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/.htpasswd && ( -n $(conf_read tools-site) && ! -a /etc/nginx/apps.d/.htpasswd-$(conf_read tools-site) ) && $(conf_read php) == "true" ]]; then
+		if ! [[ -a /etc/nginx/.htpasswd && $(conf_read php) == "true" || ( -n $(conf_read tools-site) && -a /etc/nginx/apps.d/.htpasswd-$(conf_read tools-site) && $(conf_read php) == "true" ) ]]; then
 			echo "[INFO] HTTP Authentication Credentials not found!"
 			info="1"
-		fi
-		if [[ ! -a /etc/nginx/conf.d/blockips.conf ]]; then
-			echo "[WARNING] File: /etc/nginx/conf.d/blockips.conf not found!"
-			warning="1"
 		fi
 		if [[ ! -a /etc/nginx/conf.d/fastcgi.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/conf.d/fastcgi.conf not found!"

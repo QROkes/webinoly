@@ -44,10 +44,6 @@ if [[ -n $add ]]; then
 	
 	# Create pass-file if not-exist.
 	if [[ ! -a /etc/nginx/$authfile ]]; then
-		if [[ -n $domain && ! -d /etc/nginx/apps.d ]]; then
-			sudo mkdir -p /etc/nginx/apps.d
-			sudo chmod 755 /etc/nginx/apps.d
-		fi
 		sudo touch /etc/nginx/$authfile
 		sudo chmod 644 /etc/nginx/$authfile
 		sudo chown -R root:root /etc/nginx/$authfile
@@ -118,17 +114,26 @@ elif [[ -n $wp_admin ]]; then
 
 elif [[ -n $whitelist ]]; then
 	api-events_update ha4
-	if [[ -z $purge && -a /etc/nginx/common/acl.conf ]]; then
+	if [[ -z $purge ]]; then
 		if [[ -n $list ]]; then
 			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${blu}"
-			sudo sed -n 's/^allow //p;' /etc/nginx/common/acl.conf | sudo sed -n 's/;$//p'
+			if [[ -a /etc/nginx/apps.d/webinoly-whitelist-htauth.conf ]]; then
+				sudo sed -n 's/^allow //p;' /etc/nginx/apps.d/webinoly-whitelist-htauth.conf | sudo sed -n 's/;$//p'
+			else
+				echo "[Empty] No IP's were found!"
+			fi
 			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
 		else
 			[[ $whitelist == true ]] && read -p "${blu}IP address to whitelist: ${end}" whitelist
 			if [[ $(ip_check $whitelist) == "true" ]]; then
-				exist=$( grep -E "^allow $whitelist;$" /etc/nginx/common/acl.conf )
+				if [[ ! -a /etc/nginx/apps.d/webinoly-whitelist-htauth.conf ]]; then
+					sudo touch /etc/nginx/apps.d/webinoly-whitelist-htauth.conf
+					sudo chmod 644 /etc/nginx/apps.d/webinoly-whitelist-htauth.conf
+					sudo chown -R root:root /etc/nginx/apps.d/webinoly-whitelist-htauth.conf
+				fi
+				exist=$( grep -E "^allow $whitelist;$" /etc/nginx/apps.d/webinoly-whitelist-htauth.conf )
 				if [[ -z $exist ]]; then
-					sudo sed -i "/deny all;/i \allow ${whitelist};" /etc/nginx/common/acl.conf
+					sh -c "echo -n 'allow ${whitelist};\n' >> /etc/nginx/apps.d/webinoly-whitelist-htauth.conf"
 					sudo service nginx reload
 					echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully whitelisted!${end}"
 				else
@@ -140,11 +145,11 @@ elif [[ -n $whitelist ]]; then
 				exit 1
 			fi
 		fi
-	elif [[ -n $purge && -a /etc/nginx/common/acl.conf ]]; then
+	elif [[ -n $purge ]]; then
 		[[ $whitelist == true ]] && read -p "${blu}IP address to remove from whitelist: ${end}" whitelist
 		if [[ $(ip_check $whitelist) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
-			sudo sed -i "\#^allow ${whitelist};#d" /etc/nginx/common/acl.conf
+			[[ -a /etc/nginx/apps.d/webinoly-whitelist-htauth.conf ]] && sudo sed -i "\#^allow ${whitelist};#d" /etc/nginx/apps.d/webinoly-whitelist-htauth.conf
 			sudo service nginx reload
 			echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully removed from whitelist!${end}"
 		else

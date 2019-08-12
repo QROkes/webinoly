@@ -16,7 +16,7 @@ set_timezone() {
 		if [[ $(conf_read php) == "true" ]]; then
 			sudo sed -i "/date.timezone =/c\date.timezone = $(conf_read timezone)" /etc/php/$(conf_read php-ver)/fpm/php.ini
 			# Don't reload if running inside php-optim process.
-			[[ $(conf_read status-api) != "ip3" ]] && sudo service php*-fpm reload
+			[[ $(conf_read status-api) != "ip3" ]] && sudo systemctl reload php$(conf_read php-ver)-fpm
 		fi
 		echo "${gre}Timezone: $(conf_read timezone) ${end}"
 	else
@@ -99,7 +99,7 @@ LimitNOFILE=$nginxfd" | tee -a /etc/systemd/system/nginx.service.d/nofile_limit.
 	sudo systemctl daemon-reload
 	sudo kill $(cat /run/nginx.pid)
 	conf_write linux-optim true
-	sudo nginx -t && sudo service nginx start
+	sudo service nginx start
 	api-events_update in7
 }
 
@@ -258,6 +258,7 @@ _EOF_
 #NGINX OPTIM
 nginx_optim() {
 	api-events_update in3
+	sudo service nginx stop
 	sudo cp -R /opt/webinoly/templates/nginx/common /etc/nginx/common
 	sudo cp -R /opt/webinoly/templates/nginx/conf.d/* /etc/nginx/conf.d/
 
@@ -278,6 +279,11 @@ nginx_optim() {
 		sudo chmod 600 /etc/ssl/dhparam.pem
 	fi
 
+	if [[ ! -d /etc/nginx/apps.d ]]; then
+		sudo mkdir -p /etc/nginx/apps.d
+		sudo chmod 755 /etc/nginx/apps.d
+	fi
+	
 	echo "${gre}Wait while Webinoly optimize your Ubuntu Operating System...${end}"
 	linux_optim > /dev/null 2>&1 &
 	wait $!
@@ -287,6 +293,7 @@ nginx_optim() {
 	[[ $(conf_read global-access-log-off) == "purged" ]] && sudo log -only-error=off || sudo log -only-error=on
 	[[ -n $(conf_read fastcgi-conf) ]] && sudo webinoly -config-cache=[$(conf_read fastcgi-conf)]
 
+	sudo nginx -t
 	conf_write server-version $svr_version
 	conf_write nginx-optim true
 	api-events_update in8
@@ -297,13 +304,13 @@ nginx_optim() {
 # PHP OPTIM
 php_optim() {
 	api-events_update ip3
-	sudo service php*-fpm stop
 	
 	# Check for dynamic variables
 	[[ -n $1 ]] && ver="$1" || ver=$(conf_read php-ver)
 	[[ -n $(conf_read php-max-mem) && $(conf_read php-max-mem) =~ ^[0-9]+$ && $(conf_read php-max-mem) -gt 0 ]] && local maxmem=$(conf_read php-max-mem) || local maxmem=192
 	[[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ && $(conf_read max-mb-uploads) -gt 0 ]] && local maxuploads=$(conf_read max-mb-uploads) || local maxuploads=50
 	
+	sudo systemctl stop php${ver}-fpm
 	sudo sed -i "/memory_limit =/c\memory_limit = ${maxmem}M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/max_execution_time =/c\max_execution_time = 300' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/expose_php =/c\expose_php = Off' /etc/php/$ver/fpm/php.ini
@@ -370,7 +377,7 @@ php_optim() {
 	
 	[[ $(conf_read php-tool) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
 	conf_write php-optim true
-	sudo service php*-fpm start
+	sudo systemctl start php${ver}-fpm
 	api-events_update ip4
 }
 

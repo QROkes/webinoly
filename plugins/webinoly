@@ -36,17 +36,12 @@ elif [[ -n $server_reset ]]; then
 	
 	# Regenerate NGINX conf files
 	if [[ $(conf_read nginx-optim) == "true" && $server_reset =~ ^(nginx|all)$ ]]; then
-		# Backup and keep blockip
-		sudo cp -p /etc/nginx/conf.d/blockips.conf /tmp/webinoly_blockips_backup
-		
 		sudo rm -rf /etc/nginx/common
 		sudo rm -rf /etc/nginx/conf.d/*
 		linux_purge
 		nginx_optim
-		sleep 3
-		
-		sudo mv /tmp/webinoly_blockips_backup /etc/nginx/conf.d/blockips.conf
 		echo "${gre}Nginx settings has been updated successfully!${end}"
+		nginx_not="true" # Nginx-Reload not-needed.
 	elif [[ $(conf_read nginx-optim) != "true" && $server_reset == "nginx" ]]; then
 		echo "${red}[ERROR] Nginx settings couldn't been updated, seems like is not installed in your server!${end}"
 		err_cont=true
@@ -441,14 +436,23 @@ elif [[ -n $version || -n $v || -n $V ]]; then
 
 elif [[ -n $blockip ]]; then
 	check_for_nginx -ask
-	if [[ -z $purge && -a /etc/nginx/conf.d/blockips.conf ]]; then
+	if [[ -z $purge ]]; then
 		if [[ -n $list ]]; then
 			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${blu}"
-			sudo sed -n 's/^deny //p;' /etc/nginx/conf.d/blockips.conf | sudo sed -n 's/;$//p'
+			if [[ -s /etc/nginx/conf.d/blockips.conf ]]; then
+				sudo sed -n 's/^deny //p;' /etc/nginx/conf.d/blockips.conf | sudo sed -n 's/;$//p'
+			else
+				echo "[Empty] No IP's were found!"
+			fi
 			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
 		else
 			[[ $blockip == true ]] && read -p "${blu}IP address to block: ${end}" blockip
 			if [[ $(ip_check $blockip) == "true" ]]; then
+				if [[ ! -a /etc/nginx/conf.d/blockips.conf ]]; then
+					sudo touch /etc/nginx/conf.d/blockips.conf
+					sudo chmod 644 /etc/nginx/conf.d/blockips.conf
+					sudo chown -R root:root /etc/nginx/conf.d/blockips.conf
+				fi
 				exist=$( grep -E "^deny $blockip;$" /etc/nginx/conf.d/blockips.conf )
 				if [[ -z $exist ]]; then
 					sh -c "echo -n 'deny $blockip;\n' >> /etc/nginx/conf.d/blockips.conf"
@@ -462,11 +466,11 @@ elif [[ -n $blockip ]]; then
 				exit 1
 			fi
 		fi
-	elif [[ -n $purge && -a /etc/nginx/conf.d/blockips.conf ]]; then
+	elif [[ -n $purge ]]; then
 		[[ $blockip == true ]] && read -p "${blu}IP address to unblock: ${end}" blockip
 		if [[ $(ip_check $blockip) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
-			sed -i "\#^deny ${blockip};#d" /etc/nginx/conf.d/blockips.conf
+			[[ -a /etc/nginx/conf.d/blockips.conf ]] && sed -i "\#^deny ${blockip};#d" /etc/nginx/conf.d/blockips.conf
 			echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully unblocked!${end}"
 		else
 			echo "${red}[ERROR] Please, enter a valid IP value!${end}"

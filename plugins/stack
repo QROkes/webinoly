@@ -299,6 +299,7 @@ elif [[ -n $html || -n $nginx ]]; then
 		fi
 	fi
 	
+	
 elif [[ -n $php ]]; then
 	# Check for a valid custom value.
 	if [[ -n $php && $php != true && $(conf_read multi-php) != "true" && $php != "force" ]]; then
