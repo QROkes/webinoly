@@ -2,16 +2,16 @@
 
 # Http-Authentication Plugin
 # Syntax: httpauth <option> <argument>
-# Options: -add, -delete, -list, -wp-admin, -whitelist
-# Arguments: -raw, -list
+# Options: -add, -delete, -list, -wp-admin, -whitelist, -path
+# Arguments: -raw, -list, -exact
 
 source /opt/webinoly/lib/general
 check_for_parameters $@
 api-events_update has
 
-[[ -n $add || -n $delete || -n $list || -n $whitelist ]] && check_for_nginx -ask
+[[ -n $wp_admin && -z $domain ]] || check_for_nginx -ask
 
-# Check for site argument.
+# Check for domain.
 if [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
 	authfile="apps.d/.htpasswd-$domain"
 elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
@@ -116,13 +116,15 @@ elif [[ -n $whitelist ]]; then
 	api-events_update ha4
 	if [[ -z $purge ]]; then
 		if [[ -n $list ]]; then
-			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${blu}"
-			if [[ -a /etc/nginx/apps.d/webinoly-whitelist-htauth.conf ]]; then
+			[[ -n $raw ]] && echo "" || echo "${blu}"
+			if [[ -a /etc/nginx/apps.d/webinoly-whitelist-htauth.conf && -z $raw ]]; then
+				sudo sed -n 's/^allow //p;' /etc/nginx/apps.d/webinoly-whitelist-htauth.conf | sudo sed -n 's/;$//p' | sed 's/^/+ /'
+			elif [[ -a /etc/nginx/apps.d/webinoly-whitelist-htauth.conf && -n $raw ]]; then
 				sudo sed -n 's/^allow //p;' /etc/nginx/apps.d/webinoly-whitelist-htauth.conf | sudo sed -n 's/;$//p'
 			else
 				echo "[Empty] No IP's were found!"
 			fi
-			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
+			[[ -n $raw ]] && echo "" || echo "${end}"
 		else
 			[[ $whitelist == true ]] && read -p "${blu}IP address to whitelist: ${end}" whitelist
 			if [[ $(ip_check $whitelist) == "true" ]]; then
@@ -145,7 +147,7 @@ elif [[ -n $whitelist ]]; then
 				exit 1
 			fi
 		fi
-	elif [[ -n $purge ]]; then
+	else
 		[[ $whitelist == true ]] && read -p "${blu}IP address to remove from whitelist: ${end}" whitelist
 		if [[ $(ip_check $whitelist) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
@@ -156,11 +158,114 @@ elif [[ -n $whitelist ]]; then
 			echo "${red}[ERROR] Please, enter a valid IP value!${end}"
 			exit 1
 		fi
-	else
-		echo "${red}[ERROR] Nginx file not found!${end}"
-		exit 1
 	fi
 
+
+elif [[ -n $path && -n $domain ]]; then
+	if [[ -z $purge ]]; then
+		[[ $path == true ]] && read -p "${blu}Path to protect: ${end}" path
+		
+		# Check for reserved paths.
+		if [[ ( -z $exact && $path =~ ^(/wp-admin|/wp-content/uploads/)$ ) || ( -n $exact && $path =~ ^(/favicon.ico|/robots.txt|/wp-login.php|/wp-config.txt)$ ) ]]; then
+			echo "${red}[ERROR] Reserved path!${end}"
+			exit 1
+		fi
+		
+		if [[ $path == "/" ]]; then
+			exist=$( grep -F "acl.conf;" /etc/nginx/sites-available/$domain )
+			if [[ -z $exist ]]; then
+				sudo sed -i "/# WebinolyCustom$/a \	include common/acl.conf;" /etc/nginx/sites-available/$domain
+				sudo service nginx reload
+				echo "${gre}This path ${blu}'$path'${gre} was successfully protected!${end}"
+			else
+				echo "${gre}Path: ${blu}'$path'${gre} is already protected!${end}"
+			fi
+		elif [[ $path =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
+			if [[ ! -a /etc/nginx/apps.d/htauth-$domain.conf ]]; then
+				sudo touch /etc/nginx/apps.d/htauth-$domain.conf
+				sudo chmod 644 /etc/nginx/apps.d/htauth-$domain.conf
+				sudo chown -R root:root /etc/nginx/apps.d/htauth-$domain.conf
+			fi
+			
+			exist=$( grep -E "^# Path: ${path}$" /etc/nginx/apps.d/htauth-$domain.conf )
+			extac=$( grep -E "^# Path: ${path} \(Exact\)$" /etc/nginx/apps.d/htauth-$domain.conf )
+			if [[ ( -z $exist && -z $exact ) || ( -z $extac && -n $exact ) ]]; then
+				if [[ $exact == true ]]; then
+					sign="= "
+					firm="$path (Exact)"
+				else
+					sign=""
+					firm="$path"
+				fi
+				
+				echo "# Path: ${firm}
+location $sign$path {
+	include common/acl.conf;
+	try_files \$uri \$uri/ /index.php?\$args;
+}
+# PathEnd" >> /etc/nginx/apps.d/htauth-$domain.conf
+				
+				if [[ $(is_php $domain) == "false" && $(is_wp $domain) == "false" ]]; then
+					sudo sed -i "/^# Path: $(echo $path | sed "s#/#\\\/#g")/,/^# PathEnd/{/try_files/d}" /etc/nginx/apps.d/htauth-$domain.conf
+				fi
+				
+				vconf=$( grep -E "include apps.d/htauth-$domain.conf;" /etc/nginx/sites-available/$domain )
+				[[ -z $vconf ]] && sudo sed -i "/# WebinolyCustom$/a \	include apps.d/htauth-$domain.conf;" /etc/nginx/sites-available/$domain
+				sudo service nginx reload
+				echo "${gre}This path ${blu}'$path'${gre} was successfully protected!${end}"
+			else
+				echo "${gre}Path: ${blu}'$path'${gre} is already protected!${end}"
+			fi
+		else	
+			echo "${red}[ERROR] Please, enter a valid URL path!${end}"
+			exit 1
+		fi
+	else
+		# Purge HttpAuth Path
+		[[ $path == true ]] && read -p "${blu}Path to remove protection: ${end}" path
+		if [[ $path == "/" ]]; then
+			sudo sed -i "/acl.conf;/d" /etc/nginx/sites-available/$domain
+			sudo service nginx reload
+			echo "${gre}HTTP Authentication successfully removed from ${blu}'$path'${gre}!${end}"
+		elif [[ $path == "all" ]]; then
+			sudo sed -i "/acl.conf;/d" /etc/nginx/sites-available/$domain
+			sudo sed -i "/htauth-$domain.conf;/d" /etc/nginx/sites-available/$domain
+			sudo rm -rf /etc/nginx/apps.d/htauth-$domain.conf
+			sudo service nginx reload
+			echo "${gre}HTTP Authentication successfully removed from all your custom paths!${gre}${end}"
+		elif [[ $path =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
+			if [[ -a /etc/nginx/apps.d/htauth-$domain.conf ]]; then
+				sudo sed -i "/^# Path: $(echo $path | sed "s#/#\\\/#g")/,/^# PathEnd/{/.*/d}" /etc/nginx/apps.d/htauth-$domain.conf
+				if [[ ! -s /etc/nginx/apps.d/htauth-$domain.conf ]]; then
+					sudo rm /etc/nginx/apps.d/htauth-$domain.conf
+					sudo sed -i "/htauth-$domain.conf;/d" /etc/nginx/sites-available/$domain
+				fi
+			fi
+			sudo service nginx reload
+			echo "${gre}HTTP Authentication successfully removed from ${blu}'$path'${gre}!${end}"
+		else
+			echo "${red}[ERROR] Please, enter a valid URL path!${end}"
+			exit 1
+		fi
+	fi
+
+elif [[ $list == "protected" && -n $domain ]]; then
+	root=$( grep -F "acl.conf;" /etc/nginx/sites-available/$domain )
+	if [[ -n $root ]]; then
+		echo ""
+		[[ -z $raw ]] && echo "${blu}+ /" || echo "/"
+	elif [[ -z $root ]]; then
+		[[ -z $raw ]] && echo "${blu}" || echo ""
+	fi
+	if [[ -a /etc/nginx/apps.d/htauth-$domain.conf && -z $raw ]]; then
+		sudo sed -n 's/^# Path: //p;' /etc/nginx/apps.d/htauth-$domain.conf | sed 's/^/+ /'
+	elif [[ -a /etc/nginx/apps.d/htauth-$domain.conf && -n $raw ]]; then
+		sudo sed -n 's/^# Path: //p;' /etc/nginx/apps.d/htauth-$domain.conf
+	elif [[ -z $root ]]; then
+		echo "[Empty] No protected paths were found!"
+	fi
+	[[ -n $raw ]] && echo "" || echo "${end}"
+	
 	
 elif [[ -n $list ]]; then
 	echo ""
