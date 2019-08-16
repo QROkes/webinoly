@@ -7,10 +7,12 @@ source /opt/webinoly/lib/site-ssl
 
 wp_cache_plugins() {
 	api-events_update si3
+	[[ -z $subfolder ]] && local subfolder=""
+	
 	if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/nginx-helper ]]; then
 		# Download Nginx Helper Plugin
 		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
-		sudo unzip -qq /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
+		sudo unzip -qq /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/
 		sudo rm /var/www/$domain/htdocs/nginx-helper-plugin.zip
 		echo ""
 		echo "${gre} Nginx Helper Plugin has been installed!"
@@ -27,7 +29,7 @@ wp_cache_plugins() {
 	if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/redis-cache ]]; then
 		# Download Redis Object Cache Plugin
 		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/redis-cache-plugin.zip https://downloads.wordpress.org/plugin/redis-cache.latest-stable.zip
-		sudo unzip -qq /var/www/$domain/htdocs/redis-cache-plugin.zip -d /var/www/$domain/htdocs/wp-content/plugins/
+		sudo unzip -qq /var/www/$domain/htdocs/redis-cache-plugin.zip -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/
 		sudo rm /var/www/$domain/htdocs/redis-cache-plugin.zip
 		echo ""
 		echo "${gre} Redis Object Cache Plugin has been installed!"
@@ -96,7 +98,15 @@ dbword_check() {
 
 wpinstall() {
 	api-events_update si2
-	[[ -z $domain && -n $mysql ]] && local dom="Webinoly_$(pwgen -s -1)" || local dom=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
+	if [[ -z $domain && -n $mysql ]]; then
+		local dom="Webinoly_$(pwgen -s -1)"
+	elif [[ -n $subfolder ]]; then
+		local dom=$(echo "$domain$subfolder" | sed "s/[^0-9A-Za-z]/_/g")
+		sudo mkdir -p /var/www/$domain/htdocs$subfolder
+	else
+		local dom=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
+	fi
+	
 	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 	local AUTOGENPASS_WPDB=`pwgen -s -1 16`
 	local setupmysql="y"
@@ -141,9 +151,9 @@ wpinstall() {
 	# Download WP (latest version)
 	if [[ $type == [123] ]]; then
 		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
-		sudo tar -xf /var/www/$domain/htdocs/wp.tar.gz -C /var/www/$domain/htdocs/
-		sudo mv /var/www/$domain/htdocs/wordpress/* /var/www/$domain/htdocs/
-		sudo rm -rf /var/www/$domain/htdocs/wordpress
+		sudo tar -xf /var/www/$domain/htdocs/wp.tar.gz -C /var/www/$domain/
+		sudo mv /var/www/$domain/wordpress/* /var/www/$domain/htdocs$subfolder/
+		sudo rm -rf /var/www/$domain/wordpress
 		sudo rm /var/www/$domain/htdocs/wp.tar.gz
 	fi
 	
@@ -396,41 +406,42 @@ _EOF_
 	
 	#WP-Config.php auto-setup
 	if [[ $setupwp == [yY] ]] ; then
-		cp /var/www/$domain/htdocs/wp-config-sample.php /var/www/$domain/wp-config.php
+		[[ -z $subfolder ]] && local wpcon="/var/www/$domain/wp-config.php" || local wpcon="/var/www/$domain/htdocs$subfolder/wp-config.php"
+		cp /var/www/$domain/htdocs$subfolder/wp-config-sample.php $wpcon
 		
 		# Fill new wp-config with data
-		sudo sed -i "/DB_NAME/c \define('DB_NAME', '$dbname');" /var/www/$domain/wp-config.php
-		sudo sed -i "/DB_USER/c \define('DB_USER', '$dbuser');" /var/www/$domain/wp-config.php
-		sudo sed -i "/DB_PASSWORD/c \define('DB_PASSWORD', '$dbpass');" /var/www/$domain/wp-config.php
-		sudo sed -i "/DB_HOST/c \define('DB_HOST', '$dbhost');" /var/www/$domain/wp-config.php
-		sudo sed -i "/table_prefix/c \$table_prefix  = '$dbpref';" /var/www/$domain/wp-config.php
+		sudo sed -i "/DB_NAME/c \define('DB_NAME', '$dbname');" $wpcon
+		sudo sed -i "/DB_USER/c \define('DB_USER', '$dbuser');" $wpcon
+		sudo sed -i "/DB_PASSWORD/c \define('DB_PASSWORD', '$dbpass');" $wpcon
+		sudo sed -i "/DB_HOST/c \define('DB_HOST', '$dbhost');" $wpcon
+		sudo sed -i "/table_prefix/c \$table_prefix  = '$dbpref';" $wpcon
 		
-		sudo sed -i "/'AUTH_KEY'/c \define('AUTH_KEY',        '$(pwgen -s -1 64)');" /var/www/$domain/wp-config.php
-		sudo sed -i "/'SECURE_AUTH_KEY'/c \define('SECURE_AUTH_KEY', '$(pwgen -s -1 64)');" /var/www/$domain/wp-config.php
-		sudo sed -i "/'LOGGED_IN_KEY'/c \define('LOGGED_IN_KEY',   '$(pwgen -s -1 64)');" /var/www/$domain/wp-config.php
-		sudo sed -i "/'NONCE_KEY'/c \define('NONCE_KEY',       '$(pwgen -s -1 64)');" /var/www/$domain/wp-config.php
-		sudo sed -i "/'AUTH_SALT'/c \define('AUTH_SALT',       '$(pwgen -s -1 64)');" /var/www/$domain/wp-config.php
-		sudo sed -i "/'SECURE_AUTH_SALT'/c \define('SECURE_AUTH_SALT','$(pwgen -s -1 64)');" /var/www/$domain/wp-config.php
-		sudo sed -i "/'LOGGED_IN_SALT'/c \define('LOGGED_IN_SALT',  '$(pwgen -s -1 64)');" /var/www/$domain/wp-config.php
-		sudo sed -i "/'NONCE_SALT'/c \define('NONCE_SALT',      '$(pwgen -s -1 64)');" /var/www/$domain/wp-config.php
+		sudo sed -i "/'AUTH_KEY'/c \define('AUTH_KEY',        '$(pwgen -s -1 64)');" $wpcon
+		sudo sed -i "/'SECURE_AUTH_KEY'/c \define('SECURE_AUTH_KEY', '$(pwgen -s -1 64)');" $wpcon
+		sudo sed -i "/'LOGGED_IN_KEY'/c \define('LOGGED_IN_KEY',   '$(pwgen -s -1 64)');" $wpcon
+		sudo sed -i "/'NONCE_KEY'/c \define('NONCE_KEY',       '$(pwgen -s -1 64)');" $wpcon
+		sudo sed -i "/'AUTH_SALT'/c \define('AUTH_SALT',       '$(pwgen -s -1 64)');" $wpcon
+		sudo sed -i "/'SECURE_AUTH_SALT'/c \define('SECURE_AUTH_SALT','$(pwgen -s -1 64)');" $wpcon
+		sudo sed -i "/'LOGGED_IN_SALT'/c \define('LOGGED_IN_SALT',  '$(pwgen -s -1 64)');" $wpcon
+		sudo sed -i "/'NONCE_SALT'/c \define('NONCE_SALT',      '$(pwgen -s -1 64)');" $wpcon
 		
 		# Redis Conf
-		sudo sed -i "/stop editing/i \define('WP_REDIS_SELECTIVE_FLUSH', true);" /var/www/$domain/wp-config.php
-		sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'redis_object_cache_for_wp_$domain');" /var/www/$domain/wp-config.php
+		sudo sed -i "/stop editing/i \define('WP_REDIS_SELECTIVE_FLUSH', true);" $wpcon
+		sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'redis_object_cache_for_wp_$domain');" $wpcon
 		
 		# Multisite wp-config
 		if [[ -n $wpsubdir || -n $wpsubdom ]]; then
-			sudo sed -i "/stop editing/i \define('WP_ALLOW_MULTISITE', true);" /var/www/$domain/wp-config.php
-			sudo sed -i "/stop editing/i \#define('MULTISITE', true);" /var/www/$domain/wp-config.php
-			sudo sed -i "/stop editing/i \#define('DOMAIN_CURRENT_SITE', '$domain');" /var/www/$domain/wp-config.php
-			sudo sed -i "/stop editing/i \#define('PATH_CURRENT_SITE', '/');" /var/www/$domain/wp-config.php
-			sudo sed -i "/stop editing/i \#define('SITE_ID_CURRENT_SITE', 1);" /var/www/$domain/wp-config.php
-			sudo sed -i "/stop editing/i \#define('BLOG_ID_CURRENT_SITE', 1);" /var/www/$domain/wp-config.php
+			sudo sed -i "/stop editing/i \define('WP_ALLOW_MULTISITE', true);" $wpcon
+			sudo sed -i "/stop editing/i \#define('MULTISITE', true);" $wpcon
+			sudo sed -i "/stop editing/i \#define('DOMAIN_CURRENT_SITE', '$domain');" $wpcon
+			sudo sed -i "/stop editing/i \#define('PATH_CURRENT_SITE', '/');" $wpcon
+			sudo sed -i "/stop editing/i \#define('SITE_ID_CURRENT_SITE', 1);" $wpcon
+			sudo sed -i "/stop editing/i \#define('BLOG_ID_CURRENT_SITE', 1);" $wpcon
 		fi
 		if [[ -n $wpsubdir ]]; then
-			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', false);" /var/www/$domain/wp-config.php
+			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', false);" $wpcon
 		elif [[ -n $wpsubdom ]]; then
-			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', true);" /var/www/$domain/wp-config.php
+			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', true);" $wpcon
 			sudo sed -i "/server_name /c \	server_name $domain *.$domain;" /etc/nginx/sites-available/$domain
 		fi
 	fi
@@ -470,6 +481,7 @@ deletesite() {
 	
 	
 	# Delete site files
+	sudo rm -rf /etc/nginx/apps.d/$domain*.conf
 	sudo rm -rf /etc/nginx/sites-available/$domain
 	sudo rm -rf /etc/nginx/sites-enabled/$domain
 	sudo rm -rf /var/www/$domain
@@ -484,7 +496,7 @@ createsite() {
 	# Check domain and then prevent reserved characters for file names.
 	domain_check $domain
 	domain=$(echo $domain | sed "s/[^\.0-9A-Za-z\-]/_/g" | sed "s/^[\.]/_/g" | sed "s/\.\./_/g")
-		
+
 	# Check for duplicate sites
 	if [[ -a /etc/nginx/sites-available/$domain ]]; then
 		echo "${red}[ERROR] Can not create site${blu} $domain ${red}because already exists!${end}"

@@ -135,8 +135,8 @@ db_delete() {
 	# Get dbname and dbuser of a WP site
 	if [[ -a /var/www/$domain/wp-config.php ]]; then
 		wpconfpath="/var/www/$domain/wp-config.php"
-	elif [[ -a /var/www/$domain/htdocs/wp-config.php ]]; then
-		wpconfpath="/var/www/$domain/htdocs/wp-config.php"
+	elif [[ -a /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
+		wpconfpath="/var/www/$domain/htdocs$subfolder/wp-config.php"
 	else
 		return
 	fi

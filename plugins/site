@@ -3,7 +3,7 @@
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
 # Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -yoast-sitemap
-# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp
+# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp, -subfolder
 
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
@@ -104,6 +104,14 @@ if [[ -n $wp || -n $wpsubdir || -n $wpsubdom || -n $mysql ]]; then
 		fi
 	fi
 fi
+
+# Check for valid WP subfolder
+[[ -z $subfolder ]] && subfolder=""
+if [[ -n $subfolder && $type != [123] ]]; then
+	echo "${red}[ERROR] Subfolder option is only supported for WordPress sites!${end}"
+	exit 1
+fi
+# Check for stack packages
 [[ $type == [123] || -n $php ]] && check_for_php -ask
 [[ $type == [24] ]] && check_for_mysql -ask
 
@@ -204,10 +212,52 @@ elif [[ -n $html && -n $domain ]]; then
 
 # Create WP site
 elif [[ -n $wp && -n $domain ]]; then
-	createsite
-	sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
-	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off -site=$domain
-	[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domain -yoast-sitemap=on
+	if [[ -z $subfolder ]]; then
+		createsite
+		sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
+		[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off -site=$domain
+		[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domain -yoast-sitemap=on
+	else
+		if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; then
+			echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
+			exit 1
+		fi
+		if [[ -a /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && -d /var/www/$domain/htdocs$subfolder ]]; then
+			echo "${red}[ERROR] Subfolder ${blu}'$subfolder'${red} already exists!${end}"
+			exit 1
+		elif [[ -a /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && ! -d /var/www/$domain/htdocs$subfolder ]]; then
+			wpinstall
+			echo "${gre}WordPress has been successfully installed in${blu} $domain$subfolder ${gre}subfolder!${end}"
+		else
+			createsite
+		fi
+	
+		subname=$(echo $subfolder | sed "s/\//_/g")
+		sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
+		
+		sudo cp /etc/nginx/common/php.conf /etc/nginx/apps.d/$domain$subname-php.conf
+		sudo cp /etc/nginx/common/wpfc.conf /etc/nginx/apps.d/$domain$subname-wpfc.conf
+		sudo cp /etc/nginx/common/wpcommon.conf /etc/nginx/apps.d/$domain$subname-wpcommon.conf
+		sudo cp /etc/nginx/common/locations.conf /etc/nginx/apps.d/$domain$subname-locations.conf
+		#sudo cp /etc/nginx/common/yoast-sitemap.conf /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
+		
+		sudo sed -i "/^location \/ {/,/^}$/{/.*/d}" /etc/nginx/apps.d/$domain$subname-php.conf
+		sudo sed -i "/^location \/ {/,/^}$/{/.*/d}" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+		sudo sed -i '/DO NOT MODIFY,/r /opt/webinoly/templates/template-site-wpsubfolder' /etc/nginx/apps.d/$domain$subname-php.conf
+		sudo cat /opt/webinoly/templates/template-site-wpsubfolder >> /etc/nginx/apps.d/$domain$subname-wpfc.conf
+		sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-php.conf
+		sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+		sudo sed -i "s/domain/$domain/g" /etc/nginx/apps.d/$domain$subname-php.conf
+		sudo sed -i "s/domain/$domain/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+		sudo sed -i "s/subname/$subname/g" /etc/nginx/apps.d/$domain$subname-php.conf
+		sudo sed -i "s/subname/$subname/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+		
+		sed -ri "s/^location(.*)\/([a-z].*)$/location\1subfolder\/\2/" /etc/nginx/apps.d/$domain$subname-locations.conf
+		sed -ri "s/location(.*) \/(.*) \{$/location\1 subfolder\/\2 \{/" /etc/nginx/apps.d/$domain$subname-wpcommon.conf
+		sudo sed -i "s#subfolder#$subfolder#g"  /etc/nginx/apps.d/$domain$subname-locations.conf
+		sudo sed -i "s#subfolder#$subfolder#g"  /etc/nginx/apps.d/$domain$subname-wpcommon.conf
+		
+	fi
 
 # Create WP Multisite (Sub-directory)
 elif [[ -n $wpsubdir && -n $domain ]]; then
@@ -332,6 +382,18 @@ elif [[ -n $delete && -a /etc/nginx/sites-available/$domain ]]; then
 	if [[ $domain == "default" || $domain == $(conf_read tools-port) ]]; then
 		echo "${red}[ERROR] System sites can not be removed!${end}"
 		exit 1
+	elif [[ -n $subfolder ]]; then
+		if [[ ! -a /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
+			echo "${red}[ERROR] Subfolder not found or is not a WP subsite!${end}"
+			exit 1
+		fi
+		db_delete $domain
+		subname=$(echo $subfolder | sed "s/\//_/g")
+		sudo rm -rf /var/www/$domain/htdocs$subfolder
+		sudo rm -rf /etc/nginx/apps.d/$domain$subname*.conf
+		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-php.conf/d}" /etc/nginx/sites-available/$domain
+		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-wpfc.conf/d}" /etc/nginx/sites-available/$domain
+		echo "${gre}Subfolder${blu} $subfolder ${gre}from${blu} $domain ${gre}has been successfully deleted!${end}"
 	else
 		deletesite
 	fi
