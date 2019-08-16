@@ -20,6 +20,18 @@ elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
 else
 	authfile=".htpasswd"
 fi
+# Check for valid WP subfolder
+[[ -z $subfolder ]] && subfolder=""
+if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; then
+	echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
+	exit 1
+fi
+if [[ -n $subfolder && ( -z $wp_admin || -z $domain ) ]]; then
+	echo "${red}[ERROR] Subfolder option is only supported for WordPress sites!${end}"
+	exit 1
+else
+	subname=$(echo $subfolder | sed "s/\//_/g")
+fi
 
 
 if [[ -n $add ]]; then
@@ -78,13 +90,24 @@ elif [[ -n $delete ]]; then
 	
 elif [[ -n $wp_admin ]]; then
 	api-events_update ha3
-	[[ $(conf_read nginx) == "true" && -n $domain ]] && iswpadon=$( grep -F "wpcommon.conf;" /etc/nginx/sites-available/$domain )
+	if [[ ( -z $subfolder && $(is_wp $domain) == "false" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "false" ) ]]; then
+		echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WP site!${end}"
+		exit 1
+	elif [[ -n $subfolder && $(is_wp $domain $subfolder) == "true" ]]; then
+		iswpadon=$( grep -F "wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-php.conf )
+	else
+		iswpadon=$( grep -F "wpcommon.conf;" /etc/nginx/sites-available/$domain )
+	fi
+	
 	if [[ $wp_admin == "on" && -n $domain ]]; then
 		if [[ -z $iswpadon ]]; then
-			if [[ $(conf_read nginx) == "true" ]]; then
+			if [[ -z $subfolder ]]; then
 				sudo sed -i '/wpcommon-noauth.conf/c \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
-				sudo service nginx reload
+			else
+				sudo sed -i "/wpcommon-noauth.conf/c \	include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+				sudo sed -i "/wpcommon-noauth.conf/c \	include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
 			fi
+			sudo service nginx reload
 			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain -${gre} has been enabled! ${end}"
 		else
 			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain -${gre} is already enabled! ${end}"
@@ -92,10 +115,13 @@ elif [[ -n $wp_admin ]]; then
 	
 	elif [[ $wp_admin == "off" && -n $domain ]]; then
 		if [[ -n $iswpadon ]]; then
-			if [[ $(conf_read nginx) == "true" ]]; then
+			if [[ -z $subfolder ]]; then
 				sudo sed -i '/wpcommon.conf/c \	include common/wpcommon-noauth.conf;' /etc/nginx/sites-available/$domain
-				sudo service nginx reload
+			else
+				sudo sed -i "/wpcommon.conf/c \	include apps.d/$domain$subname-wpcommon-noauth.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+				sudo sed -i "/wpcommon.conf/c \	include apps.d/$domain$subname-wpcommon-noauth.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
 			fi
+			sudo service nginx reload
 			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain -${gre} has been disabled! ${end}"
 		else
 			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain -${gre} is already disabled! ${end}"

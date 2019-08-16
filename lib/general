@@ -133,10 +133,10 @@ db_delete() {
 	local domain="$1"
 	
 	# Get dbname and dbuser of a WP site
-	if [[ -a /var/www/$domain/wp-config.php ]]; then
-		wpconfpath="/var/www/$domain/wp-config.php"
-	elif [[ -a /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
+	if [[ -a /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
 		wpconfpath="/var/www/$domain/htdocs$subfolder/wp-config.php"
+	elif [[ -a /var/www/$domain/wp-config.php ]]; then
+		wpconfpath="/var/www/$domain/wp-config.php"
 	else
 		return
 	fi
@@ -174,7 +174,7 @@ db_delete() {
 				done
 				[[ $answer  == [Nn] ]] && done="1"
 			else
-				echo "${gre}Database of your site ${blu}${domain}${gre} has been successfully deleted! ${end}"
+				echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
 			fi
 		else
 			if [[ -n $external_db ]]; then
@@ -218,7 +218,7 @@ db_delete() {
 					done
 					[[ $answer  == [Nn] ]] && done="1"
 				else
-					echo "${gre}Database of your site ${blu}${domain}${gre} has been successfully deleted! ${end}"
+					echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
 				fi
 			fi
 			echo "${end}"
@@ -353,9 +353,23 @@ is_php() {
 }
 
 is_wp() {
-	[[ -a /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpcommon") ]] && echo "true" || echo "false"
+	# $1 = domain, $2 = WP subfolder
+	if [[ -z $2 && -a /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpcommon") ]]; then
+		echo "true"
+	elif [[ -n $2 && -a /etc/nginx/sites-available/$1 && -a /etc/nginx/apps.d/$1$subname-wpcommon.conf && -a /var/www/$1/htdocs$2/wp-config.php ]]; then
+		echo "true"
+	else
+		echo "false"
+	fi
 }
 
 is_wp_cache() {
-	[[ -a /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpfc.conf;") ]] && echo "true" || echo "false"
+	# $1 = domain, $2 = WP subfolder
+	if [[ -z $2 && -a /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpfc.conf;") ]]; then
+		echo "true"
+	elif [[ -n $2 && -a /etc/nginx/sites-available/$1 && -n $(sed -n -e '/# WebinolyCustom/,$p' /etc/nginx/sites-available/$1 | grep -F "$1$subname-wpfc.conf;") ]]; then
+		echo "true"
+	else
+		echo "false"
+	fi
 }

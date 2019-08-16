@@ -107,9 +107,15 @@ fi
 
 # Check for valid WP subfolder
 [[ -z $subfolder ]] && subfolder=""
-if [[ -n $subfolder && $type != [123] ]]; then
+if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; then
+	echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
+	exit 1
+fi
+if [[ -n $subfolder && $type != [123] && -z $delete && -z $cache && -z $yoast_sitemap ]]; then
 	echo "${red}[ERROR] Subfolder option is only supported for WordPress sites!${end}"
 	exit 1
+else
+	subname=$(echo $subfolder | sed "s/\//_/g")
 fi
 # Check for stack packages
 [[ $type == [123] || -n $php ]] && check_for_php -ask
@@ -218,10 +224,6 @@ elif [[ -n $wp && -n $domain ]]; then
 		[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off -site=$domain
 		[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domain -yoast-sitemap=on
 	else
-		if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; then
-			echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
-			exit 1
-		fi
 		if [[ -a /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && -d /var/www/$domain/htdocs$subfolder ]]; then
 			echo "${red}[ERROR] Subfolder ${blu}'$subfolder'${red} already exists!${end}"
 			exit 1
@@ -231,15 +233,15 @@ elif [[ -n $wp && -n $domain ]]; then
 		else
 			createsite
 		fi
-	
-		subname=$(echo $subfolder | sed "s/\//_/g")
+
 		sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
 		
 		sudo cp /etc/nginx/common/php.conf /etc/nginx/apps.d/$domain$subname-php.conf
 		sudo cp /etc/nginx/common/wpfc.conf /etc/nginx/apps.d/$domain$subname-wpfc.conf
 		sudo cp /etc/nginx/common/wpcommon.conf /etc/nginx/apps.d/$domain$subname-wpcommon.conf
+		sudo cp /etc/nginx/common/wpcommon-noauth.conf /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 		sudo cp /etc/nginx/common/locations.conf /etc/nginx/apps.d/$domain$subname-locations.conf
-		#sudo cp /etc/nginx/common/yoast-sitemap.conf /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
+		sudo cp /etc/nginx/common/yoast-sitemap.conf /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
 		
 		sudo sed -i "/^location \/ {/,/^}$/{/.*/d}" /etc/nginx/apps.d/$domain$subname-php.conf
 		sudo sed -i "/^location \/ {/,/^}$/{/.*/d}" /etc/nginx/apps.d/$domain$subname-wpfc.conf
@@ -251,12 +253,14 @@ elif [[ -n $wp && -n $domain ]]; then
 		sudo sed -i "s/domain/$domain/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 		sudo sed -i "s/subname/$subname/g" /etc/nginx/apps.d/$domain$subname-php.conf
 		sudo sed -i "s/subname/$subname/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+		sudo sed -i "s#/index.php#$subfolder/index.php#g" /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
 		
 		sed -ri "s/^location(.*)\/([a-z].*)$/location\1subfolder\/\2/" /etc/nginx/apps.d/$domain$subname-locations.conf
 		sed -ri "s/location(.*) \/(.*) \{$/location\1 subfolder\/\2 \{/" /etc/nginx/apps.d/$domain$subname-wpcommon.conf
-		sudo sed -i "s#subfolder#$subfolder#g"  /etc/nginx/apps.d/$domain$subname-locations.conf
-		sudo sed -i "s#subfolder#$subfolder#g"  /etc/nginx/apps.d/$domain$subname-wpcommon.conf
-		
+		sed -ri "s/location(.*) \/(.*) \{$/location\1 subfolder\/\2 \{/" /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
+		sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-locations.conf
+		sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon.conf
+		sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 	fi
 
 # Create WP Multisite (Sub-directory)
@@ -388,7 +392,6 @@ elif [[ -n $delete && -a /etc/nginx/sites-available/$domain ]]; then
 			exit 1
 		fi
 		db_delete $domain
-		subname=$(echo $subfolder | sed "s/\//_/g")
 		sudo rm -rf /var/www/$domain/htdocs$subfolder
 		sudo rm -rf /etc/nginx/apps.d/$domain$subname*.conf
 		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-php.conf/d}" /etc/nginx/sites-available/$domain
@@ -455,12 +458,15 @@ elif [[ -n $ssl ]]; then
 elif [[ -n $cache ]]; then
 	if [[ $cache == "off" && -a /etc/nginx/sites-available/$domain ]]; then
 		api-events_update si9
-		if [[ $(is_wp_cache $domain) == "true" ]]; then
+		if [[ -n $subfolder && $(is_wp_cache $domain $subfolder) == "true" ]]; then
+			sudo sed -i "/$domain$subname-wpfc.conf;/c \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
+			echo "${gre}FastCGI Cache in${blu} $domain$subfolder ${gre}has been disabled!${end}"
+		elif [[ $(is_wp_cache $domain) == "true" ]]; then
 			sudo sed -i '/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
 			echo "${gre}FastCGI Cache in${blu} $domain ${gre}has been disabled!${end}"
 		else
-			if [[ $(is_wp $domain) == "false" ]]; then
-				echo "${red}[ERROR] Site${blu} $domain ${red}is not a WP site!${end}"
+			if [[ ( -z $subfolder && $(is_wp $domain) == "false" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "false" ) ]]; then
+				echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WP site!${end}"
 				exit 1
 			else
 				echo "${gre}FastCGI Cache is already disabled on your site${blu} $domain${end}"
@@ -468,9 +474,10 @@ elif [[ -n $cache ]]; then
 		fi	
 	elif [[ $cache == "on" && -a /etc/nginx/sites-available/$domain ]]; then
 		api-events_update si8
-		if [[ $(is_php $domain) == "true" && $(is_wp $domain) == "true" ]]; then
-			sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
-			if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/nginx-helper || ! -d /var/www/$domain/htdocs/wp-content/plugins/redis-cache ]]; then
+		if [[ ( -z $subfolder && $(is_php $domain) == "true" && $(is_wp $domain) == "true" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "true" && $(is_wp_cache $domain $subfolder) == "false" ) ]]; then
+			[[ -z $subfolder ]] && sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
+			[[ -n $subfolder ]] && sudo sed -i "/$domain$subname-php.conf;/c \	include apps.d/$domain$subname-wpfc.conf;" /etc/nginx/sites-available/$domain
+			if [[ ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/nginx-helper || ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/redis-cache ]]; then
 				echo "${gre}"
 				echo "We recommend Nginx Helper Plugin and Redis Object Cache Plugin as an easy way to manage FastCGI and Redis Cache on your WordPress site."
 				echo "${blu}Do you want to install it now [Y/n]? ${end}"
@@ -483,14 +490,14 @@ elif [[ -n $cache ]]; then
 				done
 			fi
 			echo "${gre}"
-			echo "FastCGI Cache in${blu} $domain ${gre}has been successfully enabled! "
+			echo "FastCGI Cache in${blu} $domain$subfolder ${gre}has been successfully enabled! "
 			echo "${end}"
 		else
-			if [[ $(is_wp $domain) == "false" ]]; then
-				echo "${red}[ERROR] Site${blu} $domain ${red}is not a WP site!${end}"
+			if [[ ( -z $subfolder && $(is_wp $domain) == "false" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "false" ) ]]; then
+				echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WP site!${end}"
 				exit 1
 			else
-				echo "${gre}FastCGI Cache is already enabled on your site${blu} $domain${end}"
+				echo "${gre}FastCGI Cache is already enabled on your site${blu} $domain$subfolder${end}"
 			fi
 		fi
 	else
@@ -506,17 +513,35 @@ elif [[ -n $force_redirect && -a /etc/nginx/sites-available/$domain ]]; then
 
 # Yoast Sitemap support, per site.
 elif [[ -n $yoast_sitemap && -a /etc/nginx/sites-available/$domain ]]; then
-	ystmap=$( grep -F "yoast-sitemap.conf;" /etc/nginx/sites-available/$domain )
+	if [[ ( -z $subfolder && $(is_wp $domain) == "false" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "false" ) ]]; then
+		echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WP site!${end}"
+		exit 1
+	elif [[ -n $subfolder && $(is_wp $domain $subfolder) == "true" ]]; then
+		ystmap=$( grep -F "yoast-sitemap.conf;" /etc/nginx/apps.d/$domain$subname-php.conf )
+	else
+		ystmap=$( grep -F "yoast-sitemap.conf;" /etc/nginx/sites-available/$domain )
+	fi
+
 	if [[ $yoast_sitemap == "on" ]]; then
 		if [[ -z $ystmap ]]; then
-			sudo sed -i "/# WebinolyCustom$/a \	include common/yoast-sitemap.conf;" /etc/nginx/sites-available/$domain
+			if [[ -z $subfolder ]]; then
+				sudo sed -i "/# WebinolyCustom$/a \	include common/yoast-sitemap.conf;" /etc/nginx/sites-available/$domain
+			else
+				sudo sed -i "/\/index.php?q/a \	include apps.d\/$domain$subname-yoast-sitemap.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
+				sudo sed -i "/\/index.php?q/a \	include apps.d\/$domain$subname-yoast-sitemap.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+			fi
 			echo "${gre}Yoast Sitemap Support was successfully enabled!${end}"
 		else
 			echo "${gre}Yoast Sitemap Support is already enabled!${end}"
 		fi
 	elif [[ $yoast_sitemap == "off" ]]; then
 		if [[ -n $ystmap ]]; then
-			sudo sed -i "/yoast-sitemap.conf;/d" /etc/nginx/sites-available/$domain
+			if [[ -z $subfolder ]]; then
+				sudo sed -i "/yoast-sitemap.conf;/d" /etc/nginx/sites-available/$domain
+			else
+				sudo sed -i "/yoast-sitemap.conf;/d" /etc/nginx/apps.d/$domain$subname-php.conf
+				sudo sed -i "/yoast-sitemap.conf;/d" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+			fi
 			echo "${gre}Yoast Sitemap Support was successfully disabled!${end}"
 		else
 			echo "${gre}Yoast Sitemap Support is already disabled!${end}"

@@ -7,9 +7,8 @@ source /opt/webinoly/lib/site-ssl
 
 wp_cache_plugins() {
 	api-events_update si3
-	[[ -z $subfolder ]] && local subfolder=""
 	
-	if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/nginx-helper ]]; then
+	if [[ ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/nginx-helper ]]; then
 		# Download Nginx Helper Plugin
 		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
 		sudo unzip -qq /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/
@@ -26,7 +25,7 @@ wp_cache_plugins() {
 		echo "${gre}Nginx Helper Plugin is already installed!${end}"
 	fi
 
-	if [[ ! -d /var/www/$domain/htdocs/wp-content/plugins/redis-cache ]]; then
+	if [[ ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/redis-cache ]]; then
 		# Download Redis Object Cache Plugin
 		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/redis-cache-plugin.zip https://downloads.wordpress.org/plugin/redis-cache.latest-stable.zip
 		sudo unzip -qq /var/www/$domain/htdocs/redis-cache-plugin.zip -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/
@@ -41,7 +40,7 @@ wp_cache_plugins() {
 		echo "${gre}Redis Object Cache Plugin is already installed!${end}"
 	fi
 	
-	sudo chown -R www-data:www-data /var/www/$domain/htdocs/wp-content/plugins
+	sudo chown -R www-data:www-data /var/www/$domain/htdocs$subfolder/wp-content/plugins
 }
 
 domain_check() {
@@ -457,6 +456,14 @@ deletesite() {
 		echo "${end}"
 	fi
 
+	# Check if site contains WP in subfolders.
+	for site in "/etc/nginx/apps.d/$domain_"*-php.conf
+	do 
+		subfolder="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+		[[ -n $subfolder && -a /var/www/$domain/htdocs$subfolder/wp-config.php ]] && db_delete $domain
+		subfolder=""
+	done
+	
 	# Determine if site is WP, so you should delete the DB too.
 	[[ $delete == "force" ]] && local dbdel="Y"
 	[[ $delete == "keep-db" ]] && local dbdel="N"
