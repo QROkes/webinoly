@@ -471,6 +471,10 @@ elif [[ -n $blockip ]]; then
 		if [[ $(ip_check $blockip) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
 			[[ -a /etc/nginx/conf.d/blockips.conf ]] && sed -i "\#^deny ${blockip};#d" /etc/nginx/conf.d/blockips.conf
+			
+			# Remove site-auth-file if empty.
+			[[ ! -s /etc/nginx/conf.d/blockips.conf ]] && sudo rm /etc/nginx/conf.d/blockips.conf
+			
 			echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully unblocked!${end}"
 		else
 			echo "${red}[ERROR] Please, enter a valid IP value!${end}"

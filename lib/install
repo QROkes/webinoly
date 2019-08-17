@@ -293,7 +293,6 @@ nginx_optim() {
 	[[ $(conf_read global-access-log-off) == "purged" ]] && sudo log -only-error=off || sudo log -only-error=on
 	[[ -n $(conf_read fastcgi-conf) ]] && sudo webinoly -config-cache=[$(conf_read fastcgi-conf)]
 
-	sudo nginx -t
 	conf_write server-version $svr_version
 	conf_write nginx-optim true
 	api-events_update in8
@@ -387,7 +386,7 @@ nginx_tool_site() {
 	sudo site $(conf_read tools-port) -php
 	sudo cp /opt/webinoly/templates/nginx/22222 /etc/nginx/sites-available/$(conf_read tools-port)
 	sudo sed -i "s/22222/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
-	sudo service nginx reload
+	sudo nginx -t && sudo service nginx reload
 	
 	# Robots.txt file in case someone remove HTTP Auth
 	sudo touch /var/www/$(conf_read tools-port)/htdocs/robots.txt

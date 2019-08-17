@@ -489,6 +489,7 @@ deletesite() {
 	
 	# Delete site files
 	sudo rm -rf /etc/nginx/apps.d/$domain*.conf
+	sudo rm -rf /etc/nginx/apps.d/.htpasswd-$domain
 	sudo rm -rf /etc/nginx/sites-available/$domain
 	sudo rm -rf /etc/nginx/sites-enabled/$domain
 	sudo rm -rf /var/www/$domain
