@@ -517,25 +517,42 @@ deletesite() {
 		echo "${end}"
 	fi
 
-	# Check if site contains WP in subfolders.
-	for site in "/etc/nginx/apps.d/$domain_"*-php.conf
-	do 
-		subfolder="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
-		[[ -n $subfolder && -a /var/www/$domain/htdocs$subfolder/wp-config.php ]] && db_delete $domain
-		subfolder=""
-	done
-	
-	# Determine if site is WP, so you should delete the DB too.
 	[[ $delete == "force" ]] && local dbdel="Y"
 	[[ $delete == "keep-db" ]] && local dbdel="N"
-	if [[ -z $dbdel && ( -a /var/www/$domain/wp-config.php || -a /var/www/$domain/htdocs/wp-config.php ) ]]; then
-		echo "${blu}Delete Database [Y/n]?${end}"
-		while read -r -n 1 -s dbdel; do
-		  local dbdel=${dbdel:-y}
-		  [[ $dbdel = [YyNn] ]] && break
+
+	# Check if site contains WP in subfolders.
+	if [[ -z $dbdel || $dbdel = [Yy] ]]; then
+		for site in "/etc/nginx/apps.d/$domain_"*-php.conf
+		do 
+			subfolder="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+			if [[ -n $subfolder && -a /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
+				if ! [[ $delete =~ ^(force|keep-db)$ ]]; then
+					echo "${blu}Delete Database ${end}'$domain$subfolder'${blu} [Y/n]?${end}"
+					while read -r -n 1 -s dbsubdel; do
+					  local dbsubdel=${dbsubdel:-y}
+					  [[ $dbsubdel = [YyNn] ]] && break
+					done
+				fi
+				if [[ $dbsubdel == [yY] || $dbdel == [yY] ]]; then
+					db_delete $domain
+					sudo rm -rf /var/www/$domain/htdocs$subfolder
+				fi
+			fi
+			subfolder=""
 		done
 	fi
-	[[ $dbdel == [yY] ]] && db_delete $domain
+	
+	# Determine if main site is WP, so you should delete the DB too.
+	if [[ ( -z $dbdel || $dbdel = [Yy] ) && ( -a /var/www/$domain/wp-config.php || -a /var/www/$domain/htdocs/wp-config.php ) ]]; then
+		if ! [[ $delete =~ ^(force|keep-db)$ ]]; then
+			echo "${blu}Delete Database ${end}'$domain$subfolder'${blu} [Y/n]?${end}"
+			while read -r -n 1 -s dbdel; do
+			  local dbdel=${dbdel:-y}
+			  [[ $dbdel = [YyNn] ]] && break
+			done
+		fi
+		[[ $dbdel == [yY] ]] && db_delete $domain
+	fi
 	
 	# Revoke SSL Cert
 	if [[ -d /etc/letsencrypt/live/$domain && -z $revoke && $delete != "force" ]]; then
