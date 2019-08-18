@@ -427,22 +427,6 @@ _EOF_
 		# Redis Conf
 		sudo sed -i "/stop editing/i \define('WP_REDIS_SELECTIVE_FLUSH', true);" $wpcon
 		sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'redis_object_cache_for_wp_$domain');" $wpcon
-		
-		# Multisite wp-config
-		if [[ -n $wpsubdir || -n $wpsubdom ]]; then
-			sudo sed -i "/stop editing/i \define('WP_ALLOW_MULTISITE', true);" $wpcon
-			sudo sed -i "/stop editing/i \#define('MULTISITE', true);" $wpcon
-			sudo sed -i "/stop editing/i \#define('DOMAIN_CURRENT_SITE', '$domain');" $wpcon
-			sudo sed -i "/stop editing/i \#define('PATH_CURRENT_SITE', '/');" $wpcon
-			sudo sed -i "/stop editing/i \#define('SITE_ID_CURRENT_SITE', 1);" $wpcon
-			sudo sed -i "/stop editing/i \#define('BLOG_ID_CURRENT_SITE', 1);" $wpcon
-		fi
-		if [[ -n $wpsubdir ]]; then
-			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', false);" $wpcon
-		elif [[ -n $wpsubdom ]]; then
-			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', true);" $wpcon
-			sudo sed -i "/server_name /c \	server_name $domain *.$domain;" /etc/nginx/sites-available/$domain
-		fi
 	fi
 	
 }

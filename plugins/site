@@ -263,22 +263,65 @@ elif [[ -n $wp && -n $domain ]]; then
 		sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 	fi
 
-# Create WP Multisite (Sub-directory)
-elif [[ -n $wpsubdir && -n $domain ]]; then
-	createsite
-	sudo sed -i '/locations.conf/i \	include common/wpsubdir.conf;' /etc/nginx/sites-available/$domain
-	sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
-	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off -site=$domain
-	[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domain -yoast-sitemap=on
+
+# Convert WP single to Multisite
+elif [[ -n $multisite_convert && -a /etc/nginx/sites-available/$domain ]]; then
+	if [[ ( -z $subfolder && $(is_wp $domain) == "false" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "false" ) ]]; then
+		echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WP site!${end}"
+		exit 1
+	elif [[ $(is_wp_multisite $domain) == "true" ]]; then		
+		echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is already in multisite configuration!${end}"
+		exit 1
+	fi
 	
+	[[ -z $subfolder ]] && wpcon="/var/www/$domain/wp-config.php" || wpcon="/var/www/$domain/htdocs$subfolder/wp-config.php"
+	sudo sed -i "/stop editing/i \define('WP_ALLOW_MULTISITE', true);" $wpcon
+
+	echo "${blu}"
+	echo "In your WordPress dashboard, go to ${end}“Tools -> Network Setup”${blu},"
+	echo "select the type of WP Multisite installation you want (Subdomain or Subdirectory)"
+	echo "and then press the ${end}“Install”${blu} button at the bottom."
+	echo ""
+	echo "After that, you don't need to add any code lines."
+	echo "We will do it for you!"
+	echo ""
+	echo "Just press ${end}<Enter>${blu} when you are ready or press ${end}'X'${blu} to Cancel!"
+	echo "${end}"
+	while read -r -n 1 -s answer; do
+		answer=${answer:-y}
+		[[ $answer = [YyXx] ]] && break
+	done
 	
-# Create WP Multisite (Sub-domain)	
-elif [[ -n $wpsubdom && -n $domain ]]; then
-	createsite
-	sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
-	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off -site=$domain
-	[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domain -yoast-sitemap=on
-	
+	passed=$(is_wp_multisite $domain)
+	if [[ $passed != "true" && $answer == [Xx] ]]; then
+		sudo sed -i "/WP_ALLOW_MULTISITE/d" $wpcon
+		echo "${red}[ERROR] Action aborted!${end}"
+		exit 1
+	elif [[ $passed != "true" && $answer != [Xx] ]]; then
+		sudo sed -i "/WP_ALLOW_MULTISITE/d" $wpcon
+		echo "${red}[ERROR] Multisite installation incomplete or not detected!${end}"
+		exit 1
+	elif [[ $passed == "true" ]]; then
+		# Multisite wp-config
+		sudo sed -i "/stop editing/i \#define('MULTISITE', true);" $wpcon
+		sudo sed -i "/stop editing/i \#define('DOMAIN_CURRENT_SITE', '$domain');" $wpcon
+		sudo sed -i "/stop editing/i \#define('PATH_CURRENT_SITE', '/');" $wpcon
+		sudo sed -i "/stop editing/i \#define('SITE_ID_CURRENT_SITE', 1);" $wpcon
+		sudo sed -i "/stop editing/i \#define('BLOG_ID_CURRENT_SITE', 1);" $wpcon
+		
+		[[ $answer == [Xx] ]] && echo "${red}Can not cancel because the installation was already done!${end}"
+		
+		if [[ $(is_wp_multisite_subdomain $domain) == "true" ]]; then
+			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', true);" $wpcon
+			sudo sed -i "/server_name /c \	server_name $domain *.$domain;" /etc/nginx/sites-available/$domain
+			echo "${gre}Subdomain Multisite configuration has been successfully completed!${end}"
+		else
+			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', false);" $wpcon			
+			sudo sed -i '/locations.conf/i \	include common/wpsubdir.conf;' /etc/nginx/sites-available/$domain
+			echo "${gre}Subdirectory Multisite configuration has been successfully completed!${end}"
+		fi
+	fi
+
 
 # Parked Domain
 elif [[ -n $parked && -n $domain ]]; then
