@@ -221,8 +221,8 @@ elif [[ -n $wp && -n $domain ]]; then
 	if [[ -z $subfolder ]]; then
 		createsite
 		sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
-		[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off -site=$domain
-		[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domain -yoast-sitemap=on
+		[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth -wp-admin=off -site=$domain > /dev/null 2>&1
+		[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domain -yoast-sitemap=on > /dev/null 2>&1
 	else
 		if [[ -a /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && -d /var/www/$domain/htdocs$subfolder ]]; then
 			echo "${red}[ERROR] Subfolder ${blu}'$subfolder'${red} already exists!${end}"
@@ -262,7 +262,7 @@ elif [[ -n $wp && -n $domain ]]; then
 		sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon.conf
 		sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 		
-		[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domain -yoast-sitemap=on -subfolder=$subfolder
+		[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domain -yoast-sitemap=on -subfolder=$subfolder > /dev/null 2>&1
 	fi
 
 

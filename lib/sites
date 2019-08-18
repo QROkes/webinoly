@@ -639,12 +639,12 @@ createsite() {
 	fi
 	
 	# Check if only-error log is enabled
-	[[ $(conf_read global-access-log-off) == "true" && $domain != $(conf_read tools-port) ]] && sudo log $domain -only-error=on
+	[[ $(conf_read global-access-log-off) == "true" && $domain != $(conf_read tools-port) ]] && sudo log $domain -only-error=on > /dev/null 2>&1
 	
 	sudo chown -R www-data:www-data /var/www
 	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
 
-	echo "${gre}Site${blu} $domain ${gre}has been successfully created!${end}"
+	echo "${gre}Site${blu} $domain$subfolder ${gre}has been successfully created!${end}"
 }
 
 

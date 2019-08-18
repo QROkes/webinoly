@@ -172,7 +172,7 @@ elif [[ -n $login_www_data ]]; then
 
 		# www-data sftp-only access jail - if fails usrlib must be listed in /etc/shells
 		sudo usermod -s /usr/lib/openssh/sftp-server www-data
-		sudo addgroup --system sftponly
+		sudo addgroup --system sftponly > /dev/null 2>&1
 		sudo usermod -G sftponly www-data
 		sudo chown root:root /var/www
 		sudo sed -i "/Subsystem sftp/c\Subsystem sftp internal-sftp" /etc/ssh/sshd_config
@@ -201,8 +201,8 @@ ForceCommand internal-sftp
 		
 		sudo rm -rf /var/www/.ssh
 		sudo sed -i '/www-data:/c\www-data:x:33:33:www-data:\/var\/www:\/usr\/sbin\/nologin' /etc/passwd
-		sudo gpasswd -d www-data sftponly
-		sudo delgroup sftponly
+		sudo gpasswd -d www-data sftponly  > /dev/null 2>&1
+		sudo delgroup sftponly > /dev/null 2>&1
 		sudo chown www-data:www-data /var/www
 		sudo sed -i "/Subsystem sftp/c\Subsystem sftp \/usr\/lib\/openssh\/sftp-server" /etc/ssh/sshd_config
 		sudo sed -i '/WebinolySFTPstart/,/WebinolySFTPstart/{/.*/d}' /etc/ssh/sshd_config

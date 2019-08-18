@@ -686,6 +686,6 @@ remove_domain_default_site() {
 
 
 create_blackhole_cert() {
-	[[ ! -a /etc/ssl/certs/webinoly-blackhole.crt.pem ]] && sudo openssl req -new -newkey rsa:2048 -days 36500 -nodes -x509 -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=blackhole" -keyout /etc/ssl/private/webinoly-blackhole.key.pem  -out /etc/ssl/certs/webinoly-blackhole.crt.pem
+	[[ ! -a /etc/ssl/certs/webinoly-blackhole.crt.pem ]] && sudo openssl req -new -newkey rsa:2048 -days 36500 -nodes -x509 -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=blackhole" -keyout /etc/ssl/private/webinoly-blackhole.key.pem  -out /etc/ssl/certs/webinoly-blackhole.crt.pem > /dev/null 2>&1
 }
 
