@@ -159,84 +159,6 @@ wp_dbdata() {
 }
 
 
-db_delete() {
-	local domain="$1"
-	local done="0"
-	
-	wp_dbdata $1
-	[[ -z $wpconfpath ]] && return
-	
-	dbsetup="DELETE FROM mysql.user WHERE User='$wp_dbuser';DROP DATABASE IF EXISTS $wp_dbname;DELETE FROM mysql.db WHERE Db='$wp_dbname' OR Db='$wp_dbname\\_%';FLUSH PRIVILEGES;"
-	while [[ $done != "1" ]]
-	do
-		done="1"
-		if [[ $wp_dbhost == "localhost" ]]; then
-			# Check if MySQL installed
-			if [[ ! -d /etc/mysql || $(conf_read mysql) != "true" || $(conf_read mysql-client) != "true" ]]; then
-				echo "${red}[ERROR] Seems like MySQL is not installed or Webinoly can not detect it!"
-				echo " - Database can not be deleted -${blu} $domain ${end}"
-				return
-			fi
-			local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-			sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup"
-			if [ $? != "0" ]; then
-				done="0"
-				echo "${red}============================================"
-				echo "    [Error]: Database delete failed."
-				echo "============================================"
-				echo ""
-				echo "${blu}  Retry [Y/n]? "
-				while read -r -n 1 -s answer; do
-					answer=${answer:-y}
-					[[ $answer = [YyNn] ]] && break
-				done
-				[[ $answer  == [Nn] ]] && done="1"
-			else
-				echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
-			fi
-		else
-			if [[ -z $wp_uroot || -z $wp_proot ]]; then
-				echo ""
-				echo "${gre}External DB found in${blu} $domain ${gre}(Press 'Enter' key twice to skip and not delete)"
-				read -p "${blu}External DB root username [root]: " wp_uroot
-				wp_uroot=${wp_uroot:-root}
-				read -p "External DB root password: " wp_proot
-			fi
-			if [[ $wp_uroot == "root" && -z $wp_proot ]]; then
-				echo "${red}Action aborted, database not deleted!"
-				continue 1;
-			else
-				if [[ $(conf_read mysql-client) != "true" ]]; then
-					echo "${gre}MySQL Client is not installed and we need it to stablish a connection with your Database."
-					echo "Wait while we install MySQL Client... installing!!!${end}"
-					mysql_client_install > /dev/null 2>&1 &
-					echo "${gre}MySQL Client has been successfully installed!${end}"
-				fi
-				
-				sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup"
-				if [ $? != "0" ]; then
-					done="0"
-					echo "${red}============================================"
-					echo "    [Error]: Database delete failed."
-					echo "============================================"
-					echo ""
-					echo "${blu}  Retry [Y/n]? "
-					while read -r -n 1 -s answer; do
-						answer=${answer:-y}
-						[[ $answer = [YyNn] ]] && break
-					done
-					[[ $answer  == [Nn] ]] && done="1"
-				else
-					echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
-				fi
-			fi
-			echo "${end}"
-		fi
-	done
-	
-}
-
-
 pre_install() {
 	sudo apt -qq update
 	if [[ $(conf_read pre-packs) != true ]]; then
@@ -386,28 +308,22 @@ is_wp_cache() {
 is_wp_multisite() {
 	wp_dbdata $1
 	dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = 'wp_sitemeta' LIMIT 1;"
+	dbsetuc="USE $wp_dbname; SELECT meta_value FROM wp_sitemeta where meta_key='subdomain_install';"
 	
 	if [[ $wp_dbhost == "localhost" ]]; then
 		local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-		val=$(sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup")
+		wpmu=$(sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup")
+		[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetuc")
 	elif [[ -n $wp_dburl ]]; then
-		val=$(sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup")
+		wpmu=$(sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup")
+		[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetuc")
 	fi
 	
-	[[ -n $val ]] && echo "true" || echo "false"
-}
-
-is_wp_multisite_subdomain() {
-	wp_dbdata $1
-	dbsetup="USE $wp_dbname; SELECT meta_value FROM wp_sitemeta where meta_key='subdomain_install';"
-	
-	if [[ $wp_dbhost == "localhost" ]]; then
-		local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-		val=$(sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup")
-	elif [[ -n $wp_dburl ]]; then
-		val=$(sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup")
+	if [[ $(echo $mutype | cut -f 2 -d " " -s) == "1" ]]; then
+		echo "subdomain"
+	elif [[ -n $wpmu ]]; then
+		echo "subdirectory"
+	else
+		echo "false"
 	fi
-	
-	[[ $(echo $val | cut -f 2 -d " " -s) == "1" ]] && echo "true" || echo "false"
 }
-
