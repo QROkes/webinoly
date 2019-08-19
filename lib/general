@@ -141,11 +141,12 @@ wp_dbdata() {
 		return
 	fi
 	
-	wp_dbname=$( grep -F "DB_NAME" $wpconfpath | cut -f 4 -d "'" )
-	wp_dbuser=$( grep -F "DB_USER" $wpconfpath | cut -f 4 -d "'" )
-	wp_dbhost=$( grep -F "DB_HOST" $wpconfpath | cut -f 4 -d "'" )
-	wp_dburl=$(echo "$wp_dbhost" | cut -f 1 -d ':')
-	wp_dbport=$(echo "$wp_dbhost" | cut -f 2 -d ':')
+	wp_dbname=$( grep -F "DB_NAME" $wpconfpath | cut -f 4 -d "'" -s)
+	wp_dbuser=$( grep -F "DB_USER" $wpconfpath | cut -f 4 -d "'" -s)
+	wp_dbhost=$( grep -F "DB_HOST" $wpconfpath | cut -f 4 -d "'" -s)
+	wp_dburl=$(echo "$wp_dbhost" | cut -f 1 -d ':' -s)
+	wp_dbport=$(echo "$wp_dbhost" | cut -f 2 -d ':' -s)
+	wp_dbpref=$( grep -F "table_prefix" $wpconfpath | cut -f 2 -d "'" -s)
 	
 	if [[ -n $external_db ]]; then
 		dbdata=${external_db:1:-1}
@@ -155,7 +156,7 @@ wp_dbdata() {
 			echo "${red}[ERROR] Invalid data for External Database!${end}" >&2
 			exit 1
 		fi
-	elif [[ -z $external_db && $wp_dbhost != "localhost" ]]; then
+	elif [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
 		echo "${red}[ERROR] External Database found, please use the '-external-db=[user,password]' option!${end}" >&2
 		exit 1
 	fi
@@ -310,8 +311,8 @@ is_wp_cache() {
 
 is_wp_multisite() {
 	wp_dbdata $1
-	dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = 'wp_sitemeta' LIMIT 1;"
-	dbsetuc="USE $wp_dbname; SELECT meta_value FROM wp_sitemeta where meta_key='subdomain_install';"
+	dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}sitemeta' LIMIT 1;"
+	dbsetuc="USE $wp_dbname; SELECT meta_value FROM ${wp_dbpref}sitemeta where meta_key='subdomain_install';"
 	
 	if [[ $wp_dbhost == "localhost" ]]; then
 		local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )

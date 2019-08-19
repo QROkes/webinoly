@@ -321,11 +321,11 @@ elif [[ -n $multisite_convert && -a /etc/nginx/sites-available/$domain ]]; then
 		[[ $pas == "quit" ]] && echo "${red}Can not cancel because the installation was already done!${end}"
 		
 		if [[ $passed == "subdomain" ]]; then
-			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', true);" $wpcon
+			sudo sed -i "/stop editing/i \define('SUBDOMAIN_INSTALL', true);" $wpcon
 			sudo sed -i "/server_name /c \	server_name $domain *.$domain;" /etc/nginx/sites-available/$domain
 			echo "${gre}Subdomain Multisite configuration has been successfully completed!${end}"
 		elif [[ $passed == "subdirectory" ]]; then
-			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', false);" $wpcon			
+			sudo sed -i "/stop editing/i \define('SUBDOMAIN_INSTALL', false);" $wpcon			
 			sudo sed -i '/locations.conf/i \	include common/wpsubdir.conf;' /etc/nginx/sites-available/$domain
 			echo "${gre}Subdirectory Multisite configuration has been successfully completed!${end}"
 		fi
