@@ -271,7 +271,13 @@ elif [[ -n $multisite_convert && -a /etc/nginx/sites-available/$domain ]]; then
 	if [[ ( -z $subfolder && $(is_wp $domain) == "false" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "false" ) ]]; then
 		echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WP site!${end}"
 		exit 1
-	elif [[ $(is_wp_multisite $domain) =~ ^(subdomain|subdirectory)$ ]]; then		
+	fi
+	
+	check=$(is_wp_multisite $domain)
+	if ! [[ $check =~ ^(subdomain|subdirectory|false)$ ]]; then
+		echo "${red}[ERROR] Task aborted due to an error!${end}"
+		exit 1
+	elif [[ $check =~ ^(subdomain|subdirectory)$ ]]; then
 		echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is already in multisite configuration!${end}"
 		exit 1
 	fi
@@ -322,11 +328,11 @@ elif [[ -n $multisite_convert && -a /etc/nginx/sites-available/$domain ]]; then
 			sudo sed -i "/stop editing/i \#define('SUBDOMAIN_INSTALL', false);" $wpcon			
 			sudo sed -i '/locations.conf/i \	include common/wpsubdir.conf;' /etc/nginx/sites-available/$domain
 			echo "${gre}Subdirectory Multisite configuration has been successfully completed!${end}"
-		else
+		fi
+	else
 			sudo sed -i "/WP_ALLOW_MULTISITE/d" $wpcon
 			echo "${red}[ERROR] Multisite installation incomplete or not detected!${end}"
 			exit 1
-		fi
 	fi
 
 

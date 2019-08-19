@@ -152,9 +152,12 @@ wp_dbdata() {
 		wp_uroot=$(echo "${dbdata}" | cut -d',' -f 1 -s)
 		wp_proot=$(echo "${dbdata}" | cut -d',' -f 2 -s)
 		if [[ $(echo "${external_db}" | cut -c-1) != "[" || $(echo "${external_db}" | rev | cut -c-1) != "]" || -z $wp_uroot || -z $wp_proot ]]; then
-			echo "${red}[ERROR] Invalid data for External Database!${end}"
+			echo "${red}[ERROR] Invalid data for External Database!${end}" >&2
 			exit 1
 		fi
+	elif [[ -z $external_db && $wp_dbhost != "localhost" ]]; then
+		echo "${red}[ERROR] External Database found, please use the '-external-db=[user,password]' option!${end}" >&2
+		exit 1
 	fi
 }
 

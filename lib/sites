@@ -364,8 +364,8 @@ wpinstall() {
 					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
 					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
 CREATE DATABASE ${dbname};
-grant usage on ${dbname}.* to ${dbuser}@\`%\` identified by '${dbpass}';
-GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to ${dbuser}@\`%\`;
+CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
+GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
 _EOF_
 
