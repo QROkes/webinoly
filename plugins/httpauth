@@ -212,6 +212,9 @@ elif [[ -n $path && -n $domain ]]; then
 			else
 				echo "${gre}Path: ${blu}'$path'${gre} is already protected!${end}"
 			fi
+		elif [[ $(is_proxy $domain) == "true" ]]; then
+			echo "${red}[ERROR] HTTP Authentication is not allowed in subfolders (only root '/' is allowed) for Reverse Proxy sites!${end}"
+			exit 1
 		elif [[ $path =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
 			if [[ ! -a /etc/nginx/apps.d/$domain-nginx.conf ]]; then
 				sudo touch /etc/nginx/apps.d/$domain-nginx.conf

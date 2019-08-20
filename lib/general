@@ -331,3 +331,7 @@ is_wp_multisite() {
 		echo "false"
 	fi
 }
+
+is_proxy() {
+	[[ -a /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "proxy_pass") ]] && echo "true" || echo "false"
+}
