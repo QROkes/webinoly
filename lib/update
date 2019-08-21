@@ -64,12 +64,47 @@ onetwo_to_onethree() {
 }
 
 
+onethree_to_onefour() {
+	sudo rm /opt/webinoly/templates/nginx/conf.d/blockips.conf
+	if [[ $(conf_read nginx) == "true" ]]; then
+		sudo mkdir -p /etc/nginx/apps.d
+		sudo cp /etc/nginx/common/acl.conf /opt/webinoly/templates/source/acl.conf.old
+		grep "^allow [^127.0.0.1]" /opt/webinoly/templates/source/acl.conf.old > /etc/nginx/apps.d/whitelist-acl.conf
+		[[ ! -s /etc/nginx/apps.d/whitelist-acl.conf ]] && sudo rm /etc/nginx/apps.d/whitelist-acl.conf
+		
+		for site in "/etc/nginx/sites-available"/*
+		do
+			domi=$(echo $site | cut -f 5 -d "/")
+			if [[ $domi != "html" && $domi != $(conf_read tools-port) ]]; then
+				if [[ $(is_proxy $domi) == "true" ]]; then
+					pat="\t}"
+				elif [[ $(is_wp $domi) == "true" || $(is_php $domi) == "true" ]]; then
+					pat="index"
+				else
+					pat="\tlocation \/ { try"
+				fi
+				sudo sed -i "/$pat/a \	# WebinolyCustomEnd" /etc/nginx/sites-available/$domi
+				sudo sed -i "/$pat/a \	# WebinolyCustom" /etc/nginx/sites-available/$domi
+				sudo sed -i "/$pat/a \	" /etc/nginx/sites-available/$domi
+				
+				if [[ $(is_wp $domi) == "true" ]]; then
+					[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domi -wp-admin=off
+					[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domi -yoast-sitemap=on
+				fi
+			fi
+		done
+	fi
+}
+
+
 # Version numbers without point
 [[ ${oldver//.} -lt 11 ]] && onezero_to_oneone > /dev/null 2>&1 &
 wait $!
 [[ ${oldver//.} -lt 12 ]] && oneone_to_onetwo > /dev/null 2>&1 &
 wait $!
 [[ ${oldver//.} -lt 13 ]] && onetwo_to_onethree > /dev/null 2>&1 &
+wait $!
+[[ ${oldver//.} -lt 14 ]] && onethree_to_onefour > /dev/null 2>&1 &
 wait $!
 
 
