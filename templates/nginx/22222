@@ -16,6 +16,7 @@ server {
 	autoindex on;
 
 	# HTTP Authentication on port 22222
+	include common/auth.conf;
 	include common/acl.conf;
 
 	# PHP Support

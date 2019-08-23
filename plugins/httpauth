@@ -109,10 +109,9 @@ elif [[ -n $wp_admin ]]; then
 				sudo sed -i "/wpcommon-noauth.conf/c \	include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 				sudo sed -i "/wpcommon-noauth.conf/c \	include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
 			fi
-			sudo service nginx reload
-			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain -${gre} has been enabled! ${end}"
+			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain$subfolder -${gre} has been enabled! ${end}"
 		else
-			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain -${gre} is already enabled! ${end}"
+			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain$subfolder -${gre} is already enabled! ${end}"
 		fi
 	
 	elif [[ $wp_admin == "off" && -n $domain ]]; then
@@ -123,10 +122,9 @@ elif [[ -n $wp_admin ]]; then
 				sudo sed -i "/wpcommon.conf/c \	include apps.d/$domain$subname-wpcommon-noauth.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 				sudo sed -i "/wpcommon.conf/c \	include apps.d/$domain$subname-wpcommon-noauth.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
 			fi
-			sudo service nginx reload
-			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain -${gre} has been disabled! ${end}"
+			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain$subfolder -${gre} has been disabled! ${end}"
 		else
-			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain -${gre} is already disabled! ${end}"
+			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain$subfolder -${gre} is already disabled! ${end}"
 		fi
 	elif [[ $wp_admin == "on" ]]; then
 		conf_write wp-admin-auth true
@@ -164,11 +162,9 @@ elif [[ -n $whitelist ]]; then
 				exist=$( grep -E "^allow $whitelist;$" /etc/nginx/apps.d/whitelist-acl.conf )
 				if [[ -z $exist ]]; then
 					sh -c "echo -n 'allow ${whitelist};\n' >> /etc/nginx/apps.d/whitelist-acl.conf"
-					sudo service nginx reload
 					echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully whitelisted!${end}"
 				else
 					echo "${gre}IP '$whitelist' is already whitelisted!${end}"
-					exit 0
 				fi
 			else	
 				echo "${red}[ERROR] Please, enter a valid IP value!${end}"
@@ -184,7 +180,6 @@ elif [[ -n $whitelist ]]; then
 			# Remove site-auth-file if empty.
 			[[ ! -s /etc/nginx/apps.d/whitelist-acl.conf ]] && sudo rm /etc/nginx/apps.d/whitelist-acl.conf
 			
-			sudo service nginx reload
 			echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully removed from whitelist!${end}"
 		else
 			echo "${red}[ERROR] Please, enter a valid IP value!${end}"
@@ -207,7 +202,6 @@ elif [[ -n $path && -n $domain ]]; then
 			exist=$( grep -F "acl.conf;" /etc/nginx/sites-available/$domain )
 			if [[ -z $exist ]]; then
 				sudo sed -i "/# WebinolyCustom$/a \	include common/acl.conf;" /etc/nginx/sites-available/$domain
-				sudo service nginx reload
 				echo "${gre}This path ${blu}'$path'${gre} was successfully protected!${end}"
 			else
 				echo "${gre}Path: ${blu}'$path'${gre} is already protected!${end}"
@@ -246,7 +240,6 @@ location $sign$path {
 				
 				vconf=$( grep -E "include apps.d/$domain-nginx.conf;" /etc/nginx/sites-available/$domain )
 				[[ -z $vconf ]] && sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain-nginx.conf;" /etc/nginx/sites-available/$domain
-				sudo service nginx reload
 				echo "${gre}This path ${blu}'$path'${gre} was successfully protected!${end}"
 			else
 				echo "${gre}Path: ${blu}'$path'${gre} is already protected!${end}"
@@ -260,13 +253,11 @@ location $sign$path {
 		[[ $path == true ]] && read -p "${blu}Path to remove protection: ${end}" path
 		if [[ $path == "/" ]]; then
 			sudo sed -i "/acl.conf;/d" /etc/nginx/sites-available/$domain
-			sudo service nginx reload
 			echo "${gre}HTTP Authentication successfully removed from ${blu}'$path'${gre}!${end}"
 		elif [[ $path == "all" ]]; then
 			sudo sed -i "/acl.conf;/d" /etc/nginx/sites-available/$domain
 			sudo sed -i "/$domain-nginx.conf;/d" /etc/nginx/sites-available/$domain
 			sudo rm -rf /etc/nginx/apps.d/$domain-nginx.conf
-			sudo service nginx reload
 			echo "${gre}HTTP Authentication successfully removed from all your custom paths!${gre}${end}"
 		elif [[ $path =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
 			if [[ -a /etc/nginx/apps.d/$domain-nginx.conf ]]; then
@@ -276,7 +267,6 @@ location $sign$path {
 					sudo sed -i "/$domain-nginx.conf;/d" /etc/nginx/sites-available/$domain
 				fi
 			fi
-			sudo service nginx reload
 			echo "${gre}HTTP Authentication successfully removed from ${blu}'$path'${gre}!${end}"
 		else
 			echo "${red}[ERROR] Please, enter a valid URL path!${end}"
@@ -315,7 +305,7 @@ elif [[ -n $list ]]; then
 		done
 		}
 	fi
-	[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No users were found!${end}"
+	[[ ! -s /etc/nginx/$authfile && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No users were found!${end}"
 	echo ""
 
 
@@ -324,4 +314,5 @@ else
 	exit 1
 fi
 
+[[ $(conf_read nginx) == "true" ]] && sudo service nginx reload
 api-events_update hae

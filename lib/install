@@ -225,12 +225,18 @@ mysql_install() {
 	sudo apt -y install debconf-utils
 	
 	# Generate mysql user passwords
-	local AUTOGENPASS_ROOT=`pwgen -s -1 16`
-	local AUTOGENPASS_ADMIN=`pwgen -s -1 16`
-	local enc_pass_root=$( echo $AUTOGENPASS_ROOT | openssl enc -a -salt )
-	local enc_pass_admin=$( echo $AUTOGENPASS_ADMIN | openssl enc -a -salt )
-	conf_write mysql-root $enc_pass_root
-	conf_write mysql-admin $enc_pass_admin
+	if [[ -z $(conf_read mysql-root) && -z $(conf_read mysql-admin) ]]; then
+		local AUTOGENPASS_ROOT=`pwgen -s -1 16`
+		local AUTOGENPASS_ADMIN=`pwgen -s -1 16`
+		local enc_pass_root=$( echo $AUTOGENPASS_ROOT | openssl enc -a -salt )
+		local enc_pass_admin=$( echo $AUTOGENPASS_ADMIN | openssl enc -a -salt )
+		conf_write mysql-root $enc_pass_root
+		conf_write mysql-admin $enc_pass_admin
+	else
+		# In case of re-installation after purge with keep-data option.
+		local AUTOGENPASS_ROOT=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+		local AUTOGENPASS_ADMIN=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+	fi
 	
 	# MariaDB Installation
 	echo "mariadb-server-10.4 mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections

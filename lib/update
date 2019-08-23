@@ -71,6 +71,7 @@ onethree_to_onefour() {
 		sudo cp /etc/nginx/common/acl.conf /opt/webinoly/templates/source/acl.conf.old
 		grep "^allow [^127.0.0.1]" /opt/webinoly/templates/source/acl.conf.old > /etc/nginx/apps.d/whitelist-acl.conf
 		[[ ! -s /etc/nginx/apps.d/whitelist-acl.conf ]] && sudo rm /etc/nginx/apps.d/whitelist-acl.conf
+		[[ -a /etc/nginx/sites-available/$(conf_read tools-port) ]] && sudo sed -i "/acl.conf;/i \	include common\/auth.conf;" /etc/nginx/sites-available/$(conf_read tools-port)
 		
 		for site in "/etc/nginx/sites-available"/*
 		do
@@ -85,6 +86,8 @@ onethree_to_onefour() {
 				fi
 				sudo sed -i "/$pat/a \	# WebinolyCustomEnd" /etc/nginx/sites-available/$domi
 				sudo sed -i "/$pat/a \	# WebinolyCustom" /etc/nginx/sites-available/$domi
+				sudo sed -i "/$pat/a \	" /etc/nginx/sites-available/$domi
+				sudo sed -i "/$pat/a \	include common\/auth.conf;" /etc/nginx/sites-available/$domi
 				sudo sed -i "/$pat/a \	" /etc/nginx/sites-available/$domi
 				
 				if [[ $(is_wp $domi) == "true" ]]; then

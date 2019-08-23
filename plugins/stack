@@ -181,12 +181,9 @@ elif [[ -n $purge && -n $mysql ]]; then
 		fi
 		
 		# Determine MySQL version according to stack version.
-		mysqlver="10.4"
-		stackver=$(conf_read server-version)
-		[[ -n $stackver && ${stackver//.} -lt 14 ]] && mysqlver="10.3"
-		[[ -n $stackver && ${stackver//.} -lt 13 ]] && mysqlver="10.2"
-		
+		mysqlver=$(sudo mysql -V | cut -f 6 -d " " -s | cut -f -2 -d "." -s)
 		sudo service mysql stop
+		
 		if [[ $mysql == "keep-data" ]]; then
 			echo "mariadb-server-${mysqlver}	mariadb-server-${mysqlver}/postrm_remove_databases	boolean false" | debconf-set-selections
 		else
@@ -213,11 +210,12 @@ elif [[ -n $purge && -n $mysql ]]; then
 		if [[ $mysql != "keep-data" ]]; then
 			sudo rm -rf /etc/mysql
 			sudo rm -rf /var/lib/mysql
+			conf_delete mysql-root
+			conf_delete mysql-admin
 		else
 			echo "${blu}MySQL data was not removed.${end}"
 		fi
-		conf_delete mysql-root
-		conf_delete mysql-admin
+		
 		conf_write mysql-client purged
 		conf_write mysql purged
 		echo ""

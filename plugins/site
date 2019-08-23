@@ -111,7 +111,7 @@ if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; the
 	echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
 	exit 1
 fi
-if [[ -n $subfolder && $type != [123] && -z $delete && -z $cache && -z $yoast_sitemap ]]; then
+if [[ -n $subfolder && $type != [123] && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert ]]; then
 	echo "${red}[ERROR] Subfolder option is only supported for WordPress sites!${end}"
 	exit 1
 else
@@ -229,7 +229,6 @@ elif [[ -n $wp && -n $domain ]]; then
 			exit 1
 		elif [[ -a /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && ! -d /var/www/$domain/htdocs$subfolder ]]; then
 			wpinstall
-			echo "${gre}WordPress has been successfully installed in${blu} $domain$subfolder ${gre}subfolder!${end}"
 		else
 			createsite
 		fi
@@ -262,7 +261,18 @@ elif [[ -n $wp && -n $domain ]]; then
 		sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon.conf
 		sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 		
+		[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domain -wp-admin=off -subfolder=$subfolder > /dev/null 2>&1
 		[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domain -yoast-sitemap=on -subfolder=$subfolder > /dev/null 2>&1
+		
+		# Activate FastCgi cache
+		if [[ $cache == "on" ]]; then
+			sudo sed -i "/$domain$subname-php.conf;/c \	include apps.d/$domain$subname-wpfc.conf;" /etc/nginx/sites-available/$domain
+			wp_cache_plugins
+		fi
+			
+		sudo chown -R www-data:www-data /var/www
+		[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
+		echo "${gre}WordPress has been successfully installed in${blu} $domain$subfolder ${gre}subfolder!${end}"
 	fi
 
 
@@ -314,7 +324,7 @@ elif [[ -n $multisite_convert && -a /etc/nginx/sites-available/$domain ]]; then
 		# Multisite wp-config
 		sudo sed -i "/stop editing/i \define('MULTISITE', true);" $wpcon
 		sudo sed -i "/stop editing/i \define('DOMAIN_CURRENT_SITE', '$domain');" $wpcon
-		sudo sed -i "/stop editing/i \define('PATH_CURRENT_SITE', '/');" $wpcon
+		sudo sed -i "/stop editing/i \define('PATH_CURRENT_SITE', '$subfolder/');" $wpcon
 		sudo sed -i "/stop editing/i \define('SITE_ID_CURRENT_SITE', 1);" $wpcon
 		sudo sed -i "/stop editing/i \define('BLOG_ID_CURRENT_SITE', 1);" $wpcon
 		
@@ -326,7 +336,17 @@ elif [[ -n $multisite_convert && -a /etc/nginx/sites-available/$domain ]]; then
 			echo "${gre}Subdomain Multisite configuration has been successfully completed!${end}"
 		elif [[ $passed == "subdirectory" ]]; then
 			sudo sed -i "/stop editing/i \define('SUBDOMAIN_INSTALL', false);" $wpcon			
-			sudo sed -i '/locations.conf/i \	include common/wpsubdir.conf;' /etc/nginx/sites-available/$domain
+			
+			if [[ -z $subfolder ]]; then
+				sudo sed -i '/locations.conf/i \	include common/wpsubdir.conf;' /etc/nginx/sites-available/$domain
+			else
+				sudo cp /etc/nginx/common/wpsubdir.conf /etc/nginx/apps.d/$domain$subname-wpsubdir.conf
+				sudo sed -i "/DO NOT MODIFY/a \include apps.d\/$domain$subname-wpsubdir.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
+				sudo sed -i "/DO NOT MODIFY/a \include apps.d\/$domain$subname-wpsubdir.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+				sed -i "s#\^(#\^$subfolder\(#" /etc/nginx/apps.d/$domain$subname-wpsubdir.conf
+				sed -i "s#\$2#$subfolder\$2#" /etc/nginx/apps.d/$domain$subname-wpsubdir.conf
+			fi
+			
 			echo "${gre}Subdirectory Multisite configuration has been successfully completed!${end}"
 		fi
 	else

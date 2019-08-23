@@ -36,12 +36,12 @@ elif [[ -n $server_reset ]]; then
 	
 	# Regenerate NGINX conf files
 	if [[ $(conf_read nginx-optim) == "true" && $server_reset =~ ^(nginx|all)$ ]]; then
-		sudo cp -p /etc/nginx/conf.d/blockips.conf /tmp/webinoly_blockips_backup
+		[[ -a /etc/nginx/conf.d/blockips.conf ]] && sudo cp -p /etc/nginx/conf.d/blockips.conf /tmp/webinoly_blockips_backup
 		sudo rm -rf /etc/nginx/common
 		sudo rm -rf /etc/nginx/conf.d/*
 		linux_purge
 		nginx_optim
-		sudo mv /tmp/webinoly_blockips_backup /etc/nginx/conf.d/blockips.conf
+		[[ -a /tmp/webinoly_blockips_backup ]] && sudo mv /tmp/webinoly_blockips_backup /etc/nginx/conf.d/blockips.conf
 		echo "${gre}Nginx settings has been updated successfully!${end}"
 		nginx_not="true" # Nginx-Reload not-needed.
 	elif [[ $(conf_read nginx-optim) != "true" && $server_reset == "nginx" ]]; then
