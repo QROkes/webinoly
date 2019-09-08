@@ -94,7 +94,11 @@ elif [[ -n $tools_port ]]; then
 	[[ $tools_port != true ]] && tools_port $tools_port || tools_port
 	newport="$(conf_read tools-port)"
 	if [[ $oldport != $newport && $(conf_read nginx-tool) == "true" && $(conf_read nginx) == "true" ]]; then
-		sudo mv /var/www/$oldport /var/www/$newport
+		# MV in some edge cases fails to rename, specially when so much files are within the directories.
+		sudo mkdir -p /var/www/$newport
+		sudo cp -rp /var/www/$oldport/* /var/www/$newport
+		sudo rm -rf /var/www/$oldport
+		
 		sudo mv /etc/nginx/sites-available/$oldport /etc/nginx/sites-available/$newport
 		sudo rm /etc/nginx/sites-enabled/$oldport
 		sudo ln -s /etc/nginx/sites-available/$newport /etc/nginx/sites-enabled/$newport
@@ -440,9 +444,10 @@ elif [[ -n $blockip ]]; then
 	check_for_nginx -ask
 	if [[ -z $purge ]]; then
 		if [[ -n $list ]]; then
-			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${blu}"
+			echo ""
+			[[ -n $raw ]] && sign="" || sign="${blu}+ "
 			if [[ -s /etc/nginx/conf.d/blockips.conf ]]; then
-				sudo sed -n 's/^deny //p;' /etc/nginx/conf.d/blockips.conf | sudo sed -n 's/;$//p'
+				sudo sed -n "s/^deny /${sign}/p;" /etc/nginx/conf.d/blockips.conf | sudo sed -n 's/;$//p'
 			else
 				echo "[Empty] No IP's were found!"
 			fi
@@ -457,7 +462,7 @@ elif [[ -n $blockip ]]; then
 				fi
 				exist=$( grep -E "^deny $blockip;$" /etc/nginx/conf.d/blockips.conf )
 				if [[ -z $exist ]]; then
-					sh -c "echo -n 'deny $blockip;\n' >> /etc/nginx/conf.d/blockips.conf"
+					echo "deny $blockip;" >> /etc/nginx/conf.d/blockips.conf
 					echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully blocked!${end}"
 				else
 					echo "${gre}IP '$blockip' is already blocked!${end}"

@@ -376,7 +376,7 @@ elif [[ -n $parked && -n $domain ]]; then
 	sudo cat /etc/nginx/sites-available/$mapto > /etc/nginx/sites-available/$domain
 	
 	# Prevent if SSL is enabled in main site and ssl data is copied to parked site causing an error.
-	sudo site $domain -ssl-off=force > /dev/null 2>&1 &
+	sudo site $domain -ssl=off -revoke=off > /dev/null 2>&1 &
 	
 	sudo sed -i "/server_name/c \	$sername" /etc/nginx/sites-available/$domain
 	sudo sed -i "s/$mapto/$domain/g"  /etc/nginx/sites-available/$domain

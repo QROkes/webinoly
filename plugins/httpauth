@@ -63,7 +63,7 @@ if [[ -n $add ]]; then
 	
 	exist=$( grep -E "^${user}:" /etc/nginx/$authfile )
 	if [[ -z $exist ]]; then
-		sudo sh -c "echo -n '$user:$(openssl passwd -1 $pass)\n' >> /etc/nginx/$authfile"
+		echo "$user:$(openssl passwd -1 $pass)" >> /etc/nginx/$authfile
 		echo "${gre}User '$user' has been added successfully!${end}"
 	else
 		echo "${red}[ERROR] Can not create '$user' user because already exist!${end}"
@@ -112,6 +112,7 @@ elif [[ -n $wp_admin ]]; then
 			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain$subfolder -${gre} has been enabled! ${end}"
 		else
 			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain$subfolder -${gre} is already enabled! ${end}"
+			nginx_not="true" # Nginx-Reload not-needed.
 		fi
 	
 	elif [[ $wp_admin == "off" && -n $domain ]]; then
@@ -125,13 +126,16 @@ elif [[ -n $wp_admin ]]; then
 			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain$subfolder -${gre} has been disabled! ${end}"
 		else
 			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain$subfolder -${gre} is already disabled! ${end}"
+			nginx_not="true" # Nginx-Reload not-needed.
 		fi
 	elif [[ $wp_admin == "on" ]]; then
 		conf_write wp-admin-auth true
 		echo "${gre}WordPress Admin HTTP Authentication has been enabled! (global)${end}"
+		nginx_not="true" # Nginx-Reload not-needed.
 	elif [[ $wp_admin == "off" ]]; then
 		conf_write wp-admin-auth purged
 		echo "${gre}WordPress Admin HTTP Authentication has been disabled! (global)${end}"
+		nginx_not="true" # Nginx-Reload not-needed.
 	else
 		echo "${red}[ERROR] Invalid value for wp-admin! ${end}"
 		exit 1
@@ -161,10 +165,11 @@ elif [[ -n $whitelist ]]; then
 				fi
 				exist=$( grep -E "^allow $whitelist;$" /etc/nginx/apps.d/whitelist-acl.conf )
 				if [[ -z $exist ]]; then
-					sh -c "echo -n 'allow ${whitelist};\n' >> /etc/nginx/apps.d/whitelist-acl.conf"
+					echo "allow ${whitelist};" >> /etc/nginx/apps.d/whitelist-acl.conf
 					echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully whitelisted!${end}"
 				else
 					echo "${gre}IP '$whitelist' is already whitelisted!${end}"
+					nginx_not="true" # Nginx-Reload not-needed.
 				fi
 			else	
 				echo "${red}[ERROR] Please, enter a valid IP value!${end}"
@@ -205,6 +210,7 @@ elif [[ -n $path && -n $domain ]]; then
 				echo "${gre}This path ${blu}'$path'${gre} was successfully protected!${end}"
 			else
 				echo "${gre}Path: ${blu}'$path'${gre} is already protected!${end}"
+				nginx_not="true" # Nginx-Reload not-needed.
 			fi
 		elif [[ $(is_proxy $domain) == "true" ]]; then
 			echo "${red}[ERROR] HTTP Authentication is not allowed in subfolders (only root '/' is allowed) for Reverse Proxy sites!${end}"
@@ -243,6 +249,7 @@ location $sign$path {
 				echo "${gre}This path ${blu}'$path'${gre} was successfully protected!${end}"
 			else
 				echo "${gre}Path: ${blu}'$path'${gre} is already protected!${end}"
+				nginx_not="true" # Nginx-Reload not-needed.
 			fi
 		else	
 			echo "${red}[ERROR] Please, enter a valid URL path!${end}"
@@ -290,6 +297,7 @@ elif [[ $list == "protected" && -n $domain ]]; then
 		echo "[Empty] No protected paths were found!"
 	fi
 	[[ -n $raw ]] && echo "" || echo "${end}"
+	nginx_not="true" # Nginx-Reload not-needed.
 	
 	
 elif [[ -n $list ]]; then
@@ -307,6 +315,7 @@ elif [[ -n $list ]]; then
 	fi
 	[[ ! -s /etc/nginx/$authfile && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No users were found!${end}"
 	echo ""
+	nginx_not="true" # Nginx-Reload not-needed.
 
 
 else
@@ -314,5 +323,5 @@ else
 	exit 1
 fi
 
-[[ $(conf_read nginx) == "true" ]] && sudo service nginx reload
+[[ $(conf_read nginx) == "true" && -z $nginx_not ]] && sudo service nginx reload
 api-events_update hae
