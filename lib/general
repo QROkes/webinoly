@@ -180,6 +180,13 @@ pre_install() {
 }
 
 
+# Remove Installation Files
+app_purge() {
+	sudo rm $HOME/webinoly.tar
+	sudo rm -rf /opt/webinoly/plugins
+}
+
+
 mysql_client_install() {
 	api-events_update im2
 	local osname=$(check_osname)

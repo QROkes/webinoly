@@ -76,6 +76,10 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 		sudo apt -y autoremove
 		sudo rm $HOME/www
 		sudo rm $HOME/sites-available
+		
+		# Remove sources
+		sudo rm -rf /opt/webinoly/templates/source/default
+		
 		api-events_update pn6
 		linux_purge
 		
@@ -126,6 +130,11 @@ elif [[ -n $purge && -n $php ]]; then
 		sudo rm -rf /etc/php
 		sudo rm /opt/webinoly/templates/source/*
 
+		# Remove sources
+		sudo rm -rf /opt/webinoly/templates/source/php.ini
+		sudo rm -rf /opt/webinoly/templates/source/www.conf
+		sudo rm -rf /opt/webinoly/templates/source/main.cf
+		
 		conf_write php purged
 		conf_write php-optim purged
 		[[ $(conf_read php-v7.3) == "true" ]] && conf_write php-v7.3 purged
@@ -342,7 +351,7 @@ elif [[ -n $mysql ]]; then
 	if [[ $(conf_read mysql) != "true" ]]; then
 		mysql_install
 		[[ -z $notools && $(conf_read mysql) == "true" && $(conf_read php) == "true" && $(conf_read nginx) == "true" && $(conf_read nginx-tool) == "true" ]] && stack -pma || echo "${gre}PhpMyAdmin was NOT installed!${end}"
-		messagend_install dbpass
+		messagend_install
 	else
 		echo "${red}MySQL is already installed!${end}"
 		if [[ $(conf_read mysql-tool) != "true" && -z $notools ]]; then
@@ -433,6 +442,7 @@ elif [[ -n $purge_server_all ]]; then
 		
 		# Remove remanent packages and things!
 		[[ -a /etc/ssl/certs/webinoly-blackhole.crt.pem ]] && sudo rm -rf /etc/ssl/certs/webinoly-blackhole.crt.pem
+		[[ -a /etc/ssl/private/webinoly-blackhole.key.pem ]] && sudo rm -rf /etc/ssl/private/webinoly-blackhole.key.pem
 		[[ -a /etc/ssl/dhparam.pem ]] && sudo rm -rf /etc/ssl/dhparam.pem
 		if [[ $(conf_read pre-packs) == true ]]; then
 			sudo apt-get -y -qq purge pwgen unzip zip > /dev/null

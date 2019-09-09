@@ -170,10 +170,12 @@ elif [[ -n $login_www_data ]]; then
 		fi
 		
 		# Allow access for www-data user
-		sudo mkdir -p /var/www/.ssh
-		sudo chmod 700 /var/www/.ssh
-		sudo cat $HOME/.ssh/authorized_keys > /var/www/.ssh/authorized_keys
-		sudo chmod 600 /var/www/.ssh/*
+		if [[ -a $HOME/.ssh/authorized_keys ]]; then
+			sudo mkdir -p /var/www/.ssh
+			sudo chmod 700 /var/www/.ssh
+			sudo cat $HOME/.ssh/authorized_keys > /var/www/.ssh/authorized_keys
+			sudo chmod 600 /var/www/.ssh/*
+		fi
 		sudo chown -R www-data:www-data /var/www
 
 		# www-data sftp-only access jail - if fails usrlib must be listed in /etc/shells
