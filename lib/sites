@@ -351,8 +351,13 @@ wpinstall() {
 			# DB Creation
 			if [[ "$setupmysql" == [yY]  ]] ; then
 				if [[ $dbhost == "localhost" ]]; then
-					local dbsetup="CREATE DATABASE $dbname;GRANT ALL PRIVILEGES ON $dbname.* TO $dbuser@$dbhost IDENTIFIED BY '$dbpass';FLUSH PRIVILEGES;"
-					sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup"
+					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
+					sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS <<_EOF_
+CREATE DATABASE $dbname;
+CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
+GRANT ALL PRIVILEGES ON ${dbname}.* TO ${dbuser}@${dbhost} IDENTIFIED BY '${dbpass}';
+FLUSH PRIVILEGES;
+_EOF_
 					if [ $? != "0" ]; then
 						done="0"
 						echo "${red}============================================"
@@ -468,13 +473,6 @@ db_delete() {
 				echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
 			fi
 		else
-			if [[ -z $wp_uroot || -z $wp_proot ]]; then
-				echo ""
-				echo "${gre}External DB found in${blu} $domain ${gre}(Press 'Enter' key twice to skip and not delete)"
-				read -p "${blu}External DB root username [root]: " wp_uroot
-				wp_uroot=${wp_uroot:-root}
-				read -p "External DB root password: " wp_proot
-			fi
 			if [[ $wp_uroot == "root" && -z $wp_proot ]]; then
 				echo "${red}Action aborted, database not deleted!"
 				continue 1;
@@ -633,7 +631,7 @@ createsite() {
 	fi
 		
 	# Activate FastCgi cache
-	if [[ ( -n $cache || $cache == "on" ) && $type == [123] ]]; then
+	if [[ $cache == "on" && $type == [123] ]]; then
 		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
 		wp_cache_plugins
 	fi

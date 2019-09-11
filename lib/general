@@ -148,7 +148,13 @@ wp_dbdata() {
 	wp_dbport=$(echo "$wp_dbhost" | cut -f 2 -d ':' -s)
 	wp_dbpref=$( grep -F "table_prefix" $wpconfpath | cut -f 2 -d "'" -s)
 	
-	if [[ -n $external_db ]]; then
+	if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
+		echo ""
+		echo "${gre}External DB found in${blu} $domain ${gre}(Press 'Enter' key twice to skip and not delete)"
+		read -p "${blu}External DB root username [root]: " wp_uroot
+		wp_uroot=${wp_uroot:-root}
+		read -p "External DB root password: " wp_proot
+	elif [[ -n $external_db ]]; then
 		dbdata=${external_db:1:-1}
 		wp_uroot=$(echo "${dbdata}" | cut -d',' -f 1 -s)
 		wp_proot=$(echo "${dbdata}" | cut -d',' -f 2 -s)
@@ -156,9 +162,6 @@ wp_dbdata() {
 			echo "${red}[ERROR] Invalid data for External Database!${end}" >&2
 			exit 1
 		fi
-	elif [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
-		echo "${red}[ERROR] External Database found, please use the '-external-db=[user,password]' option!${end}" >&2
-		exit 1
 	fi
 }
 
