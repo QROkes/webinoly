@@ -18,8 +18,8 @@ wp_cache_plugins() {
 		echo " Please, activate this plugin for a better experience with FastCgi Cache."
 		echo "${blu} ** IMPORTANT - Plugin Settings **"
 		echo "- The “Caching Method” should be set to “Nginx FastCgi Cache”."
-		echo "- Support for purge/url method has been disabled because it is considered a security risk."
-		echo "- The Purge Method should be set to “Delete local server cache file” "
+		echo "- Support for purge/url method is a premium feature only included in NGINX Plus (not-free) and we recommend not to trust in solutions or tools that use third-party NGINX modules to offer this feature."
+		echo "- The Purge Method should be set to “Delete local server cache file”."
 		echo "${end}"
 	else
 		echo "${gre}Nginx Helper Plugin is already installed!${end}"

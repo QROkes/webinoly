@@ -19,6 +19,7 @@ if [[ -n $update ]]; then
 		[[ -n $update && $update != true ]] && branch="-ver=${update}" || branch=""
 		sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=${app_version}" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
 		[[ $? == 0 ]] && echo "${gre}Webinoly App has been updated successfully!${end}"
+		api-events_update wy1s
 	else
 		echo "${gre}You currently have the latest version!${end}"
 	fi
