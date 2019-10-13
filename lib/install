@@ -186,7 +186,7 @@ php_install() {
 		sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 	fi
 	pre_install
-	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-recode php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack php-xdebug
+	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-recode php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
 	
 	if [[ -n $ver && $ver == "7.1" ]]; then
 		# mcrypt deprecated in 7.2
@@ -340,9 +340,10 @@ php_optim() {
 	sudo sed -i '/ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
 
 	if [[ $(conf_read multi-php) == "true" ]]; then
-		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9004' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.4 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9004' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9006' /etc/php/$ver/fpm/pool.d/www.conf
 	else
 		sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
 	fi
@@ -355,20 +356,12 @@ php_optim() {
 	sudo sed -i '/request_slowlog_timeout =/c\request_slowlog_timeout = 10s' /etc/php/$ver/fpm/pool.d/debug.conf
 
 	if [[ $(conf_read multi-php) == "true" ]]; then
-		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
-		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/debug.conf
-		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9005' /etc/php/$ver/fpm/pool.d/debug.conf
+		[[ $ver == 7.4 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
+		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/debug.conf
+		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9005' /etc/php/$ver/fpm/pool.d/debug.conf
+		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9007' /etc/php/$ver/fpm/pool.d/debug.conf
 	else
 		sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
-	fi
-	
-	if [[ -n $ver && ($ver == "7.3" || $ver == "7.2" || $ver == "7.1") ]]; then
-		# xdebug deprecated in 5.6
-		sudo echo 'php_admin_flag[xdebug.profiler_enable] = off' >> /etc/php/$ver/fpm/pool.d/debug.conf
-		sudo echo 'php_admin_flag[xdebug.profiler_enable_trigger] = on' >> /etc/php/$ver/fpm/pool.d/debug.conf
-		sudo echo 'php_admin_value[xdebug.profiler_output_name] = cachegrind.out.%p-%H-%R' >> /etc/php/$ver/fpm/pool.d/debug.conf
-		sudo echo 'php_admin_value[xdebug.profiler_output_dir] = /tmp/' >> /etc/php/$ver/fpm/pool.d/debug.conf 
-		sudo sed -i '/zend_extension=/c\;zend_extension=xdebug.so' /etc/php/$ver/mods-available/xdebug.ini
 	fi
 	
 	[[ $(conf_read php-tool) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
