@@ -394,10 +394,20 @@ elif [[ -n $proxy && -n $domain ]]; then
 		firstchar=$(echo "${proxy}" | cut -c-1)
 		lastchar=$(echo "${proxy}" | rev | cut -c-1)
 		proxydata=${proxy:1:-1}
-		rphost=$(echo "${proxydata}" | cut -d':' -f 1 -s)
-		rpport=$(echo "${proxydata}" | cut -d':' -f 2 -s)
 		
-		if ! [[ -n $proxydata && $firstchar == "[" && $lastchar == "]" && -n $rphost && -n $rpport && $rpport =~ ^[0-9]+$ && $rpport -ge 0 && $rpport -le 65535 ]]; then
+		rpport=$(echo "${proxydata}" | rev | cut -d':' -f 1 -s | rev)
+		if [[ $rpport =~ ^[0-9]+$ && $rpport -ge 0 && $rpport -le 65535 ]]; then
+			rphost=$(echo "${proxydata}" | rev | cut -d':' -f 2- -s | rev)
+		elif [[ $rpport =~ ^[0-9]+$ ]]; then
+			echo "${red}[ERROR] Please, enter a valid port number!${end}"
+			exit 1
+		else
+			rphost=$proxydata
+			rpport=""
+		fi
+		
+		
+		if ! [[ -n $proxydata && $firstchar == "[" && $lastchar == "]" && -n $rphost ]]; then
 			echo "${red}[ERROR] Please, enter a valid host and port!${end}"
 			exit 1
 		fi
@@ -415,7 +425,7 @@ elif [[ -n $proxy && -n $domain ]]; then
 		
 	echo "${gre}"
 	if [[ -n $rphost ]]; then
-		sudo sed -i "s/localhost/$rphost/g"  /etc/nginx/sites-available/$domain
+		sudo sed -i "s#localhost#$rphost#g"  /etc/nginx/sites-available/$domain
 		echo " Custom host found: $rphost"
 	else
 		echo " Default host: localhost"
@@ -553,7 +563,7 @@ elif [[ -n $cache ]]; then
 		if [[ ( -z $subfolder && $(is_php $domain) == "true" && $(is_wp $domain) == "true" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "true" && $(is_wp_cache $domain $subfolder) == "false" ) ]]; then
 			[[ -z $subfolder ]] && sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
 			[[ -n $subfolder ]] && sudo sed -i "/$domain$subname-php.conf;/c \	include apps.d/$domain$subname-wpfc.conf;" /etc/nginx/sites-available/$domain
-			if [[ ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/nginx-helper || ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/redis-cache ]]; then
+			if [[ $(is_parked $domain) == "false" && ( ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/nginx-helper || ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/redis-cache ) ]]; then
 				echo "${gre}"
 				echo "We recommend Nginx Helper Plugin and Redis Object Cache Plugin as an easy way to manage FastCGI and Redis Cache on your WordPress site."
 				echo "${blu}Do you want to install it now [Y/n]? ${end}"

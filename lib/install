@@ -186,12 +186,12 @@ php_install() {
 		sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 	fi
 	pre_install
-	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-recode php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
+	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
 	
-	if [[ -n $ver && $ver == "7.1" ]]; then
-		# mcrypt deprecated in 7.2
-		sudo apt -y install php${ver}-mcrypt
-	fi
+	# mcrypt deprecated in 7.2
+	[[ $ver == "7.1" ]] && sudo apt -y install php${ver}-mcrypt
+	# recode still not available in 7.4
+	[[ $ver != "7.4" ]] && sudo apt -y install php${ver}-recode
 	
 	def=$(conf_read php-ver)
 	if [[ $(conf_read php-v${def}) != "true" ]]; then
