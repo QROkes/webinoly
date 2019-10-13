@@ -57,7 +57,10 @@ domain_check() {
 
 	# Can not contain two points together and can not start or end with a point
 	[[ $din == *..* || $(echo "${din}" | cut -c-1) == "." || $(echo "${din}" | rev | cut -c-1) == "." ]] && domfail="true"
-
+	
+	# First check if valid TLD
+	[[ $count == 1 ]] && echo "${red}[WARNING] Domain name is not a valid TLD (Top Level Domain).${end}"
+	
 	[[ $domfail == "true" ]] && echo "${red}[WARNING] Domain names can only contain letters, numbers or a hyphen; can not start or end with a hyphen and can be up to 67 characters long.${end}"
 }
 
@@ -580,7 +583,13 @@ createsite() {
 	# Check domain and then prevent reserved characters for file names.
 	domain_check $domain
 	domain=$(echo $domain | sed "s/[^\.0-9A-Za-z\-]/_/g" | sed "s/^[\.]/_/g" | sed "s/\.\./_/g")
-
+	
+	# Check for reserved domain names
+	if [[ $domain == "default" ]]; then
+		echo "${red}[ERROR] Domain name reserved!${end}"
+		exit 1
+	fi
+	
 	# Check for duplicate sites
 	if [[ -a /etc/nginx/sites-available/$domain ]]; then
 		echo "${red}[ERROR] Can not create site${blu} $domain ${red}because already exists!${end}"

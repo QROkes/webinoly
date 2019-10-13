@@ -91,6 +91,11 @@ elif [[ -n $dbpass ]]; then
 	
 	
 elif [[ -n $tools_port ]]; then
+	if [[ -a /etc/nginx/sites-available/$tools_port ]]; then
+		echo "${red}[ERROR] Port/site '$tools_port' is already in use!${end}"
+		exit 1
+	fi
+	
 	oldport="$(conf_read tools-port)"
 	[[ $tools_port != true ]] && tools_port $tools_port || tools_port
 	newport="$(conf_read tools-port)"
