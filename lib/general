@@ -12,6 +12,12 @@ readonly blu=`tput setaf 6`
 readonly end=`tput sgr0`
 
 
+# STOP and exit if not root or sudo.
+if [[ $(whoami) != "root" ]]; then
+	echo "${red}Please run this script as root or using sudo.${end}"
+	exit 1
+fi
+
 
 check_ubuntu_release() {
 	local check="false"

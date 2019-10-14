@@ -12,12 +12,12 @@ if ! [[ $distr == "Ubuntu" && $osver =~ ^(xenial|bionic)$ ]]; then
 	echo "$(tput sgr0)"
 	read -p "Press [Enter] key to Continue or [Ctrl+C] to Cancel..."
 fi
+
 # Check for sudo/root privileges
-if ! $(groups $USERNAME | grep &>/dev/null '\bsudo\b' || groups $USERNAME | grep &>/dev/null '\broot\b'); then
-	echo "$(tput setaf 1)"
-	echo "****  [ERROR] sudo/root privileges are required to install Webinoly ****"
-	echo "$(tput sgr0)"
-	read -p "Press [Enter] key to Continue or [Ctrl+C] to Cancel..."
+if [[ $(whoami) != "root" ]]; then
+	echo "$(tput setaf 1)Please run this script as root or using sudo.$(tput sgr0)"
+	sudo rm weby
+	exit 1
 fi
 
 # Prevent "compulsive" re-installation if you currently have the latest version installed.

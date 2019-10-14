@@ -9,6 +9,7 @@ source /opt/webinoly/lib/webin
 check_for_parameters $@
 api-events_update wys
 
+
 if [[ -n $update ]]; then
 	api-events_update wy1
 	checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
@@ -65,6 +66,11 @@ elif [[ -n $server_reset ]]; then
 	elif [[ $(conf_read php-optim) != "true" && $server_reset == "php" ]]; then
 		echo "${red}[ERROR] PHP settings couldn't been updated, seems like is not installed in your server!${end}"
 		exit 1
+	fi
+	
+	# Display message just to show we are alive.
+	if [[ $server_reset == "all" && $(conf_read php-optim) != "true" && $(conf_read nginx-optim) != "true" ]]; then
+		echo "${blu}Nothing to do, NGINX and PHP are not installed yet!${end}"
 	fi
 	
 	
