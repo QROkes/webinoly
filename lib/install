@@ -373,7 +373,7 @@ php_optim() {
 
 nginx_tool_site() {
 	# Port 22222 tools site
-	sudo site $(conf_read tools-port) -php
+	sudo site $(conf_read tools-port) -php > /dev/null 2>&1
 	sudo cp /opt/webinoly/templates/nginx/22222 /etc/nginx/sites-available/$(conf_read tools-port)
 	sudo sed -i "s/22222/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
 	sudo nginx -t && sudo service nginx reload

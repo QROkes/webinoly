@@ -198,16 +198,14 @@ elif [[ -n $login_www_data ]]; then
 		sudo sed -i "/Subsystem sftp/c\Subsystem sftp internal-sftp" /etc/ssh/sshd_config
 		sudo echo '# WebinolySFTPstart
 Match Group sftponly
-ChrootDirectory /var/www
-X11Forwarding no
-AllowTcpForwarding no
-ForceCommand internal-sftp
+	ChrootDirectory /var/www
+	X11Forwarding no
+	AllowTcpForwarding no
+	ForceCommand internal-sftp
 # WebinolySFTPend' >> /etc/ssh/sshd_config
 
-		falus=$( grep -F "AllowUsers" /etc/ssh/sshd_config )
-		if [[ -n $falus ]]; then
-			sudo sed -i "s/$falus/$falus www-data/" /etc/ssh/sshd_config
-		fi
+		falus=$( grep -Gi "^AllowUsers " /etc/ssh/sshd_config )
+		[[ -n $falus ]] && sudo sed -i "s/$falus/$falus www-data/" /etc/ssh/sshd_config
 
 		conf_write login-www-data true
 		sudo service ssh restart
@@ -225,11 +223,11 @@ ForceCommand internal-sftp
 		sudo delgroup sftponly > /dev/null 2>&1
 		sudo chown www-data:www-data /var/www
 		sudo sed -i "/Subsystem sftp/c\Subsystem sftp \/usr\/lib\/openssh\/sftp-server" /etc/ssh/sshd_config
-		sudo sed -i '/WebinolySFTPstart/,/WebinolySFTPstart/{/.*/d}' /etc/ssh/sshd_config
+		sudo sed -i '/WebinolySFTPstart/,/WebinolySFTPend/{/.*/d}' /etc/ssh/sshd_config
 		
-		falus=$( grep -F "AllowUsers" /etc/ssh/sshd_config )
+		falus=$( grep -Gi "^AllowUsers " /etc/ssh/sshd_config )
 		if [[ -n $falus ]]; then
-			suffix="www-data"
+			suffix=" www-data"
 			foo=${falus%$suffix}
 			sudo sed -i "s/$falus/$foo/" /etc/ssh/sshd_config
 		fi
