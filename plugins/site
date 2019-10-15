@@ -424,17 +424,30 @@ elif [[ -n $proxy && -n $domain ]]; then
 	sudo sed -i "s/domain.com/$domain/g"  /etc/nginx/sites-available/$domain
 		
 	echo "${gre}"
-	if [[ -n $rphost ]]; then
-		sudo sed -i "s#localhost#$rphost#g"  /etc/nginx/sites-available/$domain
-		echo " Custom host found: $rphost"
+	if [[ $(echo "${rphost}" | cut -d':' -f 1 -s ) =~ ^(http|https)$ ]]; then
+		sudo sed -i "/proxy_set_header Host/d" /etc/nginx/sites-available/$domain
+		sudo sed -i "/proxy_set_header X-/d" /etc/nginx/sites-available/$domain
+		sudo sed -i "/proxy_redirect ws:/d" /etc/nginx/sites-available/$domain
+		sudo sed -i '/proxy_read_timeout/a \		proxy_intercept_errors on;' /etc/nginx/sites-available/$domain
+		sudo sed -i '/proxy_read_timeout/a \		proxy_ignore_headers   Set-Cookie;' /etc/nginx/sites-available/$domain
+				
+		sudo sed -i "s#http://localhost#$rphost#g"  /etc/nginx/sites-available/$domain
+		echo " Custom URL host: ${blu}$rphost${gre}"
+		proxyurl="true"
+	elif [[ -z $rphost ]]; then
+		echo " Default host: ${blu}localhost${gre}"
 	else
-		echo " Default host: localhost"
+		sudo sed -i "s#localhost#$rphost#g"  /etc/nginx/sites-available/$domain
+		echo " Custom host: ${blu}$rphost${gre}"
 	fi
+	
 	if [[ -n $rpport ]]; then
 		sudo sed -i "s/8080/$rpport/g"  /etc/nginx/sites-available/$domain
-		echo " Custom port found: $rpport"
+		echo " Custom port: ${blu}$rpport${gre}"
+	elif [[ -z $rpport && $proxyurl == "true" ]]; then
+		sudo sed -i "s/:8080//g"  /etc/nginx/sites-available/$domain
 	else
-		echo " Default port: 8080"
+		echo " Default port: ${blu}8080${gre}"
 	fi
 	
 	# Check host and port
