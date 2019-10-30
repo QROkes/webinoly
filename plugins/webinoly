@@ -126,7 +126,7 @@ elif [[ -n $tools_site ]]; then
 		tools_site=${tools_site:-NeverMatchDotCom}
 	fi	
 	
-	if [[ -a /etc/nginx/sites-available/$tools_site ]]; then
+	if [[ -a /etc/nginx/sites-available/$tools_site && -a /etc/nginx/sites-available/$(conf_read tools-port) && $tools_site != "default" ]]; then
 		# Check for previous assigned domain and remove
 		if [[ -n $(conf_read tools-site) ]]; then
 			sudo sed -i '/server_name/d' /etc/nginx/sites-available/$(conf_read tools-port)
@@ -167,6 +167,14 @@ elif [[ -n $tools_site ]]; then
 		
 		conf_write tools-site $tools_site
 		echo "${gre}Domain ${blu}- ${tools_site}:$(conf_read tools-port) -${gre} was successfully assigned to access your server tools!${end}"
+	elif [[ $tools_site == "default" ]]; then
+		sudo rm -rf /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo cp /opt/webinoly/templates/nginx/22222 /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i "s/22222/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
+		echo "${gre}Tools Site settings has been reset successfully!${end}"
+	elif [[ -a /etc/nginx/sites-available/$tools_site && ! -a /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
+		echo "${red}[ERROR] Tools Site is not enabled! ${end}"
+		exit 1
 	else
 		echo "${red}[ERROR] Domain/site not found. ${end}"
 		exit 1

@@ -512,10 +512,14 @@ db_delete() {
 
 
 deletesite() {
-	if [[ $domain == $(conf_read tools-site) || $domain == $(conf_read default-site) ]]; then
+	if [[ ( $domain == $(conf_read tools-site) || $domain == $(conf_read default-site) ) && -z $delete_all ]]; then
 		echo "${red}[WARNING] This site is set as default site or used to access your server tools."
 		echo "Deleting this site can cause unexpected behaviour in your server, please reassign your default/tools site to an existing domain."
 		echo "${end}"
+	fi
+	if [[ $domain == $(conf_read tools-site) && -z $delete_all ]]; then
+		echo "${red}[ERROR] Can not delete a site that is assigned to access your server tools (Tools-Site)!${end}"
+		exit 1
 	fi
 
 	[[ $delete == "force" ]] && local dbdel="Y"
