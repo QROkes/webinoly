@@ -135,6 +135,12 @@ elif [[ -n $purge && -n $php ]]; then
 		sudo rm -rf /opt/webinoly/templates/source/www.conf
 		sudo rm -rf /opt/webinoly/templates/source/main.cf
 		
+		# Remove tools-site
+		sudo rm -rf /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo rm -rf /etc/nginx/sites-enabled/$(conf_read tools-port)
+		sudo rm -rf /var/www/$(conf_read tools-port)
+		conf_delete tools-site
+		
 		conf_write php purged
 		conf_write php-optim purged
 		[[ $(conf_read php-v7.4) == "true" ]] && conf_write php-v7.4 purged
