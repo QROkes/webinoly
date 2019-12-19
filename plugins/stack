@@ -146,8 +146,8 @@ elif [[ -n $purge && -n $php ]]; then
 		[[ $(conf_read php-v7.4) == "true" ]] && conf_write php-v7.4 purged
 		[[ $(conf_read php-v7.3) == "true" ]] && conf_write php-v7.3 purged
 		[[ $(conf_read php-v7.2) == "true" ]] && conf_write php-v7.2 purged
-		[[ $(conf_read php-v7.1) == "true" ]] && conf_write php-v7.1 purged
 		# We need it to support and update old deprecated stacks.
+		[[ $(conf_read php-v7.1) == "true" ]] && conf_write php-v7.1 purged
 		[[ $(conf_read php-v7.0) == "true" ]] && conf_write php-v7.0 purged
 		[[ $(conf_read php-v5.6) == "true" ]] && conf_write php-v5.6 purged
 

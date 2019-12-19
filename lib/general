@@ -1,9 +1,9 @@
 #!/bin/bash
 
-readonly app_version="1.9.2"
+readonly app_version="1.10.0"
 readonly svr_version="1.4"
 readonly os_ubuntu_supported=(xenial bionic)
-readonly php_supported=(7.1 7.2 7.3 7.4)
+readonly php_supported=(7.2 7.3 7.4)
 
 # echo colors
 readonly red=`tput setaf 1`

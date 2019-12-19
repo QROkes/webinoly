@@ -188,9 +188,7 @@ php_install() {
 	pre_install
 	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
 	
-	# mcrypt deprecated in 7.2
-	[[ $ver == "7.1" ]] && sudo apt -y install php${ver}-mcrypt
-	# recode still not available in 7.4
+	# Removed/deprecated in 7.4
 	[[ $ver != "7.4" ]] && sudo apt -y install php${ver}-recode
 	
 	def=$(conf_read php-ver)
@@ -343,7 +341,6 @@ php_optim() {
 		[[ $ver == 7.4 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
 		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
 		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9004' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9006' /etc/php/$ver/fpm/pool.d/www.conf
 	else
 		sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
 	fi
@@ -359,7 +356,6 @@ php_optim() {
 		[[ $ver == 7.4 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
 		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/debug.conf
 		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9005' /etc/php/$ver/fpm/pool.d/debug.conf
-		[[ $ver == 7.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9007' /etc/php/$ver/fpm/pool.d/debug.conf
 	else
 		sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
 	fi
