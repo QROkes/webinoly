@@ -441,7 +441,6 @@ _EOF_
 
 
 db_delete() {
-	local domain="$1"
 	local done="0"
 	
 	wp_dbdata $1

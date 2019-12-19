@@ -161,7 +161,7 @@ elif [[ -n $delete_all ]]; then
 	echo "All your sites files will be removed."
 	echo "This action will only delete Databases attached to a WordPress site, any other Database will not be deleted."
 	
-	if [[ $delete_all != "force" ]]; then
+	if ! [[ $delete_all =~ ^(force|keep-db)$ ]]; then
 		echo "${blu}"
 		echo "Are you sure [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
@@ -179,7 +179,7 @@ elif [[ -n $delete_all ]]; then
 	# List all remaining sites (parked and proxy)
 	for site in "/etc/nginx/sites-available"/*
 	do
-		delete="force"
+		[[ $delete_all == "keep-db" ]] && delete="keep-db" || delete="force"
 		domain=$(echo $site | cut -f 5 -d "/")
 		[[ $domain != "default" && $domain != $(conf_read tools-port) ]] && deletesite
 	done
