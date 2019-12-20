@@ -2,7 +2,7 @@
 
 # View logs in real time Plugins
 # Syntax: log <domain> <option>
-# Options: -wp, -error, -mail, -php o -fpm, -mysql, -only-error
+# Options: -wp, -error, -mail, -php o -fpm, -mysql, -only-error, -le, -ssh
 # Arguments: -lines
 # Notes: If no domain or option is entered, access logs are displayed.
 
@@ -42,6 +42,18 @@ elif [[ -n $mysql ]]; then
 	check_for_mysql
 	if [[ -a /var/log/mysql/error.log ]]; then
 		sudo tail -f --lines=$clines /var/log/mysql/*.log
+	else
+		error
+	fi
+elif [[ -n $le ]]; then
+	if [[ -a /var/log/letsencrypt/letsencrypt.log ]]; then
+		sudo tail -f --lines=$clines /var/log/letsencrypt/letsencrypt.log
+	else
+		error
+	fi
+elif [[ -n $ssh ]]; then
+	if [[ -a /var/log/auth.log ]]; then
+		sudo tail -f --lines=$clines /var/log/auth.log
 	else
 		error
 	fi
