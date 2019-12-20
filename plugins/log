@@ -3,6 +3,7 @@
 # View logs in real time Plugins
 # Syntax: log <domain> <option>
 # Options: -wp, -error, -mail, -php o -fpm, -mysql, -only-error
+# Arguments: -lines
 # Notes: If no domain or option is entered, access logs are displayed.
 
 source /opt/webinoly/lib/general
@@ -17,6 +18,7 @@ error() {
 
 # Check for custom "lines" value
 [[ -n $(conf_read log-lines) && $(conf_read log-lines) =~ ^[0-9]+$ && $(conf_read log-lines) -gt 0 ]] && clines=$(conf_read log-lines) || clines=10
+[[ -n $lines && $lines =~ ^[0-9]+$ && $lines -gt 0 ]] && clines=$lines
 
 
 if [[ -n $mail || -n $email ]]; then
@@ -30,12 +32,14 @@ if [[ -n $mail || -n $email ]]; then
 		error
 	fi
 elif [[ -n $fpm || -n $php ]]; then
+	check_for_php
 	if [[ -a /var/log/php/$(conf_read php-ver)/fpm.log ]]; then
 		sudo tail -f --lines=$clines /var/log/php/$(conf_read php-ver)/*.log
 	else
 		error
 	fi
 elif [[ -n $mysql ]]; then
+	check_for_mysql
 	if [[ -a /var/log/mysql/error.log ]]; then
 		sudo tail -f --lines=$clines /var/log/mysql/*.log
 	else
@@ -112,6 +116,13 @@ elif [[ -n $only_error ]]; then
 	
 # Site log files
 elif [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
+	# Check if Access Log is enabled
+	islog=$( grep -F "access_log off;" /etc/nginx/sites-available/$domain )
+	if [[ -z $error && -z $wp && -n $islog ]]; then
+		echo "${red}[ERROR] Access Log for ${blu}- $domain -${red} is disabled!${end}"
+		exit 1
+	fi
+	
 	if [[ -n $error && -a /var/log/nginx/$domain.error.log ]]; then
 		sudo tail -f --lines=$clines /var/log/nginx/$domain.error.log
 	elif [[ -n $wp && -a /var/www/$domain/htdocs/wp-content/debug.log ]]; then
@@ -128,6 +139,14 @@ elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
 	exit 1
 
 elif [[ -z $domain ]]; then
+	# Check if Access Log is enabled
+	check_for_nginx
+	islog=$( grep -F "access_log off;" /etc/nginx/nginx.conf )
+	if [[ -z $error && -z $1 && -n $islog ]]; then
+		echo "${red}[ERROR] Access Log (global) is disabled!${end}"
+		exit 1
+	fi
+	
 	if [[ -n $error && -a /var/log/nginx/error.log ]]; then
 		sudo tail -f --lines=$clines /var/log/nginx/*error.log
 	elif [[ -a /var/log/nginx/access.log && -z $1 ]]; then
