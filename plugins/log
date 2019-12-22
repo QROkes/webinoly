@@ -2,8 +2,8 @@
 
 # View logs in real time Plugins
 # Syntax: log <domain> <option>
-# Options: -wp, -error, -mail, -php o -fpm, -mysql, -only-error, -le, -ssh
-# Arguments: -lines, -display
+# Options: -wp, -error, -mail, -php o -fpm, -mysql, -only-error, -le, -ssh, -syslog
+# Arguments: -lines, -display, -enable, -disable
 # Notes: If no domain or option is entered, access logs are displayed.
 
 source /opt/webinoly/lib/general
@@ -38,13 +38,6 @@ elif [[ -n $fpm || -n $php ]]; then
 	else
 		error
 	fi
-elif [[ -n $mysql ]]; then
-	check_for_mysql
-	if [[ -a /var/log/mysql/error.log ]]; then
-		sudo tail -f --lines=$clines /var/log/mysql/*.log
-	else
-		error
-	fi
 elif [[ -n $le ]]; then
 	if [[ -a /var/log/letsencrypt/letsencrypt.log ]]; then
 		sudo tail -f --lines=$clines /var/log/letsencrypt/letsencrypt.log
@@ -56,6 +49,67 @@ elif [[ -n $ssh ]]; then
 		sudo tail -f --lines=$clines /var/log/auth.log
 	else
 		error
+	fi
+
+
+# MySQL Logs
+elif [[ -n $mysql || -n $syslog ]]; then
+	check_for_mysql
+	if [[ $mysql == "error" || -n $syslog ]]; then
+		if [[ -s /var/log/syslog ]]; then
+			sudo tail -f --lines=$clines /var/log/syslog
+		else
+			echo "${red}[ERROR] MariaDB Error log (syslog) file not found or still empty!${end}"
+			exit 1
+		fi
+	elif [[ $mysql == "slow" ]]; then
+		islow=$( grep -E "^slow_query_log[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s | sed 's/[^0-9]*//g' )
+		if [[ -n $enable && $islow != 1 ]]; then
+			sudo sed -i -E "/^[#]?slow_query_log[\[ \t=]/c slow_query_log = 1" /etc/mysql/my.cnf
+			sudo service mysql restart
+			echo "${gre}MariaDB Slow Query log was successfully enabled!${end}"
+		elif [[ -n $enable && $islow == 1 ]]; then
+			echo "${gre}MariaDB Slow Query log is already enabled!${end}"
+		elif [[ -n $disable && $islow != 0 ]]; then
+			sudo sed -i -E "/^[#]?slow_query_log[\[ \t=]/c slow_query_log = 0" /etc/mysql/my.cnf
+			sudo service mysql restart
+			echo "${gre}MariaDB Slow Query log was successfully disabled!${end}"
+		elif [[ -n $disable && $islow == 0 ]]; then
+			echo "${gre}MariaDB Slow Query log is already disabled!${end}"
+		elif [[ -s /var/log/mysql/mariadb-slow.log && $islow == 1 ]]; then
+			sudo tail -f --lines=$clines /var/log/mysql/mariadb-slow.log
+		elif [[ $islow != 1 ]]; then
+			echo "${red}[ERROR] MariaDB Slow Query log is not enabled!${end}"
+			exit 1
+		else
+			echo "${red}[ERROR] MariaDB Slow Query log file not found or still empty!${end}"
+			exit 1
+		fi
+		
+	# General Log
+	else
+		isgrl=$( grep -E "^general_log[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s | sed 's/[^0-9]*//g' )
+		if [[ -n $enable && $isgrl != 1 ]]; then
+			sudo sed -i -E "/^[#]?general_log[\[ \t=]/c general_log = 1" /etc/mysql/my.cnf
+			sudo service mysql restart
+			echo "${gre}MariaDB General log was successfully enabled!${end}"
+		elif [[ -n $enable && $isgrl == 1 ]]; then
+			echo "${gre}MariaDB General log is already enabled!${end}"
+		elif [[ -n $disable && $isgrl != 0 ]]; then
+			sudo sed -i -E "/^[#]?general_log[\[ \t=]/c general_log = 0" /etc/mysql/my.cnf
+			sudo service mysql restart
+			echo "${gre}MariaDB General log was successfully disabled!${end}"
+		elif [[ -n $disable && $isgrl == 0 ]]; then
+			echo "${gre}MariaDB General log is already disabled!${end}"
+		elif [[ -s /var/log/mysql/mysql.log && $isgrl == 1 ]]; then
+			sudo tail -f --lines=$clines /var/log/mysql/mysql.log
+		elif [[ $isgrl != 1 ]]; then
+			echo "${red}[ERROR] MariaDB General log is not enabled!${end}"
+			exit 1
+		else
+			echo "${red}[ERROR] MariaDB General log file not found or still empty!${end}"
+			exit 1
+		fi
 	fi
 
 
@@ -138,7 +192,7 @@ elif [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
 	# WordPress Logs
 	[[ -z $subfolder ]] && wpath="/var/www/$domain/wp-config.php" || wpath="/var/www/$domain/htdocs$subfolder/wp-config.php"
 	if [[ -n $wp && -a $wpath ]]; then
-		iswpdeb=$( grep -F "'WP_DEBUG'" $wpath | cut -f 3 -d "'" -s | cut -f 2 -d " " -s )
+		iswpdeb=$( grep -F "'WP_DEBUG'" $wpath | cut -f 3 -d "'" -s | sed 's/[^a-zA-Z]*//g' )
 		if [[ $wp == "on" ]]; then
 			if [[ $iswpdeb == "false" ]]; then
 				[[ $display == "off" ]] && dis="false" || dis="true"
