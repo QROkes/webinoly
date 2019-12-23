@@ -1,0 +1,143 @@
+#!/bin/bash
+
+bkp_local_db() {
+	check_for_mysql
+	[[ -z $wp ]] &&	read -p "${gre}WordPress site: ${end}" wp
+	[[ -z $destination ]] && read -p "${gre}Destination: ${end}" destination
+	if [[ -z $wp || -z $destination || ! -d $destination || $(is_wp $wp) != "true" || $(echo "${destination}" | rev | cut -c-1) == "/" ]]; then
+		echo "${red}[ERROR] Please, enter a valid WP site and destination path!${end}"
+		exit 1
+	fi
+	
+	wp_dbdata $wp
+	if [[ $wp_dbhost != "localhost" ]]; then
+		echo "${red}[ERROR] Database host is not localhost!${end}"
+		exit 1
+	fi
+	
+	local filename="webinoly-backup-db_${wp}_$(date +%F)-$(date +%T).sql"
+	local adminpass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+	sudo mysqldump --user=admin --password=$adminpass --single-transaction --lock-tables --quick --databases $wp_dbname > $destination/$filename
+	
+	if [[ -s $destination/$filename ]]; then
+		echo "${gre}Database local backup successfully done!${end}"
+	else
+		echo "${red}[ERROR] Database backup failed!${end}"
+		exit 1
+	fi
+}
+
+
+bkp_s3_profile() {
+	if [[ $profile == "true" || -z $profile ]]; then
+		echo ""
+		read -p "${gre}Profile name: ${end}" profile
+		
+		if [[ -z $profile ]]; then
+			echo "${red}[ERROR] Profile name is empty!${end}"
+			exit 1
+		fi
+	fi
+	
+	if [[ -n $run ]]; then
+		if [[ -d /root/.duply/$profile ]]; then
+			sudo duply $profile backup_verify_purge --force --allow-source-mismatch
+		else
+			echo "${red}[ERROR] Backup profile not found!${end}"
+			exit 1
+		fi
+	elif [[ -n $delete ]]; then
+		if [[ -d /root/.duply/$profile ]]; then
+			sudo rm -rf /root/.duply/$profile
+			echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully deleted!${end}"
+		else
+			echo "${red}[ERROR] Backup profile not found!${end}"
+			exit 1
+		fi
+	elif [[ -n $restore ]]; then
+		if [[ $restore == "true" ]]; then
+			echo ""
+			read -p "${gre}Restore destination folder: ${end}" restore
+		fi
+		if [[ ! -d $restore ]]; then
+			echo "${red}[ERROR] Restore folder not found!${end}"
+			exit 1
+		fi
+		
+		sudo duply $profile restore $restore
+	else
+		if [[ -d /root/.duply/$profile ]]; then
+			echo "${red}[ERROR] Can not create profile${blu} '$profile' ${red}because already exists!${end}"
+			exit 1
+		fi
+	
+		[[ -z $bucket ]] &&	read -p "${gre}S3 Bucket endpoint: ${end}" bucket
+		[[ -z $source ]] && read -p "${gre}Source path: ${end}" source
+		if [[ -z $bucket || -z $source || ! -d $source ]]; then
+			echo "${red}[ERROR] Please, enter a valid source and endpoint!${end}"
+			exit 1
+		fi
+		
+		sudo duply $profile create
+		[[ -z $max_age ]] && max_age="1M"
+		sudo sed -i -E "/^[#]?GPG_KEY=/c GPG_KEY='disabled'" /root/.duply/$profile/conf
+		sudo sed -i -E "/^[#]?GPG_PW=/c #GPG_PW='_GPG_PASSWORD_'" /root/.duply/$profile/conf
+		sudo sed -i -E "/^[#]?TARGET=/c TARGET='$bucket'" /root/.duply/$profile/conf
+		sudo sed -i -E "/^[#]?SOURCE=/c SOURCE='$source'" /root/.duply/$profile/conf
+		sudo sed -i -E "/^[#]?MAX_AGE=/c MAX_AGE=$max_age" /root/.duply/$profile/conf
+		
+		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully created!${end}"
+	fi
+}
+
+
+bkp_s3_list() {
+	echo ""
+	for f in /root/.duply/*
+	do 
+		[[ -d $f ]] && pro=$(echo $f | cut -f 4 -d "/" -s)
+		[[ -a $f/conf ]] && fail="" || fail="${red}(fail)${end}"
+		[[ -z $raw ]] && outlist=" ${gre}+ $pro ${end}${fail}" || outlist="$pro"
+		echo $outlist
+	done
+	echo ""
+}
+
+
+bkp_wizard() {
+	echo "${gre}"
+	echo " ***********************************"
+	echo " ************  Backups  ************"
+	echo " ***********************************"
+	echo "${blu}"
+	echo " 1 - AWS S3 directory backup"
+	echo " 2 - WordPress Database local backup"
+	echo " 3 - Restore backup from S3"
+	echo " 4 - Run S3 backup"
+	echo " 5 - Delete profile"
+	echo " 6 - List profiles"
+	echo "${gre}"
+	read -p "What do you want to do? ${end}" wzd
+	echo ""
+	
+	if [[ $wzd == 1 ]]; then
+		bkp_s3_profile
+	elif [[ $wzd == 2 ]]; then
+		bkp_local_db
+	elif [[ $wzd == 3 ]]; then
+		restore="true"
+		bkp_s3_profile
+	elif [[ $wzd == 4 ]]; then
+		run="true"
+		bkp_s3_profile
+	elif [[ $wzd == 5 ]]; then
+		delete="true"
+		bkp_s3_profile
+	elif [[ $wzd == 6 ]]; then
+		list="true"
+		bkp_s3_list
+	else
+		echo "${red}[ERROR] Please, enter a valid option!${end}"
+		exit 1
+	fi
+}
