@@ -29,6 +29,11 @@ bkp_local_db() {
 
 
 bkp_s3_profile() {
+	if [[ ! -s /root/.aws/credentials ]]; then
+		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
+		exit 1
+	fi
+	
 	if [[ $profile == "true" || -z $profile ]]; then
 		echo ""
 		read -p "${gre}Profile name: ${end}" profile
@@ -97,9 +102,14 @@ bkp_s3_list() {
 	do 
 		[[ -d $f ]] && pro=$(echo $f | cut -f 4 -d "/" -s)
 		[[ -a $f/conf ]] && fail="" || fail="${red}(fail)${end}"
-		[[ -z $raw ]] && outlist=" ${gre}+ $pro ${end}${fail}" || outlist="$pro"
-		echo $outlist
+		[[ -n $raw || $list == "raw" ]] && outlist="$pro" || outlist=" ${gre}+ $pro ${end}${fail}"
+		if [[ -n $outlist ]]; then
+			echo "$outlist"
+			nonemptylist=true
+		fi
 	done
+	
+	[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No profiles were found!${end}"
 	echo ""
 }
 
@@ -110,31 +120,33 @@ bkp_wizard() {
 	echo " ************  Backups  ************"
 	echo " ***********************************"
 	echo "${blu}"
-	echo " 1 - AWS S3 directory backup"
-	echo " 2 - WordPress Database local backup"
-	echo " 3 - Restore backup from S3"
-	echo " 4 - Run S3 backup"
-	echo " 5 - Delete profile"
-	echo " 6 - List profiles"
+	echo " 1 - Add AWS S3 Credentials"
+	echo " 2 - AWS S3 directory backup"
+	echo " 3 - WordPress Database local backup"
+	echo " 4 - Restore backup from S3"
+	echo " 5 - Run S3 backup"
+	echo " 6 - Delete profile"
+	echo " 7 - List profiles"
 	echo "${gre}"
 	read -p "What do you want to do? ${end}" wzd
 	echo ""
 	
 	if [[ $wzd == 1 ]]; then
-		bkp_s3_profile
+		webinoly -aws-s3-credentials
 	elif [[ $wzd == 2 ]]; then
-		bkp_local_db
+		bkp_s3_profile
 	elif [[ $wzd == 3 ]]; then
+		bkp_local_db
+	elif [[ $wzd == 4 ]]; then
 		restore="true"
 		bkp_s3_profile
-	elif [[ $wzd == 4 ]]; then
+	elif [[ $wzd == 5 ]]; then
 		run="true"
 		bkp_s3_profile
-	elif [[ $wzd == 5 ]]; then
+	elif [[ $wzd == 6 ]]; then
 		delete="true"
 		bkp_s3_profile
-	elif [[ $wzd == 6 ]]; then
-		list="true"
+	elif [[ $wzd == 7 ]]; then
 		bkp_s3_list
 	else
 		echo "${red}[ERROR] Please, enter a valid option!${end}"
