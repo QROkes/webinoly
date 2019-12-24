@@ -111,7 +111,7 @@ if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; the
 	echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
 	exit 1
 fi
-if [[ -n $subfolder && $type != [123] && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert ]]; then
+if [[ -n $subfolder && $type != [123] && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from ]]; then
 	echo "${red}[ERROR] Subfolder option is only supported for WordPress sites!${end}"
 	exit 1
 else
@@ -650,7 +650,95 @@ elif [[ -n $yoast_sitemap && -a /etc/nginx/sites-available/$domain ]]; then
 		exit 1
 	fi
 
+
+# Staging and Clone sites
+elif [[ -n $clone_from ]]; then
+	if [[ ! -a /etc/nginx/sites-available/$clone_from ]]; then
+		echo "${red}[ERROR] Site/domain ${blu}'$clone_from'${red} not found!${end}"
+		exit 1
+	elif [[ -a /etc/nginx/sites-available/$domain && -z $subfolder ]]; then
+		echo "${red}[ERROR] Can not create site${blu} $domain ${red}because already exists!${end}"
+		exit 1
+	elif [[ -a /etc/nginx/sites-available/$domain && -n $subfolder && -d /var/www/$domain/htdocs$subfolder ]]; then
+		echo "${red}[ERROR] Subfolder ${blu}'$subfolder'${red} already exists!${end}"
+		exit 1
+	elif [[ $(is_wp $clone_from $subfolder) != "true" ]]; then
+		echo "${red}[ERROR] Site${blu} '$clone_from' ${red}is not a WordPress site!${end}"
+		exit 1
+	elif [[ $(conf_read default-site) == $clone_from ]]; then
+		# Nginx fails due to duplicate default-server directives
+		echo "${red}[ERROR] Cloning a site that is set as default-site is not allowed!${end}"
+		exit 1
+	fi
 	
+	if [[ -n $subfolder ]]; then
+		wpcon="/var/www/$domain/htdocs$subfolder/wp-config.php"
+		
+		sudo cp /etc/nginx/apps.d/$clone_from$subname-php.conf /etc/nginx/apps.d/$domain$subname-php.conf
+		sudo cp /etc/nginx/apps.d/$clone_from$subname-wpfc.conf /etc/nginx/apps.d/$domain$subname-wpfc.conf
+		sudo cp /etc/nginx/apps.d/$clone_from$subname-wpcommon.conf /etc/nginx/apps.d/$domain$subname-wpcommon.conf
+		sudo cp /etc/nginx/apps.d/$clone_from$subname-wpcommon-noauth.conf /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
+		sudo cp /etc/nginx/apps.d/$clone_from$subname-locations.conf /etc/nginx/apps.d/$domain$subname-locations.conf
+		sudo cp /etc/nginx/apps.d/$clone_from$subname-yoast-sitemap.conf /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
+		
+		sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-php.conf
+		sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+		
+		dest=$( echo $subfolder | rev | cut -f 2- -d "/" -s | rev )
+		sudo mkdir -p /var/www/$domain/htdocs$dest
+		sudo cp -r /var/www/$clone_from/htdocs$subfolder /var/www/$domain/htdocs$dest
+	else
+		wpcon="/var/www/$domain/wp-config.php"
+		sudo cp -r /var/www/$clone_from /var/www/$domain
+	fi
+
+	if [[ -a /etc/nginx/sites-available/$domain ]]; then
+		sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
+	else
+		sudo cp /etc/nginx/sites-available/$clone_from /etc/nginx/sites-available/$domain
+		sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
+		sudo sed -i "s/$clone_from/$domain/g"  /etc/nginx/sites-available/$domain
+	fi
+
+	[[ $(is_ssl $clone_from) == "true" ]] && site $domain -ssl=off > /dev/null 2>&1
+	dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
+	AUTOGENPASS_WPDB=`pwgen -s -1 16`
+	wp_dbdata $clone_from
+	
+	if [[ $wp_dbhost == "localhost" ]]; then
+		ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+		site -mysql=[localhost,$dom,$dom,$AUTOGENPASS_WPDB] > /dev/null 2>&1
+		mysqldump -u root -p$ROOT_PASS $wp_dbname | mysql -u root -p$ROOT_PASS $dom
+		# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
+		sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS <<_EOF_
+USE $dom;
+UPDATE ${wp_dbpref}options SET option_value='http://${domain}${subfolder}' WHERE option_name='home';
+UPDATE ${wp_dbpref}options SET option_value='http://${domain}${subfolder}' WHERE option_name='siteurl';
+UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'http://$clone_from','http://$domain');
+UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'https://$clone_from','http://$domain');
+UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'$clone_from','$domain');
+FLUSH PRIVILEGES;
+_EOF_
+	else
+		site -mysql=[${wp_dburl}:${wp_dbport},$dom,$dom,$AUTOGENPASS_WPDB,$wp_uroot,$wp_proot] > /dev/null 2>&1
+		mysqldump -u root -p$ROOT_PASS $wp_dbname | mysql -u root -p$ROOT_PASS $dom
+		sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" <<_EOF_
+USE $dom;
+UPDATE ${wp_dbpref}_options SET option_value='http://${domain}${subfolder}' WHERE option_name='home';
+UPDATE ${wp_dbpref}_options SET option_value='http://${domain}${subfolder}' WHERE option_name='siteurl';
+UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'http://$clone_from','http://$domain');
+UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'https://$clone_from','http://$domain');
+UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'$clone_from','$domain');
+FLUSH PRIVILEGES;
+_EOF_
+	fi
+	
+	sudo sed -i "/DB_NAME/c \define('DB_NAME', '$dom');" $wpcon
+	sudo sed -i "/DB_USER/c \define('DB_USER', '$dom');" $wpcon
+	sudo sed -i "/DB_PASSWORD/c \define('DB_PASSWORD', '$AUTOGENPASS_WPDB');" $wpcon
+	echo "${gre}Site ${blu}'$domain$subfolder'${gre} is now a successful clone of ${blu}'$clone_from$subfolder'${end}"
+	
+
 # Catch ERROR 
 elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
 	echo "${red}[ERROR] Site${blu} $domain ${red}doesn't exists, please enter a valid domain name!${end}"
