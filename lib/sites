@@ -718,3 +718,100 @@ force_redirect() {
 	sudo rm /tmp/template-site-wwwredirect
 
 }
+
+
+redirection_manager() {
+	if [[ -n $list ]]; then
+		echo "${gre}"
+		sudo sed -n '/RedirectFrom/{h;d;}; H; /To:/{x;p;}' /etc/nginx/apps.d/a.com-nginx.conf | sed '/# To:/ s/$/\n/' | sed 's/^# //'
+		echo "${end}"
+	elif [[ -n $delete ]]; then
+		echo ""
+		[[ -z $from ]] && read -p "${blu}Redirect 'from path' to delete: ${end}" from
+		if [[ -z $from ]]; then
+			echo "${red}[ERROR] Please, enter a valid 'from' path!${end}"
+			exit 1
+		fi
+		
+		if [[ -a /etc/nginx/apps.d/$domain-nginx.conf ]]; then
+			sudo sed -i "/^# RedirectFrom: $(echo $from | sed "s#/#\\\/#g")/,/^# RedirectEnd/{/.*/d}" /etc/nginx/apps.d/$domain-nginx.conf
+			if [[ ! -s /etc/nginx/apps.d/$domain-nginx.conf ]]; then
+				sudo rm /etc/nginx/apps.d/$domain-nginx.conf
+				sudo sed -i "/$domain-nginx.conf;/d" /etc/nginx/sites-available/$domain
+			fi
+		fi
+		echo "${gre}Redirection successfully removed!${end}"
+	else
+		# Default type
+		[[ -z $http_code ]] && http_code="302"
+		
+		echo ""
+		[[ -z $from ]] && read -p "${blu}Redirect from: ${end}" from
+		[[ -z $to ]] && ! [[ $http_code =~ ^(410|444|451)$ ]] && read -p "${blu}Redirect to: ${end}" to
+		echo ""
+		
+		if [[ -z $from || ( -z $to && $http_code =~ ^(301|302|303|307|308)$ ) ]]; then
+			echo "${red}[ERROR] Please, enter a valid from/to redirection path!${end}"
+			exit 1
+		elif ! [[ $http_code =~ ^(301|302|303|307|308|410|444|451)$ ]]; then
+			echo "${red}[ERROR] Invalid redirection HTTP Code!${end}"
+			exit 1
+		elif ! [[ $from =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
+			echo "${red}[ERROR] Please, enter a valid from/to redirection path!${end}"
+			exit 1
+		elif [[ -n $to ]] && ! [[ $to =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
+			echo "${red}[ERROR] Please, enter a valid from/to redirection path!${end}"
+			exit 1
+		fi
+		
+		if [[ ! -a /etc/nginx/apps.d/$domain-nginx.conf ]]; then
+			sudo touch /etc/nginx/apps.d/$domain-nginx.conf
+			sudo chmod 644 /etc/nginx/apps.d/$domain-nginx.conf
+			sudo chown -R root:root /etc/nginx/apps.d/$domain-nginx.conf
+		fi
+		
+		exist=$( grep -E "^# RedirectFrom: ${from}$" /etc/nginx/apps.d/$domain-nginx.conf )
+		if [[ -z $exist ]]; then
+			if [[ $exact == true ]]; then
+				sign="= "
+				code="$from (Exact)"
+			else
+				sign=""
+				code="$from"
+			fi
+			
+			if [[ $http_code =~ ^(301|302|303|307|308)$ ]]; then
+				echo "# RedirectFrom: ${code}
+# To: $to ($http_code)
+location $sign$from {
+	return $http_code $to;
+}
+# RedirectEnd" >> /etc/nginx/apps.d/$domain-nginx.conf
+			elif [[ $http_code =~ ^(410|451)$ && -n $to ]]; then
+				echo "# RedirectFrom: ${code}
+# To: $to ($http_code)
+location $sign$from {
+	error_page $http_code $to;
+	return $http_code;
+}
+# RedirectEnd" >> /etc/nginx/apps.d/$domain-nginx.conf
+			elif [[ $http_code =~ ^(410|444|451)$ && -z $to ]]; then
+				echo "# RedirectFrom: ${code}
+# To: $to ($http_code)
+location $sign$from {
+	return $http_code;
+}
+# RedirectEnd" >> /etc/nginx/apps.d/$domain-nginx.conf
+			fi
+			
+			vconf=$( grep -E "include apps.d/$domain-nginx.conf;" /etc/nginx/sites-available/$domain )
+			[[ -z $vconf ]] && sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain-nginx.conf;" /etc/nginx/sites-available/$domain
+			echo "${gre}Redirection successfully added!${end}"
+		else
+			echo "${gre}Redirection already exists!${end}"
+		fi
+		
+		
+	fi
+
+}
