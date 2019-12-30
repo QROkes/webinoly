@@ -2,8 +2,8 @@
 
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
-# Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -yoast-sitemap, -multisite-convert
-# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp, -subfolder
+# Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -yoast-sitemap, -multisite-convert, -clone-from, -replace-content, -redirection
+# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp, -subfolder, -from, -to, -http-code
 
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
@@ -677,7 +677,7 @@ elif [[ -n $clone_from ]]; then
 		sudo sed -i "s/$clone_from/$domain/g"  /etc/nginx/sites-available/$domain
 	fi
 
-	[[ $(is_ssl $clone_from) == "true" ]] && site $domain -ssl=off > /dev/null 2>&1
+	[[ $(is_ssl $clone_from) == "true" ]] && site $domain -ssl=off -revoke=off > /dev/null 2>&1
 	dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
 	AUTOGENPASS_WPDB=`pwgen -s -1 16`
 	wp_dbdata $clone_from
@@ -694,14 +694,8 @@ UPDATE ${wp_dbpref}options SET option_value='http://${domain}${subfolder}' WHERE
 FLUSH PRIVILEGES;
 _EOF_
 	else
-		site -mysql=[${wp_dburl}:${wp_dbport},$dom,$dom,$AUTOGENPASS_WPDB,$wp_uroot,$wp_proot] > /dev/null 2>&1
-		mysqldump -u root -p$ROOT_PASS $wp_dbname | mysql -u root -p$ROOT_PASS $dom
-		sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" <<_EOF_
-USE $dom;
-UPDATE ${wp_dbpref}_options SET option_value='http://${domain}${subfolder}' WHERE option_name='home';
-UPDATE ${wp_dbpref}_options SET option_value='http://${domain}${subfolder}' WHERE option_name='siteurl';
-FLUSH PRIVILEGES;
-_EOF_
+		echo "${red}[ERROR] Database host is not localhost!${end}"
+		exit 1
 	fi
 	
 	sudo sed -i "/DB_NAME/c \define('DB_NAME', '$dom');" $wpcon

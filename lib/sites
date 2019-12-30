@@ -722,9 +722,9 @@ force_redirect() {
 
 redirection_manager() {
 	if [[ -n $list ]]; then
-		echo "${gre}"
-		sudo sed -n '/RedirectFrom/{h;d;}; H; /To:/{x;p;}' /etc/nginx/apps.d/a.com-nginx.conf | sed '/# To:/ s/$/\n/' | sed 's/^# //'
-		echo "${end}"
+		[[ $list == "raw" ]] && echo "" || echo "${gre}"
+		sudo sed -n '/RedirectFrom/{h;d;}; H; /To:/{x;p;}' /etc/nginx/apps.d/$domain-nginx.conf | sed '/# To:/ s/$/\n/' | sed 's/^# //'
+		[[ $list == "raw" ]] && echo "" || echo "${end}"
 	elif [[ -n $delete ]]; then
 		echo ""
 		[[ -z $from ]] && read -p "${blu}Redirect 'from path' to delete: ${end}" from
@@ -759,7 +759,7 @@ redirection_manager() {
 		elif ! [[ $from =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
 			echo "${red}[ERROR] Please, enter a valid from/to redirection path!${end}"
 			exit 1
-		elif [[ -n $to ]] && ! [[ $to =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
+		elif [[ -n $to ]] && ! [[ $to =~ ^[A-Za-z0-9_\/\.\-:]+$ ]]; then
 			echo "${red}[ERROR] Please, enter a valid from/to redirection path!${end}"
 			exit 1
 		fi
@@ -787,15 +787,7 @@ location $sign$from {
 	return $http_code $to;
 }
 # RedirectEnd" >> /etc/nginx/apps.d/$domain-nginx.conf
-			elif [[ $http_code =~ ^(410|451)$ && -n $to ]]; then
-				echo "# RedirectFrom: ${code}
-# To: $to ($http_code)
-location $sign$from {
-	error_page $http_code $to;
-	return $http_code;
-}
-# RedirectEnd" >> /etc/nginx/apps.d/$domain-nginx.conf
-			elif [[ $http_code =~ ^(410|444|451)$ && -z $to ]]; then
+			elif [[ $http_code =~ ^(410|444|451)$ ]]; then
 				echo "# RedirectFrom: ${code}
 # To: $to ($http_code)
 location $sign$from {
