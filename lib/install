@@ -163,7 +163,7 @@ php_install() {
 		echo "${gre}PHP version '$(conf_read php-ver)' is set as default.${end}"
 	else
 		# Default PHP version
-		conf_write php-ver 7.3
+		conf_write php-ver 7.4
 	fi
 	ver=$(conf_read php-ver)
 	
