@@ -52,6 +52,7 @@ site_ssl_on() {
 	local path=$domain
 	
 	# Some validations to prevent errors when creating certs.
+	check_for_nginx_tool
 	if [[ -n $root && -a /etc/nginx/sites-available/$root ]]; then
 		path=$root
 	elif [[ -n $root && ! -a /etc/nginx/sites-available/$root ]]; then
@@ -75,22 +76,6 @@ site_ssl_on() {
 		exit 1
 	fi
 	
-	# Check if Letsencrypt is installed
-	if [[ $(conf_read nginx-tool) != "true" || ! -a /usr/bin/letsencrypt ]]; then
-		echo "${red}Seems like Let's Encrypt tool is not installed!"
-		echo "${blu}Do you want to install it now? [y/N]? ${end}"
-		while read -r -n 1 -s answer; do
-			answer=${answer:-n}
-			echo ""
-			[[ $answer = [YyNn] ]] && break
-		done
-		
-		[[ $answer == [Yy] ]] && sudo stack -nginx=force
-		if [[ $(conf_read nginx-tool) != "true" || ! -a /usr/bin/letsencrypt ]]; then
-			echo "${red}[ERROR] Let's Encrypt is required and not found! ${end}"
-			exit 1
-		fi
-	fi
 
 	echo "${gre}"
 	echo "*************************************************************************************************"

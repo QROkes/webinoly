@@ -110,9 +110,11 @@ fi
 if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; then
 	echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
 	exit 1
-fi
-if [[ -n $subfolder && $type != [123] && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from && -z $replace_content ]]; then
+elif [[ -n $subfolder && $type != [123] && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from && -z $replace_content ]]; then
 	echo "${red}[ERROR] Subfolder option is only supported for WordPress sites!${end}"
+	exit 1
+elif [[ -n $subfolder && ( -n $delete || -n $cache || -n $yoast_sitemap || -n $multisite_convert || -n $clone_from || -n $replace_content ) && ! -d /var/www/$domain/htdocs$subfolder ]]; then
+	echo "${red}[ERROR] Subfolder not found!${end}"
 	exit 1
 else
 	subname=$(echo $subfolder | sed "s/\//_/g")
@@ -523,6 +525,9 @@ elif [[ -n $ssl ]]; then
 	elif [[ $ssl == "off" && ! -a /etc/nginx/sites-available/$domain && -a /etc/letsencrypt/live/$domain/cert.pem ]]; then
 		echo "${red}[WARNING] SSL Orphan-Cert found and will be revoked automatically!${end}"
 		ssl_revoke
+	elif [[ -n $domain && ! -f /etc/nginx/sites-available/$domain ]]; then
+		echo "${red}[ERROR] Domain not found! ${end}"
+		exit 1
 	else
 		echo "${red}[ERROR] Invalid value for SSL command! ${end}"
 		exit 1

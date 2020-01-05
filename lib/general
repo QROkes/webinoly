@@ -69,6 +69,12 @@ check_for_nginx() {
 		exit 1
 	fi
 }
+check_for_nginx_tool() {
+	if [[ $(conf_read nginx) != "true"  || $(conf_read nginx-optim) != "true" || $(conf_read nginx-tool) != "true" ]]; then
+		echo "${red}[ERROR] NGINX Tools are required and not found! ${end}"
+		exit 1
+	fi
+}
 check_for_php() {
 	if [[ $(conf_read php) != "true" && $1 == "-ask" ]]; then
 		echo "${red}"
@@ -85,6 +91,12 @@ check_for_php() {
 	
 	if [[ $(conf_read php) != "true" ]]; then
 		echo "${red}[ERROR] PHP is required and not found! ${end}"
+		exit 1
+	fi
+}
+check_for_php_tool() {
+	if [[ $(conf_read php) != "true"  || $(conf_read php-optim) != "true" || $(conf_read php-tool) != "true" ]]; then
+		echo "${red}[ERROR] PHP Tools are required and not found! ${end}"
 		exit 1
 	fi
 }
