@@ -98,16 +98,18 @@ bkp_s3_profile() {
 
 bkp_s3_list() {
 	echo ""
-	for f in /root/.duply/*
-	do 
-		[[ -d $f ]] && pro=$(echo $f | cut -f 4 -d "/" -s)
-		[[ -a $f/conf ]] && fail="" || fail="${red}(fail)${end}"
-		[[ -n $raw || $list == "raw" ]] && outlist="$pro" || outlist=" ${gre}+ $pro ${end}${fail}"
-		if [[ -n $outlist ]]; then
-			echo "$outlist"
-			nonemptylist=true
-		fi
-	done
+	if [[ -d /root/.duply ]];  then
+		for f in /root/.duply/*
+		do 
+			[[ -d $f ]] && pro=$(echo $f | cut -f 4 -d "/" -s)
+			[[ -a $f/conf ]] && fail="" || fail="${red}(fail)${end}"
+			[[ -n $raw || $list == "raw" ]] && outlist="$pro" || outlist=" ${gre}+ $pro ${end}${fail}"
+			if [[ -n $outlist ]]; then
+				echo "$outlist"
+				nonemptylist=true
+			fi
+		done
+	fi
 	
 	[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No profiles were found!${end}"
 	echo ""

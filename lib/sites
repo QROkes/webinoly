@@ -722,9 +722,15 @@ force_redirect() {
 
 redirection_manager() {
 	if [[ -n $list ]]; then
-		[[ $list == "raw" ]] && echo "" || echo "${gre}"
-		sudo sed -n '/RedirectFrom/{h;d;}; H; /To:/{x;p;}' /etc/nginx/apps.d/$domain-nginx.conf | sed '/# To:/ s/$/\n/' | sed 's/^# //'
-		[[ $list == "raw" ]] && echo "" || echo "${end}"
+		[[ -n $raw || $list == "raw" ]] && echo "" || echo "${gre}"
+		
+		if [[ -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
+			isred=$( grep -P "^# RedirectFrom: " /etc/nginx/apps.d/$domain-nginx.conf )
+			sudo sed -n '/RedirectFrom/{h;d;}; H; /To:/{x;p;}' /etc/nginx/apps.d/$domain-nginx.conf | sed '/# To:/ s/$/\n/' | sed 's/^# //'
+		fi
+		[[ -z $isred && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No profiles were found!${end}"
+	
+		[[ -n $raw || $list == "raw" ]] && echo "" || echo "${end}"
 	elif [[ -n $delete ]]; then
 		echo ""
 		[[ -z $from ]] && read -p "${blu}Redirect 'from path' to delete: ${end}" from

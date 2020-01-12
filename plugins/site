@@ -451,7 +451,7 @@ elif [[ -n $on && ! -L /etc/nginx/sites-enabled/$domain && -a /etc/nginx/sites-a
 
 
 # Redirection Manager
-elif [[ -n $redirection && ( -f /etc/nginx/sites-available/$domain || -n $list ) ]]; then
+elif [[ -n $redirection && -f /etc/nginx/sites-available/$domain ]]; then
 	check_for_nginx
 	redirection_manager
 
@@ -483,7 +483,7 @@ elif [[ -n $ssl ]]; then
 	if [[ $ssl == "renew" && -z $domain ]]; then
 			# Post-Hook removed because we always restart nginx at the end of site command
 			sudo certbot renew
-	elif [[ ( $ssl == "on" || $ssl == "force-renewal" ) && -a /etc/nginx/sites-available/$domain ]]; then
+	elif [[ ( $ssl == "on" || $ssl == "force-renewal" ) && -f /etc/nginx/sites-available/$domain ]]; then
 		api-events_update si10
 		if [[ $(is_ssl $domain) == "true" && $ssl != "force-renewal" ]]; then
 			echo "${gre}SSL is already enabled for your site -${blu} $domain ${end}"
@@ -519,10 +519,10 @@ elif [[ -n $ssl ]]; then
 		else
 			site_ssl_on
 		fi
-	elif [[ $ssl == "off" && -a /etc/nginx/sites-available/$domain ]]; then
+	elif [[ $ssl == "off" && -f /etc/nginx/sites-available/$domain ]]; then
 		api-events_update si11
 		[[ $(is_ssl $domain) == "true" ]] && site_ssl_off || echo "${gre}SSL is already disabled for your site${blu} $domain ${end}"
-	elif [[ $ssl == "off" && ! -a /etc/nginx/sites-available/$domain && -a /etc/letsencrypt/live/$domain/cert.pem ]]; then
+	elif [[ $ssl == "off" && ! -f /etc/nginx/sites-available/$domain && -f /etc/letsencrypt/live/$domain/cert.pem ]]; then
 		echo "${red}[WARNING] SSL Orphan-Cert found and will be revoked automatically!${end}"
 		ssl_revoke
 	elif [[ -n $domain && ! -f /etc/nginx/sites-available/$domain ]]; then
@@ -751,7 +751,7 @@ elif [[ -n $replace_content && -a /etc/nginx/sites-available/$domain ]]; then
 
 
 # List Sites
-elif [[ -n $list ]]; then
+elif [[ -n $list && -z $redirection ]]; then
 	echo ""
 	for site in "/etc/nginx/sites-available"/*
 	do

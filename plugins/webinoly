@@ -640,10 +640,10 @@ elif [[ -n $smtp ]]; then
 
 elif [[ -n $backup ]]; then
 	check_for_nginx_tool
-	if [[ $backup == "local" ]]; then
-		bkp_local_db
-	elif [[ $backup == "s3" && -n $list ]]; then
+	if [[ -n $list ]]; then
 		bkp_s3_list
+	elif [[ $backup == "local" ]]; then
+		bkp_local_db
 	elif [[ $backup == "s3" ]]; then
 		bkp_s3_profile
 	else
