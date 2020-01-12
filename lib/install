@@ -245,6 +245,7 @@ FLUSH PRIVILEGES;
 _EOF_
 
 	conf_write mysql true
+	sudo log -mysql=binary -disable > /dev/null 2>&1
 	echo "${gre}MySQL has been installed successfully! ${end}"
 	api-events_update im4
 }

@@ -62,8 +62,10 @@ elif [[ -n $mysql || -n $syslog ]]; then
 			echo "${red}[ERROR] MariaDB Error log (syslog) file not found or still empty!${end}"
 			exit 1
 		fi
+	
+	# Slow Query Log
 	elif [[ $mysql == "slow" ]]; then
-		islow=$( grep -E "^slow_query_log[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s | sed 's/[^0-9]*//g' )
+		islow=$( grep -P "^slow_query_log[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s | sed 's/[^0-9]*//g' )
 		if [[ -n $enable && $islow != 1 ]]; then
 			sudo sed -i -E "/^[#]?slow_query_log[\[ \t=]/c slow_query_log = 1" /etc/mysql/my.cnf
 			sudo service mysql restart
@@ -85,10 +87,37 @@ elif [[ -n $mysql || -n $syslog ]]; then
 			echo "${red}[ERROR] MariaDB Slow Query log file not found or still empty!${end}"
 			exit 1
 		fi
+	
+	# Binary Log
+	elif [[ $mysql == "binary" ]]; then
+		isbin=$( grep -P "^log_bin[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s )
+		if [[ -n $enable && -z $isbin ]]; then
+			sudo sed -i -E "/^[#]?log_bin[\[ \t=]/c log_bin = /var/log/mysql/mariadb-bin" /etc/mysql/my.cnf
+			sudo sed -i -E "/^[#]?log_bin_index[\[ \t=]/c log_bin_index = /var/log/mysql/mariadb-bin.index" /etc/mysql/my.cnf
+			sudo service mysql restart
+			echo "${gre}MariaDB Binary log was successfully enabled!${end}"
+		elif [[ -n $enable && -n $isbin ]]; then
+			echo "${gre}MariaDB Binary log is already enabled!${end}"
+		elif [[ -n $disable && -n $isbin ]]; then
+			sudo sed -i -E "/^[#]?log_bin[\[ \t=]/c #log_bin = /var/log/mysql/mariadb-bin" /etc/mysql/my.cnf
+			sudo sed -i -E "/^[#]?log_bin_index[\[ \t=]/c #log_bin_index = /var/log/mysql/mariadb-bin.index" /etc/mysql/my.cnf
+			sudo service mysql restart
+			echo "${gre}MariaDB Binary log was successfully disabled!${end}"
+		elif [[ -n $disable && -z $isbin ]]; then
+			echo "${gre}MariaDB Binary log is already disabled!${end}"
+		elif [[ -s /var/log/mysql/mariadb-bin && -n $isbin ]]; then
+			sudo tail -f --lines=$clines /var/log/mysql/mariadb-bin
+		elif [[ -z $isbin ]]; then
+			echo "${red}[ERROR] MariaDB Binary log is not enabled!${end}"
+			exit 1
+		else
+			echo "${red}[ERROR] MariaDB Binary log file not found or still empty!${end}"
+			exit 1
+		fi
 		
 	# General Log
 	else
-		isgrl=$( grep -E "^general_log[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s | sed 's/[^0-9]*//g' )
+		isgrl=$( grep -P "^general_log[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s | sed 's/[^0-9]*//g' )
 		if [[ -n $enable && $isgrl != 1 ]]; then
 			sudo sed -i -E "/^[#]?general_log[\[ \t=]/c general_log = 1" /etc/mysql/my.cnf
 			sudo service mysql restart
