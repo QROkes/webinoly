@@ -744,8 +744,11 @@ elif [[ -n $replace_content && -a /etc/nginx/sites-available/$domain ]]; then
 	if [[ $wp_dbhost == "localhost" ]]; then
 		ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 		sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$query"
-	else
+	elif [[ -n $wp_dbhost ]]; then
 		sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$query"
+	else
+		echo "${red}[ERROR] Invalid WP database host!${end}"
+		exit 1
 	fi
 	echo "${gre}Content successfully replaced in your WP site!${end}"
 

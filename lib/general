@@ -150,6 +150,12 @@ conf_write() {
 wp_dbdata() {
 	local domain="$1"
 	
+	# Check for WP parked, domain mapping is common for instance.
+	if [[ $(is_parked $domain) == "true" ]]; then
+		echo "${red}[ERROR] Parked sites are not supported!${end}"
+		exit 1
+	fi
+	
 	# Get dbname and dbuser of a WP site
 	if [[ -a /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
 		wpconfpath="/var/www/$domain/htdocs$subfolder/wp-config.php"
@@ -166,9 +172,11 @@ wp_dbdata() {
 	wp_dbport=$(echo "$wp_dbhost" | cut -f 2 -d ':' -s)
 	wp_dbpref=$( grep -F "table_prefix" $wpconfpath | cut -f 2 -d "'" -s)
 	
+	[[ ${wp_dbhost,,} == "localhost" ]] && wp_dbhost=${wp_dbhost,,}
+	
 	if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
 		echo ""
-		echo "${gre}External DB found in${blu} $domain ${gre}(Press 'Enter' key twice to skip and not delete)"
+		echo "${gre}External DB found in${blu} $domain ${gre}(Press 'Enter' key twice to skip)"
 		read -p "${blu}External DB root username [root]: " wp_uroot
 		wp_uroot=${wp_uroot:-root}
 		read -p "External DB root password: " wp_proot
