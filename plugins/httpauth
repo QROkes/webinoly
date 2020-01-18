@@ -12,9 +12,9 @@ api-events_update has
 [[ -n $wp_admin && -z $domain ]] || check_for_nginx -ask
 
 # Check for domain.
-if [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
+if [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 	authfile="apps.d/.htpasswd-$domain"
-elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
+elif [[ -n $domain && ! -f /etc/nginx/sites-available/$domain ]]; then
 	echo "${red}[ERROR] Domain not found!${end}"
 	exit 1
 else
@@ -55,7 +55,7 @@ if [[ -n $add ]]; then
 	fi
 	
 	# Create pass-file if not-exist.
-	if [[ ! -a /etc/nginx/$authfile ]]; then
+	if [[ ! -f /etc/nginx/$authfile ]]; then
 		sudo touch /etc/nginx/$authfile
 		sudo chmod 644 /etc/nginx/$authfile
 		sudo chown -R root:root /etc/nginx/$authfile
@@ -75,7 +75,7 @@ if [[ -n $add ]]; then
 elif [[ -n $delete ]]; then
 	api-events_update ha2
 	[[ $delete == true ]] && read -p "${blu}HTTP-Auth User: ${end}" userpurge || userpurge=$delete
-	[[ -a /etc/nginx/$authfile ]] && exist=$( grep -F "${userpurge}:" /etc/nginx/$authfile )
+	[[ -f /etc/nginx/$authfile ]] && exist=$( grep -F "${userpurge}:" /etc/nginx/$authfile )
 	if [[ -z $exist ]]; then
 		echo "${red}[ERROR] User '$userpurge' does not exist!${end}"
 		exit 1
@@ -85,7 +85,7 @@ elif [[ -n $delete ]]; then
 	# Remove site-auth-file if empty.
 	[[ -n $domain && ! -s /etc/nginx/$authfile ]] && sudo rm /etc/nginx/$authfile
 	
-	echo "${gre}User '$userpurge has been deleted successfully!${end}"
+	echo "${gre}User '$userpurge' has been deleted successfully!${end}"
 
 	
 elif [[ -n $wp_admin ]]; then
@@ -147,9 +147,9 @@ elif [[ -n $whitelist ]]; then
 	if [[ -z $purge ]]; then
 		if [[ -n $list ]]; then
 			[[ -n $raw ]] && echo "" || echo "${blu}"
-			if [[ -a /etc/nginx/apps.d/whitelist-acl.conf && -z $raw ]]; then
+			if [[ -f /etc/nginx/apps.d/whitelist-acl.conf && -z $raw ]]; then
 				sudo sed -n 's/^allow //p;' /etc/nginx/apps.d/whitelist-acl.conf | sudo sed -n 's/;$//p' | sed 's/^/+ /'
-			elif [[ -a /etc/nginx/apps.d/whitelist-acl.conf && -n $raw ]]; then
+			elif [[ -f /etc/nginx/apps.d/whitelist-acl.conf && -n $raw ]]; then
 				sudo sed -n 's/^allow //p;' /etc/nginx/apps.d/whitelist-acl.conf | sudo sed -n 's/;$//p'
 			else
 				echo "[Empty] No IP's were found!"
@@ -158,7 +158,7 @@ elif [[ -n $whitelist ]]; then
 		else
 			[[ $whitelist == true ]] && read -p "${blu}IP address to whitelist: ${end}" whitelist
 			if [[ $(ip_check $whitelist) == "true" ]]; then
-				if [[ ! -a /etc/nginx/apps.d/whitelist-acl.conf ]]; then
+				if [[ ! -f /etc/nginx/apps.d/whitelist-acl.conf ]]; then
 					sudo touch /etc/nginx/apps.d/whitelist-acl.conf
 					sudo chmod 644 /etc/nginx/apps.d/whitelist-acl.conf
 					sudo chown -R root:root /etc/nginx/apps.d/whitelist-acl.conf
@@ -180,7 +180,7 @@ elif [[ -n $whitelist ]]; then
 		[[ $whitelist == true ]] && read -p "${blu}IP address to remove from whitelist: ${end}" whitelist
 		if [[ $(ip_check $whitelist) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
-			[[ -a /etc/nginx/apps.d/whitelist-acl.conf ]] && sudo sed -i "\#^allow ${whitelist};#d" /etc/nginx/apps.d/whitelist-acl.conf
+			[[ -f /etc/nginx/apps.d/whitelist-acl.conf ]] && sudo sed -i "\#^allow ${whitelist};#d" /etc/nginx/apps.d/whitelist-acl.conf
 			
 			# Remove site-auth-file if empty.
 			[[ ! -s /etc/nginx/apps.d/whitelist-acl.conf ]] && sudo rm /etc/nginx/apps.d/whitelist-acl.conf
@@ -216,7 +216,7 @@ elif [[ -n $path && -n $domain ]]; then
 			echo "${red}[ERROR] HTTP Authentication is not allowed in subfolders (only root '/' is allowed) for Reverse Proxy sites!${end}"
 			exit 1
 		elif [[ $path =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
-			if [[ ! -a /etc/nginx/apps.d/$domain-nginx.conf ]]; then
+			if [[ ! -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
 				sudo touch /etc/nginx/apps.d/$domain-nginx.conf
 				sudo chmod 644 /etc/nginx/apps.d/$domain-nginx.conf
 				sudo chown -R root:root /etc/nginx/apps.d/$domain-nginx.conf
@@ -267,7 +267,7 @@ location $sign$path {
 			sudo rm -rf /etc/nginx/apps.d/$domain-nginx.conf
 			echo "${gre}HTTP Authentication successfully removed from all your custom paths!${gre}${end}"
 		elif [[ $path =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
-			if [[ -a /etc/nginx/apps.d/$domain-nginx.conf ]]; then
+			if [[ -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
 				sudo sed -i "/^# Path: $(echo $path | sed "s#/#\\\/#g")/,/^# PathEnd/{/.*/d}" /etc/nginx/apps.d/$domain-nginx.conf
 				if [[ ! -s /etc/nginx/apps.d/$domain-nginx.conf ]]; then
 					sudo rm /etc/nginx/apps.d/$domain-nginx.conf
@@ -289,9 +289,9 @@ elif [[ $list == "protected" && -n $domain ]]; then
 	elif [[ -z $root ]]; then
 		[[ -z $raw ]] && echo "${blu}" || echo ""
 	fi
-	if [[ -a /etc/nginx/apps.d/$domain-nginx.conf && -z $raw ]]; then
+	if [[ -f /etc/nginx/apps.d/$domain-nginx.conf && -z $raw ]]; then
 		sudo sed -n 's/^# Path: //p;' /etc/nginx/apps.d/$domain-nginx.conf | sed 's/^/+ /'
-	elif [[ -a /etc/nginx/apps.d/$domain-nginx.conf && -n $raw ]]; then
+	elif [[ -f /etc/nginx/apps.d/$domain-nginx.conf && -n $raw ]]; then
 		sudo sed -n 's/^# Path: //p;' /etc/nginx/apps.d/$domain-nginx.conf
 	elif [[ -z $root ]]; then
 		echo "[Empty] No protected paths were found!"
@@ -302,7 +302,7 @@ elif [[ $list == "protected" && -n $domain ]]; then
 	
 elif [[ -n $list ]]; then
 	echo ""
-	if [[ -a /etc/nginx/$authfile ]]; then
+	if [[ -f /etc/nginx/$authfile ]]; then
 		cat /etc/nginx/$authfile | 
 		{
 		while read line

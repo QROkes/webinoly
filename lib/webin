@@ -11,156 +11,156 @@ webinoly_verify() {
 	echo "${red}"
 	
 	# Webinoly
-	if [[ ! -a /opt/webinoly/lib/general ]]; then
+	if [[ ! -f /opt/webinoly/lib/general ]]; then
 		echo "[ERROR] File: /opt/webinoly/lib/general not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/lib/install ]]; then
+	if [[ ! -f /opt/webinoly/lib/install ]]; then
 		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/lib/sites ]]; then
+	if [[ ! -f /opt/webinoly/lib/sites ]]; then
 		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/lib/site-ssl ]]; then
+	if [[ ! -f /opt/webinoly/lib/site-ssl ]]; then
 		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/lib/webin ]]; then
+	if [[ ! -f /opt/webinoly/lib/webin ]]; then
 		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/lib/update ]]; then
+	if [[ ! -f /opt/webinoly/lib/update ]]; then
 		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/lib/public_suffix_list.dat ]]; then
+	if [[ ! -f /opt/webinoly/lib/public_suffix_list.dat ]]; then
 		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/lib/timezone.dat ]]; then
+	if [[ ! -f /opt/webinoly/lib/timezone.dat ]]; then
 		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/lib/api-events_sample ]]; then
+	if [[ ! -f /opt/webinoly/lib/api-events_sample ]]; then
 		echo "[ERROR] File: /opt/webinoly/lib/install not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/template-site-php ]]; then
+	if [[ ! -f /opt/webinoly/templates/template-site-php ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/template-site-php not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/template-site-proxy ]]; then
+	if [[ ! -f /opt/webinoly/templates/template-site-proxy ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/template-site-php not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/template-site-ssl ]]; then
+	if [[ ! -f /opt/webinoly/templates/template-site-ssl ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/template-site-php not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/template-site-sslredirect ]]; then
+	if [[ ! -f /opt/webinoly/templates/template-site-sslredirect ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/template-site-php not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/template-site-wwwredirect ]]; then
+	if [[ ! -f /opt/webinoly/templates/template-site-wwwredirect ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/template-site-php not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/nginx.conf ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/nginx.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/nginx.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/22222 ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/22222 ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/22222 not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/conf.d/fastcgi.conf ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/conf.d/fastcgi.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/conf.d/fastcgi.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/conf.d/upstream.conf ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/conf.d/upstream.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/conf.d/upstream.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/common/acl.conf ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/common/acl.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/acl.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/common/locations.conf ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/common/locations.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/locations.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/common/php.conf ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/common/php.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/php.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/common/wpcommon.conf ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/common/wpcommon.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/wpcommon.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/common/wpfc.conf ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/common/wpfc.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/wpfc.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/common/wpsubdir.conf ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/common/wpsubdir.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/wpsubdir.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/common/headers-html.conf ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/common/headers-html.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/headers-html.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/common/headers-http.conf ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/common/headers-http.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/headers-http.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/templates/nginx/common/headers-https.conf ]]; then
+	if [[ ! -f /opt/webinoly/templates/nginx/common/headers-https.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/templates/nginx/common/headers-https.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
+	if [[ ! -f /opt/webinoly/webinoly.conf ]]; then
 		echo "[ERROR] File: /opt/webinoly/webinoly.conf not found!"
 		error="1"
 	fi
-	if [[ ! -a /usr/bin/webinoly ]]; then
+	if [[ ! -f /usr/bin/webinoly ]]; then
 		echo "[ERROR] File: /usr/bin/webinoly not found!"
 		error="1"
 	fi
-	if [[ ! -a /usr/bin/site ]]; then
+	if [[ ! -f /usr/bin/site ]]; then
 		echo "[ERROR] File: /usr/bin/site not found!"
 		error="1"
 	fi
-	if [[ ! -a /usr/bin/httpauth ]]; then
+	if [[ ! -f /usr/bin/httpauth ]]; then
 		echo "[ERROR] File: /usr/bin/httpauth not found!"
 		error="1"
 	fi
-	if [[ ! -a /usr/bin/log ]]; then
+	if [[ ! -f /usr/bin/log ]]; then
 		echo "[ERROR] File: /usr/bin/log not found!"
 		error="1"
 	fi
-	if [[ ! -a /usr/bin/stack ]]; then
+	if [[ ! -f /usr/bin/stack ]]; then
 		echo "[ERROR] File: /usr/bin/stack not found!"
 		error="1"
 	fi
 	
 	# NGINX
 	if [[ $(conf_read nginx) == "true" ]]; then
-		if [[ ! -a /etc/nginx/nginx.conf ]]; then
+		if [[ ! -f /etc/nginx/nginx.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/nginx.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/fastcgi.conf ]]; then
+		if [[ ! -f /etc/nginx/fastcgi.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/fastcgi.conf not found!"
 			error="1"
 		fi
 	fi
 	if [[ $(conf_read nginx) != "true" ]]; then
-		if [[ -a /etc/nginx/nginx.conf ]]; then
+		if [[ -f /etc/nginx/nginx.conf ]]; then
 			echo "[WARNING] Seems like NGINX is installed but Webinoly can not detect it!"
 			warning="1"
 		fi
-		if [[ -a /etc/nginx/fastcgi.conf ]]; then
+		if [[ -f /etc/nginx/fastcgi.conf ]]; then
 			echo "[WARNING] Seems like NGINX is installed but Webinoly can not detect it!"
 			warning="1"
 		fi
@@ -168,55 +168,55 @@ webinoly_verify() {
 	
 	# NGINX Optim
 	if [[ $(conf_read nginx-optim) == "true" ]]; then
-		if [[ ! -a /etc/nginx/fastcgi_params ]]; then
+		if [[ ! -f /etc/nginx/fastcgi_params ]]; then
 			echo "[ERROR] File: /etc/nginx/fastcgi_params not found!"
 			error="1"
 		fi
-		if ! [[ -a /etc/nginx/.htpasswd && $(conf_read php) == "true" || ( -n $(conf_read tools-site) && -a /etc/nginx/apps.d/.htpasswd-$(conf_read tools-site) && $(conf_read php) == "true" ) ]]; then
+		if ! [[ -f /etc/nginx/.htpasswd && $(conf_read php) == "true" || ( -n $(conf_read tools-site) && -f /etc/nginx/apps.d/.htpasswd-$(conf_read tools-site) && $(conf_read php) == "true" ) ]]; then
 			echo "[INFO] HTTP Authentication Credentials not found!"
 			info="1"
 		fi
-		if [[ ! -a /etc/nginx/conf.d/fastcgi.conf ]]; then
+		if [[ ! -f /etc/nginx/conf.d/fastcgi.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/conf.d/fastcgi.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/conf.d/upstream.conf ]]; then
+		if [[ ! -f /etc/nginx/conf.d/upstream.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/conf.d/upstream.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/common/acl.conf ]]; then
+		if [[ ! -f /etc/nginx/common/acl.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/common/acl.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/common/locations.conf ]]; then
+		if [[ ! -f /etc/nginx/common/locations.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/common/locations.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/common/php.conf ]]; then
+		if [[ ! -f /etc/nginx/common/php.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/common/php.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/common/wpcommon.conf ]]; then
+		if [[ ! -f /etc/nginx/common/wpcommon.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/common/wpcommon.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/common/wpfc.conf ]]; then
+		if [[ ! -f /etc/nginx/common/wpfc.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/common/wpfc.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/common/wpsubdir.conf ]]; then
+		if [[ ! -f /etc/nginx/common/wpsubdir.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/common/wpsubdir.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/common/headers-html.conf ]]; then
+		if [[ ! -f /etc/nginx/common/headers-html.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/common/headers-html.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/common/headers-http.conf ]]; then
+		if [[ ! -f /etc/nginx/common/headers-http.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/common/headers-http.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/nginx/common/headers-https.conf ]]; then
+		if [[ ! -f /etc/nginx/common/headers-https.conf ]]; then
 			echo "[ERROR] File: /etc/nginx/common/headers-https.conf not found!"
 			error="1"
 		fi
@@ -224,7 +224,7 @@ webinoly_verify() {
 	
 	# NGINX Tools
 	if [[ $(conf_read nginx-tool) == "true" ]]; then
-		if [[ ! -a /etc/nginx/sites-available/$(conf_read tools-port) && $(conf_read php) == "true" ]]; then
+		if [[ ! -f /etc/nginx/sites-available/$(conf_read tools-port) && $(conf_read php) == "true" ]]; then
 			echo "[ERROR] File: /etc/nginx/sites-available/$(conf_read tools-port) not found!"
 			error="1"
 		fi
@@ -238,7 +238,7 @@ webinoly_verify() {
 		fi
 	fi
 	if [[ $(conf_read nginx-tool) != "true" && -n $(conf_read tools-port) ]]; then
-		if [[ -a /etc/nginx/sites-available/$(conf_read tools-port) || -d /var/www/$(conf_read tools-port) ]]; then
+		if [[ -f /etc/nginx/sites-available/$(conf_read tools-port) || -d /var/www/$(conf_read tools-port) ]]; then
 			echo "[WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!"
 			warning="1"
 		fi
@@ -251,33 +251,33 @@ webinoly_verify() {
 	fi
 	
 	# PHP
-	if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/php.ini && $(conf_read php) == "true" ]]; then
+	if [[ ! -f /etc/php/$(conf_read php-ver)/fpm/php.ini && $(conf_read php) == "true" ]]; then
 		echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/php.ini not found!"
 		error="1"
-	elif [[ -a /etc/php/$(conf_read php-ver)/fpm/php.ini && $(conf_read php) != "true" ]]; then
+	elif [[ -f /etc/php/$(conf_read php-ver)/fpm/php.ini && $(conf_read php) != "true" ]]; then
 		echo "[WARNING] Seems like PHP is installed but Webinoly can not detect it!"
 		warning="1"
 	fi
 	
 	# PHP Optim
 	if [[ $(conf_read php-optim) == "true" ]]; then
-		if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf ]]; then
+		if [[ ! -f /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf ]]; then
 			echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf ]]; then
+		if [[ ! -f /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf ]]; then
 			echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf ]]; then
+		if [[ ! -f /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf ]]; then
 			echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /opt/webinoly/templates/source/www.conf ]]; then
+		if [[ ! -f /opt/webinoly/templates/source/www.conf ]]; then
 			echo "[ERROR] File: /opt/webinoly/templates/source/www.conf not found!"
 			error="1"
 		fi
-		if [[ ! -a /opt/webinoly/templates/source/php.ini ]]; then
+		if [[ ! -f /opt/webinoly/templates/source/php.ini ]]; then
 			echo "[ERROR] File: /opt/webinoly/templates/source/php.ini not found!"
 			error="1"
 		fi
@@ -285,29 +285,29 @@ webinoly_verify() {
 	
 	# PHP Tools
 	if [[ $(conf_read php-tool) == "true" && $(conf_read nginx) == "true" ]]; then
-		if [[ ! -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/php ]]; then
+		if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/fpm/status/php ]]; then
 			echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/fpm/status/php not found!"
 			error="1"
 		fi
-		if [[ ! -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug ]]; then
+		if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug ]]; then
 			echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug not found!"
 			error="1"
 		fi
-		if [[ ! -a /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
+		if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
 			echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/php/index.php not found!"
 			error="1"
 		fi
 	fi
 	if [[ $(conf_read php-tool) != "true" && $(conf_read nginx) == "true" ]]; then
-		if [[ -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/php ]]; then
+		if [[ -f /var/www/$(conf_read tools-port)/htdocs/fpm/status/php ]]; then
 			echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
 			warning="1"
 		fi
-		if [[ -a /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug ]]; then
+		if [[ -f /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug ]]; then
 			echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
 			error="1"
 		fi
-		if [[ -a /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
+		if [[ -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
 			echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
 			warning="1"
 		fi
@@ -355,11 +355,11 @@ webinoly_verify() {
 		fi
 	fi
 	if [[ $(conf_read nginx-tool) == "true" ]]; then
-		if [[ ! -a /usr/bin/duplicity ]]; then
+		if [[ ! -f /usr/bin/duplicity ]]; then
 			echo "[ERROR] File: /usr/bin/duplicity not found!"
 			error="1"
 		fi
-		if [[ ! -a /usr/bin/duply ]]; then
+		if [[ ! -f /usr/bin/duply ]]; then
 			echo "[ERROR] File: /usr/bin/duply not found!"
 			error="1"
 		fi
@@ -367,7 +367,7 @@ webinoly_verify() {
 			echo "[ERROR] File: /usr/bin/letsencrypt not found!"
 			error="1"
 		fi
-		if [[ ! -a /usr/bin/certbot ]]; then
+		if [[ ! -f /usr/bin/certbot ]]; then
 			echo "[ERROR] File: /usr/bin/certbot not found!"
 			error="1"
 		fi
@@ -429,8 +429,8 @@ webinoly_verify() {
 	fi
 	
 	# Check for PHP and MySQL version
-	if [[ $(conf_read php) == "true" && $(php -v | grep -m1 "" | sed 's/PHP \([^\-]*\).*/\1/' | cut -f 1-2 -d'.') != "7.3" ]]; then
-		echo "[INFO] PHP v7.3 is recommended to get an optimal perfomance!"
+	if [[ $(conf_read php) == "true" && $(php -v | grep -m1 "" | sed 's/PHP \([^\-]*\).*/\1/' | cut -f 1-2 -d'.') != "7.4" ]]; then
+		echo "[INFO] PHP v7.4 is recommended to get an optimal perfomance!"
 	fi
 	if [[ $(conf_read mysql) == "true" && $(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.') != "10.4" ]]; then
 		echo "[INFO] MariaDB (MySQL) v10.4 is recommended to get an optimal perfomance!"
@@ -456,7 +456,7 @@ webinoly_verify() {
 	for cert in "/etc/letsencrypt/live"/*
 	do
 		domain=$(echo $cert | cut -f 5 -d "/")
-		if [[ -d $cert && ! -a /etc/nginx/sites-available/$domain ]]; then
+		if [[ -d $cert && ! -f /etc/nginx/sites-available/$domain ]]; then
 			echo "[INFO] SSL Orphan-Cert found ($domain)!"
 			info="1"
 		fi
@@ -555,7 +555,7 @@ system_info() {
 	fi
 
 	echo "[Raw Conf]"
-	if [[ -a /opt/webinoly/webinoly.conf ]]; then
+	if [[ -f /opt/webinoly/webinoly.conf ]]; then
 		sudo cat /opt/webinoly/webinoly.conf
 	else
 		echo "${red} [ERROR] Configuration File not found! ${blu}"
@@ -566,7 +566,7 @@ system_info() {
 }
 
 
-smtp_setup() {		
+smtp_setup() {
 	if [[ $smtp == true ]]; then
 		echo "${gre}"
 		echo "**********************************"
@@ -591,12 +591,12 @@ smtp_setup() {
 		exit 1
 	fi
 	
-	if [[ -z $user || -z $pass || -z $host || -z $mainhost || ! -a /etc/nginx/sites-available/$mainhost ]]; then
+	if [[ -z $user || -z $pass || -z $host || -z $mainhost || ! -f /etc/nginx/sites-available/$mainhost ]]; then
 		echo "${red}[ERROR] Invalid SMTP data!${end}"
 		exit 1
 	fi
 	
-	[[ ! -a /opt/webinoly/templates/source/main.cf ]] && sudo cp -p /etc/postfix/main.cf /opt/webinoly/templates/source/
+	[[ ! -f /opt/webinoly/templates/source/main.cf ]] && sudo cp -p /etc/postfix/main.cf /opt/webinoly/templates/source/
 
 	sudo touch /etc/mailname
 	echo "$mainhost" > /etc/mailname
@@ -672,9 +672,9 @@ mysql_change_password() {
 remove_domain_default_site() {
 	# In case we have a domain as default before.
 	if ! [[ $(conf_read default-site) =~ ^(default|blackhole)$ || -z $(conf_read default-site) ]]; then
-		[[ ! -L /etc/nginx/sites-enabled/default && -a /etc/nginx/sites-available/default ]] && sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+		[[ ! -L /etc/nginx/sites-enabled/default && -f /etc/nginx/sites-available/default ]] && sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 		# Check in case site was deleted!
-		if [[ -a /etc/nginx/sites-available/$(conf_read default-site) ]]; then
+		if [[ -f /etc/nginx/sites-available/$(conf_read default-site) ]]; then
 			sudo sed -i "s/listen 80 default_server;/listen 80;/" /etc/nginx/sites-available/$(conf_read default-site)
 			sudo sed -i "s/listen \[::\]:80 default_server;/listen [::]:80;/" /etc/nginx/sites-available/$(conf_read default-site)
 			sudo sed -i "s/listen 443 ssl http2 default_server;/listen 443 ssl http2;/" /etc/nginx/sites-available/$(conf_read default-site)
@@ -686,11 +686,534 @@ remove_domain_default_site() {
 
 
 create_blackhole_cert() {
-	if [[ ! -a /etc/ssl/certs/webinoly-blackhole.crt.pem ]]; then
+	if [[ ! -f /etc/ssl/certs/webinoly-blackhole.crt.pem ]]; then
 		# REMOVE: Temporal fix affecting openssl 1.1.1 - https://www.mail-archive.com/debian-bugs-dist@lists.debian.org/msg1603717.html
 		sudo touch /root/.rnd
 		
 		sudo openssl req -new -newkey rsa:2048 -days 36500 -nodes -x509 -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=blackhole" -keyout /etc/ssl/private/webinoly-blackhole.key.pem  -out /etc/ssl/certs/webinoly-blackhole.crt.pem > /dev/null 2>&1
 	fi
+}
+
+
+webinoly_update() {
+	checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
+	currentver=$(conf_read app-version)
+	
+	if [[ ( -n $checkver && ${checkver//.} -gt ${currentver//.} ) || ( -n $update && $update != true ) ]]; then
+		echo ""
+		[[ -n $update && $update != true ]] && branch="-ver=${update}" || branch=""
+		sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=${app_version}" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
+		[[ $? == 0 ]] && echo "${gre}Webinoly App has been updated successfully!${end}"
+		api-events_update wy1s
+	else
+		echo "${gre}You currently have the latest version!${end}"
+	fi
+}
+
+
+server_reset() {
+	# Regenerate NGINX conf files
+	if [[ $(conf_read nginx-optim) == "true" && $server_reset =~ ^(nginx|all)$ ]]; then
+		[[ -f /etc/nginx/conf.d/blockips.conf ]] && sudo cp -p /etc/nginx/conf.d/blockips.conf /tmp/webinoly_blockips_backup
+		sudo rm -rf /etc/nginx/common
+		sudo rm -rf /etc/nginx/conf.d/*
+		linux_purge
+		nginx_optim
+		[[ -f /tmp/webinoly_blockips_backup ]] && sudo mv /tmp/webinoly_blockips_backup /etc/nginx/conf.d/blockips.conf
+		echo "${gre}Nginx settings has been updated successfully!${end}"
+		nginx_not="true" # Nginx-Reload not-needed.
+	elif [[ $(conf_read nginx-optim) != "true" && $server_reset == "nginx" ]]; then
+		echo "${red}[ERROR] Nginx settings couldn't been updated, seems like is not installed in your server!${end}"
+		err_cont=true
+	fi
+	
+	# Regenerate PHP conf files
+	if [[ $(conf_read php-optim) == "true" && $server_reset =~ ^(php|all)$ ]]; then
+		if [[ -f /opt/webinoly/templates/source/php.ini && -f /opt/webinoly/templates/source/www.conf ]]; then
+			sudo cat /opt/webinoly/templates/source/php.ini > /etc/php/$(conf_read php-ver)/fpm/php.ini
+			sudo cat /opt/webinoly/templates/source/www.conf > /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
+			sudo rm -rf /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
+			php_optim
+			echo "${gre}PHP settings has been updated successfully!${end}"
+		else
+			echo "${red}[ERROR] PHP could not been updated, source files not found!${end}"
+			exit 1
+		fi
+	elif [[ $(conf_read php-optim) != "true" && $server_reset == "php" ]]; then
+		echo "${red}[ERROR] PHP settings couldn't been updated, seems like is not installed in your server!${end}"
+		exit 1
+	fi
+	
+	# Display message just to show we are alive.
+	if [[ $server_reset == "all" && $(conf_read php-optim) != "true" && $(conf_read nginx-optim) != "true" ]]; then
+		echo "${blu}Nothing to do, NGINX and PHP are not installed yet!${end}"
+	fi
+}
+
+
+show_db_data() {
+	if [[ -n $(conf_read mysql-root) || -n $(conf_read mysql-admin) ]]; then
+		rpass=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+		apass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+		echo ""
+		[[ $dbpass == "raw" || -n $raw ]] && echo "root:$rpass" || echo "${gre}  root: $rpass"
+		[[ $dbpass == "raw" || -n $raw ]] && echo "admin:$apass" || echo "  admin: $apass ${end}"
+		echo ""
+	else
+		echo "${red}"
+		echo "[ERROR] DB Passwords not found!"
+		echo "${end}"
+		exit 1
+	fi
+}
+
+
+change_tools_port() {
+	[[ $tools_port != true ]] && tools_port $tools_port || tools_port
+	newport="$(conf_read tools-port)"
+	if [[ $oldport != $newport && $(conf_read nginx-tool) == "true" && $(conf_read nginx) == "true" ]]; then
+		# MV in some edge cases fails to rename, specially when so much files are within the directories.
+		sudo mkdir -p /var/www/$newport
+		sudo cp -rp /var/www/$oldport/* /var/www/$newport
+		sudo rm -rf /var/www/$oldport
+		
+		sudo mv /etc/nginx/sites-available/$oldport /etc/nginx/sites-available/$newport
+		sudo rm /etc/nginx/sites-enabled/$oldport
+		sudo ln -s /etc/nginx/sites-available/$newport /etc/nginx/sites-enabled/$newport
+		sudo sed -i "s/${oldport}/${newport}/g"  /etc/nginx/sites-available/$newport
+	fi
+}
+
+
+set_tools_site() {
+	if [[ $tools_site == true ]]; then
+		echo "${gre}Please, enter a valid domain to access the Tools Section! ${end}"
+		read -p "${blu}Domain: ${end}" tools_site
+		tools_site=${tools_site:-NeverMatchDotCom}
+	fi	
+	
+	if [[ -f /etc/nginx/sites-available/$tools_site && -f /etc/nginx/sites-available/$(conf_read tools-port) && $tools_site != "default" ]]; then
+		# Check for previous assigned domain and remove
+		if [[ -n $(conf_read tools-site) ]]; then
+			sudo sed -i '/server_name/d' /etc/nginx/sites-available/$(conf_read tools-port)
+			# In case SSL is enabled
+			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) default_server deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) default_server;" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/headers-https.conf/d' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+		fi
+		
+		# Assign new domain/site
+		sername=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$tools_site | grep -F "server_name" | sed -e 's/^[ \t]*//')
+		sudo sed -i "/error_log/a \	${sername}" /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port);" /etc/nginx/sites-available/$(conf_read tools-port)
+		
+		# If SSL is enabled
+		if [[ $(is_ssl $tools_site) == "true" ]]; then
+			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) ssl http2 deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) ssl http2;" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$tools_site/}" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/locations.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/WebinolySSLend/i \	error_page 497  https:\/\/\$host:\$server_port\$request_uri;" /etc/nginx/sites-available/$(conf_read tools-port)
+			create_blackhole_cert
+		fi
+		
+		# Default blackhole for requests different from our assigned Tools-Site
+		sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-blackhole' /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/22222/$(conf_read tools-port)/}" /etc/nginx/sites-available/$(conf_read tools-port)
+		if [[ $(is_ssl $tools_site) == "false" ]]; then
+			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/ssl_certificate/d}" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/error_page/d}" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/ssl //}" /etc/nginx/sites-available/$(conf_read tools-port)
+			echo "${red}It's highly recommended having an SSL Cert enabled on this site. ${end}"
+		fi
+		
+		conf_write tools-site $tools_site
+		echo "${gre}Domain ${blu}- ${tools_site}:$(conf_read tools-port) -${gre} was successfully assigned to access your server tools!${end}"
+	elif [[ $tools_site == "default" ]]; then
+		sudo rm -rf /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo cp /opt/webinoly/templates/nginx/22222 /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i "s/22222/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
+		conf_delete tools-site
+		echo "${gre}Tools Site settings has been reset successfully!${end}"
+	elif [[ -f /etc/nginx/sites-available/$tools_site && ! -f /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
+		echo "${red}[ERROR] Tools Site is not enabled! ${end}"
+		exit 1
+	else
+		echo "${red}[ERROR] Domain/site not found. ${end}"
+		exit 1
+	fi
+}
+
+
+www_data_sftp_access() {
+	if [[ $login_www_data == "on" && $(conf_read login-www-data) == "true" ]]; then
+		echo "${gre}SFTP access for www-data user is already enabled! ${end}"
+	elif [[ $login_www_data == "off" && $(conf_read login-www-data) != "true" ]]; then
+		echo "${gre}SFTP access for www-data user is already disabled! ${end}"
+	elif [[ $login_www_data == "on" ]]; then
+		# Allow access for www-data user
+		if [[ -f $HOME/.ssh/authorized_keys ]]; then
+			sudo mkdir -p /var/www/.ssh
+			sudo chmod 700 /var/www/.ssh
+			sudo cat $HOME/.ssh/authorized_keys > /var/www/.ssh/authorized_keys
+			sudo chmod 600 /var/www/.ssh/*
+		fi
+		sudo chown -R www-data:www-data /var/www
+
+		# www-data sftp-only access jail - if fails usrlib must be listed in /etc/shells
+		sudo usermod -s /usr/lib/openssh/sftp-server www-data
+		sudo addgroup --system sftponly > /dev/null 2>&1
+		sudo usermod -G sftponly www-data
+		sudo chown root:root /var/www
+		sudo sed -i "/Subsystem sftp/c\Subsystem sftp internal-sftp" /etc/ssh/sshd_config
+		sudo echo '# WebinolySFTPstart
+Match Group sftponly
+	ChrootDirectory /var/www
+	X11Forwarding no
+	AllowTcpForwarding no
+	ForceCommand internal-sftp
+# WebinolySFTPend' >> /etc/ssh/sshd_config
+
+		falus=$( grep -Gi "^AllowUsers " /etc/ssh/sshd_config )
+		[[ -n $falus ]] && sudo sed -i "s/$falus/$falus www-data/" /etc/ssh/sshd_config
+
+		conf_write login-www-data true
+		sudo service ssh restart
+		echo "${gre}SFTP access for www-data user has been successfuly enabled! ${end}"
+	
+	elif [[ $login_www_data == "off" ]]; then
+		sudo rm -rf /var/www/.ssh
+		sudo sed -i '/www-data:/c\www-data:x:33:33:www-data:\/var\/www:\/usr\/sbin\/nologin' /etc/passwd
+		sudo gpasswd -d www-data sftponly  > /dev/null 2>&1
+		sudo delgroup sftponly > /dev/null 2>&1
+		sudo chown www-data:www-data /var/www
+		sudo sed -i "/Subsystem sftp/c\Subsystem sftp \/usr\/lib\/openssh\/sftp-server" /etc/ssh/sshd_config
+		sudo sed -i '/WebinolySFTPstart/,/WebinolySFTPend/{/.*/d}' /etc/ssh/sshd_config
+		
+		falus=$( grep -Gi "^AllowUsers " /etc/ssh/sshd_config )
+		if [[ -n $falus ]]; then
+			suffix=" www-data"
+			foo=${falus%$suffix}
+			sudo sed -i "s/$falus/$foo/" /etc/ssh/sshd_config
+		fi
+
+		conf_write login-www-data purged
+		sudo service ssh restart
+		echo "${gre}SFTP access for www-data user has been successfuly disabled! ${end}"
+	else
+		echo "${red}[ERROR] Invalid value for login-www-data! ${end}"
+		exit 1
+	fi
+}
+
+
+config_fastcgi_cache() {
+	if [[ $(conf_read nginx) == "true" ]]; then	
+		hitline=$( grep -F "fastcgi_cache_valid 200" /etc/nginx/conf.d/fastcgi.conf )
+		hitval=$(echo "${hitline//;}" | rev | cut -d' ' -f 1 | rev)
+		inaline=$( grep -F "fastcgi_cache_path" /etc/nginx/conf.d/fastcgi.conf )
+		inactive=$(echo "${inaline//;}" | rev | cut -d' ' -f 1 | rev)
+		inaval=$(echo "${inactive}" | cut -d'=' -f 2)
+		maxsize=$(echo "${inaline}" | rev | cut -d' ' -f 2 | rev)
+		othline=$( grep -F "fastcgi_cache_valid 301 302 307 404 410" /etc/nginx/conf.d/fastcgi.conf )
+		othval=$(echo "${othline//;}" | rev | cut -d' ' -f 1 | rev)
+	else
+		hitval="Not yet defined"
+		inaval="Not yet defined"
+		othval="Not yet defined"
+	fi
+
+	
+	if [[ $config_cache == true ]]; then
+		echo "${gre}"
+		echo "**********************************************************************"
+		echo "*************     Set FastCGI Cache new time values     **************"
+		echo "*****  Example: 30d = 30days  |  3h = 3hours  |  5m = 5minutes  ******"
+		echo "**********************************************************************"
+		echo "${blu}"
+		echo "FastCGI Cache Valid for Pages (HttpCode: 200) actual value is: $hitval"
+		read -p "   Set new value: " hit
+		hit=${hit:-$hitval}
+		echo ""
+		echo "Purge Cache for inactive pages actual value is: $inaval"
+		read -p "   Set new value: " ina
+		ina=${ina:-$inaval}
+		echo ""
+		echo "FastCGI Cache Valid for Errors and Redirections (HttpCode: 301, 302, 307, 404, 410) actual value is: $othval"
+		read -p "   Set new value: " oth
+		oth=${oth:-$othval}
+		echo ""
+	elif [[ $(echo "${config_cache}" | cut -c-1) == "[" && $(echo "${config_cache}" | rev | cut -c-1) == "]" ]]; then
+		custombegin=$(echo "${config_cache}" | cut -c-1)
+		customlast=$(echo "${config_cache}" | rev | cut -c-1)
+		cachedata=${config_cache:1:-1}
+			
+		hit=$(echo "${cachedata}" | cut -d',' -f 1 )
+		ina=$(echo "${cachedata}" | cut -d',' -f 2 )
+		oth=$(echo "${cachedata}" | cut -d',' -f 3 )
+	else
+		echo "${red}[ERROR] Please enter a valid value!${end}"
+		exit 1
+	fi
+	
+	if [[ "$hit" =~ ^[0-9]+[smhdwMy]$ && "$ina" =~ ^[0-9]+[smhdwMy]$ && "$oth" =~ ^[0-9]+[smhdwMy]$ ]]; then
+		if [[ $(conf_read nginx) == "true" ]]; then	
+			sudo sed -i "/fastcgi_cache_valid 200/c \fastcgi_cache_valid 200 ${hit};" /etc/nginx/conf.d/fastcgi.conf
+			sudo sed -i "/fastcgi_cache_valid 301 302 307 404 410/c \fastcgi_cache_valid 301 302 307 404 410 ${oth};" /etc/nginx/conf.d/fastcgi.conf
+			sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path \/var\/run\/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m ${maxsize} inactive=${ina};" /etc/nginx/conf.d/fastcgi.conf
+		fi
+		conf_write fastcgi-conf ${hit},${ina},${oth}
+		echo "${gre}FastCGI Cache values has been successfully updated!${end}"
+	else
+		echo "${red}[ERROR] Invalid values!${end}"
+		exit 1
+	fi
+}
+
+
+webinoly_uninstall() {
+	echo "${red}"
+	echo "You are about to completely remove Webinoly App from your server!!"
+	echo "${blu}Are you sure [y/N]? "
+	while read -r -n 1 -s answer; do
+		answer=${answer:-n}
+		echo ""
+		[[ $answer = [YyNn] ]] && break
+	done
+	
+	if [[ $answer == [Yy] ]]; then
+		sudo tar -Pcf $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf /opt/webinoly/templates/source
+		sudo rm -rf /opt/webinoly
+		sudo rm /usr/bin/webinoly
+		sudo rm /usr/bin/stack
+		sudo rm /usr/bin/site
+		sudo rm /usr/bin/httpauth
+		sudo rm /usr/bin/log			
+		echo "${gre}Webinoly App has been removed successfully from your server!${end}"
+		exit 0 # Only allowed here because after this Webinoly does not exist in the server!
+	else
+		echo "${red}Action aborted!${end}"
+		exit 1
+	fi
+}
+
+
+external_sources_update() {
+	echo "${blu}- Downloading Public Suffix List!${end}"
+	sudo wget --timeout=15 -t 1 -qrO /tmp/temp-public_suffix_list.dat https://publicsuffix.org/list/public_suffix_list.dat
+	if [[ -s /tmp/temp-public_suffix_list.dat ]]; then
+		echo "${blu}- Processing file!${end}"
+		sudo sed -i '/^\/\// d' /tmp/temp-public_suffix_list.dat
+		sudo sed -i '/^$/d' /tmp/temp-public_suffix_list.dat
+		sudo sed -i 's/[!]\+//g' /tmp/temp-public_suffix_list.dat
+		sudo sed -i 's/^\*\.\+//g' /tmp/temp-public_suffix_list.dat
+		sudo mv /tmp/temp-public_suffix_list.dat /opt/webinoly/lib/public_suffix_list.dat
+		echo "${gre}Domain list has been successfully updated!${end}"
+	else
+		echo "${red}[ERROR] Domain list not updated!${end}"
+		err_cont=true
+	fi
+	
+	echo ""
+	echo "${blu}- Downloading Timezone Database!${end}"
+	sudo wget --timeout=15 -t 1 -qrO /tmp/timezonedb.tgz https://pecl.php.net/get/timezonedb
+	if [[ -s /tmp/timezonedb.tgz ]]; then
+		echo "${blu}- Processing file!${end}"
+		sudo tar -xf /tmp/timezonedb.tgz -C /tmp/ --wildcards --no-anchored timezonedb-*/timezonedb.h --strip-components=1
+		sudo sed -i '/^\t{.*},$/!d' /tmp/timezonedb.h
+		sudo cut -d'"' -f2 /tmp/timezonedb.h > /opt/webinoly/lib/timezone.dat
+		sudo rm /tmp/timezonedb.*
+		echo "${gre}Timezone Database has been successfully updated!${end}"
+	else
+		echo "${red}[ERROR] Timezone Database not updated!${end}"
+		exit 1
+	fi
+}
+
+
+clear_caches() {
+	if [[ $clear_cache =~ ^(redis|all)$ ]]; then
+		if [[ $(conf_read php-tool) == "true" && -f /etc/redis/redis.conf ]]; then
+			sudo redis-cli flushall
+			echo "${gre}- Redis Cache has been successfully cleared!${end}"
+		else
+			echo "${red}[ERROR] We can not clear Redis Cache because is not installed!${end}"
+			err_cont=true
+		fi
+	fi
+	if [[ $clear_cache =~ ^(memcache|memcached|all)$ ]]; then
+		if [[ $(conf_read php-tool) == "true" && -f /etc/memcached.conf ]]; then
+			memhost=$(grep ^-l /etc/memcached.conf | cut -f 2 -d ' ')
+			memport=$(grep ^-p /etc/memcached.conf | cut -f 2 -d ' ')
+			echo flush_all > /dev/tcp/$memhost/$memport
+			echo "${gre}- Memcached has been successfully cleared!${end}"
+		else
+			echo "${red}[ERROR] We can not clear Memcache because is not installed!${end}"
+			err_cont=true
+		fi
+	fi
+	if [[ $clear_cache =~ ^(opcache|all)$ ]]; then
+		if [[ $(conf_read nginx-tool) == "true" && $(conf_read php-tool) == "true" ]]; then
+			port=$(conf_read tools-port)
+			if [[ ! -f /var/www/$port/htdocs/php/opcache/index.php ]]; then
+				sudo mkdir /var/www/$port/htdocs/php/opcache
+				sudo touch /var/www/$port/htdocs/php/opcache/index.php
+				echo '<?php opcache_reset(); echo "OK\n";' > /var/www/$port/htdocs/php/opcache/index.php
+				sudo chown -R www-data:www-data /var/www/$port/htdocs/php/opcache
+				sudo chmod 644 /var/www/$port/htdocs/php/opcache/index.php
+			fi
+			wget --spider --no-check-certificate --timeout=15 -t 1 localhost:$port/php/opcache/  > /dev/null 2>&1 &
+			echo "${gre}- OpCache has been successfully cleared!${end}"
+		else
+			echo "${red}[ERROR] We can not clear OpCache because PHP or NGINX are not installed!${end}"
+			err_cont=true
+		fi
+	fi
+	if [[ $clear_cache =~ ^(fastcgi|all)$ ]]; then
+		if [[ $(conf_read nginx) == "true" ]]; then
+			sudo rm -Rf /var/run/nginx-cache/*
+			echo "${gre}- FastCgi Cache has been successfully cleared!${end}"
+		else	
+			echo "${red}[ERROR] We can not clear FastCGI Cache because NGINX is not installed!${end}"
+			err_cont=true
+		fi
+	fi
+}
+
+
+nginx_blockip() {
+	if [[ -z $purge ]]; then
+		if [[ -n $list ]]; then
+			echo ""
+			[[ -n $raw ]] && sign="" || sign="${blu}+ "
+			if [[ -s /etc/nginx/conf.d/blockips.conf ]]; then
+				sudo sed -n "s/^deny /${sign}/p;" /etc/nginx/conf.d/blockips.conf | sudo sed -n 's/;$//p'
+			else
+				echo "[Empty] No IP's were found!"
+			fi
+			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
+		else
+			[[ $blockip == true ]] && read -p "${blu}IP address to block: ${end}" blockip
+			if [[ $(ip_check $blockip) == "true" ]]; then
+				if [[ ! -f /etc/nginx/conf.d/blockips.conf ]]; then
+					sudo touch /etc/nginx/conf.d/blockips.conf
+					sudo chmod 644 /etc/nginx/conf.d/blockips.conf
+					sudo chown -R root:root /etc/nginx/conf.d/blockips.conf
+				fi
+				exist=$( grep -E "^deny $blockip;$" /etc/nginx/conf.d/blockips.conf )
+				if [[ -z $exist ]]; then
+					echo "deny $blockip;" >> /etc/nginx/conf.d/blockips.conf
+					echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully blocked!${end}"
+				else
+					echo "${gre}IP '$blockip' is already blocked!${end}"
+				fi
+			else	
+				echo "${red}[ERROR] Please, enter a valid IP value!${end}"
+				exit 1
+			fi
+		fi
+	elif [[ -n $purge ]]; then
+		[[ $blockip == true ]] && read -p "${blu}IP address to unblock: ${end}" blockip
+		if [[ $(ip_check $blockip) == "true" ]]; then
+			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
+			[[ -f /etc/nginx/conf.d/blockips.conf ]] && sed -i "\#^deny ${blockip};#d" /etc/nginx/conf.d/blockips.conf
+			
+			# Remove site-auth-file if empty.
+			[[ ! -s /etc/nginx/conf.d/blockips.conf ]] && sudo rm /etc/nginx/conf.d/blockips.conf
+			
+			echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully unblocked!${end}"
+		else
+			echo "${red}[ERROR] Please, enter a valid IP value!${end}"
+			exit 1
+		fi
+	else
+		echo "${red}[ERROR] Nginx file not found!${end}"
+		exit 1
+	fi
+}
+
+
+set_default_nginx_response() {
+	if [[ $default_site == true ]]; then
+		echo "${gre}Please, enter a valid option to set the Default-Site server response! ${end}"
+		read -p "${blu}default/blackhole or any existing domain: ${end}" default_site
+		default_site=${default_site:-NeverMatchDotCom}
+	fi
+	
+	if [[ $default_site == "default" ]]; then
+		if [[ -f /opt/webinoly/templates/source/default ]]; then
+			sudo cat /opt/webinoly/templates/source/default >| /etc/nginx/sites-available/default
+			remove_domain_default_site
+			conf_write default-site default
+			echo "${gre}Default Nginx was successfully assigned as default site!${end}"
+		else
+			echo "${red}[ERROR] Nginx Default file backup not found! ${end}"
+			exit 1
+		fi
+	elif [[ $default_site == "blackhole" ]]; then
+		sudo cat /opt/webinoly/templates/general/nginx-blackhole >| /etc/nginx/sites-available/default
+		remove_domain_default_site
+		create_blackhole_cert
+		conf_write default-site blackhole
+		echo "${gre}Blackhole Nginx site was successfully assigned as default site!${end}"
+	else
+		# Domain option
+		if [[ -L /etc/nginx/sites-enabled/$default_site ]]; then
+			remove_domain_default_site
+			sudo sed -i "s/listen 80;/listen 80 default_server;/" /etc/nginx/sites-available/$default_site
+			sudo sed -i "s/listen \[::\]:80;/listen [::]:80 default_server;/" /etc/nginx/sites-available/$default_site
+			sudo sed -i '/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 ssl http2;/listen 443 ssl http2 default_server;/}' /etc/nginx/sites-available/$default_site
+			sudo sed -i '/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 ssl http2;/listen [::]:443 ssl http2 default_server;/}' /etc/nginx/sites-available/$default_site
+			
+			# If default site is Non-SSL, we need add a blackhole for port 443.
+			if [[ $(is_ssl $default_site) == "false" ]]; then
+				create_blackhole_cert
+				sudo sed -i '1r /opt/webinoly/templates/general/nginx-blackhole' /etc/nginx/sites-available/$default_site
+				sudo sed -i '/NonSSL/,/NonSSLend/{/.*/d}' /etc/nginx/sites-available/$default_site
+			fi
+			
+			sudo rm -rf /etc/nginx/sites-enabled/default
+			conf_write default-site $default_site
+			echo "${gre}Site ${blu}- ${default_site} -${gre} was successfully assigned as default site!${end}"
+		else
+			[[ -f /etc/nginx/sites-available/$default_site ]] && echo "${red}Site found but is disabled.${end}"
+			echo "${red}[ERROR] Please, enter a valid option (default, blackhole or domain.com). ${end}"
+			exit 1
+		fi
+	fi
+}
+
+
+aws_s3_credentials() {
+	if [[ $aws_s3_credentials == true ]]; then
+		echo ""
+		read -p "${blu}Access Key ID: ${end}" user
+		read -p "${blu}Secret Access Key: ${end}" pass
+		echo ""
+	elif [[ $(echo "${aws_s3_credentials}" | cut -c-1) == "[" && $(echo "${aws_s3_credentials}" | rev | cut -c-1) == "]" ]]; then
+		cred=${aws_s3_credentials:1:-1}
+		user=$(echo "${cred}" | cut -d',' -f 1 -s)
+		pass=$(echo "${cred}" | cut -d',' -f 2 -s)
+	else
+		echo "${red}[ERROR] Invalid AWS S3 Credentials!${end}"
+		exit 1
+	fi
+
+	if ! [[ -n $user && -n $pass ]]; then
+		echo "${red}[ERROR] Please, enter a valid AWS S3 Access and Secret Key!${end}"
+		exit 1
+	fi
+
+	sudo rm -rf /root/.aws/credentials
+	sudo mkdir -p /root/.aws
+	sudo touch /root/.aws/credentials
+	sudo echo "[default]
+aws_access_key_id = $user
+aws_secret_access_key = $pass" >> /root/.aws/credentials
+	echo "${gre}AWS S3 Credentials successfully added!${end}"
 }
 

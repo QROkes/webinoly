@@ -122,7 +122,7 @@ bkp_s3_list() {
 		for f in /root/.duply/*
 		do 
 			[[ -d $f ]] && pro=$(echo $f | cut -f 4 -d "/" -s)
-			[[ -a $f/conf ]] && fail="" || fail="${red}(fail)${end}"
+			[[ -f $f/conf ]] && fail="" || fail="${red}(fail)${end}"
 			[[ -n $raw || $list == "raw" ]] && outlist="$pro" || outlist=" ${gre}+ $pro ${end}${fail}"
 			if [[ -n $outlist ]]; then
 				echo "$outlist"

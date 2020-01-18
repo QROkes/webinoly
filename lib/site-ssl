@@ -25,7 +25,7 @@ ssl_nginx() {
 		sudo chmod 755 $(dirname -- $ssl_crt)
 		sudo chmod 755 $(dirname -- $ssl_key)
 		sudo chown -R root:root $(dirname -- $ssl_crt)
-		if [[ -n $ssl_ocsp && -a $ssl_ocsp ]]; then
+		if [[ -n $ssl_ocsp && -f $ssl_ocsp ]]; then
 			sudo sed -i "/ssl_trusted_certificate/c \	ssl_trusted_certificate $ssl_ocsp;" /etc/nginx/sites-available/$domain
 			sudo chmod 777 $ssl_ocsp
 			sudo chmod 755 $(dirname -- $ssl_ocsp)
@@ -53,9 +53,9 @@ site_ssl_on() {
 	
 	# Some validations to prevent errors when creating certs.
 	check_for_nginx_tool
-	if [[ -n $root && -a /etc/nginx/sites-available/$root ]]; then
+	if [[ -n $root && -f /etc/nginx/sites-available/$root ]]; then
 		path=$root
-	elif [[ -n $root && ! -a /etc/nginx/sites-available/$root ]]; then
+	elif [[ -n $root && ! -f /etc/nginx/sites-available/$root ]]; then
 		echo "${red}[ERROR] Root path domain is not a valid domain or is not found/hosted in this server!${end}"
 		exit 1
 	fi
@@ -71,7 +71,7 @@ site_ssl_on() {
 		exit 1
 	fi
 	
-	if [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
+	if [[ ! -f /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
 		echo "${red}[ERROR] Cert you're trying to renew not found!${end}"
 		exit 1
 	fi
@@ -111,30 +111,30 @@ site_ssl_on() {
 	[[ $subdomflag == 1 ]] && local domset="-d $domain" || local domset="-d $domain -d www.$domain"
 	
 	# Wildcard
-	if [[ ( ! -a /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ) && -n $wildcard ]]; then
+	if [[ ( ! -f /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ) && -n $wildcard ]]; then
 		sudo certbot certonly --manual --preferred-challenges=dns --manual-public-ip-logging-ok -d $domain -d *.$domain $param
 	
 	# Manual mode for Reverse Proxy sites
-	elif [[ ( ! -a /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ) && -n $root_path ]]; then
+	elif [[ ( ! -f /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ) && -n $root_path ]]; then
 		conf_write temp-path $root_path
 		sudo certbot certonly --manual --preferred-challenges=http --manual-auth-hook /opt/webinoly/lib/ex-ssl-authentication --manual-cleanup-hook /opt/webinoly/lib/ex-ssl-cleanup --manual-public-ip-logging-ok $domset $param
 		conf_delete temp-path
 	
 	# Single cert
-	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ]]; then
+	elif [[ ! -f /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ]]; then
 		sudo certbot certonly --webroot -w /var/www/$path/htdocs/ $domset $param
 	
-	elif [[ -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
+	elif [[ -f /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
 		echo "${blu}Certificate for${end} $domain ${blu}already exist and found, wait while we configure your server to use it!${end}"
 	fi
 	
 	
 	# SSL Nginx Conf
-	if [[ -a /etc/letsencrypt/live/$domain/fullchain.pem && $ssl != "force-renewal" ]]; then
+	if [[ -f /etc/letsencrypt/live/$domain/fullchain.pem && $ssl != "force-renewal" ]]; then
 		ssl_nginx
 
 		# Auto-Renew Certificate
-		if [[ ! -a /var/spool/cron/crontabs/root ]]; then
+		if [[ ! -f /var/spool/cron/crontabs/root ]]; then
 			sudo touch /var/spool/cron/crontabs/root
 			sudo chmod 600 /var/spool/cron/crontabs/root
 			sudo chown root:crontab /var/spool/cron/crontabs/root
@@ -146,9 +146,9 @@ site_ssl_on() {
 		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
 		
 		echo "${gre}SSL have been successfully enabled for your site -${blu} $domain${end}"
-	elif [[ -a /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
+	elif [[ -f /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
 		echo "${gre}SSL Cert ${blu}- $domain$ - ${gre}has been Forced to Renew!${end}"
-	elif [[ ! -a /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
+	elif [[ ! -f /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
 		echo "${red}"
 		echo "[ERROR] Unable to create the new certificate!"
 		echo "${end}"

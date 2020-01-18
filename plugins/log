@@ -22,30 +22,30 @@ error() {
 
 
 if [[ -n $mail || -n $email ]]; then
-	if [[ -a /var/log/mail.log && -a /var/log/mail.err ]]; then
+	if [[ -f /var/log/mail.log && -f /var/log/mail.err ]]; then
 		sudo tail -f --lines=$clines /var/log/mail.log /var/log/mail.err
-	elif [[ -a /var/log/mail.log ]]; then
+	elif [[ -f /var/log/mail.log ]]; then
 		sudo tail -f --lines=$clines /var/log/mail.log
-	elif [[ -a /var/log/mail.err ]]; then
+	elif [[ -f /var/log/mail.err ]]; then
 		sudo tail -f --lines=$clines /var/log/mail.err
 	else
 		error
 	fi
 elif [[ -n $fpm || -n $php ]]; then
 	check_for_php
-	if [[ -a /var/log/php/$(conf_read php-ver)/fpm.log ]]; then
+	if [[ -f /var/log/php/$(conf_read php-ver)/fpm.log ]]; then
 		sudo tail -f --lines=$clines /var/log/php/$(conf_read php-ver)/*.log
 	else
 		error
 	fi
 elif [[ -n $le ]]; then
-	if [[ -a /var/log/letsencrypt/letsencrypt.log ]]; then
+	if [[ -f /var/log/letsencrypt/letsencrypt.log ]]; then
 		sudo tail -f --lines=$clines /var/log/letsencrypt/letsencrypt.log
 	else
 		error
 	fi
 elif [[ -n $ssh ]]; then
-	if [[ -a /var/log/auth.log ]]; then
+	if [[ -f /var/log/auth.log ]]; then
 		sudo tail -f --lines=$clines /var/log/auth.log
 	else
 		error
@@ -176,7 +176,7 @@ elif [[ -n $only_error ]]; then
 	fi
 	
 	# Per site
-	if [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
+	if [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 		check_for_nginx
 		islog=$( grep -F "access_log off;" /etc/nginx/sites-available/$domain )
 		if [[ $domain == "default" || $domain == $(conf_read tools-port) ]]; then
@@ -203,14 +203,14 @@ elif [[ -n $only_error ]]; then
 				echo "${gre}Access Log is already disabled for ${blu}${domain} ${gre}site!${end}"
 			fi
 		fi
-	elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
+	elif [[ -n $domain && ! -f /etc/nginx/sites-available/$domain ]]; then
 		echo "${red}[ERROR] Domain not found!${end}"
 		exit 1
 	fi
 
 	
 # Site log files
-elif [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
+elif [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 	# Check if Access Log is enabled
 	islog=$( grep -F "access_log off;" /etc/nginx/sites-available/$domain )
 	if [[ -z $error && -z $wp && -n $islog ]]; then
@@ -220,7 +220,7 @@ elif [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
 	
 	# WordPress Logs
 	[[ -z $subfolder ]] && wpath="/var/www/$domain/wp-config.php" || wpath="/var/www/$domain/htdocs$subfolder/wp-config.php"
-	if [[ -n $wp && -a $wpath ]]; then
+	if [[ -n $wp && -f $wpath ]]; then
 		iswpdeb=$( grep -F "'WP_DEBUG'" $wpath | cut -f 3 -d "'" -s | sed 's/[^a-zA-Z]*//g' )
 		if [[ $wp == "on" ]]; then
 			if [[ $iswpdeb == "false" ]]; then
@@ -241,7 +241,7 @@ elif [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
 			else
 				echo "${gre}WordPress Debug mode for${blu} $domain ${gre}is already disabled!${end}"
 			fi
-		elif [[ -a /var/www/$domain/htdocs$subfolder/wp-content/debug.log && $iswpdeb == "true" ]]; then
+		elif [[ -f /var/www/$domain/htdocs$subfolder/wp-content/debug.log && $iswpdeb == "true" ]]; then
 			sudo tail -f --lines=$clines /var/www/$domain/htdocs$subfolder/wp-content/debug.log
 		elif [[ $iswpdeb != "true" ]]; then
 			echo "${red}[ERROR] WordPress Debug Mode is not enabled!${end}"
@@ -255,16 +255,16 @@ elif [[ -n $domain && -a /etc/nginx/sites-available/$domain ]]; then
 		exit 1
 	
 	# Access and error logs
-	elif [[ -n $error && -a /var/log/nginx/$domain.error.log ]]; then
+	elif [[ -n $error && -f /var/log/nginx/$domain.error.log ]]; then
 		sudo tail -f --lines=$clines /var/log/nginx/$domain.error.log
-	elif [[ -a /var/log/nginx/$domain.access.log && -z $error && -z $wp ]]; then
+	elif [[ -f /var/log/nginx/$domain.access.log && -z $error && -z $wp ]]; then
 		sudo tail -f --lines=$clines /var/log/nginx/$domain.access.log
 	else
 		echo "${red}[ERROR] Log file not found!${end}"
 		exit 1
 	fi
 
-elif [[ -n $domain && ! -a /etc/nginx/sites-available/$domain ]]; then
+elif [[ -n $domain && ! -f /etc/nginx/sites-available/$domain ]]; then
 	echo "${red}[ERROR] Domain not found!${end}"
 	exit 1
 
@@ -277,9 +277,9 @@ elif [[ -z $domain ]]; then
 		exit 1
 	fi
 	
-	if [[ -n $error && -a /var/log/nginx/error.log ]]; then
+	if [[ -n $error && -f /var/log/nginx/error.log ]]; then
 		sudo tail -f --lines=$clines /var/log/nginx/*error.log
-	elif [[ -a /var/log/nginx/access.log && -z $1 ]]; then
+	elif [[ -f /var/log/nginx/access.log && -z $1 ]]; then
 		sudo tail -f --lines=$clines /var/log/nginx/*access.log
 	else
 		echo "${red}[ERROR] Please, enter a valid option! ${end}"

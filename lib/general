@@ -122,7 +122,7 @@ check_for_mysql() {
 
 
 conf_read() {
-	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
+	if [[ ! -f /opt/webinoly/webinoly.conf ]]; then
 		echo "${red}[ERROR] Config file not found!${end}"
 		exit 1
 	fi
@@ -132,7 +132,7 @@ conf_read() {
 }
 
 conf_delete() {
-	if [[ ! -a /opt/webinoly/webinoly.conf ]]; then
+	if [[ ! -f /opt/webinoly/webinoly.conf ]]; then
 		echo "${red}[ERROR] Config file not found!${end}"
 		exit 1
 	fi
@@ -141,7 +141,7 @@ conf_delete() {
 }
 
 conf_write() {
-	[[ ! -a /opt/webinoly/webinoly.conf ]] && sudo touch /opt/webinoly/webinoly.conf
+	[[ ! -f /opt/webinoly/webinoly.conf ]] && sudo touch /opt/webinoly/webinoly.conf
 	conf_delete $1
 	echo "$1:$2" >> /opt/webinoly/webinoly.conf
 }
@@ -157,9 +157,9 @@ wp_dbdata() {
 	fi
 	
 	# Get dbname and dbuser of a WP site
-	if [[ -a /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
+	if [[ -f /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
 		wpconfpath="/var/www/$domain/htdocs$subfolder/wp-config.php"
-	elif [[ -a /var/www/$domain/wp-config.php ]]; then
+	elif [[ -f /var/www/$domain/wp-config.php ]]; then
 		wpconfpath="/var/www/$domain/wp-config.php"
 	else
 		return
@@ -261,7 +261,7 @@ tools_port() {
 
 api-events_update() {
 	conf_write status-api $1
-	if [[ -a /opt/webinoly/lib/api-events ]]; then
+	if [[ -f /opt/webinoly/lib/api-events ]]; then
 		source /opt/webinoly/lib/api-events
 		api-events_catch_status $1
 	fi
@@ -316,18 +316,18 @@ ip_check() {
 
 
 is_ssl() {
-	[[ -a /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "ssl_certificate_key") ]] && echo "true" || echo "false"
+	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "ssl_certificate_key") ]] && echo "true" || echo "false"
 }
 
 is_php() {
-	[[ -a /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "php.conf;") ]] && echo "true" || echo "false"
+	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "php.conf;") ]] && echo "true" || echo "false"
 }
 
 is_wp() {
 	# $1 = domain, $2 = WP subfolder
-	if [[ -z $2 && -a /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpcommon") ]]; then
+	if [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpcommon") ]]; then
 		echo "true"
-	elif [[ -n $2 && -a /etc/nginx/sites-available/$1 && -a /etc/nginx/apps.d/$1$subname-wpcommon.conf && -a /var/www/$1/htdocs$2/wp-config.php ]]; then
+	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -f /etc/nginx/apps.d/$1$subname-wpcommon.conf && -f /var/www/$1/htdocs$2/wp-config.php ]]; then
 		echo "true"
 	else
 		echo "false"
@@ -336,9 +336,9 @@ is_wp() {
 
 is_wp_cache() {
 	# $1 = domain, $2 = WP subfolder
-	if [[ -z $2 && -a /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpfc.conf;") ]]; then
+	if [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpfc.conf;") ]]; then
 		echo "true"
-	elif [[ -n $2 && -a /etc/nginx/sites-available/$1 && -n $(sed -n -e '/# WebinolyCustom/,$p' /etc/nginx/sites-available/$1 | grep -F "$1$subname-wpfc.conf;") ]]; then
+	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/# WebinolyCustom/,$p' /etc/nginx/sites-available/$1 | grep -F "$1$subname-wpfc.conf;") ]]; then
 		echo "true"
 	else
 		echo "false"
@@ -369,9 +369,9 @@ is_wp_multisite() {
 }
 
 is_proxy() {
-	[[ -a /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "proxy_pass") ]] && echo "true" || echo "false"
+	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "proxy_pass") ]] && echo "true" || echo "false"
 }
 
 is_parked() {
-	[[ -a /etc/nginx/sites-available/$1 && ! -d /var/www/$1 && $(is_proxy $1) == "false" ]] && echo "true" || echo "false"
+	[[ -f /etc/nginx/sites-available/$1 && ! -d /var/www/$1 && $(is_proxy $1) == "false" ]] && echo "true" || echo "false"
 }

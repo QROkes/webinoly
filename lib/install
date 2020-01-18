@@ -49,7 +49,7 @@ linux_optim() {
 	local cacheram=$(($nginxfd/1024))
 	
 	[ -d /etc/systemd/system/nginx.service.d ] || sudo mkdir /etc/systemd/system/nginx.service.d
-	[ -a /etc/systemd/system/nginx.service.d/nofile_limit.conf ] || sudo touch /etc/systemd/system/nginx.service.d/nofile_limit.conf
+	[ -f /etc/systemd/system/nginx.service.d/nofile_limit.conf ] || sudo touch /etc/systemd/system/nginx.service.d/nofile_limit.conf
 	sudo echo "[Service]
 LimitNOFILE=$nginxfd" | tee -a /etc/systemd/system/nginx.service.d/nofile_limit.conf
 	
@@ -270,7 +270,7 @@ nginx_optim() {
 	# www-data sftp default uploads permissions 755 and 644, instead of 775 and 664.
 	sudo sed -i '/USERGROUPS_ENAB/c \USERGROUPS_ENAB no' /etc/login.defs
 	
-	if [[ ! -a /etc/ssl/dhparam.pem ]]; then
+	if [[ ! -f /etc/ssl/dhparam.pem ]]; then
 		sudo openssl dhparam -out /etc/ssl/dhparam.pem 2048
 		sudo chmod 600 /etc/ssl/dhparam.pem
 	fi
@@ -389,7 +389,7 @@ nginx_tool() {
 	[[ -z $(conf_read tools-port) ]] && tools_port 22222
 	[[ $(conf_read php) == "true" ]] && nginx_tool_site
 	# in case php was installed before nginx
-	[[ $(conf_read php-tool) == "true" && ! -a /var/www/$(conf_read tools-port)/htdocs/php/index.php ]] && php_tool_site
+	[[ $(conf_read php-tool) == "true" && ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]] && php_tool_site
 
 	# Install LetsEncrypt
 	echo | sudo add-apt-repository ppa:certbot/certbot
@@ -432,7 +432,7 @@ redis_optim() {
 php_tool() {
 	api-events_update ip5
 	# in case nginx was installed before php
-	[[ $(conf_read nginx-tool) == "true" && ! -a /etc/nginx/sites-available/$(conf_read tools-port) ]] && nginx_tool_site
+	[[ $(conf_read nginx-tool) == "true" && ! -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && nginx_tool_site
 	[[ $(conf_read nginx) == "true" ]] && php_tool_site
 
 	# Redis (Object Cache)
