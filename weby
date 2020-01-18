@@ -22,7 +22,7 @@ fi
 
 # Prevent "compulsive" re-installation if you currently have the latest version installed.
 checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
-if [[ -a /opt/webinoly/webinoly.conf && $2 != "-ver=beta" && $2 != "-ver=alpha" ]]; then
+if [[ -f /opt/webinoly/webinoly.conf && $2 != "-ver=beta" && $2 != "-ver=alpha" ]]; then
 	currentver=$(grep -w "^app-version:.*" /opt/webinoly/webinoly.conf | cut -f 2 -d ':')
 	if [[ -n $checkver && -n $currentver && ${checkver//.} -le ${currentver//.} ]]; then
 		echo "$(tput setaf 2)You currently have the latest version!$(tput sgr0)"
@@ -111,7 +111,7 @@ sudo mv /opt/webinoly/plugins/* /usr/bin/
 source /opt/webinoly/lib/general
 
 # Check for uninstalled Webinoly conf file
-if [[ -a $HOME/.webinoly-conf-restore_dont-remove ]]; then
+if [[ -f $HOME/.webinoly-conf-restore_dont-remove ]]; then
 	echo "${gre}Seems like Webinoly was installed previously, we will try to recover your old configuration!${end}"
 	sudo tar -Pxf $HOME/.webinoly-conf-restore_dont-remove -C /
 	sudo rm -rf $HOME/.webinoly-conf-restore_dont-remove
@@ -124,7 +124,7 @@ if [[ -a $HOME/.webinoly-conf-restore_dont-remove ]]; then
 fi
 
 # Check for Server Conf Updates and Save Tools Port after library is available.
-if [[ -a /opt/webinoly/webinoly.conf ]]; then
+if [[ -f /opt/webinoly/webinoly.conf ]]; then
 	echo "${gre}Webinoly Configuration file was found, so we will use it!${end}"
 	oldapp=$(conf_read app-version)
 	oldver=$(conf_read server-version)

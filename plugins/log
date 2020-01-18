@@ -120,12 +120,14 @@ elif [[ -n $mysql || -n $syslog ]]; then
 		isgrl=$( grep -P "^general_log[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s | sed 's/[^0-9]*//g' )
 		if [[ -n $enable && $isgrl != 1 ]]; then
 			sudo sed -i -E "/^[#]?general_log[\[ \t=]/c general_log = 1" /etc/mysql/my.cnf
+			sudo sed -i -E "/^[#]?general_log_file[\[ \t=]/c general_log_file = /var/log/mysql/mysql.log" /etc/mysql/my.cnf
 			sudo service mysql restart
 			echo "${gre}MariaDB General log was successfully enabled!${end}"
 		elif [[ -n $enable && $isgrl == 1 ]]; then
 			echo "${gre}MariaDB General log is already enabled!${end}"
 		elif [[ -n $disable && $isgrl != 0 ]]; then
 			sudo sed -i -E "/^[#]?general_log[\[ \t=]/c general_log = 0" /etc/mysql/my.cnf
+			sudo sed -i -E "/^[#]?general_log_file[\[ \t=]/c #general_log_file = /var/log/mysql/mysql.log" /etc/mysql/my.cnf
 			sudo service mysql restart
 			echo "${gre}MariaDB General log was successfully disabled!${end}"
 		elif [[ -n $disable && $isgrl == 0 ]]; then
