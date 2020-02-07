@@ -55,11 +55,31 @@ elif [[ -n $ssh ]]; then
 # MySQL Logs
 elif [[ -n $mysql || -n $syslog ]]; then
 	check_for_mysql
-	if [[ $mysql == "error" || -n $syslog ]]; then
-		if [[ -s /var/log/syslog ]]; then
-			sudo tail -f --lines=$clines /var/log/syslog
+	
+	# General Log
+	if [[ $mysql == "general" ]]; then
+		isgrl=$( grep -P "^general_log[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s | sed 's/[^0-9]*//g' )
+		if [[ -n $enable && $isgrl != 1 ]]; then
+			sudo sed -i -E "/^[#]?general_log[\[ \t=]/c general_log = 1" /etc/mysql/my.cnf
+			sudo sed -i -E "/^[#]?general_log_file[\[ \t=]/c general_log_file = /var/log/mysql/mysql.log" /etc/mysql/my.cnf
+			sudo service mysql restart
+			echo "${gre}MariaDB General log was successfully enabled!${end}"
+		elif [[ -n $enable && $isgrl == 1 ]]; then
+			echo "${gre}MariaDB General log is already enabled!${end}"
+		elif [[ -n $disable && $isgrl != 0 ]]; then
+			sudo sed -i -E "/^[#]?general_log[\[ \t=]/c general_log = 0" /etc/mysql/my.cnf
+			sudo sed -i -E "/^[#]?general_log_file[\[ \t=]/c #general_log_file = /var/log/mysql/mysql.log" /etc/mysql/my.cnf
+			sudo service mysql restart
+			echo "${gre}MariaDB General log was successfully disabled!${end}"
+		elif [[ -n $disable && $isgrl == 0 ]]; then
+			echo "${gre}MariaDB General log is already disabled!${end}"
+		elif [[ -s /var/log/mysql/mysql.log && $isgrl == 1 ]]; then
+			sudo tail -f --lines=$clines /var/log/mysql/mysql.log
+		elif [[ $isgrl != 1 ]]; then
+			echo "${red}[ERROR] MariaDB General log is not enabled!${end}"
+			exit 1
 		else
-			echo "${red}[ERROR] MariaDB Error log (syslog) file not found or still empty!${end}"
+			echo "${red}[ERROR] MariaDB General log file not found or still empty!${end}"
 			exit 1
 		fi
 	
@@ -115,32 +135,15 @@ elif [[ -n $mysql || -n $syslog ]]; then
 			exit 1
 		fi
 		
-	# General Log
+	# Error Log & Syslog (default)
 	else
-		isgrl=$( grep -P "^general_log[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s | sed 's/[^0-9]*//g' )
-		if [[ -n $enable && $isgrl != 1 ]]; then
-			sudo sed -i -E "/^[#]?general_log[\[ \t=]/c general_log = 1" /etc/mysql/my.cnf
-			sudo sed -i -E "/^[#]?general_log_file[\[ \t=]/c general_log_file = /var/log/mysql/mysql.log" /etc/mysql/my.cnf
-			sudo service mysql restart
-			echo "${gre}MariaDB General log was successfully enabled!${end}"
-		elif [[ -n $enable && $isgrl == 1 ]]; then
-			echo "${gre}MariaDB General log is already enabled!${end}"
-		elif [[ -n $disable && $isgrl != 0 ]]; then
-			sudo sed -i -E "/^[#]?general_log[\[ \t=]/c general_log = 0" /etc/mysql/my.cnf
-			sudo sed -i -E "/^[#]?general_log_file[\[ \t=]/c #general_log_file = /var/log/mysql/mysql.log" /etc/mysql/my.cnf
-			sudo service mysql restart
-			echo "${gre}MariaDB General log was successfully disabled!${end}"
-		elif [[ -n $disable && $isgrl == 0 ]]; then
-			echo "${gre}MariaDB General log is already disabled!${end}"
-		elif [[ -s /var/log/mysql/mysql.log && $isgrl == 1 ]]; then
-			sudo tail -f --lines=$clines /var/log/mysql/mysql.log
-		elif [[ $isgrl != 1 ]]; then
-			echo "${red}[ERROR] MariaDB General log is not enabled!${end}"
-			exit 1
+		if [[ -s /var/log/syslog ]]; then
+			sudo tail -f --lines=$clines /var/log/syslog
 		else
-			echo "${red}[ERROR] MariaDB General log file not found or still empty!${end}"
+			echo "${red}[ERROR] MariaDB Error log (syslog) file not found or still empty!${end}"
 			exit 1
 		fi
+		
 	fi
 
 
