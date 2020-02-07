@@ -1089,11 +1089,11 @@ nginx_blockip() {
 	if [[ -z $purge ]]; then
 		if [[ -n $list ]]; then
 			echo ""
-			[[ -n $raw ]] && sign="" || sign="${blu}+ "
+			[[ $list == "raw" || -n $raw ]] && sign="" || sign="${blu}+ "
 			if [[ -s /etc/nginx/conf.d/blockips.conf ]]; then
 				sudo sed -n "s/^deny /${sign}/p;" /etc/nginx/conf.d/blockips.conf | sudo sed -n 's/;$//p'
 			else
-				echo "[Empty] No IP's were found!"
+				[[ $list != "raw" && -z $raw ]] && echo "[Empty] No IP's were found!"
 			fi
 			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
 		else

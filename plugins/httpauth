@@ -146,15 +146,15 @@ elif [[ -n $whitelist ]]; then
 	api-events_update ha4
 	if [[ -z $purge ]]; then
 		if [[ -n $list ]]; then
-			[[ -n $raw ]] && echo "" || echo "${blu}"
+			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${blu}"
 			if [[ -f /etc/nginx/apps.d/whitelist-acl.conf && -z $raw ]]; then
 				sudo sed -n 's/^allow //p;' /etc/nginx/apps.d/whitelist-acl.conf | sudo sed -n 's/;$//p' | sed 's/^/+ /'
 			elif [[ -f /etc/nginx/apps.d/whitelist-acl.conf && -n $raw ]]; then
 				sudo sed -n 's/^allow //p;' /etc/nginx/apps.d/whitelist-acl.conf | sudo sed -n 's/;$//p'
 			else
-				echo "[Empty] No IP's were found!"
+				[[ $list != "raw" && -z $raw ]] && echo "[Empty] No IP's were found!"
 			fi
-			[[ -n $raw ]] && echo "" || echo "${end}"
+			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
 		else
 			[[ $whitelist == true ]] && read -p "${blu}IP address to whitelist: ${end}" whitelist
 			if [[ $(ip_check $whitelist) == "true" ]]; then
@@ -294,7 +294,7 @@ elif [[ $list == "protected" && -n $domain ]]; then
 	elif [[ -f /etc/nginx/apps.d/$domain-nginx.conf && -n $raw ]]; then
 		sudo sed -n 's/^# Path: //p;' /etc/nginx/apps.d/$domain-nginx.conf
 	elif [[ -z $root ]]; then
-		echo "[Empty] No protected paths were found!"
+		[[ -z $raw ]] && echo "[Empty] No protected paths were found!"
 	fi
 	[[ -n $raw ]] && echo "" || echo "${end}"
 	nginx_not="true" # Nginx-Reload not-needed.
