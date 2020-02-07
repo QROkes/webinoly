@@ -83,7 +83,7 @@ elif [[ -n $delete ]]; then
 	sudo sed -i "/^$userpurge:/d" /etc/nginx/$authfile
 	
 	# Remove site-auth-file if empty.
-	[[ -n $domain && ! -s /etc/nginx/$authfile ]] && sudo rm /etc/nginx/$authfile
+	[[ -n $domain && -f /etc/nginx/$authfile && ! -s /etc/nginx/$authfile ]] && sudo rm /etc/nginx/$authfile
 	
 	echo "${gre}User '$userpurge' has been deleted successfully!${end}"
 
@@ -183,7 +183,7 @@ elif [[ -n $whitelist ]]; then
 			[[ -f /etc/nginx/apps.d/whitelist-acl.conf ]] && sudo sed -i "\#^allow ${whitelist};#d" /etc/nginx/apps.d/whitelist-acl.conf
 			
 			# Remove site-auth-file if empty.
-			[[ ! -s /etc/nginx/apps.d/whitelist-acl.conf ]] && sudo rm /etc/nginx/apps.d/whitelist-acl.conf
+			[[ -f /etc/nginx/apps.d/whitelist-acl.conf && ! -s /etc/nginx/apps.d/whitelist-acl.conf ]] && sudo rm /etc/nginx/apps.d/whitelist-acl.conf
 			
 			echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully removed from whitelist!${end}"
 		else

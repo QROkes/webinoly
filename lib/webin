@@ -1123,7 +1123,7 @@ nginx_blockip() {
 			[[ -f /etc/nginx/conf.d/blockips.conf ]] && sed -i "\#^deny ${blockip};#d" /etc/nginx/conf.d/blockips.conf
 			
 			# Remove site-auth-file if empty.
-			[[ ! -s /etc/nginx/conf.d/blockips.conf ]] && sudo rm /etc/nginx/conf.d/blockips.conf
+			[[ -f /etc/nginx/conf.d/blockips.conf && ! -s /etc/nginx/conf.d/blockips.conf ]] && sudo rm /etc/nginx/conf.d/blockips.conf
 			
 			echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully unblocked!${end}"
 		else

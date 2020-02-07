@@ -184,6 +184,7 @@ elif [[ -n $smtp && -n $purge ]]; then
 	rm -rf /etc/mailname
 	conf_write smtp purged
 	sudo service postfix restart
+	echo "${gre}SMTP configuration has been successfully removed!${end}"
 elif [[ -n $smtp ]]; then
 	if [[ $(conf_read php-tool) != "true" ]]; then
 		echo "${red}[ERROR] Seems like PHP and Postfix are not installed!${end}"
