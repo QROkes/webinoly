@@ -421,9 +421,7 @@ elif [[ -n $purge_server_all ]]; then
 	api-events_update st2
 	echo ""
 	echo "${red}¡ C A U T I O N !  You are about to remove Webinoly Stack completely from your server!"
-	echo "This action will remove Nginx, PHP, MySQL and all the other tools, all your sites will remain in the server but will be publicly unavailable after this action."
-	echo ""
-	echo "If you want to remove your sites data use the webinoly command: 'sudo webinoly -delete-all'"
+	echo "This action will remove Nginx, PHP, MySQL and all the additional tools."
 	echo ""
 	if [[ $(conf_read force-flag) != "true" && $force != 1 ]]; then
 		echo " ${blu}Are you sure [y/N]? ${end}"
@@ -437,9 +435,9 @@ elif [[ -n $purge_server_all ]]; then
 
 	if [[ $answer == [Yy] ]]; then
 		conf_write force-flag true
-		[[ $force == 1 ]] && stack -nginx -purge=force || stack -nginx -purge
-		[[ $force == 1 ]] && stack -mysql -purge=force || stack -mysql -purge
-		[[ $force == 1 ]] && stack -php -purge=force || stack -php -purge
+		stack -nginx -purge=force
+		stack -mysql -purge=force
+		stack -php -purge=force
 		clear_force_flag
 		
 		# Remove remanent packages and things!
