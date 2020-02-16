@@ -268,6 +268,17 @@ api-events_update() {
 }
 
 
+remove_nginx_default_server() {
+	if [[ -n $1 && -f /etc/nginx/sites-available/$1 ]]; then
+		sudo sed -i "s/listen 80 default_server;/listen 80;/" /etc/nginx/sites-available/$1
+		sudo sed -i "s/listen \[::\]:80 default_server;/listen [::]:80;/" /etc/nginx/sites-available/$1
+		sudo sed -i "s/listen 443 ssl http2 default_server;/listen 443 ssl http2;/" /etc/nginx/sites-available/$1
+		sudo sed -i "s/listen \[::\]:443 ssl http2 default_server;/listen [::]:443 ssl http2;/" /etc/nginx/sites-available/$1
+		sudo sed -i '/WebinolyStartBlackhole/,/WebinolyEndBlackhole/{/.*/d}' /etc/nginx/sites-available/$1
+	fi
+}
+
+
 check_for_parameters() {
 	# Check for domain parameter if is first parameter and have no hyphen at the begining.
 	if [[ -n $1 && $(echo $1 | cut -c-1) != "-"  ]]; then

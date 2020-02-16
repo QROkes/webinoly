@@ -673,14 +673,7 @@ remove_domain_default_site() {
 	# In case we have a domain as default before.
 	if ! [[ $(conf_read default-site) =~ ^(default|blackhole)$ || -z $(conf_read default-site) ]]; then
 		[[ ! -L /etc/nginx/sites-enabled/default && -f /etc/nginx/sites-available/default ]] && sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
-		# Check in case site was deleted!
-		if [[ -f /etc/nginx/sites-available/$(conf_read default-site) ]]; then
-			sudo sed -i "s/listen 80 default_server;/listen 80;/" /etc/nginx/sites-available/$(conf_read default-site)
-			sudo sed -i "s/listen \[::\]:80 default_server;/listen [::]:80;/" /etc/nginx/sites-available/$(conf_read default-site)
-			sudo sed -i "s/listen 443 ssl http2 default_server;/listen 443 ssl http2;/" /etc/nginx/sites-available/$(conf_read default-site)
-			sudo sed -i "s/listen \[::\]:443 ssl http2 default_server;/listen [::]:443 ssl http2;/" /etc/nginx/sites-available/$(conf_read default-site)
-			sudo sed -i '/WebinolyStartBlackhole/,/WebinolyEndBlackhole/{/.*/d}' /etc/nginx/sites-available/$(conf_read default-site)
-		fi
+		remove_nginx_default_server $(conf_read default-site)
 	fi
 }
 

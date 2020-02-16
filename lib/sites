@@ -983,6 +983,9 @@ parked_domain() {
 	# Prevent if SSL is enabled in main site and ssl data is copied to parked site causing an error.
 	sudo site $domain -ssl=off -revoke=off > /dev/null 2>&1
 	
+	# Prevent if main site is default.
+	[[ $(conf_read default-site) == $mapto ]] && remove_nginx_default_server $domain
+	
 	sudo sed -i "/server_name/c \	$sername" /etc/nginx/sites-available/$domain
 	sudo sed -i "s/$mapto/$domain/g"  /etc/nginx/sites-available/$domain
 	sudo sed -i "/root/c \	root /var/www/$mapto/htdocs;" /etc/nginx/sites-available/$domain
@@ -1191,6 +1194,9 @@ clone_wp_site() {
 		sudo cp /etc/nginx/sites-available/$clone_from /etc/nginx/sites-available/$domain
 		sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 		sudo sed -i "s/$clone_from/$domain/g"  /etc/nginx/sites-available/$domain
+		
+		# Prevent if main site is default.
+		[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
 	fi
 
 	[[ $(is_ssl $clone_from) == "true" ]] && site $domain -ssl=off -revoke=off > /dev/null 2>&1

@@ -335,10 +335,6 @@ elif [[ -n $clone_from ]]; then
 	elif [[ $(is_wp $clone_from $subfolder) != "true" ]]; then
 		echo "${red}[ERROR] Site${blu} '$clone_from' ${red}is not a WordPress site!${end}"
 		exit 1
-	elif [[ $(conf_read default-site) == $clone_from ]]; then
-		# Nginx fails due to duplicate default-server directives
-		echo "${red}[ERROR] Cloning a site that is set as default-site is not allowed!${end}"
-		exit 1
 	else
 		clone_wp_site
 	fi
