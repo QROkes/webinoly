@@ -144,6 +144,8 @@ site_ssl_on() {
 		cronrene=$( sudo grep -F "certbot renew" /var/spool/cron/crontabs/root )
 		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
 		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
+
+		[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "https://${domain}"
 		
 		echo "${gre}SSL have been successfully enabled for your site -${blu} $domain${end}"
 	elif [[ -f /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
@@ -178,6 +180,8 @@ site_ssl_off() {
 	# In case this domain is used as tools-site or default-site
 	[[ $(conf_read tools-site) == $domain ]] && sudo webinoly -tools-site=$domain
 	[[ $(conf_read default-site) == $domain ]] && sudo webinoly -default-site=$domain
+	
+	[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "http://${domain}"
 	
 	if [[ -n $revoke && $revoke =~ ^(on|off)$ ]]; then
 		[[ $revoke == "on" ]] && answer="Y" || answer="N"

@@ -658,6 +658,23 @@ createsite() {
 }
 
 
+edit_wp_db_url() {
+	#Example: edit_wp_db_url example.com "http://${domain}${subfolder}"
+	if [[ -n $1 && -n $2 && $(is_wp $1) == "true" ]]; then
+		doms=$(echo $1$subfolder | sed "s/[^0-9A-Za-z]/_/g")
+		ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+		wp_dbdata $1
+		
+		sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS <<_EOF_
+USE $doms;
+UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
+UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
+FLUSH PRIVILEGES;
+_EOF_
+	fi
+}
+
+
 force_redirect() {
 	if ! [[ $force_redirect =~ ^(www|root|off)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid argument!${end}"
@@ -671,17 +688,23 @@ force_redirect() {
 	local rediron=$( grep -F "WebinolyWWWredirectStart" /etc/nginx/sites-available/$domain )
 	local sername="server_name $domain www.$domain;"
 	cp /opt/webinoly/templates/template-site-wwwredirect /tmp/template-site-wwwredirect
+	[[ $(is_ssl $domain) == "true" ]] && local scheme="https" || local scheme="http"
 	
 	case $force_redirect in
 		"www")
 			[[ -n $rediron ]] && sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
+			[[ $(is_wp $domain) == "true" && $(is_ssl $domain) != "true" ]] && edit_wp_db_url $domain "${scheme}://www.${domain}"
+			
 			sudo sed -i "/#server_name;/c \	server_name $domain;" /tmp/template-site-wwwredirect
 			sudo sed -i "/#return 301;/c \	return 301 \$scheme://www.${domain}\$request_uri;" /tmp/template-site-wwwredirect
 			sudo sed -i "/server_name /c \	server_name www.$domain;" /etc/nginx/sites-available/$domain
+			
 			echo "${gre}Force-Redirection to WWW has been successfully enabled!${end}"
 		;;
 		"root")
 			[[ -n $rediron ]] && sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
+			[[ $(is_wp $domain) == "true" && $(is_ssl $domain) != "true" ]] && edit_wp_db_url $domain "${scheme}://${domain}"
+			
 			sudo sed -i "/#server_name;/c \	server_name www.$domain;" /tmp/template-site-wwwredirect
 			sudo sed -i "/#return 301;/c \	return 301 \$scheme://${domain}\$request_uri;" /tmp/template-site-wwwredirect
 			sudo sed -i "/server_name /c \	server_name $domain;" /etc/nginx/sites-available/$domain
@@ -689,6 +712,8 @@ force_redirect() {
 		;;
 		"off")
 			if [[ -n $rediron ]]; then
+				[[ $(is_wp $domain) == "true" && $(is_ssl $domain) != "true" ]] && edit_wp_db_url $domain "${scheme}://${domain}"
+			
 				sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
 				sudo sed -i "/server_name /c \	$sername" /etc/nginx/sites-available/$domain
 				echo "${gre}Force-Redirection has been successfully disabled!${end}"
@@ -1208,13 +1233,7 @@ clone_wp_site() {
 		ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 		site -mysql=[localhost,$dom,$dom,$AUTOGENPASS_WPDB] > /dev/null 2>&1
 		mysqldump -u root -p$ROOT_PASS $wp_dbname | mysql -u root -p$ROOT_PASS $dom
-		# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
-		sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS <<_EOF_
-USE $dom;
-UPDATE ${wp_dbpref}options SET option_value='http://${domain}${subfolder}' WHERE option_name='home';
-UPDATE ${wp_dbpref}options SET option_value='http://${domain}${subfolder}' WHERE option_name='siteurl';
-FLUSH PRIVILEGES;
-_EOF_
+		edit_wp_db_url $domain "http://${domain}${subfolder}"
 	else
 		echo "${red}[ERROR] Database host is not localhost!${end}"
 		exit 1
