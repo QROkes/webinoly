@@ -97,7 +97,7 @@ bkp_s3_profile() {
 		if ! [[ $tar_scheme =~ ^(http|https|s3)$ ]]; then
 			echo "${red}[ERROR] Invalid target/destination!${end}"
 			exit 1
-		elif [[ $( echo $tar_url | cut -d'.' -f 1 -s) != "s3" ]]; then
+		elif [[ $( echo $tar_url | cut -d'.' -f 1 -s) != "s3" || $(is_url https://${tar_url}) != "true" ]]; then
 			echo "${red}[ERROR] Invalid S3 path!${end}"
 			exit 1
 		fi

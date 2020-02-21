@@ -594,6 +594,9 @@ smtp_setup() {
 	if [[ -z $user || -z $pass || -z $host || -z $mainhost || ! -f /etc/nginx/sites-available/$mainhost ]]; then
 		echo "${red}[ERROR] Invalid SMTP data!${end}"
 		exit 1
+	elif [[ $(is_url $host) != "true" && $(ip_check $host) != "true" ]]; then
+		echo "${red}[ERROR] Invalid SMTP host!${end}"
+		exit 1
 	fi
 	
 	[[ ! -f /opt/webinoly/templates/source/main.cf ]] && sudo cp -p /etc/postfix/main.cf /opt/webinoly/templates/source/
