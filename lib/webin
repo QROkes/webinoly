@@ -594,7 +594,7 @@ smtp_setup() {
 	if [[ -z $user || -z $pass || -z $host || -z $mainhost || ! -f /etc/nginx/sites-available/$mainhost ]]; then
 		echo "${red}[ERROR] Invalid SMTP data!${end}"
 		exit 1
-	elif [[ $(is_url $host) != "true" && $(ip_check $host) != "true" ]]; then
+	elif [[ $(ip_check $host) != "true" ]] && ! [[ $(is_url $host) =~ ^(http|https|true)$ ]]; then
 		echo "${red}[ERROR] Invalid SMTP host!${end}"
 		exit 1
 	fi

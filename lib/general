@@ -362,16 +362,24 @@ is_url_path() {
 is_url() {
 	local scheme=$(echo "${1,,}" | cut -d':' -f 1 -s)
 	local hostname=$(echo "${1,,}" | cut -d':' -f 2 -s | cut -d'/' -f 3 -s)
-	local path=$(echo "${1,,}" | cut -d':' -f 2 -s | cut -d'/' -f 4 -s)
+	local path=$(echo "${1,,}" | cut -d':' -f 2 -s | cut -d'/' -f 4- -s)
 	
-	if ! [[ $scheme =~ ^(http|https)$ ]]; then
-		echo "false"
-	elif [[ $(is_domain $hostname) != "true" ]]; then
-		echo "false"
-	elif [[ $(is_url_path /$path) != "true" ]]; then
-		echo "false"
+	# In case of no-scheme format
+	local hostnamed=$(echo "${1,,}" | cut -d'/' -f 1)
+	
+	if [[ $scheme =~ ^(http|https)$ ]]; then	
+		if [[ $(is_domain $hostname) != "true" ]]; then
+			echo "false"
+		elif [[ -n $path && $(is_url_path /$path) != "true" ]]; then
+			echo "false"
+		else
+			echo $scheme
+		fi
+	elif [[ $(is_domain $hostnamed) == "true" ]]; then
+		path=$(echo "${1,,}" | cut -d'/' -f 2- -s)
+		[[ -n $path && $(is_url_path /$path) != "true" ]] && echo "false" || echo "true"
 	else
-		echo "true"
+		echo "false"
 	fi
 }
 

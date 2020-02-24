@@ -161,7 +161,7 @@ wpinstall() {
 				[[ -z $dbport && -n $dburl ]] && dbport="3306"
 				
 				# External DB validation
-				if ! [[ $dbport =~ ^[0-9]+$ && $dbport -ge 0 && $dbport -le 65535 && ( $(is_url $dburl) == "true" || $(ip_check $dburl) == "true" ) ]]; then
+				if ! [[ $dbport =~ ^[0-9]+$ && $dbport -ge 0 && $dbport -le 65535 && ( $(is_url $dburl) =~ ^(http|https|true)$ || $(ip_check $dburl) == "true" ) ]]; then
 					echo "${red}[ERROR] Invalid database host/port!${blu}"
 					done="0"
 					continue 1
@@ -787,8 +787,9 @@ redirection_manager() {
 		elif [[ $(is_url_path $from) != "true" ]]; then
 			echo "${red}[ERROR] Please, enter a valid 'FROM' redirection path!${end}"
 			exit 1
-		elif [[ -n $to && $(is_url_path $to) != "true" && $(is_url $to) != "true" ]]; then
+		elif [[ -n $to && $(is_url_path $to) != "true" ]] && ! [[ $(is_url $to) =~ ^(http|https)$ ]]; then
 			echo "${red}[ERROR] Please, enter a valid 'TO' redirection path!${end}"
+			[[ $(is_url $to) == "true" ]] && echo "${red}[ERROR] Missing scheme in 'TO' URL!${end}"
 			exit 1
 		fi
 		
@@ -1038,7 +1039,7 @@ reverse_proxy() {
 		fi
 		
 		
-		if ! [[ -n $proxydata && $firstchar == "[" && $lastchar == "]" && -n $rphost && ( $(is_url $rphost) == "true" || $(ip_check $rphost) == "true" || $rphost == "localhost" ) ]]; then
+		if ! [[ -n $proxydata && $firstchar == "[" && $lastchar == "]" && -n $rphost && ( $(is_url $rphost) =~ ^(http|https|true)$ || $(ip_check $rphost) == "true" || $rphost == "localhost" ) ]]; then
 			echo "${red}[ERROR] Please, enter a valid host and port!${end}"
 			exit 1
 		fi
