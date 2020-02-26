@@ -154,14 +154,21 @@ wpinstall() {
 			
 			# Check if localhost or external DB
 			if [[ $dbhost != "localhost" && $setupmysql == [yY] ]]; then
-				local dburl=$(echo "$dbhost" | cut -f 1-2 -d ':')
-				local dbport=$(echo "$dbhost" | cut -f 3 -d ':' -s)
+				local dburl=$(echo "$dbhost" | cut -f 1 -d ':')
+				local dbport=$(echo "$dbhost" | cut -f 2 -d ':' -s)
 				
 				# Default external DB port
-				[[ -z $dbport && -n $dburl ]] && dbport="3306"
+				if [[ -z $dbport && -n $dburl ]]; then
+					dbport="3306"
+					dbhost="${dbhost}:${dbport}"
+				fi
 				
 				# External DB validation
-				if ! [[ $dbport =~ ^[0-9]+$ && $dbport -ge 0 && $dbport -le 65535 && ( $(is_url $dburl) =~ ^(http|https|true)$ || $(ip_check $dburl) == "true" ) ]]; then
+				if [[ $(is_url $dbhost) =~ ^(http|https)$ ]]; then	
+					echo "${red}[ERROR] Remove scheme from host URL!${blu}"
+					done="0"
+					continue 1
+				elif ! [[ $dbport =~ ^[0-9]+$ && $dbport -ge 0 && $dbport -le 65535 && ( $(is_url $dburl) == "true" || $(ip_check $dburl) == "true" ) ]]; then
 					echo "${red}[ERROR] Invalid database host/port!${blu}"
 					done="0"
 					continue 1
@@ -690,7 +697,7 @@ force_redirect() {
 	case $force_redirect in
 		"www")
 			[[ -n $rediron ]] && sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
-			[[ $(is_wp $domain) == "true" && $(is_ssl $domain) != "true" ]] && edit_wp_db_url $domain "${scheme}://www.${domain}"
+			[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "${scheme}://www.${domain}"
 			
 			sudo sed -i "/#server_name;/c \	server_name $domain;" /tmp/template-site-wwwredirect
 			sudo sed -i "/#return 301;/c \	return 301 \$scheme://www.${domain}\$request_uri;" /tmp/template-site-wwwredirect
@@ -700,7 +707,7 @@ force_redirect() {
 		;;
 		"root")
 			[[ -n $rediron ]] && sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
-			[[ $(is_wp $domain) == "true" && $(is_ssl $domain) != "true" ]] && edit_wp_db_url $domain "${scheme}://${domain}"
+			[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "${scheme}://${domain}"
 			
 			sudo sed -i "/#server_name;/c \	server_name www.$domain;" /tmp/template-site-wwwredirect
 			sudo sed -i "/#return 301;/c \	return 301 \$scheme://${domain}\$request_uri;" /tmp/template-site-wwwredirect
@@ -709,7 +716,7 @@ force_redirect() {
 		;;
 		"off")
 			if [[ -n $rediron ]]; then
-				[[ $(is_wp $domain) == "true" && $(is_ssl $domain) != "true" ]] && edit_wp_db_url $domain "${scheme}://${domain}"
+				[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "${scheme}://${domain}"
 			
 				sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
 				sudo sed -i "/server_name /c \	$sername" /etc/nginx/sites-available/$domain
@@ -1030,7 +1037,7 @@ reverse_proxy() {
 		rpport=$(echo "${proxydata}" | rev | cut -d':' -f 1 -s | rev)
 		if [[ $rpport =~ ^[0-9]+$ && $rpport -ge 0 && $rpport -le 65535 ]]; then
 			rphost=$(echo "${proxydata}" | rev | cut -d':' -f 2- -s | rev)
-		elif [[ $rpport =~ ^[0-9]+$ ]]; then
+		elif [[ -n $rpport ]]; then
 			echo "${red}[ERROR] Please, enter a valid port number!${end}"
 			exit 1
 		else
@@ -1210,6 +1217,8 @@ clone_wp_site() {
 		wpcon="/var/www/$domain/wp-config.php"
 		sudo cp -r /var/www/$clone_from /var/www/$domain
 	fi
+
+	sudo chown -R www-data:www-data /var/www/$domain
 
 	if [[ -f /etc/nginx/sites-available/$domain ]]; then
 		sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain

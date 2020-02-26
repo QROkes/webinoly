@@ -168,11 +168,12 @@ wp_dbdata() {
 	wp_dbname=$( grep -F "DB_NAME" $wpconfpath | cut -f 4 -d "'" -s)
 	wp_dbuser=$( grep -F "DB_USER" $wpconfpath | cut -f 4 -d "'" -s)
 	wp_dbhost=$( grep -F "DB_HOST" $wpconfpath | cut -f 4 -d "'" -s)
-	wp_dburl=$(echo "$wp_dbhost" | cut -f 1-2 -d ':' -s)
-	wp_dbport=$(echo "$wp_dbhost" | cut -f 3 -d ':' -s)
+	wp_dburl=$(echo "$wp_dbhost" | cut -f 1 -d ':')
+	wp_dbport=$(echo "$wp_dbhost" | cut -f 2 -d ':' -s)
 	wp_dbpref=$( grep -F "table_prefix" $wpconfpath | cut -f 2 -d "'" -s)
 	
 	[[ ${wp_dbhost,,} == "localhost" ]] && wp_dbhost=${wp_dbhost,,}
+	[[ -z $wp_dbport ]] && wp_dbport="3306"
 	
 	if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
 		echo ""
@@ -361,21 +362,23 @@ is_url_path() {
 
 is_url() {
 	local scheme=$(echo "${1,,}" | cut -d':' -f 1 -s)
-	local hostname=$(echo "${1,,}" | cut -d':' -f 2 -s | cut -d'/' -f 3 -s)
+	local host=$(echo "${1,,}" | cut -d':' -f 2 -s | cut -d'/' -f 3 -s)
 	local path=$(echo "${1,,}" | cut -d':' -f 2 -s | cut -d'/' -f 4- -s)
 	
 	# In case of no-scheme format
-	local hostnamed=$(echo "${1,,}" | cut -d'/' -f 1)
+	local hosted=$(echo "${1,,}" | cut -d'/' -f 1)
+	# In case of no-scehem have port included
+	[[ $(echo $hosted | cut -d':' -f 2 -s) =~ ^[0-9]+$ ]] && hosted=$(echo $hosted | cut -d':' -f 1)
 	
 	if [[ $scheme =~ ^(http|https)$ ]]; then	
-		if [[ $(is_domain $hostname) != "true" ]]; then
+		if [[ $(is_domain $host) != "true" ]]; then
 			echo "false"
 		elif [[ -n $path && $(is_url_path /$path) != "true" ]]; then
 			echo "false"
 		else
 			echo $scheme
 		fi
-	elif [[ $(is_domain $hostnamed) == "true" ]]; then
+	elif [[ $(is_domain $hosted) == "true" ]]; then
 		path=$(echo "${1,,}" | cut -d'/' -f 2- -s)
 		[[ -n $path && $(is_url_path /$path) != "true" ]] && echo "false" || echo "true"
 	else
