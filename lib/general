@@ -1,6 +1,6 @@
 #!/bin/bash
 
-readonly app_version="1.10.2"
+readonly app_version="1.10.3"
 readonly svr_version="1.4"
 readonly os_ubuntu_supported=(xenial bionic)
 readonly php_supported=(7.2 7.3 7.4)
@@ -419,8 +419,8 @@ is_wp_cache() {
 
 is_wp_multisite() {
 	wp_dbdata $1
-	dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}sitemeta' LIMIT 1;"
-	dbsetuc="USE $wp_dbname; SELECT meta_value FROM ${wp_dbpref}sitemeta where meta_key='subdomain_install';"
+	local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}sitemeta' LIMIT 1;"
+	local dbsetuc="USE $wp_dbname; SELECT meta_value FROM ${wp_dbpref}sitemeta where meta_key='subdomain_install';"
 	
 	if [[ $wp_dbhost == "localhost" ]]; then
 		local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
@@ -439,6 +439,25 @@ is_wp_multisite() {
 		echo "false"
 	fi
 }
+
+
+is_wp_installed() {
+	# This function check if WP db exists.
+	# When you create a WP site, DB is created only after the initial WP installation wizard is completed.
+	
+	wp_dbdata $1
+	local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
+	
+	if [[ $wp_dbhost == "localhost" ]]; then
+		local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+		[[ -n $(sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup") ]] && echo "true" || echo "false"
+	elif [[ -n $wp_dburl ]]; then
+		[[ -n $(sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup") ]] && echo "true" || echo "false"
+	else
+		echo "false"
+	fi
+}
+
 
 is_proxy() {
 	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "proxy_pass") ]] && echo "true" || echo "false"

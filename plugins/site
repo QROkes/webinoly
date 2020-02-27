@@ -335,6 +335,9 @@ elif [[ -n $clone_from ]]; then
 	elif [[ $(is_wp $clone_from $subfolder) != "true" ]]; then
 		echo "${red}[ERROR] Site${blu} '$clone_from' ${red}is not a WordPress site!${end}"
 		exit 1
+	elif [[ $(is_wp_installed $clone_from) != "true" ]]; then
+		echo "${red}[ERROR] Seems like WordPress is still not configured in your${blu} '$clone_from' ${red}site!${end}"
+		exit 1
 	else
 		clone_wp_site
 	fi

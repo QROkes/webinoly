@@ -664,7 +664,7 @@ createsite() {
 
 edit_wp_db_url() {
 	#Example: edit_wp_db_url example.com "http://${domain}${subfolder}"
-	if [[ -n $1 && -n $2 && $(is_wp $1) == "true" ]]; then
+	if [[ -n $1 && -n $2 && $(is_wp $1) == "true" && $(is_wp_installed $1) == "true" ]]; then
 		doms=$(echo $1$subfolder | sed "s/[^0-9A-Za-z]/_/g")
 		ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 		wp_dbdata $1
@@ -1227,6 +1227,10 @@ clone_wp_site() {
 		sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 		sudo sed -i "s/$clone_from/$domain/g"  /etc/nginx/sites-available/$domain
 		
+		# Fix server_name according to new domain/site.
+		[[ $subdomflag == 1 ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
+		sudo sed -i "/server_name /c \	$sername" /etc/nginx/sites-available/$domain
+		
 		# Prevent if main site is default.
 		[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
 	fi
@@ -1255,7 +1259,7 @@ clone_wp_site() {
 		sudo site $domain -replace-content=[https://$clone_from,http://$domain]$arg > /dev/null 2>&1
 		sudo site $domain -replace-content=[$clone_from,$domain]$arg > /dev/null 2>&1
 	fi
-	echo "${gre}Site ${blu}'$domain$subfolder'${gre} is now a successful clone of ${blu}'$clone_from$subfolder'${end}"
+	echo "${gre}Site ${blu}'$domain$subfolder'${gre} is now a successfull clone of ${blu}'$clone_from$subfolder'${end}"
 }
 
 
