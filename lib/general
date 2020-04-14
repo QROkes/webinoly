@@ -1,9 +1,10 @@
 #!/bin/bash
 
-readonly app_version="1.10.3"
+readonly app_version="1.11.0"
 readonly svr_version="1.4"
 readonly os_ubuntu_supported=(xenial bionic)
 readonly php_supported=(7.2 7.3 7.4)
+readonly datadog_agent_ver="7"
 
 # echo colors
 readonly red=`tput setaf 1`
@@ -466,3 +467,23 @@ is_proxy() {
 is_parked() {
 	[[ -f /etc/nginx/sites-available/$1 && ! -d /var/www/$1 && $(is_proxy $1) == "false" ]] && echo "true" || echo "false"
 }
+
+
+is_dd_log() {
+	if [[ $1 == "nginx" ]]; then
+		local ddpath="/etc/datadog-agent/conf.d/nginx.d/conf.yaml"
+	elif [[ $1 == "fpm" ]]; then
+		local ddpath="/etc/datadog-agent/conf.d/php_fpm.d/conf.yaml"
+	elif [[ $1 == "mysql" ]]; then
+		local ddpath="/etc/datadog-agent/conf.d/mysql.d/conf.yaml"
+	elif [[ $1 == "redis" ]]; then
+		local ddpath="/etc/datadog-agent/conf.d/redisdb.d/conf.yaml"
+	elif [[ $1 == "global" ]]; then
+		[[ -f /etc/datadog-agent/datadog.yaml && -n $(grep -F "WebinolyLogsStart" /etc/datadog-agent/datadog.yaml) ]] && local global="true"
+	else
+		local ddpath=""
+	fi
+	
+	[[ -n $global || ( -n $ddpath && -f $ddpath && -n $(grep -F "WebinolyDatadogLogsStart" $ddpath)) ]] && echo "true" || echo "false"
+}
+

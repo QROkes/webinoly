@@ -1,0 +1,17 @@
+
+# WebinolyLocalhostStart
+server {
+	listen 127.0.0.1;
+	server_name localhost;
+
+	location = /nginx_status {
+		access_log off;
+		stub_status on;
+	}
+	location ~ ^/(status|ping)$ {
+		access_log off;
+		include fastcgi_params;
+		fastcgi_pass php;
+	}
+}
+# WebinolyLocalhostEnd

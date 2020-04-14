@@ -728,6 +728,8 @@ server_reset() {
 		if [[ -f /opt/webinoly/templates/source/php.ini && -f /opt/webinoly/templates/source/www.conf ]]; then
 			sudo cat /opt/webinoly/templates/source/php.ini > /etc/php/$(conf_read php-ver)/fpm/php.ini
 			sudo cat /opt/webinoly/templates/source/www.conf > /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf
+			# Added in v1.11.0, will fail if stack was built before:
+			[[ -f /opt/webinoly/templates/source/php-fpm.conf ]] && sudo cat /opt/webinoly/templates/source/php-fpm.conf > /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf
 			sudo rm -rf /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
 			php_optim
 			echo "${gre}PHP settings has been updated successfully!${end}"
@@ -1212,4 +1214,462 @@ aws_access_key_id = $user
 aws_secret_access_key = $pass" >> /root/.aws/credentials
 	echo "${gre}AWS S3 Credentials successfully added!${end}"
 }
+
+
+dd_nginx_purge() {
+	if [[ -f /etc/datadog-agent/conf.d/nginx.d/conf.yaml ]]; then
+		if [[ ! -f /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml ]]; then
+			sudo sed -i '/WebinolyLocalhostStart/,/WebinolyLocalhostEnd/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+		fi
+		
+		sudo rm -rf /etc/datadog-agent/conf.d/nginx.d/conf.yaml
+		echo "${gre}Datadog Nginx integration has been successfully removed!${end}"
+	else
+		echo "${gre}Datadog Nginx integration is not installed, so not removed!${end}"
+	fi
+}
+
+
+dd_fpm_purge() {
+	if [[ -f /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml ]]; then
+		if [[ ! -f /etc/datadog-agent/conf.d/nginx.d/conf.yaml ]]; then
+			sudo sed -i '/WebinolyLocalhostStart/,/WebinolyLocalhostEnd/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+		fi
+
+		sudo rm -rf /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml
+		echo "${gre}Datadog PHP-FPM integration has been successfully removed!${end}"
+	else
+		echo "${gre}Datadog PHP-FPM integration is not installed, so not removed!${end}"
+	fi
+}
+
+
+dd_mysql_purge() {
+	if [[ -f /etc/datadog-agent/conf.d/mysql.d/conf.yaml ]]; then
+		sudo rm -rf /etc/datadog-agent/conf.d/mysql.d/conf.yaml
+		echo "${gre}Datadog MySQL integration has been successfully removed!${end}"
+	else
+		echo "${gre}Datadog MySQL integration is not installed, so not removed!${end}"
+	fi
+}
+
+
+dd_redis_purge() {
+	if [[ -f /etc/datadog-agent/conf.d/redisdb.d/conf.yaml ]]; then
+		sudo rm -rf /etc/datadog-agent/conf.d/redisdb.d/conf.yaml
+		echo "${gre}Datadog Redis integration has been successfully removed!${end}"
+	else
+		echo "${gre}Datadog Redis integration is not installed, so not removed!${end}"
+	fi
+}
+
+
+dd_logs_enable() {
+	if [[ $(is_dd_log global) != "true" ]]; then
+		echo "# WebinolyLogsStart
+logs_enabled: true
+logs_config:
+  use_http: true
+  use_compression: true
+# WebinolyLogsEnd" >> /etc/datadog-agent/datadog.yaml
+	fi
+}
+
+
+dd_logs_disable() {
+	if [[ $(is_dd_log nginx) != "true" && $(is_dd_log fpm) != "true" && $(is_dd_log mysql) != "true" && $(is_dd_log redis) != "true" ]]; then
+		sudo sed -i '/WebinolyLogsStart/,/WebinolyLogsEnd/{/.*/d}' /etc/datadog-agent/datadog.yaml
+	fi
+}
+
+
+logrotate_perm() {
+	if [[ $1 == "nginx" ]]; then
+		local path="/etc/logrotate.d/nginx"
+		local owner="www-data adm"
+	elif [[ $1 == "fpm" ]]; then
+		local path="/etc/logrotate.d/php$(conf_read php-ver)-fpm"
+		local owner="root root"
+	elif [[ $1 == "mysql" ]]; then
+		local path="/etc/logrotate.d/mysql-server"
+		local owner="mysql adm"
+	elif [[ $1 == "redis" ]]; then
+		local path="/etc/logrotate.d/redis-server"
+		local owner="redis adm"
+	else
+		local path=""
+		local owner=""
+	fi
+	
+	if [[ -n $path && -n $owner ]]; then
+		sudo sed -i "/create [0-9]/d" $path
+		sudo sed -i "/missingok/i \	create 0644 $owner" $path
+	fi
+}
+
+
+dd_nginx_logs_extended() {
+	for site in "/etc/nginx/sites-available"/*
+	do
+		domi=$(echo $site | cut -f 5 -d "/")
+		if [[ -n $domi && $domi != "default" ]]; then
+			if [[ -L /etc/nginx/sites-enabled/$domi && -z $( grep -F "access_log off;" /etc/nginx/sites-available/$domi) ]]; then
+				[[ -f /var/log/nginx/$domi.access.log ]] && sudo chmod 644 /var/log/nginx/$domi.access.log
+				[[ -f /var/log/nginx/$domi.error.log ]] && sudo chmod 644 /var/log/nginx/$domi.error.log
+				echo "#WebinolyDatadogLogsStart
+ - type: file
+   path: /var/log/nginx/$domi.access.log
+   service: nginx
+   source: $domi
+
+ - type: file
+   path: /var/log/nginx/$domi.error.log
+   service: nginx
+   source: $domi
+#WebinolyDatadogLogsEnd" >> /etc/datadog-agent/conf.d/nginx.d/conf.yaml
+				echo "${gre}Datadog Nginx Logs for ${blu}${domi}${gre} has been successfully enabled!${end}"
+			elif [[ -L /etc/nginx/sites-enabled/$domi ]]; then
+				[[ -f /var/log/nginx/$domi.error.log ]] && sudo chmod 644 /var/log/nginx/$domi.error.log
+				echo "#WebinolyDatadogLogsStart
+ - type: file
+   path: /var/log/nginx/$domi.error.log
+   service: nginx
+   source: $domi
+#WebinolyDatadogLogsEnd" >> /etc/datadog-agent/conf.d/nginx.d/conf.yaml
+				echo "${gre}Datadog Nginx (Only-Error) Logs for ${blu}${domi}${gre} has been successfully enabled!${end}"
+			else
+				echo "${gre}Datadog Nginx Logs for ${blu}${domi}${gre} can NOT be added because your site is disabled!${end}"
+			fi
+		fi
+	done
+}
+
+
+dd_nginx_logs() {
+	if [[ $(is_dd_log nginx) == "true" ]]; then
+		echo "${gre}Datadog Nginx Log is already enabled!${end}"
+	elif [[ -f /etc/datadog-agent/conf.d/nginx.d/conf.yaml ]]; then
+		logrotate_perm nginx
+		[[ -f /var/log/nginx/error.log ]] && sudo chmod 644 /var/log/nginx/error.log
+		[[ -d /var/log/nginx ]] && sudo chmod 755 /var/log/nginx
+	
+		if [[ -z $( grep -F "access_log off;" /etc/nginx/nginx.conf ) ]]; then
+			[[ -f /var/log/nginx/access.log ]] && sudo chmod 644 /var/log/nginx/access.log
+			echo "#WebinolyDatadogLogsStart
+logs:
+ - type: file
+   path: /var/log/nginx/access.log
+   service: nginx
+   source: nginx
+
+ - type: file
+   path: /var/log/nginx/error.log
+   service: nginx
+   source: nginx
+#WebinolyDatadogLogsEnd" >> /etc/datadog-agent/conf.d/nginx.d/conf.yaml
+		else
+			echo "#WebinolyDatadogLogsStart
+logs:
+ - type: file
+   path: /var/log/nginx/error.log
+   service: nginx
+   source: nginx
+#WebinolyDatadogLogsEnd" >> /etc/datadog-agent/conf.d/nginx.d/conf.yaml
+		fi
+	
+	dd_nginx_logs_extended
+	dd_logs_enable
+	echo "${gre}Datadog Nginx Logs (global) has been successfully enabled!${end}"
+	
+	else
+		echo "${red}[ERROR] Datadog Nginx integration is not enabled!${end}"
+		exit 1
+	fi
+}
+
+
+dd_fpm_logs() {
+	if [[ $(is_dd_log fpm) == "true" ]]; then
+		echo "${gre}Datadog PHP-FPM Log is already enabled!${end}"
+	elif [[ -f /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml ]]; then
+		
+		# REMOVE: Check for stacks built before v1.11.0
+		if [[ -f /var/log/php/$(conf_read php-ver)/fpm.log ]]; then
+			sudo sed -i "/error_log =/c\error_log = \/var\/log\/php$(conf_read php-ver)-fpm.log" /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf
+			sudo systemctl restart php$(conf_read php-ver)-fpm
+		fi
+		
+		logrotate_perm fpm
+		[[ -f /var/log/php$(conf_read php-ver)-fpm.log ]] && sudo chmod 644 /var/log/php$(conf_read php-ver)-fpm.log
+		
+		echo "#WebinolyDatadogLogsStart
+logs:
+ - type: file
+   path: /var/log/php$(conf_read php-ver)-fpm.log
+   service: php
+   source: php
+#WebinolyDatadogLogsEnd" >> /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml
+	
+	dd_logs_enable
+	echo "${gre}Datadog PHP-FPM Logs has been successfully enabled!${end}"
+	
+	else
+		echo "${red}[ERROR] Datadog PHP-FPM integration is not enabled!${end}"
+		exit 1
+	fi
+}
+
+
+dd_mysql_logs() {
+	if [[ $(is_dd_log mysql) == "true" ]]; then
+		echo "${gre}Datadog MySQL Log is already enabled!${end}"
+	elif [[ -f /etc/datadog-agent/conf.d/mysql.d/conf.yaml ]]; then
+		
+		# REMOVE: Check for stacks built before v1.11.0
+		if [[ -f /etc/mysql/conf.d/mysqld_safe_syslog.cnf ]]; then
+			sudo sed -i "/Logging and Replication/a \log_error = \/var\/log\/mysql\/error.log" /etc/mysql/my.cnf
+			sudo rm -rf /etc/mysql/conf.d/mysqld_safe_syslog.cnf
+			sudo service mysql restart
+		fi
+		
+		logrotate_perm mysql
+		[[ -f /var/log/mysql/error.log ]] && sudo chmod 644 /var/log/mysql/error.log
+		[[ -d /var/log/mysql ]] && sudo chmod 755 /var/log/mysql
+		
+		echo "#WebinolyDatadogLogsStart
+logs:
+ - type: file
+   path: /var/log/mysql/error.log
+   source: mysql
+   service: mysql
+#WebinolyDatadogLogsEnd" >> /etc/datadog-agent/conf.d/mysql.d/conf.yaml
+	
+	dd_logs_enable
+	echo "${gre}Datadog MySQL Logs has been successfully enabled!${end}"
+	
+	else
+		echo "${red}[ERROR] Datadog MySQL integration is not enabled!${end}"
+		exit 1
+	fi
+}
+
+
+dd_redis_logs() {
+	if [[ $(is_dd_log redis) == "true" ]]; then
+		echo "${gre}Datadog Redis Log is already enabled!${end}"
+	elif [[ -f /etc/datadog-agent/conf.d/redisdb.d/conf.yaml ]]; then
+		logrotate_perm redis
+		[[ -f /var/log/redis/redis-server.log ]] && sudo chmod 644 /var/log/redis/redis-server.log
+		[[ -d /var/log/redis ]] && sudo chmod 755 /var/log/redis
+	
+		echo "#WebinolyDatadogLogsStart
+logs:
+ - type: file
+   path: /var/log/redis/redis-server.log
+   source: redis
+   service: redis
+#WebinolyDatadogLogsEnd" >> /etc/datadog-agent/conf.d/redisdb.d/conf.yaml
+	
+	dd_logs_enable
+	echo "${gre}Datadog Redis Logs has been successfully enabled!${end}"
+	
+	else
+		echo "${red}[ERROR] Datadog Redis integration is not enabled!${end}"
+		exit 1
+	fi
+}
+
+
+dd_nginx() {
+	if [[ ! -f /etc/datadog-agent/conf.d/nginx.d/conf.yaml ]]; then
+		if [[ -z $(grep -F "WebinolyLocalhostStart" /etc/nginx/sites-available/$(conf_read tools-port)) ]]; then
+			sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-localhost' /etc/nginx/sites-available/$(conf_read tools-port)
+		fi
+		
+		sudo touch /etc/datadog-agent/conf.d/nginx.d/conf.yaml
+		sudo chmod 644 /etc/datadog-agent/conf.d/nginx.d/conf.yaml
+		sudo chown dd-agent:dd-agent /etc/datadog-agent/conf.d/nginx.d/conf.yaml
+		
+		echo "init_config:
+
+instances:
+- nginx_status_url: http://localhost/nginx_status
+" >> /etc/datadog-agent/conf.d/nginx.d/conf.yaml
+
+		[[ $logs != "off" ]] && dd_nginx_logs
+		echo "${gre}Datadog Nginx integration has been successfully configured!${end}"
+		
+	elif [[ $logs == "on" ]]; then
+		dd_nginx_logs
+	elif [[ $logs == "off" ]]; then
+		if [[ $(is_dd_log nginx) == "true" ]]; then
+			sudo sed -i '/WebinolyDatadogLogsStart/,/WebinolyDatadogLogsEnd/{/.*/d}' /etc/datadog-agent/conf.d/nginx.d/conf.yaml
+			dd_logs_disable
+			echo "${gre}Datadog Nginx Logs has been successfully disabled!${end}"
+		else
+			echo "${gre}Datadog Nginx Log is already disabled!${end}"
+		fi
+	else
+		echo "${gre}Datadog Nginx integration is already enabled!${end}"
+	fi
+}
+
+
+dd_fpm() {
+	if [[ ! -f /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml ]]; then
+		if [[ -z $(grep -F "WebinolyLocalhostStart" /etc/nginx/sites-available/$(conf_read tools-port)) ]]; then
+			sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-localhost' /etc/nginx/sites-available/$(conf_read tools-port)
+		fi
+		
+		sudo touch /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml
+		sudo chmod 644 /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml
+		sudo chown dd-agent:dd-agent /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml
+		
+		echo "init_config:
+
+instances:
+- status_url: http://localhost/status
+  ping_url: http://localhost/ping
+  use_fastcgi: false
+  ping_reply: pong
+" >> /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml
+
+		[[ $logs != "off" ]] && dd_fpm_logs
+		echo "${gre}Datadog PHP-FPM integration has been successfully configured!${end}"
+		
+	elif [[ $logs == "on" ]]; then
+		dd_fpm_logs
+	elif [[ $logs == "off" ]]; then
+		if [[ $(is_dd_log fpm) == "true" ]]; then
+			sudo sed -i '/WebinolyDatadogLogsStart/,/WebinolyDatadogLogsEnd/{/.*/d}' /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml
+			dd_logs_disable
+			echo "${gre}Datadog PHP-FPM Logs has been successfully disabled!${end}"
+		else
+			echo "${gre}Datadog PHP-FPM Log is already disabled!${end}"
+		fi
+	else
+		echo "${gre}Datadog PHP-FPM integration is already enabled!${end}"
+	fi
+}
+
+
+dd_mysql() {
+	if [[ ! -f /etc/datadog-agent/conf.d/mysql.d/conf.yaml ]]; then
+		local ADMIN_PASS=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+		sudo touch /etc/datadog-agent/conf.d/mysql.d/conf.yaml
+		sudo chmod 644 /etc/datadog-agent/conf.d/mysql.d/conf.yaml
+		sudo chown dd-agent:dd-agent /etc/datadog-agent/conf.d/mysql.d/conf.yaml
+		
+		echo "init_config:
+
+instances:
+- server: 127.0.0.1
+  user: admin
+  pass: '$ADMIN_PASS'
+  port: \"3306\"
+  options:
+    replication: false
+    galera_cluster: false
+    extra_status_metrics: true
+    extra_innodb_metrics: true
+    extra_performance_metrics: true
+    schema_size_metrics: false
+    disable_innodb_metrics: false
+" >> /etc/datadog-agent/conf.d/mysql.d/conf.yaml
+
+		[[ $logs != "off" ]] && dd_mysql_logs
+		echo "${gre}Datadog MySQL integration has been successfully configured!${end}"
+		
+	elif [[ $logs == "on" ]]; then
+		dd_mysql_logs
+	elif [[ $logs == "off" ]]; then
+		if [[ $(is_dd_log mysql) == "true" ]]; then
+			sudo sed -i '/WebinolyDatadogLogsStart/,/WebinolyDatadogLogsEnd/{/.*/d}' /etc/datadog-agent/conf.d/mysql.d/conf.yaml
+			dd_logs_disable
+			echo "${gre}Datadog MySQL Logs has been successfully disabled!${end}"
+		else
+			echo "${gre}Datadog MySQL Log is already disabled!${end}"
+		fi
+	else
+		echo "${gre}Datadog MySQL integration is already enabled!${end}"
+	fi
+}
+
+
+dd_redis() {
+	if [[ ! -f /etc/datadog-agent/conf.d/redisdb.d/conf.yaml ]]; then
+		sudo touch /etc/datadog-agent/conf.d/redisdb.d/conf.yaml
+		sudo chmod 644 /etc/datadog-agent/conf.d/redisdb.d/conf.yaml
+		sudo chown dd-agent:dd-agent /etc/datadog-agent/conf.d/redisdb.d/conf.yaml
+		
+		echo "init_config:
+
+instances:
+- host: localhost
+  port: 6379
+" >> /etc/datadog-agent/conf.d/redisdb.d/conf.yaml
+
+		[[ $logs != "off" ]] && dd_redis_logs
+		echo "${gre}Datadog Redis integration has been successfully configured!${end}"
+		
+	elif [[ $logs == "on" ]]; then
+		dd_redis_logs
+	elif [[ $logs == "off" ]]; then
+		if [[ $(is_dd_log redis) == "true" ]]; then
+			sudo sed -i '/WebinolyDatadogLogsStart/,/WebinolyDatadogLogsEnd/{/.*/d}' /etc/datadog-agent/conf.d/redisdb.d/conf.yaml
+			dd_logs_disable
+			echo "${gre}Datadog Redis Logs has been successfully disabled!${end}"
+		else
+			echo "${gre}Datadog Redis Log is already disabled!${end}"
+		fi
+	else
+		echo "${gre}Datadog Redis integration is already enabled!${end}"
+	fi
+}
+
+
+dd_purge() {
+	if [[ -d /etc/datadog-agent ]]; then
+		sudo apt-get remove --purge datadog-agent -y
+		sudo sed -i '/WebinolyLocalhostStart/,/WebinolyLocalhostEnd/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+		echo "${gre}Datadog Agent has been removed successfully from your server!${end}"
+	else
+		echo "${red}[ERROR] Datadog Agent is not installed on your server!${end}"
+		exit 1
+	fi
+}
+
+dd_install() {
+	if ! [[ $(command -v curl) ]]; then
+		echo "${red}[ERROR] Curl package is required for Datadog!${end}"
+		exit 1
+	elif [[ -d /etc/datadog-agent ]]; then
+		echo "${gre}Datadog Agent is already installed in your server!${end}"
+	else
+		[[ $datadog == true ]] && read -p "${blu}Datatdog API key: ${end}" datadog
+		
+		if [[ $datadog == true ]]; then
+			echo "${red}[ERROR] Invalid Datadog API key!${end}"
+			exit 1
+		elif ! [[ $datadog  =~ ^[0-9a-zA-Z]+$ ]]; then
+			echo "${red}[ERROR] Invalid Datadog API key!${end}"
+			exit 1
+		else
+			DD_INSTALL_ONLY=true DD_AGENT_MAJOR_VERSION=$datadog_agent_ver DD_API_KEY=$datadog bash -c "$(curl -L https://raw.githubusercontent.com/DataDog/datadog-agent/master/cmd/agent/install_script.sh)"
+			
+			if [[ $integrations != "off" ]]; then
+				[[ $(conf_read nginx) == "true" ]] && dd_nginx
+				[[ $(conf_read php) == "true" ]] && dd_fpm
+				[[ $(conf_read mysql) == "true" ]] && dd_mysql
+				[[ $(conf_read php-tool) == "true" ]] && dd_redis
+			fi
+			
+			sudo service datadog-agent start
+			echo "${gre}Datadog Agent has been successfully installed in your server!${end}"
+		fi
+	fi
+}
+
+
+
 

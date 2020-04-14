@@ -212,6 +212,58 @@ elif [[ -n $aws_s3_credentials ]]; then
 	aws_s3_credentials
 
 
+elif [[ -n $datadog ]]; then
+	if [[ -n $purge ]]; then
+		if [[ $integrations == "nginx" ]]; then
+			dd_nginx_purge
+		elif [[ $integrations == "fpm" ]]; then
+			dd_fpm_purge
+		elif [[ $integrations == "mysql" ]]; then
+			dd_mysql_purge
+		elif [[ $integrations == "redis" ]]; then
+			dd_redis_purge
+		elif [[ -n $integrations ]]; then
+			echo "${red}[ERROR] Invalid Datadog integration!${end}"
+			exit 1
+		else
+			dd_purge
+		fi
+		
+		
+		if [[ -n $integrations ]]; then
+			dd_logs_disable
+			sudo service datadog-agent restart
+		fi
+		
+	elif [[ -n $integrations && $integrations != "off" ]]; then
+		if [[ ! -d /etc/datadog-agent ]]; then
+			echo "${red}[ERROR] Datadog Agent is not installed in your server!${end}"
+			exit 1
+		fi
+		
+		if [[ $integrations == "nginx" ]]; then
+			check_for_nginx
+			dd_nginx
+		elif [[ $integrations == "fpm" ]]; then
+			check_for_php
+			dd_fpm
+		elif [[ $integrations == "mysql" ]]; then
+			check_for_mysql
+			dd_mysql
+		elif [[ $integrations == "redis" ]]; then
+			check_for_php_tool
+			dd_redis
+		else
+			echo "${red}[ERROR] Invalid Datadog integration!${end}"
+			exit 1
+		fi
+		
+		sudo service datadog-agent restart
+	else
+		dd_install
+	fi
+
+
 else
 	echo "${red}[ERROR] Please enter a valid option!${end}"
 	exit 1

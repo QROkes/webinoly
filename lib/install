@@ -195,6 +195,7 @@ php_install() {
 	if [[ $(conf_read php-v${def}) != "true" ]]; then
 		sudo cp -p /etc/php/$ver/fpm/php.ini /opt/webinoly/templates/source/
 		sudo cp -p /etc/php/$ver/fpm/pool.d/www.conf /opt/webinoly/templates/source/
+		sudo cp -p /etc/php/$ver/fpm/php-fpm.conf /opt/webinoly/templates/source/
 	fi
 	
 	conf_write php true
@@ -232,6 +233,11 @@ mysql_install() {
 	echo "mariadb-server-10.4 mysql-server/root_password_again password $AUTOGENPASS_ROOT" | debconf-set-selections
 	sudo apt -y install mariadb-server
 
+	# Binaly logs disabled by default and Error logging not in syslog (syslog is default).
+	sudo sed -i "/Logging and Replication/a \log_error = \/var\/log\/mysql\/error.log" /etc/mysql/my.cnf
+	sudo rm -rf /etc/mysql/conf.d/mysqld_safe_syslog.cnf
+	sudo log -mysql=binary -disable > /dev/null 2>&1
+
 	#Instead of mysql_secure_installation we do this: (same but manually, because not acept unattended)
 	sudo mysql --user=root -p$AUTOGENPASS_ROOT <<_EOF_
 ALTER USER 'root'@'localhost' IDENTIFIED BY '${AUTOGENPASS_ROOT}';
@@ -243,9 +249,8 @@ CREATE USER IF NOT EXISTS 'admin'@'localhost' IDENTIFIED BY '${AUTOGENPASS_ADMIN
 GRANT ALL PRIVILEGES ON *.* TO 'admin'@'localhost' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 _EOF_
-
+	
 	conf_write mysql true
-	sudo log -mysql=binary -disable > /dev/null 2>&1
 	echo "${gre}MySQL has been installed successfully! ${end}"
 	api-events_update im4
 }
@@ -323,11 +328,6 @@ php_optim() {
 	
 	set_timezone &
 
-	sudo mkdir -p /var/log/php/$ver
-	sudo touch /var/log/php/$ver/fpm.log
-	sudo sed -i "/error_log =/c\error_log = /var/log/php/$ver/fpm.log" /etc/php/$ver/fpm/php-fpm.conf
-	sudo sed -i '/log_level =/c\log_level = notice' /etc/php/$ver/fpm/php-fpm.conf
-
 	sudo sed -i '/pm =/c\pm = ondemand' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/request_terminate_timeout =/c\request_terminate_timeout = 300' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.max_spare_servers =/c\pm.max_spare_servers = 35' /etc/php/$ver/fpm/pool.d/www.conf
@@ -346,11 +346,11 @@ php_optim() {
 		sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
 	fi
 	
-	sudo touch /var/log/php/$ver/slow.log
+	sudo touch /var/log/php$ver-slog.log
 	sudo cp /etc/php/$ver/fpm/pool.d/www.conf /etc/php/$ver/fpm/pool.d/debug.conf
 	sudo sed -i '/\[www\]/c\[debug]' /etc/php/$ver/fpm/pool.d/debug.conf
 	sudo sed -i '/rlimit_core =/c\rlimit_core = unlimited' /etc/php/$ver/fpm/pool.d/debug.conf
-	sudo sed -i "/slowlog =/c\slowlog = /var/log/php/$ver/slow.log" /etc/php/$ver/fpm/pool.d/debug.conf
+	sudo sed -i "/slowlog =/c\slowlog = /var/log/php$ver-slog.log" /etc/php/$ver/fpm/pool.d/debug.conf
 	sudo sed -i '/request_slowlog_timeout =/c\request_slowlog_timeout = 10s' /etc/php/$ver/fpm/pool.d/debug.conf
 
 	if [[ $(conf_read multi-php) == "true" ]]; then

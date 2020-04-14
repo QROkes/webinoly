@@ -441,6 +441,7 @@ elif [[ -n $purge_server_all ]]; then
 		clear_force_flag
 		
 		# Remove remanent packages and things!
+		[[ -d /etc/datadog-agent ]] && webinoly -datadog -purge
 		[[ -f /etc/ssl/certs/webinoly-blackhole.crt.pem ]] && sudo rm -rf /etc/ssl/certs/webinoly-blackhole.crt.pem
 		[[ -f /etc/ssl/private/webinoly-blackhole.key.pem ]] && sudo rm -rf /etc/ssl/private/webinoly-blackhole.key.pem
 		[[ -f /etc/ssl/dhparam.pem ]] && sudo rm -rf /etc/ssl/dhparam.pem
