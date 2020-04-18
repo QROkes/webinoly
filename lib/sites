@@ -790,7 +790,10 @@ redirection_manager() {
 		[[ -z $to || $to == "true" ]] && ! [[ $http_code =~ ^(410|444|451)$ ]] && read -p "${blu}Redirect to: ${end}" to
 		echo ""
 		
-		if [[ -z $from || ( -z $to && $http_code =~ ^(301|302|303|307|308)$ ) ]]; then
+		if [[ -n $( grep -E "^# Path: ${from}( \([Exact]+\))?$" /etc/nginx/apps.d/$domain-nginx.conf ) ]]; then
+			echo "${red}[ERROR] Protected paths are not allowed for redirections!${end}"
+			exit 1
+		elif [[ -z $from || ( -z $to && $http_code =~ ^(301|302|303|307|308)$ ) ]]; then
 			echo "${red}[ERROR] Please, enter a valid from/to redirection path!${end}"
 			exit 1
 		elif [[ $from == "/" ]]; then
@@ -817,12 +820,11 @@ redirection_manager() {
 			sudo chown -R root:root /etc/nginx/apps.d/$domain-nginx.conf
 		fi
 		
-		exist=$( grep -E "^# RedirectFrom: ${from}$" /etc/nginx/apps.d/$domain-nginx.conf )
-		if [[ -z $exist ]]; then
-			if [[ $exact == true ]]; then
-				sign="= "
-				code="$from (Exact)"
-			elif [[ $regex == "sensitive" ]]; then
+		local exist=$( grep -E "^# RedirectFrom: ${from}( \([Regx]+\))?$" /etc/nginx/apps.d/$domain-nginx.conf )
+		local exists=$( grep -E "^# RedirectFrom: ${from}( \(Exact\))$" /etc/nginx/apps.d/$domain-nginx.conf )
+		# Can have both at the same time, one exact and another.
+		if [[ ( -z $exists && $exact == "true" ) || ( -z $exists && -z $exist ) || ( -n $exists && -z $exist && -z $exact ) ]]; then
+			if [[ $regex == "sensitive" ]]; then
 				sign="~ "
 				code="$from (Regex)"
 			elif [[ $regex == "insensitive" ]]; then
@@ -831,6 +833,9 @@ redirection_manager() {
 			elif [[ $regex == "longest" ]]; then
 				sign="^~ "
 				code="$from (Regex)"
+			elif [[ $exact == true ]]; then
+				sign="= "
+				code="$from (Exact)"
 			else
 				sign=""
 				code="$from"
