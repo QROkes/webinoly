@@ -33,8 +33,10 @@ if [[ -n $mail || -n $email ]]; then
 	fi
 elif [[ -n $fpm || -n $php ]]; then
 	check_for_php
-	if [[ -f /var/log/php/$(conf_read php-ver)/fpm.log ]]; then
-		sudo tail -f --lines=$clines /var/log/php/$(conf_read php-ver)/*.log
+	# REMOVE: Temporal check because we change log path in v1.11.0
+	php_log_path=$(grep -w "^error_log = .*" /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf | cut -f 3 -d ' ')
+	if [[ -f $php_log_path ]]; then
+		sudo tail -f --lines=$clines $php_log_path
 	else
 		error
 	fi
@@ -137,7 +139,10 @@ elif [[ -n $mysql || -n $syslog ]]; then
 		
 	# Error Log & Syslog (default)
 	else
-		if [[ -s /var/log/syslog ]]; then
+		# REMOVE: Temporal check because we change log path in v1.11.0
+		if [[ -f /etc/mysql/conf.d/mysqld_safe_syslog.cnf && -s /var/log/mysql/error.log ]]; then
+			sudo tail -f --lines=$clines /var/log/mysql/error.log
+		elif [[ ! -f /etc/mysql/conf.d/mysqld_safe_syslog.cnf && -s /var/log/syslog ]]; then
 			sudo tail -f --lines=$clines /var/log/syslog
 		else
 			echo "${red}[ERROR] MariaDB Error log (syslog) file not found or still empty!${end}"
