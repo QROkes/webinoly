@@ -615,7 +615,7 @@ smtp_setup() {
 	sudo sed -i '/relayhost/a \smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd' /etc/postfix/main.cf
 	sudo sed -i '/relayhost/a \smtp_sasl_security_options = noanonymous' /etc/postfix/main.cf
 	sudo sed -i '/relayhost/a \smtp_sasl_auth_enable = yes' /etc/postfix/main.cf
-	sudo sed -i 's/mydestination = , $myhostname, /mydestination = /' /etc/postfix/main.cf
+	sudo sed -i '/mydestination =/c \mydestination = localhost' /etc/postfix/main.cf
 	sudo postconf -e 'smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt'
 
 	echo "$host:587 $user:$pass" > /etc/postfix/sasl_passwd

@@ -179,6 +179,7 @@ elif [[ -n $smtp && -n $purge ]]; then
 	fi
 	
 	sudo cat /opt/webinoly/templates/source/main.cf >| /etc/postfix/main.cf
+	sudo sed -i '/mydestination =/c \mydestination = localhost' /etc/postfix/main.cf
 	rm -rf /etc/postfix/sasl_passwd.db
 	rm -rf /etc/postfix/sasl_passwd
 	rm -rf /etc/mailname

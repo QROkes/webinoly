@@ -449,9 +449,11 @@ php_tool() {
 	echo "postfix postfix/mailname        string  $hostname" | debconf-set-selections
 	sudo apt -y install postfix
 	sudo cp -p /etc/postfix/main.cf /opt/webinoly/templates/source/
+	sudo sed -i '/mydestination =/c \mydestination = localhost' /etc/postfix/main.cf
 
 	redis_optim
 	sudo service php*-fpm reload
+	sudo service postfix restart
 	conf_write php-tool true
 	api-events_update ip8
 }
