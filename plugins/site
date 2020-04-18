@@ -3,7 +3,7 @@
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
 # Options: -html, -php, -mysql, -wp, -wpsubdir, -wpsubdom, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -yoast-sitemap, -multisite-convert, -clone-from, -replace-content, -redirection
-# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp, -subfolder, -from, -to, -http-code
+# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp, -subfolder, -from, -to, -http-code, -regex
 
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
