@@ -65,51 +65,43 @@ bkp_s3_profile() {
 			read -p "${gre}Restore destination folder: ${end}" restore
 		fi
 		if [[ ! -d $restore ]]; then
-			echo "${red}[ERROR] Restore folder not found!${end}"
+			echo "${red}[ERROR] Restore destination folder not found!${end}"
 			exit 1
 		fi
 		
-		sudo duply $profile restore $restore
+		sudo duply $profile restore $restore $date
 	else
 		if [[ -d /root/.duply/$profile ]]; then
 			echo "${red}[ERROR] Can not create profile${blu} '$profile' ${red}because already exists!${end}"
 			exit 1
 		fi
 	
-		[[ -z $bucket ]] &&	read -p "${gre}S3 Bucket endpoint: ${end}" bucket
+		[[ -z $bucket ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
+		# Only numerals 0-9, basic Latin letters (only lowercase) and underscore.
+		if ! [[ $bucket =~ ^[0-9a-z\/_]+$ ]] || [[ -z $bucket || $(echo "$bucket" | cut -c-1) =~ [_|\/] || ${#bucket} -gt 63 || ${#bucket} -lt 3 ]]; then
+			echo "${red}[ERROR] Bucket names can only contain lowercase letters, numbers or underscores; must start with a letter or number and must be at least 3 and no more than 63 characters long.${end}"
+			exit 1
+		fi
+		
 		[[ -z $source ]] && read -p "${gre}Source path: ${end}" source
-		if [[ -z $bucket || -z $source || ! -d $source ]]; then
-			echo "${red}[ERROR] Please, enter a valid source and endpoint!${end}"
+		if [[ -z $source || ! -d $source ]]; then
+			echo "${red}[ERROR] Please, enter a valid source folder and bucket name!${end}"
 			exit 1
 		fi
-		
-		# Bucket sintax validation
-		tar_scheme=$( echo $bucket | sed 's#://#|#' | cut -d'|' -f 1 -s)
-		tar_url=$( echo $bucket | sed 's#://#|#' | cut -d'|' -f 2 -s)
-		
-		# Fix URL in case was entered without scheme ej. 's3.amazonaws.com/bucket/folder'
-		if [[ -z $tar_scheme && -z $tar_url && -n $bucket ]]; then
-			tar_scheme="https"
-			tar_url=$bucket
-		fi
-		
-		# Validation
-		if ! [[ $tar_scheme =~ ^(http|https|s3)$ ]]; then
-			echo "${red}[ERROR] Invalid target/destination!${end}"
-			exit 1
-		elif [[ $( echo $tar_url | cut -d'.' -f 1 -s) != "s3" || $(is_url $tar_url) != "true" ]]; then
-			echo "${red}[ERROR] Invalid S3 path!${end}"
-			exit 1
-		fi
-		
 		
 		sudo duply $profile create
 		[[ -z $max_age ]] && max_age="1M"
 		sudo sed -i -E "/^[#]?GPG_KEY=/c GPG_KEY='disabled'" /root/.duply/$profile/conf
 		sudo sed -i -E "/^[#]?GPG_PW=/c #GPG_PW='_GPG_PASSWORD_'" /root/.duply/$profile/conf
-		sudo sed -i -E "/^[#]?TARGET=/c TARGET='s3://${tar_url}'" /root/.duply/$profile/conf
+		sudo sed -i -E "/^[#]?TARGET=/c TARGET='s3+http://${bucket}'" /root/.duply/$profile/conf
 		sudo sed -i -E "/^[#]?SOURCE=/c SOURCE='$source'" /root/.duply/$profile/conf
 		sudo sed -i -E "/^[#]?MAX_AGE=/c MAX_AGE=$max_age" /root/.duply/$profile/conf
+		
+		if [[ -z $s3_european_buckets ]]; then
+			sudo echo 'DUPL_PARAMS="$DUPL_PARAMS --s3-use-new-style "' >> /root/.duply/$profile/conf
+		else
+			sudo echo 'DUPL_PARAMS="$DUPL_PARAMS --s3-use-new-style --s3-european-buckets "' >> /root/.duply/$profile/conf
+		fi
 		
 		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully created!${end}"
 	fi
