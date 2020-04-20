@@ -3,7 +3,7 @@
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
 # Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials
-# Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets
+# Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info
 
 source /opt/webinoly/lib/webin
 source /opt/webinoly/lib/bkp
@@ -70,11 +70,6 @@ elif [[ -n $config_cache ]]; then
 elif [[ -n $uninstall ]]; then
 	api-events_update wy4
 	webinoly_uninstall
-	nginx_not="true" # Nginx-Reload not-needed.
-
-
-elif [[ -n $info ]]; then
-	system_info
 	nginx_not="true" # Nginx-Reload not-needed.
 
 	
@@ -263,6 +258,11 @@ elif [[ -n $datadog ]]; then
 	else
 		dd_install
 	fi
+
+
+elif [[ -n $info ]]; then
+	system_info
+	nginx_not="true" # Nginx-Reload not-needed.
 
 
 else

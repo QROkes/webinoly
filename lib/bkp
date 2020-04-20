@@ -51,6 +51,23 @@ bkp_s3_profile() {
 			echo "${red}[ERROR] Backup profile not found!${end}"
 			exit 1
 		fi
+	elif [[ -n $info ]]; then
+		if [[ -d /root/.duply/$profile ]]; then
+			tar=$(grep -E "^TARGET[ ]?=" /root/.duply/$profile/conf | cut -f 2 -d "'" )
+			sou=$(grep -E "^SOURCE[ ]?=" /root/.duply/$profile/conf | cut -f 2 -d "'" )
+			age=$(grep -E "^MAX_AGE[ ]?=" /root/.duply/$profile/conf | cut -f 2 -d "=" )
+			par=$(grep "s3-use-new-style" /root/.duply/$profile/conf | cut -f 2 -d '"' )
+			
+			echo ""
+			echo "${blu}S3 Bucket:${end} $tar"
+			echo "${blu}Source:${end} $sou"
+			echo "${blu}Max_Age:${end} $age"
+			echo "${blu}Parameters:${end} $par"
+			echo ""
+		else
+			echo "${red}[ERROR] Backup profile not found!${end}"
+			exit 1
+		fi
 	elif [[ -n $delete ]]; then
 		if [[ -d /root/.duply/$profile ]]; then
 			sudo rm -rf /root/.duply/$profile
@@ -128,6 +145,7 @@ bkp_s3_list() {
 }
 
 
+
 bkp_wizard() {
 	echo "${gre}"
 	echo " ***********************************"
@@ -140,7 +158,8 @@ bkp_wizard() {
 	echo " 4 - Restore backup from S3"
 	echo " 5 - Run S3 backup"
 	echo " 6 - Delete profile"
-	echo " 7 - List profiles"
+	echo " 7 - Profile info"
+	echo " 8 - List profiles"
 	echo "${gre}"
 	read -p "What do you want to do? ${end}" wzd
 	echo ""
@@ -161,6 +180,9 @@ bkp_wizard() {
 		delete="true"
 		bkp_s3_profile
 	elif [[ $wzd == 7 ]]; then
+		info="true"
+		bkp_s3_profile
+	elif [[ $wzd == 8 ]]; then
 		bkp_s3_list
 	else
 		echo "${red}[ERROR] Please, enter a valid option!${end}"
