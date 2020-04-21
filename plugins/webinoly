@@ -2,8 +2,8 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
-# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials
-# Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info
+# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import
+# Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file
 
 source /opt/webinoly/lib/webin
 source /opt/webinoly/lib/bkp
@@ -202,10 +202,12 @@ elif [[ -n $backup ]]; then
 	else
 		bkp_wizard
 	fi
+	nginx_not="true" # Nginx-Reload not-needed.
 
 
 elif [[ -n $aws_s3_credentials ]]; then
 	aws_s3_credentials
+	nginx_not="true" # Nginx-Reload not-needed.
 
 
 elif [[ -n $datadog ]]; then
@@ -258,6 +260,11 @@ elif [[ -n $datadog ]]; then
 	else
 		dd_install
 	fi
+
+
+elif [[ -n $db_import ]]; then
+	database_import
+	nginx_not="true" # Nginx-Reload not-needed.
 
 
 elif [[ -n $info ]]; then
