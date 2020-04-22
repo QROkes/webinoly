@@ -2,10 +2,12 @@
 
 bkp_local_db() {
 	check_for_mysql
-	[[ -z $wp ]] &&	read -p "${gre}WordPress site: ${end}" wp
-	[[ -z $destination ]] && read -p "${gre}Destination: ${end}" destination
-	if [[ -z $wp || -z $destination || ! -d $destination || $(is_wp $wp) != "true" || $(echo "${destination}" | rev | cut -c-1) == "/" ]]; then
-		echo "${red}[ERROR] Please, enter a valid WP site and destination path!${end}"
+	[[ -z $wp || $wp == "true" ]] &&	read -p "${gre}WordPress site: ${end}" wp
+	if [[ -z $wp || $(is_wp $wp) != "true"  ]]; then
+		echo "${red}[ERROR] Please, enter a valid WP site!${end}"
+		exit 1
+	elif [[ $(is_wp_installed $wp) != "true"  ]]; then
+		echo "${red}[ERROR] Your WP site database is still empty!${end}"
 		exit 1
 	fi
 	
@@ -15,14 +17,34 @@ bkp_local_db() {
 		exit 1
 	fi
 	
+	[[ -z $destination || $destination == "true" ]] && read -p "${gre}Destination: ${end}" destination
+	if [[ $destination == "default" ]]; then
+		destination="$HOME/webinoly-backups/$wp"
+		sudo mkdir -p $destination
+	fi
+	if [[ -z $destination || ! -d $destination || $(echo "${destination}" | rev | cut -c-1) == "/" ]]; then
+		echo "${red}[ERROR] Please, enter a valid destination path!${end}"
+		exit 1
+	fi
+	
 	local filename="webinoly-backup-db_${wp}_$(date +%F)-$(date +%T).sql"
 	local adminpass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 	sudo mysqldump --user=admin --password=$adminpass --single-transaction --lock-tables --quick --databases $wp_dbname > $destination/$filename
 	
 	if [[ -s $destination/$filename ]]; then
 		echo "${gre}Database local backup successfully done!${end}"
+		[[ -n $max && $max =~ ^[0-9]+$ ]] && sudo ls -1t $destination | tail -n +$((max+1)) | xargs -d '\n' -I '%' sudo rm -f $destination/%
+		[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket
 	else
 		echo "${red}[ERROR] Database backup failed!${end}"
+		exit 1
+	fi
+}
+
+
+check_duply_profile() {
+	if [[ ! -d /root/.duply/$profile ]]; then
+		echo "${red}[ERROR] Backup profile not found!${end}"
 		exit 1
 	fi
 }
@@ -44,39 +66,35 @@ bkp_s3_profile() {
 		fi
 	fi
 	
+	
 	if [[ -n $run ]]; then
-		if [[ -d /root/.duply/$profile ]]; then
-			sudo duply $profile backup_verify_purge --force --allow-source-mismatch
-		else
-			echo "${red}[ERROR] Backup profile not found!${end}"
-			exit 1
-		fi
+		check_duply_profile
+		sudo duply $profile backup_verify_purge --force --allow-source-mismatch
+		
 	elif [[ -n $info ]]; then
-		if [[ -d /root/.duply/$profile ]]; then
-			tar=$(grep -E "^TARGET[ ]?=" /root/.duply/$profile/conf | cut -f 2 -d "'" )
-			sou=$(grep -E "^SOURCE[ ]?=" /root/.duply/$profile/conf | cut -f 2 -d "'" )
-			age=$(grep -E "^MAX_AGE[ ]?=" /root/.duply/$profile/conf | cut -f 2 -d "=" )
-			par=$(grep "s3-use-new-style" /root/.duply/$profile/conf | cut -f 2 -d '"' )
+		check_duply_profile
+		
+		tar=$(grep -E "^TARGET[ ]?=" /root/.duply/$profile/conf | cut -f 2 -d "'" )
+		sou=$(grep -E "^SOURCE[ ]?=" /root/.duply/$profile/conf | cut -f 2 -d "'" )
+		age=$(grep -E "^MAX_AGE[ ]?=" /root/.duply/$profile/conf | cut -f 2 -d "=" )
+		par=$(grep "s3-use-new-style" /root/.duply/$profile/conf | cut -f 2 -d '"' )
 			
-			echo ""
-			echo "${blu}S3 Bucket:${end} $tar"
-			echo "${blu}Source:${end} $sou"
-			echo "${blu}Max_Age:${end} $age"
-			echo "${blu}Parameters:${end} $par"
-			echo ""
-		else
-			echo "${red}[ERROR] Backup profile not found!${end}"
-			exit 1
-		fi
+		echo ""
+		echo "${blu}S3 Bucket:${end} $tar"
+		echo "${blu}Source:${end} $sou"
+		echo "${blu}Max_Age:${end} $age"
+		echo "${blu}Parameters:${end} $par"
+		echo ""
+	
 	elif [[ -n $delete ]]; then
-		if [[ -d /root/.duply/$profile ]]; then
-			sudo rm -rf /root/.duply/$profile
-			echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully deleted!${end}"
-		else
-			echo "${red}[ERROR] Backup profile not found!${end}"
-			exit 1
-		fi
+		check_duply_profile
+		
+		sudo rm -rf /root/.duply/$profile
+		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully deleted!${end}"
+		
 	elif [[ -n $restore ]]; then
+		check_duply_profile
+		
 		if [[ $restore == "true" ]]; then
 			echo ""
 			read -p "${gre}Restore destination folder: ${end}" restore
@@ -87,20 +105,45 @@ bkp_s3_profile() {
 		fi
 		
 		sudo duply $profile restore $restore $date
+	elif [[ -n $add_db_pre ]]; then
+		check_duply_profile
+		
+		[[ $add_db_pre == "true" ]] &&	read -p "${gre}WordPress site: ${end}" add_db_pre
+		# we dont check is_wp_installed because at this point we are still not doing a backup, just setting it.
+		if [[ -z $add_db_pre || $(is_wp $add_db_pre) != "true"  ]]; then
+			echo "${red}[ERROR] Please, enter a valid WP site!${end}"
+			exit 1
+		fi
+		
+		wp_dbdata $add_db_pre
+		if [[ $wp_dbhost != "localhost" ]]; then
+			echo "${red}[ERROR] Database host is not localhost!${end}"
+			exit 1
+		fi
+		
+		[[ -z $destination || $destination == "true" ]] && destination="default"
+		[[ -z $max && $destination == "default" ]] && max="5"
+		[[ -n $max && $max =~ ^[0-9]+$ ]] && local param="-max=$max "
+		[[ -n $bucket && $bucket != "true" ]] && local param="${param}-bucket=$bucket"
+		
+		[[ ! -f /root/.duply/$profile/pre ]] && sudo touch /root/.duply/$profile/pre
+		echo "sudo webinoly -backup=local -wp=$add_db_pre -destination=$destination $param" >> /root/.duply/$profile/pre
+		echo "${gre}Database backup will run each time you run your S3 backup!${end}"
+	
 	else
 		if [[ -d /root/.duply/$profile ]]; then
 			echo "${red}[ERROR] Can not create profile${blu} '$profile' ${red}because already exists!${end}"
 			exit 1
 		fi
 	
-		[[ -z $bucket ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
+		[[ -z $bucket || $bucket == "true" ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
 		# Only numerals 0-9, basic Latin letters (only lowercase) and underscore.
 		if ! [[ $bucket =~ ^[0-9a-z\/_]+$ ]] || [[ -z $bucket || $(echo "$bucket" | cut -c-1) =~ [_|\/] || ${#bucket} -gt 63 || ${#bucket} -lt 3 ]]; then
 			echo "${red}[ERROR] Bucket names can only contain lowercase letters, numbers or underscores; must start with a letter or number and must be at least 3 and no more than 63 characters long.${end}"
 			exit 1
 		fi
 		
-		[[ -z $source ]] && read -p "${gre}Source path: ${end}" source
+		[[ -z $source || $source == "true" ]] && read -p "${gre}Source path: ${end}" source
 		if [[ -z $source || ! -d $source ]]; then
 			echo "${red}[ERROR] Please, enter a valid source folder and bucket name!${end}"
 			exit 1
@@ -144,6 +187,62 @@ bkp_s3_list() {
 	echo ""
 }
 
+
+s3_send() {
+	if [[ ! -s /root/.aws/credentials ]]; then
+		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
+		exit 1
+	fi
+	
+	[[ -z $send_to_s3 || $send_to_s3 == "true" ]] && read -p "${gre}File to send: ${end}" send_to_s3
+	if [[ ! -f $send_to_s3 ]]; then
+		echo "${red}[ERROR] File not found!${end}"
+		exit 1
+	fi
+	
+	[[ -z $bucket || $bucket == "true" ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
+	# Only numerals 0-9, basic Latin letters (only lowercase) and underscore.
+	if ! [[ $bucket =~ ^[0-9a-z\/_]+$ ]] || [[ -z $bucket || $(echo "$bucket" | cut -c-1) =~ [_|\/] || ${#bucket} -gt 63 || ${#bucket} -lt 3 ]]; then
+		echo "${red}[WARNING] Seems like you're still using the old (deprecated) bucket naming schema."
+		echo "https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html#bucketnamingrules${end}"
+		#exit 1
+	fi
+	
+	folder=$(echo $bucket | cut -f 2- -d "/" -s)
+	[[ -n $folder ]] && folder="/${folder}/"
+	
+	export folder
+	export bucket=$(echo $bucket | cut -f 1 -d "/")
+	export send_to_s3
+	
+	python - &>/dev/null <<END
+import os,boto
+
+filepath = os.environ['send_to_s3']
+BUCKET = os.environ['bucket']
+folder = os.environ['folder']
+
+conn = boto.connect_s3()
+bucket = conn.lookup(BUCKET)
+k = bucket.new_key(folder + filepath.split('/')[-1])
+k.set_contents_from_filename(filepath)
+
+END
+	
+	if [[ $? == 0 ]]; then
+		unset send_to_s3
+		unset folder
+		unset bucket
+		echo "${gre}File was sent to S3 successfully!${end}"
+	else
+		unset send_to_s3
+		unset folder
+		unset bucket
+		echo "${red}[ERROR] Can not connect with your bucket!${end}"
+		exit 1
+	fi
+	
+}
 
 
 bkp_wizard() {

@@ -2,8 +2,8 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
-# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import
-# Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file
+# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3
+# Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre
 
 source /opt/webinoly/lib/webin
 source /opt/webinoly/lib/bkp
@@ -198,7 +198,7 @@ elif [[ -n $backup ]]; then
 	elif [[ $backup == "local" ]]; then
 		bkp_local_db
 	elif [[ $backup == "s3" ]]; then
-		bkp_s3_profile
+		[[ -n $send_to_s3 ]] && s3_send || bkp_s3_profile
 	else
 		bkp_wizard
 	fi
