@@ -70,9 +70,9 @@ if [[ -n $wp || -n $wpsubdir || -n $wpsubdom || -n $mysql ]]; then
 			if [[ -n $mysql && $mysql != true ]]; then
 				wpdata=${wpdata/#/true,false,}
 				# Insert wp_prefix if external db data is found.
-				extdata=$(echo "${wpdata,,}" | cut -d',' -f 7- -s)
+				extdata=$(echo $wpdata | cut -d',' -f 7- -s)
 				if [[ -n $extdata ]]; then
-					wpdata=$(echo "${wpdata,,}" | cut -d',' -f -6 -s)
+					wpdata=$(echo $wpdata | cut -d',' -f -6 -s)
 					wpdata=${wpdata/%/,false,}
 					wpdata=${wpdata/%/$extdata}
 				fi
@@ -336,7 +336,10 @@ elif [[ -n $clone_from ]]; then
 	elif [[ $(is_wp $clone_from $subfolder) != "true" ]]; then
 		echo "${red}[ERROR] Site${blu} '$clone_from' ${red}is not a WordPress site!${end}"
 		exit 1
-	elif [[ $(is_wp_installed $clone_from) != "true" ]]; then
+	fi
+	
+	wp_dbdata $clone_from #We need to call this function in the parent shell to preserve variables and avoid asking two times for the same values in case of external db.
+	if [[ $(is_wp_installed $clone_from) != "true" ]]; then
 		echo "${red}[ERROR] Seems like WordPress is still not configured in your${blu} '$clone_from' ${red}site!${end}"
 		exit 1
 	else

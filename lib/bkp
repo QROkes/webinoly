@@ -1,19 +1,15 @@
 #!/bin/bash
 
 bkp_local_db() {
-	check_for_mysql
+	check_for_mysql_client
+	wp_dbdata $wp
+	
 	[[ -z $wp || $wp == "true" ]] &&	read -p "${gre}WordPress site: ${end}" wp
 	if [[ -z $wp || $(is_wp $wp) != "true"  ]]; then
 		echo "${red}[ERROR] Please, enter a valid WP site!${end}"
 		exit 1
 	elif [[ $(is_wp_installed $wp) != "true"  ]]; then
 		echo "${red}[ERROR] Your WP site database is still empty!${end}"
-		exit 1
-	fi
-	
-	wp_dbdata $wp
-	if [[ $wp_dbhost != "localhost" ]]; then
-		echo "${red}[ERROR] Database host is not localhost!${end}"
 		exit 1
 	fi
 	
@@ -28,8 +24,12 @@ bkp_local_db() {
 	fi
 	
 	local filename="webinoly-backup-db_${wp}_$(date +%F)-$(date +%T).sql"
-	local adminpass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
-	sudo mysqldump --user=admin --password=$adminpass --single-transaction --lock-tables --quick --databases $wp_dbname > $destination/$filename
+	if [[ $wp_dbhost == "localhost" ]]; then
+		local adminpass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+		sudo mysqldump --user=admin --password=$adminpass --single-transaction --lock-tables --quick --databases $wp_dbname > $destination/$filename
+	else
+		sudo mysqldump -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" --single-transaction --lock-tables --quick --databases $wp_dbname > $destination/$filename
+	fi
 	
 	if [[ -s $destination/$filename ]]; then
 		echo "${gre}Database local backup successfully done!${end}"

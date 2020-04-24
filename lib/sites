@@ -174,12 +174,7 @@ wpinstall() {
 					continue 1
 				fi
 				
-				if [[ $(conf_read mysql-client) != "true" ]]; then
-					echo "${gre}MySQL Client is not installed and we need it to stablish a connection with your external server."
-					echo "Wait while we install MySQL Client... installing!!!${end}"
-					mysql_client_install > /dev/null 2>&1 &
-					echo "${gre}MySQL Client has been successfully installed!${end}"
-				fi
+				check_for_mysql_client
 				echo "${blu}"
 				
 				if [[ $type == 1 || ($type == [35] && ( -z $dburoot || -z $dbproot )) ]]; then
@@ -665,16 +660,28 @@ createsite() {
 edit_wp_db_url() {
 	#Example: edit_wp_db_url example.com "http://${domain}${subfolder}"
 	if [[ -n $1 && -n $2 && $(is_wp $1) == "true" && $(is_wp_installed $1) == "true" ]]; then
-		doms=$(echo $1$subfolder | sed "s/[^0-9A-Za-z]/_/g")
-		ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+		local doms=$(echo $1$subfolder | sed "s/[^0-9A-Za-z]/_/g")
 		wp_dbdata $1
 		
-		sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS <<_EOF_
+		if [[ $wp_dbhost == "localhost" ]]; then
+			ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+			sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS <<_EOF_
 USE $doms;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
 FLUSH PRIVILEGES;
 _EOF_
+
+		else
+echo ""
+
+			sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" <<_EOF_
+USE $doms;
+UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
+UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
+FLUSH PRIVILEGES;
+_EOF_
+		fi
 	fi
 }
 
@@ -1229,8 +1236,7 @@ yoast_sitemap() {
 
 clone_wp_site() {
 	if [[ -n $subfolder ]]; then
-		wpcon="/var/www/$domain/htdocs$subfolder/wp-config.php"
-		arg=" -subfolder=$subfolder"
+		local wpcon="/var/www/$domain/htdocs$subfolder/wp-config.php"
 		
 		sudo cp /etc/nginx/apps.d/$clone_from$subname-php.conf /etc/nginx/apps.d/$domain$subname-php.conf
 		sudo cp /etc/nginx/apps.d/$clone_from$subname-wpfc.conf /etc/nginx/apps.d/$domain$subname-wpfc.conf
@@ -1242,12 +1248,11 @@ clone_wp_site() {
 		sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-php.conf
 		sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 		
-		dest=$( echo $subfolder | rev | cut -f 2- -d "/" -s | rev )
+		local dest=$( echo $subfolder | rev | cut -f 2- -d "/" -s | rev )
 		sudo mkdir -p /var/www/$domain/htdocs$dest
 		sudo cp -r /var/www/$clone_from/htdocs$subfolder /var/www/$domain/htdocs$dest
 	else
-		arg=""
-		wpcon="/var/www/$domain/wp-config.php"
+		local wpcon="/var/www/$domain/wp-config.php"
 		sudo cp -r /var/www/$clone_from /var/www/$domain
 	fi
 
@@ -1269,18 +1274,18 @@ clone_wp_site() {
 	fi
 
 	[[ $(is_ssl $clone_from) == "true" ]] && site $domain -ssl=off -revoke=off > /dev/null 2>&1
-	dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
-	AUTOGENPASS_WPDB=`pwgen -s -1 16`
-	wp_dbdata $clone_from
+	local dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
+	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+	local AUTOGENPASS_WPDB=`pwgen -s -1 16`
 	
 	if [[ $wp_dbhost == "localhost" ]]; then
-		ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 		site -mysql=[localhost,$dom,$dom,$AUTOGENPASS_WPDB] > /dev/null 2>&1
 		mysqldump -u root -p$ROOT_PASS $wp_dbname | mysql -u root -p$ROOT_PASS $dom
 		edit_wp_db_url $domain "http://${domain}${subfolder}"
 	else
-		echo "${red}[ERROR] Database host is not localhost!${end}"
-		exit 1
+		site -mysql=[$wp_dbhost,$dom,$dom,$AUTOGENPASS_WPDB,$wp_uroot,$wp_proot] > /dev/null 2>&1
+		mysqldump -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" $wp_dbname | mysql -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" $dom
+		edit_wp_db_url $domain "http://${domain}${subfolder}"
 	fi
 	
 	sudo sed -i "/DB_NAME/c \define('DB_NAME', '$dom');" $wpcon
@@ -1288,9 +1293,9 @@ clone_wp_site() {
 	sudo sed -i "/DB_PASSWORD/c \define('DB_PASSWORD', '$AUTOGENPASS_WPDB');" $wpcon
 	
 	if [[ $replace_content != "off" ]]; then
-		sudo site $domain -replace-content=[http://$clone_from,http://$domain]$arg > /dev/null 2>&1
-		sudo site $domain -replace-content=[https://$clone_from,http://$domain]$arg > /dev/null 2>&1
-		sudo site $domain -replace-content=[$clone_from,$domain]$arg > /dev/null 2>&1
+		replace_content="[http://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
+		replace_content="[https://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
+		replace_content="[$clone_from,$domain]" && wp_replace_content > /dev/null 2>&1
 	fi
 	echo "${gre}Site ${blu}'$domain$subfolder'${gre} is now a successfull clone of ${blu}'$clone_from$subfolder'${end}"
 }
