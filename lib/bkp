@@ -43,7 +43,7 @@ bkp_local_db() {
 
 
 check_duply_profile() {
-	if [[ ! -d /root/.duply/$profile ]]; then
+	if [[ ! -d $HOME/.duply/$profile ]]; then
 		echo "${red}[ERROR] Backup profile not found!${end}"
 		exit 1
 	fi
@@ -51,7 +51,7 @@ check_duply_profile() {
 
 
 bkp_s3_profile() {
-	if [[ ! -s /root/.aws/credentials ]]; then
+	if [[ ! -s $HOME/.aws/credentials && $(conf_read awsiamrole) != true ]]; then
 		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
 		exit 1
 	fi
@@ -74,10 +74,10 @@ bkp_s3_profile() {
 	elif [[ -n $info ]]; then
 		check_duply_profile
 		
-		tar=$(grep -E "^TARGET[ ]?=" /root/.duply/$profile/conf | cut -f 2 -d "'" )
-		sou=$(grep -E "^SOURCE[ ]?=" /root/.duply/$profile/conf | cut -f 2 -d "'" )
-		age=$(grep -E "^MAX_AGE[ ]?=" /root/.duply/$profile/conf | cut -f 2 -d "=" )
-		par=$(grep "s3-use-new-style" /root/.duply/$profile/conf | cut -f 2 -d '"' )
+		tar=$(grep -E "^TARGET[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "'" )
+		sou=$(grep -E "^SOURCE[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "'" )
+		age=$(grep -E "^MAX_AGE[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "=" )
+		par=$(grep "s3-use-new-style" $HOME/.duply/$profile/conf | cut -f 2 -d '"' )
 			
 		echo ""
 		echo "${blu}S3 Bucket:${end} $tar"
@@ -89,7 +89,7 @@ bkp_s3_profile() {
 	elif [[ -n $delete ]]; then
 		check_duply_profile
 		
-		sudo rm -rf /root/.duply/$profile
+		sudo rm -rf $HOME/.duply/$profile
 		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully deleted!${end}"
 		
 	elif [[ -n $restore ]]; then
@@ -126,12 +126,12 @@ bkp_s3_profile() {
 		[[ -n $max && $max =~ ^[0-9]+$ ]] && local param="-max=$max "
 		[[ -n $bucket && $bucket != "true" ]] && local param="${param}-bucket=$bucket"
 		
-		[[ ! -f /root/.duply/$profile/pre ]] && sudo touch /root/.duply/$profile/pre
-		echo "sudo webinoly -backup=local -wp=$add_db_pre -destination=$destination $param" >> /root/.duply/$profile/pre
+		[[ ! -f $HOME/.duply/$profile/pre ]] && sudo touch $HOME/.duply/$profile/pre
+		echo "sudo webinoly -backup=local -wp=$add_db_pre -destination=$destination $param" >> $HOME/.duply/$profile/pre
 		echo "${gre}Database backup will run each time you run your S3 backup!${end}"
 	
 	else
-		if [[ -d /root/.duply/$profile ]]; then
+		if [[ -d $HOME/.duply/$profile ]]; then
 			echo "${red}[ERROR] Can not create profile${blu} '$profile' ${red}because already exists!${end}"
 			exit 1
 		fi
@@ -151,16 +151,16 @@ bkp_s3_profile() {
 		
 		sudo duply $profile create
 		[[ -z $max_age ]] && max_age="1M"
-		sudo sed -i -E "/^[#]?GPG_KEY=/c GPG_KEY='disabled'" /root/.duply/$profile/conf
-		sudo sed -i -E "/^[#]?GPG_PW=/c #GPG_PW='_GPG_PASSWORD_'" /root/.duply/$profile/conf
-		sudo sed -i -E "/^[#]?TARGET=/c TARGET='s3+http://${bucket}'" /root/.duply/$profile/conf
-		sudo sed -i -E "/^[#]?SOURCE=/c SOURCE='$source'" /root/.duply/$profile/conf
-		sudo sed -i -E "/^[#]?MAX_AGE=/c MAX_AGE=$max_age" /root/.duply/$profile/conf
+		sudo sed -i -E "/^[#]?GPG_KEY=/c GPG_KEY='disabled'" $HOME/.duply/$profile/conf
+		sudo sed -i -E "/^[#]?GPG_PW=/c #GPG_PW='_GPG_PASSWORD_'" $HOME/.duply/$profile/conf
+		sudo sed -i -E "/^[#]?TARGET=/c TARGET='s3+http://${bucket}'" $HOME/.duply/$profile/conf
+		sudo sed -i -E "/^[#]?SOURCE=/c SOURCE='$source'" $HOME/.duply/$profile/conf
+		sudo sed -i -E "/^[#]?MAX_AGE=/c MAX_AGE=$max_age" $HOME/.duply/$profile/conf
 		
 		if [[ -z $s3_european_buckets ]]; then
-			sudo echo 'DUPL_PARAMS="$DUPL_PARAMS --s3-use-new-style "' >> /root/.duply/$profile/conf
+			sudo echo 'DUPL_PARAMS="$DUPL_PARAMS --s3-use-new-style "' >> $HOME/.duply/$profile/conf
 		else
-			sudo echo 'DUPL_PARAMS="$DUPL_PARAMS --s3-use-new-style --s3-european-buckets "' >> /root/.duply/$profile/conf
+			sudo echo 'DUPL_PARAMS="$DUPL_PARAMS --s3-use-new-style --s3-european-buckets "' >> $HOME/.duply/$profile/conf
 		fi
 		
 		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully created!${end}"
@@ -170,8 +170,8 @@ bkp_s3_profile() {
 
 bkp_s3_list() {
 	echo ""
-	if [[ -d /root/.duply ]];  then
-		for f in /root/.duply/*
+	if [[ -d $HOME/.duply ]];  then
+		for f in $HOME/.duply/*
 		do 
 			[[ -d $f ]] && pro=$(echo $f | cut -f 4 -d "/" -s)
 			[[ -f $f/conf ]] && fail="" || fail="${red}(fail)${end}"
@@ -189,7 +189,7 @@ bkp_s3_list() {
 
 
 s3_send() {
-	if [[ ! -s /root/.aws/credentials ]]; then
+	if [[ ! -s $HOME/.aws/credentials && $(conf_read awsiamrole) != true ]]; then
 		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
 		exit 1
 	fi
