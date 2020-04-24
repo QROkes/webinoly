@@ -1068,6 +1068,27 @@ parked_domain() {
 }
 
 
+forward_domain() {
+	[[ -z $forward || $forward == "true" ]] &&	read -p "${gre}Destination domain: ${end}" forward
+	if [[ $(is_url $forward) != "true" ]]; then
+		echo "${red}[ERROR] Invalid destination domain!${end}"
+		exit 1
+	fi
+	
+	createsite
+	sudo rm -rf /var/www/$domain
+	sudo sed -i '/access_log/,/-nginx.conf;/{/.*/d}' /etc/nginx/sites-available/$domain
+	
+	if [[ $root == "on"  ]]; then
+		sudo sed -i "/server_name /a \	return 301 $forward;" /etc/nginx/sites-available/$domain
+	else
+		sudo sed -i "/server_name /a \	return 301 $forward\$request_uri;" /etc/nginx/sites-available/$domain
+	fi
+	
+	echo "${blu}Every request to${end} $domain ${blu}will be redirected to ${end}$forward"
+}
+
+
 reverse_proxy() {
 	if [[ $proxy != true ]]; then
 		firstchar=$(echo "${proxy}" | cut -c-1)
