@@ -69,10 +69,11 @@ site_ssl_on() {
 	elif [[ -n $root_path && ! -d $root_path ]]; then
 		echo "${red}[ERROR] Invalid root path!${end}"
 		exit 1
-	fi
-	
-	if [[ ! -f /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
+	elif [[ ! -f /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
 		echo "${red}[ERROR] Cert you're trying to renew not found!${end}"
+		exit 1
+	elif [[ -n $manual && $manual != "http" && $manual != "dns" ]]; then
+		echo "${red}[ERROR] Invalid value for manual option!${end}"
 		exit 1
 	fi
 	
@@ -110,19 +111,24 @@ site_ssl_on() {
 	[[ $ssl == "force-renewal" ]] && param="$param --force-renewal"
 	[[ $subdomflag == 1 ]] && local domset="-d $domain" || local domset="-d $domain -d www.$domain"
 	
-	# Wildcard
-	if [[ ( ! -f /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ) && -n $wildcard ]]; then
-		sudo certbot certonly --manual --preferred-challenges=dns --manual-public-ip-logging-ok -d $domain -d *.$domain $param
+	if [[ -n $wildcard ]]; then
+		local domset="-d $domain -d *.$domain"
+		local manual="dns"
+	fi
 	
 	# Manual mode for Reverse Proxy sites
-	elif [[ ( ! -f /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ) && -n $root_path ]]; then
+	if [[ ( ! -f /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ) && -n $root_path ]]; then
 		conf_write temp-path $root_path
 		sudo certbot certonly --manual --preferred-challenges=http --manual-auth-hook /opt/webinoly/lib/ex-ssl-authentication --manual-cleanup-hook /opt/webinoly/lib/ex-ssl-cleanup --manual-public-ip-logging-ok $domset $param
 		conf_delete temp-path
 	
 	# Single cert
 	elif [[ ! -f /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ]]; then
-		sudo certbot certonly --webroot -w /var/www/$path/htdocs/ $domset $param
+		if [[ -n $manual ]]; then
+			sudo certbot certonly --manual --preferred-challenges=$manual --manual-public-ip-logging-ok $domset $param
+		else
+			sudo certbot certonly --webroot -w /var/www/$path/htdocs/ $domset $param
+		fi
 	
 	elif [[ -f /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
 		echo "${blu}Certificate for${end} $domain ${blu}already exist and found, wait while we configure your server to use it!${end}"
