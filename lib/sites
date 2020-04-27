@@ -659,9 +659,9 @@ createsite() {
 
 edit_wp_db_url() {
 	#Example: edit_wp_db_url example.com "http://${domain}${subfolder}"
+	wp_dbdata $1
 	if [[ -n $1 && -n $2 && $(is_wp $1) == "true" && $(is_wp_installed $1) == "true" ]]; then
 		local doms=$(echo $1$subfolder | sed "s/[^0-9A-Za-z]/_/g")
-		wp_dbdata $1
 		
 		if [[ $wp_dbhost == "localhost" ]]; then
 			ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
@@ -797,7 +797,7 @@ redirection_manager() {
 		[[ -z $to || $to == "true" ]] && ! [[ $http_code =~ ^(410|444|451)$ ]] && read -p "${blu}Redirect to: ${end}" to
 		echo ""
 		
-		if [[ -n $( grep -E "^# Path: ${from}( \([Exact]+\))?$" /etc/nginx/apps.d/$domain-nginx.conf ) ]]; then
+		if [[ -f /etc/nginx/apps.d/$domain-nginx.conf && -n $( grep -E "^# Path: ${from}( \([Exact]+\))?$" /etc/nginx/apps.d/$domain-nginx.conf ) ]]; then
 			echo "${red}[ERROR] Protected paths are not allowed for redirections!${end}"
 			exit 1
 		elif [[ -z $from || ( -z $to && $http_code =~ ^(301|302|303|307|308)$ ) ]]; then
@@ -1070,7 +1070,7 @@ parked_domain() {
 
 forward_domain() {
 	[[ -z $forward || $forward == "true" ]] &&	read -p "${gre}Destination domain: ${end}" forward
-	if [[ $(is_url $forward) != "true" ]]; then
+	if ! [[ $(is_url $forward) =~ ^(http|https)$ ]]; then
 		echo "${red}[ERROR] Invalid destination domain!${end}"
 		exit 1
 	fi
@@ -1294,7 +1294,6 @@ clone_wp_site() {
 		[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
 	fi
 
-	[[ $(is_ssl $clone_from) == "true" ]] && site $domain -ssl=off -revoke=off > /dev/null 2>&1
 	local dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
 	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 	local AUTOGENPASS_WPDB=`pwgen -s -1 16`
@@ -1312,6 +1311,11 @@ clone_wp_site() {
 	sudo sed -i "/DB_NAME/c \define('DB_NAME', '$dom');" $wpcon
 	sudo sed -i "/DB_USER/c \define('DB_USER', '$dom');" $wpcon
 	sudo sed -i "/DB_PASSWORD/c \define('DB_PASSWORD', '$AUTOGENPASS_WPDB');" $wpcon
+	
+	# Remove custom settings from cloned site
+	sudo site $domain -subdomain=false -force-redirect=off > /dev/null 2>&1
+	[[ $(is_ssl $clone_from) == "true" ]] && revoke="off" && site_ssl_off > /dev/null 2>&1
+	
 	
 	if [[ $replace_content != "off" ]]; then
 		replace_content="[http://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1

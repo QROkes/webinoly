@@ -21,7 +21,30 @@ error() {
 [[ -n $lines && $lines =~ ^[0-9]+$ && $lines -gt 0 ]] && clines=$lines
 
 
-if [[ -n $mail || -n $email ]]; then
+if [[ -n $purge ]]; then
+	if [[ $purge != "force" ]]; then
+		echo "${gre}"
+		echo "All your logs GZ files will be removed from your server!"
+		echo "${blu}Are you sure [y/N]? "
+		while read -r -n 1 -s answer; do
+			answer=${answer:-n}
+			echo ""
+			[[ $answer = [YyNn] ]] && break
+		done
+	else
+		answer="Y"
+	fi
+	
+	if [[ $answer == [Yy] ]]; then
+		sudo find /var/log -name "*.gz" -type f -delete
+		echo "${gre}All your logs GZ files has been successfully removed from your server!${end}"
+	else
+		echo "${red}Action aborted!${end}"
+		exit 1
+	fi
+	
+	
+elif [[ -n $mail || -n $email ]]; then
 	if [[ -f /var/log/mail.log && -f /var/log/mail.err ]]; then
 		sudo tail -f --lines=$clines /var/log/mail.log /var/log/mail.err
 	elif [[ -f /var/log/mail.log ]]; then
@@ -55,7 +78,7 @@ elif [[ -n $ssh ]]; then
 
 
 # MySQL Logs
-elif [[ -n $mysql || -n $syslog ]]; then
+elif [[ -n $mysql ]]; then
 	check_for_mysql
 	
 	# General Log
@@ -137,12 +160,12 @@ elif [[ -n $mysql || -n $syslog ]]; then
 			exit 1
 		fi
 		
-	# Error Log & Syslog (default)
+	# Error Log
 	else
-		# REMOVE: Temporal check because we change log path in v1.11.0
-		if [[ -f /etc/mysql/conf.d/mysqld_safe_syslog.cnf && -s /var/log/mysql/error.log ]]; then
+		# REMOVE: Temporal check because we change log path in v1.11.0 - by default mysql send logs to syslog
+		if [[ ! -f /etc/mysql/conf.d/mysqld_safe_syslog.cnf && -s /var/log/mysql/error.log ]]; then
 			sudo tail -f --lines=$clines /var/log/mysql/error.log
-		elif [[ ! -f /etc/mysql/conf.d/mysqld_safe_syslog.cnf && -s /var/log/syslog ]]; then
+		elif [[ -f /etc/mysql/conf.d/mysqld_safe_syslog.cnf && -s /var/log/syslog ]]; then
 			sudo tail -f --lines=$clines /var/log/syslog
 		else
 			echo "${red}[ERROR] MariaDB Error log (syslog) file not found or still empty!${end}"
@@ -150,6 +173,16 @@ elif [[ -n $mysql || -n $syslog ]]; then
 		fi
 		
 	fi
+
+
+# Syslog
+elif [[ -n $syslog ]]; then
+	if [[ -s /var/log/syslog ]]; then
+		sudo tail -f --lines=$clines /var/log/syslog
+	else
+		echo "${red}[ERROR] MariaDB Error log (syslog) file not found or still empty!${end}"
+		exit 1
+	fi	
 
 
 # Turn On/Off Access Logs

@@ -372,6 +372,7 @@ is_url_path() {
 
 
 is_url() {
+	# Output: true,http,https,false
 	local scheme=$(echo "${1,,}" | cut -d':' -f 1 -s)
 	local host=$(echo "${1,,}" | cut -d':' -f 2 -s | cut -d'/' -f 3 -s)
 	local path=$(echo "${1,,}" | cut -d':' -f 2 -s | cut -d'/' -f 4- -s)
