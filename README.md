@@ -14,6 +14,7 @@ Webinoly provides a set of tools and commands that facilitate the web server adm
 - FastCgi Cache and Redis Object Cache for your WordPress sites.
 - Install WP in any subfolder, Clone a WP site and support for external databases.
 - Nginx redirection manager, Backups, SMTP and a lot more features.
+- Datadog native integration for monitoring and analytics.
 - Get an A+ grade on [Qualys (SSL Labs) Test](https://www.ssllabs.com/ssltest/).
 - Log viewer in real time.
 
