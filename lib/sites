@@ -578,7 +578,7 @@ createsite() {
 	api-events_update si1
 	
 	# First check if valid TLD
-	[[ $count == 1 ]] && echo "${red}[WARNING] Domain name is not a valid TLD (Top Level Domain).${end}"
+	[[ -z $tld ]] && echo "${red}[WARNING] Domain name is not a valid TLD (Top Level Domain).${end}"
 	
 	# Check domain and then prevent reserved characters for file names.
 	if [[ $(is_domain $domain) != "true" ]]; then
@@ -744,7 +744,20 @@ force_redirect() {
 		if [[ -z $ignore_ssl ]]; then
 			sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /tmp/template-site-wwwredirect
 			sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /tmp/template-site-wwwredirect
-			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$domain/}" /tmp/template-site-wwwredirect
+			
+			local ssl_cer=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_certificate " | tr -d '\t')
+			local ssl_key=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_certificate_key " | tr -d '\t')
+			local ssl_tru=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "ssl_trusted_certificate " | tr -d '\t')
+			
+			sudo sed -i "/ssl_certificate /c\	$ssl_cer" /tmp/template-site-wwwredirect
+			sudo sed -i "/ssl_certificate_key /c\	$ssl_key" /tmp/template-site-wwwredirect
+			
+			if [[ -z $ssl_tru ]]; then
+				sudo sed -i '/ssl_stapling/d' /tmp/template-site-wwwredirect
+				sudo sed -i '/ssl_trusted_certificate/d' /tmp/template-site-wwwredirect
+			else
+				sudo sed -i "/ssl_trusted_certificate /c\	$ssl_tru" /tmp/template-site-wwwredirect
+			fi
 		fi
 		
 		sudo sed -i "/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/s/\(server_name\).*$/$sername/" /etc/nginx/sites-available/$domain
@@ -812,7 +825,7 @@ redirection_manager() {
 		elif [[ -n $regex ]] && ! [[ $regex =~ ^(sensitive|insensitive|longest)$ ]]; then
 			echo "${red}[ERROR] Invalid regex value!${end}"
 			exit 1
-		elif [[ -z $regex && $(is_url_path $from) != "true" ]]; then
+		elif [[ ( -z $regex || -n $exact ) && $(is_url_path $from) != "true" ]]; then
 			echo "${red}[ERROR] Please, enter a valid 'FROM' redirection path!${end}"
 			exit 1
 		elif [[ -n $to && $(is_url_path $to) != "true" ]] && ! [[ $(is_url $to) =~ ^(http|https)$ ]]; then
@@ -827,11 +840,19 @@ redirection_manager() {
 			sudo chown -R root:root /etc/nginx/apps.d/$domain-nginx.conf
 		fi
 		
-		local exist=$( grep -E "^# RedirectFrom: ${from}( \([Regx]+\))?$" /etc/nginx/apps.d/$domain-nginx.conf )
-		local exists=$( grep -E "^# RedirectFrom: ${from}( \(Exact\))$" /etc/nginx/apps.d/$domain-nginx.conf )
+		# SED need escaped characters: Put a backslash before $.*/[\]^
+		local escaped_path=$(echo $from | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g")
+		
+		local exisa=$( grep -G "^# RedirectFrom: $escaped_path$" /etc/nginx/apps.d/$domain-nginx.conf )
+		local exisb=$( grep -G "^# RedirectFrom: $escaped_path (Regex)$" /etc/nginx/apps.d/$domain-nginx.conf )
+		local exisc=$( grep -G "^# RedirectFrom: $escaped_path (Exact)$" /etc/nginx/apps.d/$domain-nginx.conf )
+		
 		# Can have both at the same time, one exact and another.
-		if [[ ( -z $exists && $exact == "true" ) || ( -z $exists && -z $exist ) || ( -n $exists && -z $exist && -z $exact ) ]]; then
-			if [[ $regex == "sensitive" ]]; then
+		if [[ ( -z $exisc && $exact == "true" ) || ( -z $exisa && -z $exisb && -z $exact ) ]]; then
+			if [[ $exact == true ]]; then
+				sign="= "
+				code="$from (Exact)"
+			elif [[ $regex == "sensitive" ]]; then
 				sign="~ "
 				code="$from (Regex)"
 			elif [[ $regex == "insensitive" ]]; then
@@ -840,9 +861,6 @@ redirection_manager() {
 			elif [[ $regex == "longest" ]]; then
 				sign="^~ "
 				code="$from (Regex)"
-			elif [[ $exact == true ]]; then
-				sign="= "
-				code="$from (Exact)"
 			else
 				sign=""
 				code="$from"
@@ -1313,6 +1331,8 @@ clone_wp_site() {
 	sudo sed -i "/DB_NAME/c \define('DB_NAME', '$dom');" $wpcon
 	sudo sed -i "/DB_USER/c \define('DB_USER', '$dom');" $wpcon
 	sudo sed -i "/DB_PASSWORD/c \define('DB_PASSWORD', '$AUTOGENPASS_WPDB');" $wpcon
+	sudo sed -i "/'WP_CACHE_KEY_SALT'/d" $wpcon
+	sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'redis_object_cache_for_wp_$domain$(echo $subfolder | sed "s/\//_/g")');" $wpcon
 	
 	# Remove custom settings from cloned site
 	sudo site $domain -subdomain=false -force-redirect=off > /dev/null 2>&1

@@ -18,18 +18,18 @@ check_for_nginx -ask
 if [[ -n $domain ]]; then
 	count=1
 	while true; do
-		tld=$(echo "${domain}" | rev | cut -d'.' -f -$count -s | rev)
-		if ! grep -Fxq "$tld" /opt/webinoly/lib/public_suffix_list.dat; then
+		tld=$(echo $domain | cut -d'.' -f ${count}- -s)
+		if grep -Fxq "$tld" /opt/webinoly/lib/public_suffix_list.dat || [ -z $tld ]; then
 			break
 		fi
 		count=$[$count+1]
 	done
-	[[ -n $(echo "$(echo "${domain}" | rev | cut -d'.' -f $count- -s | rev)" | cut -d'.' -f 2 -s) || $count == 1 ]] && subdomflag="1" || subdomflag="0"
+	[[ $count -gt 2 ]] && subdomflag="1" || subdomflag="0"
 fi
 # Get variables with sub-domain info
-if [[ $subdomflag == 1 ]]; then
-	main_domain=$(echo "${domain}" | rev | cut -d'.' -f -$count -s | rev)
-	sub_domain=$(echo "${domain}" | rev | cut -d'.' -f $[$count+1]- -s | rev)
+if [[ $subdomflag == 1 && -n $tld ]]; then
+	main_domain=$(echo $domain | cut -d'.' -f $[$count-1]- -s)
+	sub_domain=$(echo $domain | cut -d'.' -f -$[$count-2] -s)
 fi
 # Overwrite value if defined by user
 [[ $subdomain == "true" ]] && subdomflag="1"
