@@ -33,8 +33,8 @@ bkp_local_db() {
 	
 	if [[ -s $destination/$filename ]]; then
 		echo "${gre}Database local backup successfully done!${end}"
-		[[ -n $max && $max =~ ^[0-9]+$ ]] && sudo ls -1t $destination | tail -n +$((max+1)) | xargs -d '\n' -I '%' sudo rm -f $destination/%
 		[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket
+		[[ -n $max && $max =~ ^[0-9]+$ ]] && sudo ls -1t $destination | tail -n +$((max+1)) | xargs -d '\n' -I '%' sudo rm -f $destination/%
 	else
 		echo "${red}[ERROR] Database backup failed!${end}"
 		exit 1

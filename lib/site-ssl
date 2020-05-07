@@ -60,7 +60,10 @@ site_ssl_on() {
 		exit 1
 	fi
 	
-	if [[ ! -d /var/www/$path/htdocs && -z $root_path ]]; then
+	if [[ -n $manual && $manual != "http" && $manual != "dns" ]]; then
+		echo "${red}[ERROR] Invalid value for manual option!${end}"
+		exit 1
+	elif [[ ! -d /var/www/$path/htdocs && -z $root_path && -z $manual ]]; then
 		echo "${red}[ERROR] Seems like you are trying to request an SSL Certificate for a Parked/Mapped Domain."
 		echo "Please, use the '-root=domain.com' parameter to specify the main domain."
 		echo ""
@@ -71,9 +74,6 @@ site_ssl_on() {
 		exit 1
 	elif [[ ! -f /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
 		echo "${red}[ERROR] Cert you're trying to renew not found!${end}"
-		exit 1
-	elif [[ -n $manual && $manual != "http" && $manual != "dns" ]]; then
-		echo "${red}[ERROR] Invalid value for manual option!${end}"
 		exit 1
 	fi
 	

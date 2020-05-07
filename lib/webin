@@ -1213,9 +1213,12 @@ aws_s3_credentials() {
 		sudo rm -rf $HOME/.aws/credentials
 		sudo mkdir -p $HOME/.aws
 		sudo touch $HOME/.aws/credentials
+		
 		sudo echo "[default]
 aws_access_key_id = $user
 aws_secret_access_key = $pass" >> $HOME/.aws/credentials
+
+		[[ -n $(conf_read awsiamrole) ]] && conf_write awsiamrole purged
 	fi
 
 	echo "${gre}AWS S3 Credentials successfully added!${end}"

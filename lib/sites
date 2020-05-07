@@ -621,7 +621,7 @@ createsite() {
 	
 	# Create data folder for new site
 	if [[ -z $proxy && -z $parked ]]; then
-		if [[ ! -d /var/www/$domain/htdocs || ! -d /var/www/$domain ]]; then
+		if [[ ! -d /var/www/$domain/htdocs ]]; then
 			sudo mkdir -p /var/www/$domain/htdocs
 			[[ $type == [123] ]] && wpinstall
 		else
@@ -634,13 +634,13 @@ createsite() {
 			echo ""
 			
 			if [[ $wwwexist == [nN] ]]; then
-				sudo rm -rf /var/www/$domain/htdocs
+				sudo rm -rf /var/www/$domain
 				sudo mkdir -p /var/www/$domain/htdocs
 				[[ $type == [123] ]] && wpinstall
 			fi
 		fi
 	fi
-		
+
 	# Activate FastCgi cache
 	if [[ $cache == "on" && $type == [123] ]]; then
 		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
@@ -1070,9 +1070,11 @@ parked_domain() {
 
 forward_domain() {
 	[[ -z $forward || $forward == "true" ]] &&	read -p "${gre}Destination domain: ${end}" forward
-	if ! [[ $(is_url $forward) =~ ^(http|https)$ ]]; then
+	if ! [[ $(is_url $forward) =~ ^(http|https|true)$ ]]; then
 		echo "${red}[ERROR] Invalid destination domain!${end}"
 		exit 1
+	elif [[ $(is_url $forward) == "true" ]]; then
+		forward="http://${forward}"
 	fi
 	
 	createsite
