@@ -221,7 +221,6 @@ elif [[ -n $only_error ]]; then
 	# Per site
 	if [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 		check_for_nginx
-		islog=$( grep -F "access_log off;" /etc/nginx/sites-available/$domain )
 		if [[ $domain == "default" || $domain == $(conf_read tools-port) ]]; then
 			echo "${red}[ERROR] Only-Error is not allowed to be used in Tools-Port or Default Nginx site! ${end}"
 			exit 1
@@ -229,7 +228,7 @@ elif [[ -n $only_error ]]; then
 		
 		if [[ $only_error == "on" ]]; then
 			api-events_update lg3
-			if [[ -z $islog ]]; then
+			if [[ $(is_log $domain) == "true" ]]; then
 				sudo sed -i '/access_log/c \	access_log off;' /etc/nginx/sites-available/$domain
 				sudo service nginx reload
 				echo "${gre}Only-Error Log was successfully enabled for ${blu}${domain} ${gre}site!${end}"
@@ -238,7 +237,7 @@ elif [[ -n $only_error ]]; then
 			fi
 		elif [[ $only_error == "off" ]]; then
 			api-events_update lg4
-			if [[ -n $islog ]]; then
+			if [[ $(is_log $domain) != "true" ]]; then
 				sudo sed -i "/access_log/c \	access_log \/var\/log\/nginx\/${domain}.access.log we_log;" /etc/nginx/sites-available/$domain
 				sudo service nginx reload
 				echo "${gre}Only-Error Log was successfully disabled for ${blu}${domain} ${gre}site!${end}"
@@ -255,8 +254,7 @@ elif [[ -n $only_error ]]; then
 # Site log files
 elif [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 	# Check if Access Log is enabled
-	islog=$( grep -F "access_log off;" /etc/nginx/sites-available/$domain )
-	if [[ -z $error && -z $wp && -n $islog ]]; then
+	if [[ -z $error && -z $wp && $(is_log $domain) != "true" ]]; then
 		echo "${red}[ERROR] Access Log for${blu} $domain ${red}is disabled!${end}"
 		exit 1
 	fi

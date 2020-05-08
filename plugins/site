@@ -110,7 +110,10 @@ if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; the
 elif [[ -n $subfolder && $type != [123] && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from && -z $replace_content ]]; then
 	echo "${red}[ERROR] Subfolder option is only supported for WordPress sites!${end}"
 	exit 1
-elif [[ -n $subfolder && ( -n $delete || -n $cache || -n $yoast_sitemap || -n $multisite_convert || -n $clone_from || -n $replace_content ) && ! -d /var/www/$domain/htdocs$subfolder ]]; then
+elif [[ -n $subfolder && ( -n $delete || -n $cache || -n $yoast_sitemap || -n $multisite_convert || -n $replace_content ) && ! -d /var/www/$domain/htdocs$subfolder ]]; then
+	echo "${red}[ERROR] Subfolder not found!${end}"
+	exit 1
+elif [[ -n $subfolder && -n $clone_from && ! -d /var/www/$clone_from/htdocs$subfolder ]]; then
 	echo "${red}[ERROR] Subfolder not found!${end}"
 	exit 1
 else

@@ -1306,12 +1306,14 @@ clone_wp_site() {
 		sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 		sudo sed -i "s/$clone_from/$domain/g"  /etc/nginx/sites-available/$domain
 		
+		# Remove custom settings from cloned site
+		sudo site $domain -subdomain=false -force-redirect=off > /dev/null 2>&1
+		[[ $(is_ssl $clone_from) == "true" ]] && revoke="off" && site_ssl_off > /dev/null 2>&1
+		[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
+		
 		# Fix server_name according to new domain/site.
 		[[ $subdomflag == "true" ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
 		sudo sed -i "/server_name /c \	$sername" /etc/nginx/sites-available/$domain
-		
-		# Prevent if main site is default.
-		[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
 	fi
 
 	local dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
@@ -1334,16 +1336,12 @@ clone_wp_site() {
 	sudo sed -i "/'WP_CACHE_KEY_SALT'/d" $wpcon
 	sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'redis_object_cache_for_wp_$domain$(echo $subfolder | sed "s/\//_/g")');" $wpcon
 	
-	# Remove custom settings from cloned site
-	sudo site $domain -subdomain=false -force-redirect=off > /dev/null 2>&1
-	[[ $(is_ssl $clone_from) == "true" ]] && revoke="off" && site_ssl_off > /dev/null 2>&1
-	
-	
 	if [[ $replace_content != "off" ]]; then
 		replace_content="[http://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
 		replace_content="[https://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
 		replace_content="[$clone_from,$domain]" && wp_replace_content > /dev/null 2>&1
 	fi
+	
 	echo "${gre}Site ${blu}'$domain$subfolder'${gre} is now a successfull clone of ${blu}'$clone_from$subfolder'${end}"
 }
 

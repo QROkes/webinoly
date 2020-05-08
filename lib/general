@@ -409,6 +409,7 @@ is_php() {
 
 is_wp() {
 	# $1 = domain, $2 = WP subfolder
+	[[ -n $2 ]] && local subname=$(echo $2 | sed "s/\//_/g")
 	if [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpcommon") ]]; then
 		echo "true"
 	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -f /etc/nginx/apps.d/$1$subname-wpcommon.conf && -f /var/www/$1/htdocs$2/wp-config.php ]]; then
@@ -420,6 +421,7 @@ is_wp() {
 
 is_wp_cache() {
 	# $1 = domain, $2 = WP subfolder
+	[[ -n $2 ]] && local subname=$(echo $2 | sed "s/\//_/g")
 	if [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpfc.conf;") ]]; then
 		echo "true"
 	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/# WebinolyCustom/,$p' /etc/nginx/sites-available/$1 | grep -F "$1$subname-wpfc.conf;") ]]; then
@@ -513,5 +515,10 @@ is_subdomain() {
 	else
 		 echo "false"
 	fi
+}
+
+
+is_log() {
+	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "nginx/$1.access.log ") ]] && echo "true" || echo "false"
 }
 

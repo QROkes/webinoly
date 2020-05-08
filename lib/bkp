@@ -2,10 +2,11 @@
 
 bkp_local_db() {
 	check_for_mysql_client
-	wp_dbdata $wp
 	
 	[[ -z $wp || $wp == "true" ]] &&	read -p "${gre}WordPress site: ${end}" wp
-	if [[ -z $wp || $(is_wp $wp) != "true"  ]]; then
+	
+	wp_dbdata $wp
+	if [[ -z $wp || $(is_wp $wp $subfolder) != "true"  ]]; then
 		echo "${red}[ERROR] Please, enter a valid WP site!${end}"
 		exit 1
 	elif [[ $(is_wp_installed $wp) != "true"  ]]; then
@@ -110,7 +111,7 @@ bkp_s3_profile() {
 		
 		[[ $add_db_pre == "true" ]] &&	read -p "${gre}WordPress site: ${end}" add_db_pre
 		# we dont check is_wp_installed because at this point we are still not doing a backup, just setting it.
-		if [[ -z $add_db_pre || $(is_wp $add_db_pre) != "true"  ]]; then
+		if [[ -z $add_db_pre || $(is_wp $add_db_pre $subfolder) != "true"  ]]; then
 			echo "${red}[ERROR] Please, enter a valid WP site!${end}"
 			exit 1
 		fi
@@ -124,7 +125,8 @@ bkp_s3_profile() {
 		[[ -z $destination || $destination == "true" ]] && destination="default"
 		[[ -z $max && $destination == "default" ]] && max="5"
 		[[ -n $max && $max =~ ^[0-9]+$ ]] && local param="-max=$max "
-		[[ -n $bucket && $bucket != "true" ]] && local param="${param}-bucket=$bucket"
+		[[ -n $bucket && $bucket != "true" ]] && local param="${param}-bucket=$bucket "
+		[[ -n $subfolder ]] && local param="${param}-subfolder=$subfolder"
 		
 		[[ ! -f $HOME/.duply/$profile/pre ]] && sudo touch $HOME/.duply/$profile/pre
 		echo "sudo webinoly -backup=local -wp=$add_db_pre -destination=$destination $param" >> $HOME/.duply/$profile/pre
@@ -138,8 +140,8 @@ bkp_s3_profile() {
 	
 		[[ -z $bucket || $bucket == "true" ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
 		# Only numerals 0-9, basic Latin letters (only lowercase) and underscore.
-		if ! [[ $bucket =~ ^[0-9a-z\/_]+$ ]] || [[ -z $bucket || $(echo "$bucket" | cut -c-1) =~ [_|\/] || ${#bucket} -gt 63 || ${#bucket} -lt 3 ]]; then
-			echo "${red}[ERROR] Bucket names can only contain lowercase letters, numbers or underscores; must start with a letter or number and must be at least 3 and no more than 63 characters long.${end}"
+		if ! [[ $bucket =~ ^[0-9a-z\/-]+$ ]] || [[ -z $bucket || $(echo "$bucket" | cut -c-1) =~ [-|\/] || ${#bucket} -gt 63 || ${#bucket} -lt 3 ]]; then
+			echo "${red}[ERROR] Bucket names can only contain lowercase letters, numbers or hyphens; must start with a letter or number and must be at least 3 and no more than 63 characters long.${end}"
 			exit 1
 		fi
 		
@@ -202,7 +204,7 @@ s3_send() {
 	
 	[[ -z $bucket || $bucket == "true" ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
 	# Only numerals 0-9, basic Latin letters (only lowercase) and underscore.
-	if ! [[ $bucket =~ ^[0-9a-z\/_]+$ ]] || [[ -z $bucket || $(echo "$bucket" | cut -c-1) =~ [_|\/] || ${#bucket} -gt 63 || ${#bucket} -lt 3 ]]; then
+	if ! [[ $bucket =~ ^[0-9a-z\/-]+$ ]] || [[ -z $bucket || $(echo "$bucket" | cut -c-1) =~ [-|\/] || ${#bucket} -gt 63 || ${#bucket} -lt 3 ]]; then
 		echo "${red}[WARNING] Seems like you're still using the old (deprecated) bucket naming schema."
 		echo "https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html#bucketnamingrules${end}"
 		#exit 1

@@ -236,6 +236,8 @@ mysql_install() {
 	# Binaly logs disabled by default and Error logging not in syslog (syslog is default).
 	sudo sed -i "/Logging and Replication/a \log_error = \/var\/log\/mysql\/error.log" /etc/mysql/my.cnf
 	sudo rm -rf /etc/mysql/conf.d/mysqld_safe_syslog.cnf
+	
+	conf_write mysql true
 	sudo log -mysql=binary -disable > /dev/null 2>&1
 
 	#Instead of mysql_secure_installation we do this: (same but manually, because not acept unattended)
@@ -250,7 +252,6 @@ GRANT ALL PRIVILEGES ON *.* TO 'admin'@'localhost' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 _EOF_
 	
-	conf_write mysql true
 	echo "${gre}MySQL has been installed successfully! ${end}"
 	api-events_update im4
 }
