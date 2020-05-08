@@ -498,3 +498,20 @@ is_dd_log() {
 	[[ -n $global || ( -n $ddpath && -f $ddpath && -n $(grep -F "WebinolyDatadogLogsStart" $ddpath)) ]] && echo "true" || echo "false"
 }
 
+
+is_subdomain() {
+	if [[ -n $1 ]]; then
+		local count=1
+		while true; do
+			tld=$(echo $1 | cut -d'.' -f ${count}- -s)
+			if grep -Fxq "$tld" /opt/webinoly/lib/public_suffix_list.dat || [ -z $tld ]; then
+				break
+			fi
+			count=$[$count+1]
+		done
+		[[ $count -gt 2 ]] && echo "true" || echo "false"
+	else
+		 echo "false"
+	fi
+}
+

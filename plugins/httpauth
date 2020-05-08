@@ -59,6 +59,7 @@ if [[ -n $add ]]; then
 		sudo touch /etc/nginx/$authfile
 		sudo chmod 644 /etc/nginx/$authfile
 		sudo chown -R root:root /etc/nginx/$authfile
+		[[ -n $domain && $(is_subdomain $domain) == "false" ]] && sudo ln -s /etc/nginx/$authfile /etc/nginx/apps.d/.htpasswd-www.$domain
 	fi
 	
 	exist=$( grep -E "^${user}:" /etc/nginx/$authfile )
@@ -83,7 +84,10 @@ elif [[ -n $delete ]]; then
 	sudo sed -i "/^$userpurge:/d" /etc/nginx/$authfile
 	
 	# Remove site-auth-file if empty.
-	[[ -n $domain && -f /etc/nginx/$authfile && ! -s /etc/nginx/$authfile ]] && sudo rm /etc/nginx/$authfile
+	if [[ -n $domain && -f /etc/nginx/$authfile && ! -s /etc/nginx/$authfile ]]; then
+		sudo rm /etc/nginx/$authfile
+		sudo rm -rf /etc/nginx/apps.d/.htpasswd-www.$domain
+	fi
 	
 	echo "${gre}User '$userpurge' has been deleted successfully!${end}"
 

@@ -13,27 +13,24 @@ check_for_parameters $@
 api-events_update sis
 check_for_nginx -ask
 
-
-# Check if site is sub-domain
+# Check if domain is subdomain
 if [[ -n $domain ]]; then
 	count=1
 	while true; do
-		tld=$(echo $domain | cut -d'.' -f ${count}- -s)
+		tld=$(echo $1 | cut -d'.' -f ${count}- -s)
 		if grep -Fxq "$tld" /opt/webinoly/lib/public_suffix_list.dat || [ -z $tld ]; then
 			break
 		fi
 		count=$[$count+1]
 	done
-	[[ $count -gt 2 ]] && subdomflag="1" || subdomflag="0"
+	[[ $count -gt 2 ]] && subdomflag="true" || subdomflag="false"
 fi
-# Get variables with sub-domain info
-if [[ $subdomflag == 1 && -n $tld ]]; then
+if [[ $subdomflag == "true" && -n $tld ]]; then
 	main_domain=$(echo $domain | cut -d'.' -f $[$count-1]- -s)
 	sub_domain=$(echo $domain | cut -d'.' -f -$[$count-2] -s)
 fi
-# Overwrite value if defined by user
-[[ $subdomain == "true" ]] && subdomflag="1"
-[[ $subdomain == "false" ]] && subdomflag="0"
+[[ $subdomain == "true" ]] && subdomflag="true"
+[[ $subdomain == "false" ]] && subdomflag="false"
 
 
 # Evaluate if site to create is WP ( 0 = noWP, 1 = WP ask, 2 = WP default, 3 = WP unattended, 4 = MySQL default, 5 = MySQL unattended )
