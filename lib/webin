@@ -594,7 +594,7 @@ smtp_setup() {
 	if [[ -z $user || -z $pass || -z $host || -z $mainhost || ! -f /etc/nginx/sites-available/$mainhost ]]; then
 		echo "${red}[ERROR] Invalid SMTP data!${end}"
 		exit 1
-	elif [[ $(ip_check $host) != "true" ]] && ! [[ $(is_url $host) =~ ^(http|https|true)$ ]]; then
+	elif [[ $(is_ip $host) != "true" ]] && ! [[ $(is_url $host) =~ ^(http|https|true)$ ]]; then
 		echo "${red}[ERROR] Invalid SMTP host!${end}"
 		exit 1
 	fi
@@ -1096,7 +1096,7 @@ nginx_blockip() {
 			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
 		else
 			[[ $blockip == true ]] && read -p "${blu}IP address to block: ${end}" blockip
-			if [[ $(ip_check $blockip) == "true" ]]; then
+			if [[ $(is_ip $blockip) == "true" ]]; then
 				if [[ ! -f /etc/nginx/conf.d/blockips.conf ]]; then
 					sudo touch /etc/nginx/conf.d/blockips.conf
 					sudo chmod 644 /etc/nginx/conf.d/blockips.conf
@@ -1116,7 +1116,7 @@ nginx_blockip() {
 		fi
 	elif [[ -n $purge ]]; then
 		[[ $blockip == true ]] && read -p "${blu}IP address to unblock: ${end}" blockip
-		if [[ $(ip_check $blockip) == "true" ]]; then
+		if [[ $(is_ip $blockip) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
 			[[ -f /etc/nginx/conf.d/blockips.conf ]] && sed -i "\#^deny ${blockip};#d" /etc/nginx/conf.d/blockips.conf
 			

@@ -59,7 +59,7 @@ if [[ -n $add ]]; then
 		sudo touch /etc/nginx/$authfile
 		sudo chmod 644 /etc/nginx/$authfile
 		sudo chown -R root:root /etc/nginx/$authfile
-		[[ -n $domain && $(is_subdomain $domain) == "false" ]] && sudo ln -s /etc/nginx/$authfile /etc/nginx/apps.d/.htpasswd-www.$domain
+		[[ -n $domain && $subdomain == "false" ]] && sudo ln -s /etc/nginx/$authfile /etc/nginx/apps.d/.htpasswd-www.$domain
 	fi
 	
 	exist=$( grep -E "^${user}:" /etc/nginx/$authfile )
@@ -161,7 +161,7 @@ elif [[ -n $whitelist ]]; then
 			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
 		else
 			[[ $whitelist == true ]] && read -p "${blu}IP address to whitelist: ${end}" whitelist
-			if [[ $(ip_check $whitelist) == "true" ]]; then
+			if [[ $(is_ip $whitelist) == "true" ]]; then
 				if [[ ! -f /etc/nginx/apps.d/whitelist-acl.conf ]]; then
 					sudo touch /etc/nginx/apps.d/whitelist-acl.conf
 					sudo chmod 644 /etc/nginx/apps.d/whitelist-acl.conf
@@ -182,7 +182,7 @@ elif [[ -n $whitelist ]]; then
 		fi
 	else
 		[[ $whitelist == true ]] && read -p "${blu}IP address to remove from whitelist: ${end}" whitelist
-		if [[ $(ip_check $whitelist) == "true" ]]; then
+		if [[ $(is_ip $whitelist) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
 			[[ -f /etc/nginx/apps.d/whitelist-acl.conf ]] && sudo sed -i "\#^allow ${whitelist};#d" /etc/nginx/apps.d/whitelist-acl.conf
 			

@@ -1,6 +1,9 @@
 #!/bin/bash
 
-readonly app_version="1.11.1"
+# Prevent 'tput' errors when running from Cron
+[[ -z $TERM || $TERM == "unknown" ]] && TERM=dumb
+
+readonly app_version="1.11.2"
 readonly svr_version="1.4"
 readonly os_ubuntu_supported=(xenial bionic)
 readonly php_supported=(7.2 7.3 7.4)
@@ -292,10 +295,27 @@ remove_nginx_default_server() {
 
 
 check_for_parameters() {
+	# Global variables: domain, tld, subdomain, main_domain, sub_domain, empty_param
+	
 	# Check for domain parameter if is first parameter and have no hyphen at the begining.
-	if [[ -n $1 && $(echo $1 | cut -c-1) != "-"  ]]; then
+	if [[ -n $1 && $(echo $1 | cut -c-1) != "-" ]]; then
 		domain=$1
 		shift
+		
+		local count=1
+		while true; do
+			tld=$(echo $domain | cut -d'.' -f ${count}- -s)
+			if grep -Fxq "$tld" /opt/webinoly/lib/public_suffix_list.dat || [ -z $tld ]; then
+				break
+			fi
+			count=$[$count+1]
+		done
+		[[ $count -gt 2 ]] && subdomain="true" || subdomain="false"
+		
+		if [[ $subdomain == "true" && -n $tld ]]; then
+			main_domain=$(echo $domain | cut -d'.' -f $[$count-1]- -s)
+			sub_domain=$(echo $domain | cut -d'.' -f -$[$count-2] -s)
+		fi
 	fi
 	
 	for arg in $@; do
@@ -325,10 +345,11 @@ check_for_parameters() {
 			exit 1
 		fi
 	done
+	[[ -z $@ ]] && empty_param="true"
 }
 
 
-ip_check() {
+is_ip() {
 	# Check for valid IPv4 and IPv6 values, including CIDR.
 	if [[ -n $1 && $1 =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\/([0-9]|[1-2][0-9]|3[0-2]))?$ || $1 =~ ^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))(\/([0-9]|[1-9][0-9]|1[0-2][0-8]))?$ ]]; then
 		echo "true"
@@ -372,29 +393,54 @@ is_url_path() {
 
 
 is_url() {
-	# Output: true,http,https,false
+	# Output: true,http,https,false  Example: $(is_url $domain)
+	# Global variables when -split is set: url_scheme, url_host, url_path, url_port    Example: is_url $domain -split
+	
 	local scheme=$(echo "${1,,}" | cut -d':' -f 1 -s)
 	local host=$(echo "${1,,}" | cut -d':' -f 2 -s | cut -d'/' -f 3 -s)
-	local path=$(echo "${1,,}" | cut -d':' -f 2 -s | cut -d'/' -f 4- -s)
+	local path=$(echo "${1,,}" | cut -d':' -f 2- -s | cut -d'/' -f 4- -s)
+	local port=$(echo "${1,,}" | cut -d':' -f 3 -s | cut -d'/' -f 1 )
+	local out="false"
 	
 	# In case of no-scheme format
 	local hosted=$(echo "${1,,}" | cut -d'/' -f 1)
-	# In case of no-scehem have port included
+	# In case of no-scheme have port included
 	[[ $(echo $hosted | cut -d':' -f 2 -s) =~ ^[0-9]+$ ]] && hosted=$(echo $hosted | cut -d':' -f 1)
 	
 	if [[ $scheme =~ ^(http|https)$ ]]; then	
 		if [[ $(is_domain $host) != "true" ]]; then
-			echo "false"
+			out="false"
 		elif [[ -n $path && $(is_url_path /$path) != "true" ]]; then
-			echo "false"
+			out="false"
+		elif [[ -n $port ]] && ! [[ $port =~ ^[0-9]+$ && $port -ge 0 && $port -le 65535 ]]; then
+			out="false"
 		else
-			echo $scheme
+			out=$scheme
 		fi
 	elif [[ $(is_domain $hosted) == "true" ]]; then
+		scheme=""
+		host=$hosted
 		path=$(echo "${1,,}" | cut -d'/' -f 2- -s)
-		[[ -n $path && $(is_url_path /$path) != "true" ]] && echo "false" || echo "true"
+		port=$(echo "${1,,}" | cut -d'/' -f 1 | cut -d':' -f 2 -s)
+		
+		if [[ -n $path && $(is_url_path /$path) != "true" ]]; then
+			out="false"
+		elif [[ -n $port ]] && ! [[ $port =~ ^[0-9]+$ && $port -ge 0 && $port -le 65535 ]]; then
+			out="false"
+		else
+			out="true"
+		fi
 	else
-		echo "false"
+		out="false"
+	fi
+	
+	if [[ $2 == "-split" && $out != "false" ]]; then
+		url_scheme=$scheme
+		url_host=$host
+		url_path="/$path"
+		url_port=$port
+	elif [[ $2 != "-split" ]]; then
+		echo $out
 	fi
 }
 
@@ -498,23 +544,6 @@ is_dd_log() {
 	fi
 	
 	[[ -n $global || ( -n $ddpath && -f $ddpath && -n $(grep -F "WebinolyDatadogLogsStart" $ddpath)) ]] && echo "true" || echo "false"
-}
-
-
-is_subdomain() {
-	if [[ -n $1 ]]; then
-		local count=1
-		while true; do
-			tld=$(echo $1 | cut -d'.' -f ${count}- -s)
-			if grep -Fxq "$tld" /opt/webinoly/lib/public_suffix_list.dat || [ -z $tld ]; then
-				break
-			fi
-			count=$[$count+1]
-		done
-		[[ $count -gt 2 ]] && echo "true" || echo "false"
-	else
-		 echo "false"
-	fi
 }
 
 

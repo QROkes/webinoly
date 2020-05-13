@@ -36,7 +36,7 @@ ssl_nginx() {
 	fi
 
 	# HTTP to HTTPS Redirection
-	[[ $subdomflag == "true" ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
+	[[ $subdomain == "true" ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
 	[[ -n $wildcard ]] && sername="server_name $domain *.$domain;"
 	sudo sed -i '1r /opt/webinoly/templates/template-site-sslredirect' /etc/nginx/sites-available/$domain
 	sudo sed -i "/#server_name;/c \	$sername" /etc/nginx/sites-available/$domain
@@ -87,8 +87,8 @@ site_ssl_on() {
 	echo "**  read about the Let's Encrypt rate limit - https://letsencrypt.org/docs/rate-limits/        **"
 	echo "*************************************************************************************************"
 	echo "${end}"
-	[[ $subdomflag == "false" ]] && echo "${blu}Please, be sure that${end} $domain ${blu}and${end} www.$domain ${blu}are both currently pointing (DNS) to this server. ${end}"
-	[[ $subdomflag == "true" ]] && echo "${blu}Please, be sure that the${end} $domain ${blu}subdomain is currently pointing (DNS) to this server. ${end}"
+	[[ $subdomain == "false" ]] && echo "${blu}Please, be sure that${end} $domain ${blu}and${end} www.$domain ${blu}are both currently pointing (DNS) to this server. ${end}"
+	[[ $subdomain == "true" ]] && echo "${blu}Please, be sure that the${end} $domain ${blu}subdomain is currently pointing (DNS) to this server. ${end}"
 	
 	# We need an email to notify each renew intent (cron)
 	while [[ -z $cermail ]]
@@ -109,7 +109,7 @@ site_ssl_on() {
 	local param="--email $cermail --no-eff-email --agree-tos --staple-ocsp --must-staple"
 	[[ $(conf_read debug) == "true" ]] && param="$param --test-cert"
 	[[ $ssl == "force-renewal" ]] && param="$param --force-renewal"
-	[[ $subdomflag == "true" ]] && local domset="-d $domain" || local domset="-d $domain -d www.$domain"
+	[[ $subdomain == "true" ]] && local domset="-d $domain" || local domset="-d $domain -d www.$domain"
 	
 	if [[ -n $wildcard ]]; then
 		local domset="-d $domain -d *.$domain"

@@ -168,7 +168,7 @@ wpinstall() {
 					echo "${red}[ERROR] Remove scheme from host URL!${blu}"
 					done="0"
 					continue 1
-				elif ! [[ $dbport =~ ^[0-9]+$ && $dbport -ge 0 && $dbport -le 65535 && ( $(is_url $dburl) == "true" || $(ip_check $dburl) == "true" ) ]]; then
+				elif ! [[ $dbport =~ ^[0-9]+$ && $dbport -ge 0 && $dbport -le 65535 && ( $(is_url $dburl) == "true" || $(is_ip $dburl) == "true" ) ]]; then
 					echo "${red}[ERROR] Invalid database host/port!${blu}"
 					done="0"
 					continue 1
@@ -600,7 +600,7 @@ createsite() {
 	
 	sudo cp /opt/webinoly/templates/template-site-php /etc/nginx/sites-available/$domain
 	
-	if [[ $subdomflag == "true" ]]; then
+	if [[ $subdomain == "true" ]]; then
 		# Remove www support for subdomains - only main domain will support both www and non-www.
 		sudo sed -i "s/ www.domain.com;/;/g"  /etc/nginx/sites-available/$domain
 		
@@ -691,7 +691,7 @@ force_redirect() {
 		echo "${red}[ERROR] Please, enter a valid argument!${end}"
 		exit 1
 	fi
-	if [[ $subdomflag == "true" ]]; then
+	if [[ $subdomain == "true" ]]; then
 		echo "${red}[ERROR] Please, use the main/root domain, Force-Redirection should not be used in Subdomains!${end}"
 		exit 1
 	fi
@@ -1127,7 +1127,7 @@ reverse_proxy() {
 		fi
 		
 		
-		if ! [[ -n $proxydata && $firstchar == "[" && $lastchar == "]" && -n $rphost && ( $(is_url $rphost) =~ ^(http|https|true)$ || $(ip_check $rphost) == "true" || $rphost == "localhost" ) ]]; then
+		if ! [[ -n $proxydata && $firstchar == "[" && $lastchar == "]" && -n $rphost && ( $(is_url $rphost) =~ ^(http|https|true)$ || $(is_ip $rphost) == "true" || $rphost == "localhost" ) ]]; then
 			echo "${red}[ERROR] Please, enter a valid host and port!${end}"
 			exit 1
 		fi
@@ -1312,7 +1312,7 @@ clone_wp_site() {
 		[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
 		
 		# Fix server_name according to new domain/site.
-		[[ $subdomflag == "true" ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
+		[[ $subdomain == "true" ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
 		sudo sed -i "/server_name /c \	$sername" /etc/nginx/sites-available/$domain
 	fi
 
