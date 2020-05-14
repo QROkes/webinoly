@@ -994,7 +994,7 @@ wp_multisite_convertion() {
 	echo "select the type of WP Multisite installation you want (Subdomain or Subdirectory)"
 	echo "and then press the ${end}“Install”${blu} button at the bottom."
 	echo ""
-	echo "After that, you don't need to add any code lines."
+	echo "After that, you don't need to modify any file, please, don't touch any line of code."
 	echo "We will do it for you!"
 	echo ""
 	echo "${gre}Waiting... we will automatically finish the multisite configuration after you do the install in the WP dashboard!${blu}"
@@ -1052,32 +1052,27 @@ wp_multisite_convertion() {
 
 
 parked_domain() {
-	[[ $parked != true ]] && mapto=$parked || mapto="NeverMatchAtFirstDotCom"
-	
-	while [[ ! -f /etc/nginx/sites-available/$mapto ]]
-	do
-		echo "${blu}"
-		read -p "Main site domain: " mapto
-		mapto=${mapto:-NeverMatchAtFirstDotCom}
-		echo "${end}"
-		[[ ! -f /etc/nginx/sites-available/$mapto ]] && echo "${red}Main site domain not found! ${end}"
-	done
+	[[ $parked == true ]] && read -p "${blu}Main site domain: ${end}" parked
+	if [[ ! -f /etc/nginx/sites-available/$parked ]]; then
+		echo "${red}[ERROR] Main site domain not found! ${end}"
+		exit 1
+	fi
 	
 	# Nginx conf file for the new parked domain
-	sername=$(grep -w "server_name .*;" /etc/nginx/sites-available/$domain)
+	sername=$(grep -o "server_name .*;" /etc/nginx/sites-available/$domain)
 	sudo truncate -s 0 /etc/nginx/sites-available/$domain
-	sudo cat /etc/nginx/sites-available/$mapto > /etc/nginx/sites-available/$domain
+	sudo cat /etc/nginx/sites-available/$parked > /etc/nginx/sites-available/$domain
 	
 	# Prevent if SSL is enabled in main site and ssl data is copied to parked site causing an error.
 	sudo site $domain -ssl=off -revoke=off > /dev/null 2>&1
 	
 	# Prevent if main site is default.
-	[[ $(conf_read default-site) == $mapto ]] && remove_nginx_default_server $domain
+	[[ $(conf_read default-site) == $parked ]] && remove_nginx_default_server $domain
 	
 	sudo sed -i "/server_name/c \	$sername" /etc/nginx/sites-available/$domain
-	sudo sed -i "s/$mapto/$domain/g"  /etc/nginx/sites-available/$domain
-	sudo sed -i "/root/c \	root /var/www/$mapto/htdocs;" /etc/nginx/sites-available/$domain
-	cusconl=$( grep -F "include /var/www/$domain/" /etc/nginx/sites-available/$domain | sed "s/$domain/$mapto/" )
+	sudo sed -i "s/$parked/$domain/g"  /etc/nginx/sites-available/$domain
+	sudo sed -i "/root/c \	root /var/www/$parked/htdocs;" /etc/nginx/sites-available/$domain
+	cusconl=$( grep -F "include /var/www/$domain/" /etc/nginx/sites-available/$domain | sed "s/$domain/$parked/" )
 	sed -i "/include \/var\/www\/$domain/c \ ${cusconl}" /etc/nginx/sites-available/$domain
 	
 	echo "${gre}"
@@ -1114,24 +1109,20 @@ reverse_proxy() {
 		firstchar=$(echo "${proxy}" | cut -c-1)
 		lastchar=$(echo "${proxy}" | rev | cut -c-1)
 		proxydata=${proxy:1:-1}
-		
-		rpport=$(echo "${proxydata}" | rev | cut -d':' -f 1 -s | rev)
-		if [[ $rpport =~ ^[0-9]+$ && $rpport -ge 0 && $rpport -le 65535 ]]; then
-			rphost=$(echo "${proxydata}" | rev | cut -d':' -f 2- -s | rev)
-		elif [[ -n $rpport ]]; then
-			echo "${red}[ERROR] Please, enter a valid port number!${end}"
-			exit 1
-		else
-			rphost=$proxydata
-			rpport=""
-		fi
-		
-		
-		if ! [[ -n $proxydata && $firstchar == "[" && $lastchar == "]" && -n $rphost && ( $(is_url $rphost) =~ ^(http|https|true)$ || $(is_ip $rphost) == "true" || $rphost == "localhost" ) ]]; then
-			echo "${red}[ERROR] Please, enter a valid host and port!${end}"
-			exit 1
-		fi
+		[[ $firstchar != "[" || $lastchar != "]" ]] && proxydata=""
+	else
+		read -p "${blu}URL address: ${end}" proxydata
 	fi
+	
+	if ! [[ -n $proxydata && $(is_url $proxydata) =~ ^(http|https|true)$ ]]; then
+		echo "${red}[ERROR] Please, enter a valid host and port!${end}"
+		exit 1
+	fi
+		
+	is_url $proxydata -split
+	[[ -n $url_scheme ]] && url_scheme="$url_scheme://" || url_scheme="http://"
+	[[ -n $url_port ]] && url_port=":$url_port"
+	rpurl="$url_scheme$url_host$url_port$url_path"
 	
 	# Support for custom nginx rules.
 	sudo mkdir -p /var/www/.proxy
@@ -1143,42 +1134,19 @@ reverse_proxy() {
 	sudo sed -i '/error_log /r /opt/webinoly/templates/template-site-proxy' /etc/nginx/sites-available/$domain
 	sudo sed -i "s/domain.com/$domain/g"  /etc/nginx/sites-available/$domain
 		
-	echo "${gre}"
-	if [[ $(echo "${rphost}" | cut -d':' -f 1 -s ) =~ ^(http|https)$ ]]; then
-		sudo sed -i "/proxy_set_header Host/d" /etc/nginx/sites-available/$domain
-		sudo sed -i "/proxy_set_header X-/d" /etc/nginx/sites-available/$domain
-		sudo sed -i "/proxy_redirect ws:/d" /etc/nginx/sites-available/$domain
-		sudo sed -i '/proxy_read_timeout/a \		proxy_intercept_errors on;' /etc/nginx/sites-available/$domain
-		sudo sed -i '/proxy_read_timeout/a \		proxy_ignore_headers   Set-Cookie;' /etc/nginx/sites-available/$domain
+	sudo sed -i "/proxy_set_header Host/d" /etc/nginx/sites-available/$domain
+	sudo sed -i "/proxy_set_header X-/d" /etc/nginx/sites-available/$domain
+	sudo sed -i "/proxy_redirect ws:/d" /etc/nginx/sites-available/$domain
+	sudo sed -i '/proxy_read_timeout/a \		proxy_intercept_errors on;' /etc/nginx/sites-available/$domain
+	sudo sed -i '/proxy_read_timeout/a \		proxy_ignore_headers   Set-Cookie;' /etc/nginx/sites-available/$domain
 				
-		sudo sed -i "s#http://localhost#$rphost#g"  /etc/nginx/sites-available/$domain
-		echo " Custom URL host: ${blu}$rphost${gre}"
-		proxyurl="true"
-	elif [[ -z $rphost ]]; then
-		echo " Default host: ${blu}localhost${gre}"
-	else
-		sudo sed -i "s#localhost#$rphost#g"  /etc/nginx/sites-available/$domain
-		echo " Custom host: ${blu}$rphost${gre}"
-	fi
-	
-	if [[ -n $rpport ]]; then
-		sudo sed -i "s/8080/$rpport/g"  /etc/nginx/sites-available/$domain
-		echo " Custom port: ${blu}$rpport${gre}"
-	elif [[ -z $rpport && $proxyurl == "true" ]]; then
-		sudo sed -i "s/:8080//g"  /etc/nginx/sites-available/$domain
-	else
-		echo " Default port: ${blu}8080${gre}"
-	fi
+	sudo sed -i "s#http://localhost:8080#$rpurl#g"  /etc/nginx/sites-available/$domain
 	
 	# Check host and port
-	[[ -z $rphost ]] && rphost="localhost"
-	[[ -z $rpport ]] && rpport="8080"
-	code=$(wget -t 1 --timeout=5 --server-response --spider ${rphost}:${rpport} 2>&1 | awk '/^  HTTP/{print $2}')
+	code=$(wget -t 1 --timeout=5 --server-response --spider $rpurl 2>&1 | awk '/^  HTTP/{print $2}')
 	code="${code##*$'\n'}"
 	echo "${red}"
-	[[ $code != 200 ]] && echo "[WARNING] Seems like your host/port is not responding!"
-	
-	echo "${end}"
+	[[ $code != 200 ]] && echo "[WARNING] Seems like your Reverse Proxy host is not responding!"
 }
 
 

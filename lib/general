@@ -162,17 +162,13 @@ conf_write() {
 wp_dbdata() {
 	local domain="$1"
 	
-	# Check for WP parked, domain mapping is common for instance.
-	if [[ $(is_parked $domain) == "true" ]]; then
-		echo "${red}[ERROR] Parked sites are not supported!${end}"
-		exit 1
-	fi
-	
 	# Get dbname and dbuser of a WP site
 	if [[ -f /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
 		wpconfpath="/var/www/$domain/htdocs$subfolder/wp-config.php"
 	elif [[ -f /var/www/$domain/wp-config.php ]]; then
 		wpconfpath="/var/www/$domain/wp-config.php"
+	elif [[ $(is_wp $domain) == "true" && $(is_parked $domain) == "true" ]]; then
+		wpconfpath="$(grep -G "root .*;" /etc/nginx/sites-available/$domain | sed -r 's/^.*root (.*)htdocs;$/\1/')wp-config.php"
 	else
 		return
 	fi
@@ -437,7 +433,7 @@ is_url() {
 	if [[ $2 == "-split" && $out != "false" ]]; then
 		url_scheme=$scheme
 		url_host=$host
-		url_path="/$path"
+		[[ -n $path ]] && url_path="/$path"
 		url_port=$port
 	elif [[ $2 != "-split" ]]; then
 		echo $out
