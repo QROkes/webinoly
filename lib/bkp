@@ -1,5 +1,30 @@
 #!/bin/bash
 
+
+bucket_validation() {
+	local bucketname=$(echo $1 | cut -d "/" -f 1)
+	local bucketfolder=$(echo $1 | cut -d "/" -f 2- -s)
+	
+	# Only numerals 0-9, basic Latin letters (only lowercase) and underscore.
+	# https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
+	if [[ -z $1 || -z $bucketname ]]; then
+		echo "${red}[ERROR] Please, enter a valid bucket name! ${end}"
+		exit 1
+	elif ! [[ $bucketname =~ ^[0-9a-z\/-]+$ ]] || [[ -z $bucketname || $(echo $bucketname | cut -c-1) =~ [-|\/] || ${#bucketname} -gt 63 || ${#bucketname} -lt 3 ]]; then
+		echo "${red}[ERROR] Bucket names can only contain lowercase letters, numbers or hyphens; must start with a letter or number and must be at least 3 and no more than 63 characters long.${end}"
+		exit 1
+	elif [[ -n $bucketfolder ]] && ! [[ $bucketfolder =~ ^[0-9a-zA-Z\/-_\!\.\*\'\)\(]+$ ]]; then
+		if [[ $(is_url_path /$bucketfolder) == "true" ]]; then
+			echo "${red}[WARNING] Your bucket folder name contain some characters that might require special handling!"
+			echo "More info: https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html#object-key-guidelines ${end}"
+		else
+			echo "${red}[ERROR] Invalid bucket folder name.${end}"
+			exit 1
+		fi
+	fi
+}
+
+
 bkp_local_db() {
 	check_for_mysql_client
 	
@@ -139,11 +164,7 @@ bkp_s3_profile() {
 		fi
 	
 		[[ -z $bucket || $bucket == "true" ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
-		# Only numerals 0-9, basic Latin letters (only lowercase) and underscore.
-		if ! [[ $bucket =~ ^[0-9a-z\/-]+$ ]] || [[ -z $bucket || $(echo "$bucket" | cut -c-1) =~ [-|\/] || ${#bucket} -gt 63 || ${#bucket} -lt 3 ]]; then
-			echo "${red}[ERROR] Bucket names can only contain lowercase letters, numbers or hyphens; must start with a letter or number and must be at least 3 and no more than 63 characters long.${end}"
-			exit 1
-		fi
+		bucket_validation $bucket
 		
 		[[ -z $source || $source == "true" ]] && read -p "${gre}Source path: ${end}" source
 		if [[ -z $source || ! -d $source ]]; then
@@ -178,7 +199,7 @@ bkp_s3_list() {
 			[[ -d $f ]] && pro=$(echo $f | rev | cut -f 1 -d "/" -s | rev)
 			[[ -f $f/conf ]] && fail="" || fail="${red}(fail)${end}"
 			[[ -n $raw || $list == "raw" ]] && outlist="$pro" || outlist=" ${gre}+ $pro ${end}${fail}"
-			if [[ -n $outlist ]]; then
+			if [[ -n $pro ]]; then
 				echo "$outlist"
 				nonemptylist=true
 			fi
@@ -203,12 +224,7 @@ s3_send() {
 	fi
 	
 	[[ -z $bucket || $bucket == "true" ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
-	# Only numerals 0-9, basic Latin letters (only lowercase) and underscore.
-	if ! [[ $bucket =~ ^[0-9a-z\/-]+$ ]] || [[ -z $bucket || $(echo "$bucket" | cut -c-1) =~ [-|\/] || ${#bucket} -gt 63 || ${#bucket} -lt 3 ]]; then
-		echo "${red}[WARNING] Seems like you're still using the old (deprecated) bucket naming schema."
-		echo "https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html#bucketnamingrules${end}"
-		#exit 1
-	fi
+	bucket_validation $bucket
 	
 	folder=$(echo $bucket | cut -f 2- -d "/" -s)
 	[[ -n $folder ]] && folder="/${folder}/"
