@@ -594,9 +594,19 @@ smtp_setup() {
 	if [[ -z $user || -z $pass || -z $host || -z $mainhost || ! -f /etc/nginx/sites-available/$mainhost ]]; then
 		echo "${red}[ERROR] Invalid SMTP data!${end}"
 		exit 1
-	elif [[ $(is_ip $host) != "true" ]] && ! [[ $(is_url $host) =~ ^(http|https|true)$ ]]; then
-		echo "${red}[ERROR] Invalid SMTP host!${end}"
+	elif [[ $(is_ip $host) != "true" && $(is_url $host) != "true" ]]; then
+		if [[ $(is_url $host) =~ ^(http|https)$ ]]; then
+			echo "${red}[ERROR] Invalid SMTP host! (HTTP/HTTPS can not be used in conjunction with SMTP protocol)${end}"
+		else
+			echo "${red}[ERROR] Invalid SMTP host!${end}"
+		fi
 		exit 1
+	else
+		is_url $host -split
+		if [[ -n $url_port ]]; then
+			echo "${red}[ERROR] Invalid SMTP host! (Custom port is not supported)${end}"
+			exit 1
+		fi
 	fi
 	
 	[[ ! -f /opt/webinoly/templates/source/main.cf ]] && sudo cp -p /etc/postfix/main.cf /opt/webinoly/templates/source/

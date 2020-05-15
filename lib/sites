@@ -154,24 +154,29 @@ wpinstall() {
 			
 			# Check if localhost or external DB
 			if [[ $dbhost != "localhost" && $setupmysql == [yY] ]]; then
-				local dburl=$(echo "$dbhost" | cut -f 1 -d ':')
-				local dbport=$(echo "$dbhost" | cut -f 2 -d ':' -s)
+				# DB host validation
+				is_url $dbhost -split
+				if [[ -n $url_path ]]; then
+					echo "${red}[ERROR] Invalid database host/port! (Folders in DB host are not supported)${blu}"
+					url_path=""
+					done="0"
+					continue 1
+				elif [[ $(is_url $dbhost) =~ ^(http|https)$ ]]; then	
+					local dburl=$url_host
+					local dbport=$url_port
+				elif [[ $(is_url $dbhost) == "true" || $(is_ip $dburl) == "true" ]]; then	
+					local dburl=$(echo "$dbhost" | cut -f 1 -d ':')
+					local dbport=$(echo "$dbhost" | cut -f 2 -d ':' -s)
+				else
+					echo "${red}[ERROR] Invalid database host/port!${blu}"
+					done="0"
+					continue 1
+				fi
 				
 				# Default external DB port
 				if [[ -z $dbport && -n $dburl ]]; then
 					dbport="3306"
 					dbhost="${dbhost}:${dbport}"
-				fi
-				
-				# External DB validation
-				if [[ $(is_url $dbhost) =~ ^(http|https)$ ]]; then	
-					echo "${red}[ERROR] Remove scheme from host URL!${blu}"
-					done="0"
-					continue 1
-				elif ! [[ $dbport =~ ^[0-9]+$ && $dbport -ge 0 && $dbport -le 65535 && ( $(is_url $dburl) == "true" || $(is_ip $dburl) == "true" ) ]]; then
-					echo "${red}[ERROR] Invalid database host/port!${blu}"
-					done="0"
-					continue 1
 				fi
 				
 				check_for_mysql_client
@@ -829,9 +834,12 @@ redirection_manager() {
 			echo "${red}[ERROR] Please, enter a valid 'FROM' redirection path!${end}"
 			exit 1
 		elif [[ -n $to && $(is_url_path $to) != "true" ]] && ! [[ $(is_url $to) =~ ^(http|https)$ ]]; then
-			echo "${red}[ERROR] Please, enter a valid 'TO' redirection path!${end}"
-			[[ $(is_url $to) == "true" ]] && echo "${red}[ERROR] Missing scheme in 'TO' URL!${end}"
-			exit 1
+			if [[ $(is_url $to) == "true" ]]; then
+				to="http://${to}"
+			else
+				echo "${red}[ERROR] Please, enter a valid 'TO' redirection path!${end}"
+				exit 1
+			fi
 		fi
 		
 		if [[ ! -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
@@ -1069,11 +1077,12 @@ parked_domain() {
 	# Prevent if main site is default.
 	[[ $(conf_read default-site) == $parked ]] && remove_nginx_default_server $domain
 	
+	sudo sed -i "/include apps.d\/$parked-nginx.conf/d" /etc/nginx/sites-available/$domain
 	sudo sed -i "/server_name/c \	$sername" /etc/nginx/sites-available/$domain
 	sudo sed -i "s/$parked/$domain/g"  /etc/nginx/sites-available/$domain
 	sudo sed -i "/root/c \	root /var/www/$parked/htdocs;" /etc/nginx/sites-available/$domain
-	cusconl=$( grep -F "include /var/www/$domain/" /etc/nginx/sites-available/$domain | sed "s/$domain/$parked/" )
-	sed -i "/include \/var\/www\/$domain/c \ ${cusconl}" /etc/nginx/sites-available/$domain
+	cusconl=$( grep -o "include /var/www/$domain/.*" /etc/nginx/sites-available/$domain | sed "s/$domain/$parked/" )
+	sed -i "/include \/var\/www\/$domain/c \	${cusconl}" /etc/nginx/sites-available/$domain
 	
 	echo "${gre}"
 	echo "Parked domain was successfully configured! "

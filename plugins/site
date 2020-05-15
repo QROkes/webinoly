@@ -157,6 +157,9 @@ elif [[ -n $multisite_convert && -f /etc/nginx/sites-available/$domain ]]; then
 	if [[ ( -z $subfolder && $(is_wp $domain) == "false" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "false" ) ]]; then
 		echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WP site!${end}"
 		exit 1
+	elif [[ $(is_parked $domain) == "true" ]]; then
+		echo "${red}[ERROR] Multisite conversion in a parked site is not allowed!${end}"
+		exit 1
 	fi
 	
 	check=$(is_wp_multisite $domain)
@@ -317,6 +320,9 @@ elif [[ -n $clone_from ]]; then
 		exit 1
 	elif [[ $(is_wp $clone_from $subfolder) != "true" ]]; then
 		echo "${red}[ERROR] Site${blu} '$clone_from' ${red}is not a WordPress site!${end}"
+		exit 1
+	elif [[ $(is_parked $clone_from) == "true" ]]; then
+		echo "${red}[ERROR] Cloning a parked site is not allowed!${end}"
 		exit 1
 	fi
 	
