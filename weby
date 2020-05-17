@@ -20,16 +20,14 @@ if [[ $(whoami) != "root" ]]; then
 	exit 1
 fi
 
-# Prevent "compulsive" re-installation if you currently have the latest version installed.
-checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
-if [[ -f /opt/webinoly/webinoly.conf && $2 != "-ver=beta" && $2 != "-ver=alpha" ]]; then
-	currentver=$(grep -w "^app-version:.*" /opt/webinoly/webinoly.conf | cut -f 2 -d ':')
-	if [[ -n $checkver && -n $currentver && ${checkver//.} -le ${currentver//.} ]]; then
-		echo "$(tput setaf 2)You currently have the latest version!$(tput sgr0)"
-		sudo rm weby
-		exit 0
-	fi
+# Prevent "compulsive" re-installation, force the use of the 'update' command.
+if [[ -f /opt/webinoly/webinoly.conf && $1 != "upd" && $2 != "-ver=beta" && $2 != "-ver=alpha" ]]; then
+	echo "$(tput setaf 2)Webinoly is already installed on your server!"
+	echo "$(tput setaf 6)To update use the proper command.$(tput sgr0)"
+	sudo rm weby
+	exit 0
 fi
+
 
 # In case client is just Updating Webinoly and not fresh-installing we need accurate statistics.
 [[ -n $1 ]] && setup=$1 || setup=9
@@ -64,6 +62,7 @@ done
 
 
 # Download and install Webinoly
+checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
 if [[ $2 == "-ver="* ]]; then
 	ver=$(echo "$2" | cut -d'=' -f 2 -s)
 	# Skip stadistics counters for dev and testing (custom version stats).
@@ -148,6 +147,9 @@ if [[ $2 == "-ver="* && -z $apiskip ]]; then
 	if ! [[ $ver =~ ^[0-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
 		branch=$ver
 		conf_write branch $ver
+	elif [[ -n $update ]]; then
+		type="Reinstall"
+		opt=$ver
 	else
 		type="Custom"
 		webyversion="$checkver"
@@ -155,7 +157,7 @@ if [[ $2 == "-ver="* && -z $apiskip ]]; then
 	fi
 fi
 
-if [[ $type != "Custom" ]]; then
+if [[ -z $type ]]; then
 	if [[ -n $update && -n $oldapp ]]; then
 		type="Updates"
 		opt=$oldapp
