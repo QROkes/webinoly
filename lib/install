@@ -462,21 +462,28 @@ php_tool() {
 
 mysql_tool() {
 	api-events_update im5
+	
 	sudo mkdir -p /var/www/$(conf_read tools-port)/htdocs/pma
 	sudo wget --timeout=15 -t 1 -qrO /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.xz
-	sudo tar -xf /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz -C /var/www/$(conf_read tools-port)/htdocs/pma
-	sudo mv /var/www/$(conf_read tools-port)/htdocs/pma/phpMyAdmin-*-all-languages/* /var/www/$(conf_read tools-port)/htdocs/pma/
-	sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma/phpMyAdmin-*-all-languages
-	sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma/test
-	sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma/setup
-	sudo rm /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz
-
-	sudo cp /var/www/$(conf_read tools-port)/htdocs/pma/config.sample.inc.php /var/www/$(conf_read tools-port)/htdocs/pma/config.inc.php
-	sudo sed -i "/blowfish_secret/c \$cfg['blowfish_secret'] = '$(pwgen -s -1 32)';" /var/www/$(conf_read tools-port)/htdocs/pma/config.inc.php
-	sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs/pma
 	
-	conf_write mysql-tool true
-	echo "${gre}PhpMyAdmin has been installed successfully! ${end}"
+	if [[ -s /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz ]]; then	
+		sudo tar -xf /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz -C /var/www/$(conf_read tools-port)/htdocs/pma
+		sudo mv /var/www/$(conf_read tools-port)/htdocs/pma/phpMyAdmin-*-all-languages/* /var/www/$(conf_read tools-port)/htdocs/pma/
+		sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma/phpMyAdmin-*-all-languages
+		sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma/test
+		sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma/setup
+		sudo rm /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz
+
+		sudo cp /var/www/$(conf_read tools-port)/htdocs/pma/config.sample.inc.php /var/www/$(conf_read tools-port)/htdocs/pma/config.inc.php
+		sudo sed -i "/blowfish_secret/c \$cfg['blowfish_secret'] = '$(pwgen -s -1 32)';" /var/www/$(conf_read tools-port)/htdocs/pma/config.inc.php
+		sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs/pma
+		
+		conf_write mysql-tool true
+		echo "${gre}PhpMyAdmin has been installed successfully! ${end}"
+	else
+		echo "${red}[ERROR] Downloading phpMyAdmin failed!${end}"
+	fi
+	
 	api-events_update im6
 }
 

@@ -11,16 +11,20 @@ wp_cache_plugins() {
 	if [[ ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/nginx-helper ]]; then
 		# Download Nginx Helper Plugin
 		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
-		sudo unzip -qq /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/
-		sudo rm /var/www/$domain/htdocs/nginx-helper-plugin.zip
-		echo ""
-		echo "${gre} Nginx Helper Plugin has been installed!"
-		echo " Please, activate this plugin for a better experience with FastCgi Cache."
-		echo "${blu} ** IMPORTANT - Plugin Settings **"
-		echo "- The “Caching Method” should be set to “Nginx FastCgi Cache”."
-		echo "- Support for purge/url method is a premium feature only included in NGINX Plus (not-free) and we recommend not to trust in solutions or tools that use third-party NGINX modules to offer this feature."
-		echo "- The Purge Method should be set to “Delete local server cache file”."
-		echo "${end}"
+		if [[ -s /var/www/$domain/htdocs/nginx-helper-plugin.zip ]]; then		
+			sudo unzip -qq /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/
+			sudo rm /var/www/$domain/htdocs/nginx-helper-plugin.zip
+			echo ""
+			echo "${gre} Nginx Helper Plugin has been installed!"
+			echo " Please, activate this plugin for a better experience with FastCgi Cache."
+			echo "${blu} ** IMPORTANT - Plugin Settings **"
+			echo "- The “Caching Method” should be set to “Nginx FastCgi Cache”."
+			echo "- Support for purge/url method is a premium feature only included in NGINX Plus (not-free) and we recommend not to trust in solutions or tools that use third-party NGINX modules to offer this feature."
+			echo "- The Purge Method should be set to “Delete local server cache file”."
+			echo "${end}"
+		else
+			echo "${red}[ERROR] Downloading Nginx-Helper plugin failed!${end}"
+		fi
 	else
 		echo "${gre}Nginx Helper Plugin is already installed!${end}"
 	fi
@@ -28,14 +32,18 @@ wp_cache_plugins() {
 	if [[ ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/redis-cache ]]; then
 		# Download Redis Object Cache Plugin
 		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/redis-cache-plugin.zip https://downloads.wordpress.org/plugin/redis-cache.latest-stable.zip
-		sudo unzip -qq /var/www/$domain/htdocs/redis-cache-plugin.zip -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/
-		sudo rm /var/www/$domain/htdocs/redis-cache-plugin.zip
-		echo ""
-		echo "${gre} Redis Object Cache Plugin has been installed!"
-		echo " Please, activate this plugin for a better experience with WordPress Object Cache."
-		echo "${blu} ** IMPORTANT - Plugin Settings **"
-		echo "- Go to “Menu > Settings > Redis” and be sure that Object Cache is enabled. "
-		echo "${end}"
+		if [[ -s /var/www/$domain/htdocs/redis-cache-plugin.zip ]]; then		
+			sudo unzip -qq /var/www/$domain/htdocs/redis-cache-plugin.zip -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/
+			sudo rm /var/www/$domain/htdocs/redis-cache-plugin.zip
+			echo ""
+			echo "${gre} Redis Object Cache Plugin has been installed!"
+			echo " Please, activate this plugin for a better experience with WordPress Object Cache."
+			echo "${blu} ** IMPORTANT - Plugin Settings **"
+			echo "- Go to “Menu > Settings > Redis” and be sure that Object Cache is enabled. "
+			echo "${end}"
+		else
+			echo "${red}[ERROR] Downloading Redis-Cache plugin failed!${end}"
+		fi
 	else
 		echo "${gre}Redis Object Cache Plugin is already installed!${end}"
 	fi
@@ -133,6 +141,11 @@ wpinstall() {
 	# Download WP (latest version)
 	if [[ $type == [123] ]]; then
 		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
+		if [[ ! -s /var/www/$domain/htdocs/wp.tar.gz ]]; then
+			echo "${red}[ERROR] Downloading WordPress failed!${end}"
+			exit 1
+		fi
+		
 		sudo tar -xf /var/www/$domain/htdocs/wp.tar.gz -C /var/www/$domain/
 		sudo mv /var/www/$domain/wordpress/* /var/www/$domain/htdocs$subfolder/
 		sudo rm -rf /var/www/$domain/wordpress

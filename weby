@@ -95,7 +95,12 @@ if [[ $2 == "-ver="* ]]; then
 fi
 [[ -z $webyversion || $apiskip == true ]] && sudo wget --timeout=15 -t 1 --referer="https://webinoly.com/?option=${setup}${update}" -qrO $HOME/webinoly.tar https://qrok.es/wytar
 
-
+if [[ ! -s $HOME/webinoly.tar ]]; then
+	echo "$(tput setaf 1)[ERROR] Downloading Webinoly failed!$(tput sgr0)"
+	sudo rm weby
+	exit 1
+fi
+		
 sudo mkdir -p /opt/webinoly
 sudo tar -xf $HOME/webinoly.tar -C /opt/webinoly
 sudo mkdir -p /opt/webinoly/templates/source
