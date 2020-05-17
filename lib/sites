@@ -1131,7 +1131,8 @@ reverse_proxy() {
 	is_url $proxydata -split
 	[[ -n $url_scheme ]] && url_scheme="$url_scheme://" || url_scheme="http://"
 	[[ -n $url_port ]] && url_port=":$url_port"
-	rpurl="$url_scheme$url_host$url_port$url_path"
+	rpurl="$url_host$url_port$url_path"
+	[[ $(echo $rpurl | rev | cut -c-1) != "/" ]] && rpurl="${rpurl}/"
 	
 	# Support for custom nginx rules.
 	sudo mkdir -p /var/www/.proxy
@@ -1142,20 +1143,24 @@ reverse_proxy() {
 	sudo sed -i '/index /d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/error_log /r /opt/webinoly/templates/template-site-proxy' /etc/nginx/sites-available/$domain
 	sudo sed -i "s/domain.com/$domain/g"  /etc/nginx/sites-available/$domain
-		
-	sudo sed -i "/proxy_set_header Host/d" /etc/nginx/sites-available/$domain
-	sudo sed -i "/proxy_set_header X-/d" /etc/nginx/sites-available/$domain
-	sudo sed -i "/proxy_redirect ws:/d" /etc/nginx/sites-available/$domain
-	sudo sed -i '/proxy_read_timeout/a \		proxy_intercept_errors on;' /etc/nginx/sites-available/$domain
-	sudo sed -i '/proxy_read_timeout/a \		proxy_ignore_headers   Set-Cookie;' /etc/nginx/sites-available/$domain
-				
-	sudo sed -i "s#http://localhost:8080#$rpurl#g"  /etc/nginx/sites-available/$domain
+	
+	if [[ $url_host != "localhost" && $url_host != "127.0.0.1" ]]; then
+		sudo sed -i "/proxy_set_header Host/d" /etc/nginx/sites-available/$domain
+		sudo sed -i "/proxy_set_header X-/d" /etc/nginx/sites-available/$domain
+		sudo sed -i "/proxy_redirect ws:/d" /etc/nginx/sites-available/$domain
+		sudo sed -i '/proxy_read_timeout/a \		proxy_intercept_errors on;' /etc/nginx/sites-available/$domain
+		sudo sed -i '/proxy_read_timeout/a \		proxy_ignore_headers   Set-Cookie;' /etc/nginx/sites-available/$domain
+	else
+		sudo sed -i "s#ws://localhost:8080/#ws://${rpurl}#g"  /etc/nginx/sites-available/$domain
+	fi
+	
+	sudo sed -i "s#http://localhost:8080/#${url_scheme}${rpurl}#g"  /etc/nginx/sites-available/$domain
 	
 	# Check host and port
-	code=$(wget -t 1 --timeout=5 --server-response --spider $rpurl 2>&1 | awk '/^  HTTP/{print $2}')
+	local code=$(wget -t 1 --timeout=5 --server-response --spider $rpurl 2>&1 | awk '/^  HTTP/{print $2}')
 	code="${code##*$'\n'}"
-	echo "${red}"
-	[[ $code != 200 ]] && echo "[WARNING] Seems like your Reverse Proxy host is not responding!"
+	[[ -n $code ]] && local mes="(Code: ${code})"
+	[[ $code =~ ^(2|3|4)[0-9][0-9]$ ]] || echo "${red}[WARNING] Seems like your Reverse Proxy host is not responding! ${mes}${end}"
 }
 
 
