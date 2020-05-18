@@ -28,7 +28,7 @@ bucket_validation() {
 bkp_local_db() {
 	check_for_mysql_client
 	
-	[[ -z $wp || $wp == "true" ]] &&	read -p "${gre}WordPress site: ${end}" wp
+	[[ -z $wp || $wp == "true" ]] && read -p "${gre}WordPress site: ${end}" wp
 	
 	wp_dbdata $wp
 	if [[ -z $wp || $(is_wp $wp $subfolder) != "true"  ]]; then
@@ -40,11 +40,15 @@ bkp_local_db() {
 	fi
 	
 	[[ -z $destination || $destination == "true" ]] && read -p "${gre}Destination: ${end}" destination
-	if [[ $destination == "default" ]]; then
+	if [[ -z $destination || $destination == "default" ]]; then
 		destination="$HOME/webinoly-backups/$wp"
 		sudo mkdir -p $destination
+	
+	# Must start with / and can not end with /
+	elif [[ ! -d $destination && $(echo "${destination}" | cut -c-1) == "/" && $(echo "${destination}" | rev | cut -c-1) != "/" ]]; then
+		sudo mkdir -p $destination
 	fi
-	if [[ -z $destination || ! -d $destination || $(echo "${destination}" | rev | cut -c-1) == "/" ]]; then
+	if [[ ! -d $destination || $(echo "${destination}" | rev | cut -c-1) == "/" ]]; then
 		echo "${red}[ERROR] Please, enter a valid destination path!${end}"
 		exit 1
 	fi
@@ -123,11 +127,8 @@ bkp_s3_profile() {
 		
 		if [[ $restore == "true" ]]; then
 			echo ""
+			# We don't do a restore path validation because duply can handle it better.
 			read -p "${gre}Restore destination folder: ${end}" restore
-		fi
-		if [[ ! -d $restore ]]; then
-			echo "${red}[ERROR] Restore destination folder not found!${end}"
-			exit 1
 		fi
 		
 		sudo duply $profile restore $restore $date

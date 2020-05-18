@@ -405,8 +405,16 @@ webinoly_verify() {
 	fi
 	
 	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+	[[ -z $ROOT_PASS ]] && local ROOT_PASS="dUmb"
 	if ! sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit" 2>/dev/null && [[ $(conf_read mysql) == "true" ]]; then
-		echo "[ERROR] MySQL Connection to localhost failed!"
+		echo "[ERROR] MySQL Connection to localhost failed! (root)"
+		error="1"
+	fi
+	
+	local ADMIN_PASS=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+	[[ -z $ADMIN_PASS ]] && local ADMIN_PASS="dUmb"
+	if ! sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "quit" 2>/dev/null && [[ $(conf_read mysql) == "true" ]]; then
+		echo "[ERROR] MySQL Connection to localhost failed! (admin)"
 		error="1"
 	fi
 	
@@ -568,6 +576,9 @@ system_info() {
 
 smtp_setup() {
 	if [[ $smtp == true ]]; then
+		local hostname=$(grep -E "^myhostname[ ]?=[ ]?.*$" /etc/postfix/main.cf | cut -d "=" -f 2 -s | sed "s/ //")
+		[[ -n $hostname && -f /etc/nginx/sites-available/$hostname ]] && local default_host=" [$hostname]"
+		
 		echo "${gre}"
 		echo "**********************************"
 		echo "**********  SMTP Setup  **********"
@@ -578,7 +589,8 @@ smtp_setup() {
 		read -p "${blu} + SMTP Host: ${end}" host
 		read -p "${blu} + User: ${end}" user
 		read -p "${blu} + Password: ${end}" pass
-		read -p "${blu} + Main Hostname/Domain: ${end}" mainhost
+		read -p "${blu} + Main Hostname/Domain${default_host}: ${end}" mainhost
+		[[ -z $mainhost && -n $default_host ]] && mainhost=$hostname
 		echo ""
 	elif [[ $(echo "${smtp}" | cut -c-1) == "[" && $(echo "${smtp}" | rev | cut -c-1) == "]" ]]; then
 		userdata=${smtp:1:-1}
@@ -591,8 +603,11 @@ smtp_setup() {
 		exit 1
 	fi
 	
-	if [[ -z $user || -z $pass || -z $host || -z $mainhost || ! -f /etc/nginx/sites-available/$mainhost ]]; then
+	if [[ -z $user || -z $pass || -z $host || -z $mainhost ]]; then
 		echo "${red}[ERROR] Invalid SMTP data!${end}"
+		exit 1
+	elif [[ ! -f /etc/nginx/sites-available/$mainhost ]]; then
+		echo "${red}[ERROR] Main Host site not found in your server!${end}"
 		exit 1
 	elif [[ $(is_ip $host) != "true" && $(is_url $host) != "true" ]]; then
 		if [[ $(is_url $host) =~ ^(http|https)$ ]]; then
@@ -726,6 +741,13 @@ server_reset() {
 		linux_purge
 		nginx_optim
 		[[ -f /tmp/webinoly_blockips_backup ]] && sudo mv /tmp/webinoly_blockips_backup /etc/nginx/conf.d/blockips.conf
+		
+		# Fix permissions
+		sudo find /var/www -type d -exec chmod 755 {} \;
+		sudo find /var/www -type f -exec chmod 644 {} \;
+		sudo chown -R www-data:www-data /var/www
+		[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
+		
 		echo "${gre}Nginx settings has been updated successfully!${end}"
 		nginx_not="true" # Nginx-Reload not-needed.
 	elif [[ $(conf_read nginx-optim) != "true" && $server_reset == "nginx" ]]; then
@@ -994,7 +1016,7 @@ webinoly_uninstall() {
 	done
 	
 	if [[ $answer == [Yy] ]]; then
-		sudo tar -Pcf $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf /opt/webinoly/templates/source
+		[[ -z $no_recovery ]] && sudo tar -Pcf $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf /opt/webinoly/templates/source
 		sudo rm -rf /opt/webinoly
 		sudo rm /usr/bin/webinoly
 		sudo rm /usr/bin/stack
