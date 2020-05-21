@@ -21,33 +21,18 @@ if [[ $(whoami) != "root" ]]; then
 fi
 
 # Prevent "compulsive" re-installation, force the use of the 'update' command.
-if [[ -f /opt/webinoly/webinoly.conf && $1 != "upd" && $2 != "-ver=beta" && $2 != "-ver=alpha" ]]; then
+if [[ -f /opt/webinoly/webinoly.conf && $1 != "upd" && $2 != "-ver=alpha" ]]; then
 	echo "$(tput setaf 2)Webinoly is already installed on your server!"
 	echo "$(tput setaf 6)To update use the proper command.$(tput sgr0)"
 	sudo rm weby
 	exit 0
 fi
 
-
-# In case client is just Updating Webinoly and not fresh-installing we need accurate statistics.
-[[ -n $1 ]] && setup=$1 || setup=9
-if [[ $setup == "upd" ]]; then
+# Diplay menu to select type of server
+if [[ $1 == "upd" ]]; then
 	setup=0
 	update="&update=true"
-else
-	update=""
-fi
-
-if [[ $setup == "api="* ]]; then
-	api_paas=$(echo "${setup}" | cut -d'=' -f 2 -s)
-	api="true"
-	setup=3
-fi
-
-
-# Diplay menu to select type of server
-while ! [[ $setup -ge 0 && $setup -le 3 && $setup =~ ^[0-9]+$ ]] 2>/dev/null
-do
+elif ! [[ $1 -ge 0 && $1 -le 3 && $1 =~ ^[0-9]+$ ]]; then
 	echo ""
 	echo "  1 - HTML Server"
 	echo "  2 - PHP Server"
@@ -57,43 +42,36 @@ do
 	read -p "Select the desired option to configure your server: " setup
 	echo ""
 	echo "------------------------------------------------"
-	setup=${setup:-3}
-done
+	setup=${setup:-0}
+else
+	setup=$1
+fi
 
 
 # Download and install Webinoly
-checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
 if [[ $2 == "-ver="* ]]; then
 	ver=$(echo "$2" | cut -d'=' -f 2 -s)
 	# Skip stadistics counters for dev and testing (custom version stats).
-	if [[ $(echo "${ver}" | rev | cut -c-1) == "*" || $ver == "alpha" ]]; then
+	if [[ $(echo $ver | rev | cut -c-1) == "*" || $ver == "alpha" ]]; then
 		ver=${ver//'*'}
 		statskip="true"
 	fi
 	
 	# Be sure we have a valid server response for the requested version
 	code=$(wget --server-response --spider https://qrok.es/webinoly?version=$ver 2>&1 | awk '/^  HTTP/{print $2}')
-	# Get the last code (redirections)
-	code="${code##*$'\n'}"
+	code="${code##*$'\n'}" # Get the last code (redirections)
 
-	echo "$(tput setaf 1)"
 	if [[ $code == 200 ]]; then
 		sudo wget --timeout=15 -t 1 -qrO $HOME/webinoly.tar https://qrok.es/webinoly?version=$ver
-		webyversion="$ver"
-		[[ $ver == "beta" ]] && echo "[WARNING] You are installing a BETA version of Webinoly and it's not recommended for production enviroments."
+		[[ $ver == "beta" ]] && echo "$(tput setaf 1)[WARNING] You are installing a BETA version of Webinoly and it's not recommended for production enviroments.$(tput sgr0)"
 	else
-		echo "[ERROR] Version not found or not available! ($code) $(tput sgr0)"
-		if [[ $1 != "api" ]]; then
-			sudo rm weby
-			exit 1
-		else
-			webyversion="$checkver"
-			apiskip=true
-		fi
+		echo "$(tput setaf 1)[ERROR] Version not found or not available! ($code) $(tput sgr0)"
+		sudo rm weby
+		exit 1
 	fi
-	echo $(tput sgr0)
+else
+	sudo wget --timeout=15 -t 1 --referer="https://webinoly.com/?option=${setup}${update}" -qrO $HOME/webinoly.tar https://qrok.es/wytar
 fi
-[[ -z $webyversion || $apiskip == true ]] && sudo wget --timeout=15 -t 1 --referer="https://webinoly.com/?option=${setup}${update}" -qrO $HOME/webinoly.tar https://qrok.es/wytar
 
 if [[ ! -s $HOME/webinoly.tar ]]; then
 	echo "$(tput setaf 1)[ERROR] Downloading Webinoly failed!$(tput sgr0)"
@@ -111,7 +89,6 @@ sudo find /opt/webinoly -type d -exec chmod 755 {} \;
 sudo find /opt/webinoly -type f -exec chmod 644 {} \;
 sudo chmod -f 744 /opt/webinoly/lib/ex-*
 
-# Install plugins
 sudo chmod 755 /opt/webinoly/plugins/*
 sudo mv /opt/webinoly/plugins/* /usr/bin/
 
@@ -123,79 +100,68 @@ if [[ -f $HOME/.webinoly-conf-restore_dont-remove ]]; then
 	sudo tar -Pxf $HOME/.webinoly-conf-restore_dont-remove -C /
 	sudo rm -rf $HOME/.webinoly-conf-restore_dont-remove
 	sudo webinoly -verify
-	if [[ $? == 1 ]]; then
+	if [[ $? != 0 ]]; then
 		sudo rm weby
 		app_purge
 		exit 1
 	fi
 fi
 
-# Check for Server Conf Updates and Save Tools Port after library is available.
+
+# Check if new installation
 if [[ -f /opt/webinoly/webinoly.conf ]]; then
-	echo "${gre}Webinoly Configuration file was found, so we will use it!${end}"
 	oldapp=$(conf_read app-version)
 	oldver=$(conf_read server-version)
 	newver=$svr_version
-	[[ -n $oldver && ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
+	echo "${gre}Webinoly Configuration file was found, so we will use it!${end}"
 else
-	[[ -n $2 && $2 != "-ver="* ]] && tools_port $2
-	newinst="true"
+	new_install="true"
 fi
 
 
 # Write app version
 webyversion=$app_version
-[[ -z $webyversion ]] && webyversion="undetermined"
 conf_write app-version $webyversion
 
-# Ping to Webinoly Stats
-opt=$setup
-branch="Public"
-if [[ $2 == "-ver="* && -z $apiskip ]]; then
-	if ! [[ $ver =~ ^[0-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
-		branch=$ver
-		conf_write branch $ver
-	elif [[ -n $update ]]; then
-		type="Reinstall"
-		opt=$ver
-	else
-		type="Custom"
-		webyversion="$checkver"
-		opt=$ver
-	fi
-fi
 
-if [[ -z $type ]]; then
-	if [[ -n $update && -n $oldapp ]]; then
+# Ping to Webinoly Stats
+if [[ $statskip != "true" ]]; then
+	opt=$setup
+	branch="Public"
+
+	if [[ $new_install == "true" ]]; then
+		type="New"
+	elif [[ $ver == "beta" ]]; then
+		type="Beta"
+		conf_write branch $ver
+	elif [[ -n $update && $ver =~ ^[0-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
+		type="Downgrade"
+		webyversion=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
+		opt=$ver
+	elif [[ -n $setup && $ver =~ ^[0-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
+		type="Custom"
+		webyversion=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
+		opt=$ver
+	elif [[ -n $update && -n $oldapp ]]; then
 		type="Updates"
 		opt=$oldapp
-	elif [[ -z $update && -n $oldapp ]]; then
-		type="Reinstall"
-		opt=$oldapp
-	elif [[ $newinst == "true" ]]; then
-		type="New"
-		if [[ $api == "true" ]]; then
-			type="API"
-			opt=$api_paas
-		fi
 	else
 		type="Error"
 	fi
-elif [[ $type == "Custom" && $api == "true" ]]; then
-	type="API"
-	opt=$api_paas
+
+	wget https://api.webinoly.com/stats/?install=${branch}:${webyversion}:${type}:${opt} --referer="Webinoly-Internal-Verified-Stats" --spider --timeout=15 -t 1 -q
 fi
-[[ $statskip == "true" ]] || wget https://api.webinoly.com/stats/?install=${branch}:${webyversion}:${type}:${opt} --referer="Webinoly-Internal-Verified-Stats" --spider --timeout=15 -t 1 -q
 
 
-# Stack installation
+# Stack installation & updates
+[[ -n $oldver && ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
 [[ $setup -gt 0 && $setup -le 3 ]] && stack -nginx
 [[ $setup -gt 1 && $setup -le 3 ]] && stack -php
 [[ $setup == 3 ]] && stack -mysql
 
 
 # Message Center
-if [[ $newinst == "true" && $setup == 0 ]]; then
+if [[ $new_install == "true" && $setup == 0 ]]; then
 	echo "${blu}You have chosen the option '0', it means that you have to manually build your own stack."
 	echo "But, don't worry! With Webinoly this is an easy task, just use the stack command, i.e. 'sudo stack -lemp'"
 	echo "${gre}"
