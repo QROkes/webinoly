@@ -45,7 +45,7 @@ You don't need developer skills to help, visit our site to know [How to Contribu
 
 [![PayPal Donations](https://cdn.qrokes.com/media/paypal-webinoly-donate.png)](https://www.paypal.me/qrokes)
 [![GitHub Sponsors](https://cdn.qrokes.com/media/github-sponsors.png)](https://github.com/sponsors/QROkes)
-[![Bitcoin Donations](https://cdn.qrokes.com/media/bitcoin-webinoly-donate.png)](https://www.blockchain.com/btc/payment_request?address=1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3)
+[![Bitcoin Donations](https://cdn.qrokes.com/media/bitcoin-webinoly-donate.png)](https://www.blockchain.com/en/btc/address/1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3)
 
 If you like Webinoly, buy me a coffee or a beer to show support.
 

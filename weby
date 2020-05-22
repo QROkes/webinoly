@@ -26,6 +26,10 @@ if [[ -f /opt/webinoly/webinoly.conf && $1 != "upd" && $2 != "-ver=alpha" ]]; th
 	echo "$(tput setaf 6)To update use the proper command.$(tput sgr0)"
 	sudo rm weby
 	exit 0
+elif [[ ! -f /opt/webinoly/webinoly.conf && $1 == "upd" ]]; then
+	echo "$(tput setaf 1)Webinoly cannot be updated because it's not installed or not found.$(tput sgr0)"
+	sudo rm weby
+	exit 0
 fi
 
 # Diplay menu to select type of server
@@ -33,16 +37,15 @@ if [[ $1 == "upd" ]]; then
 	setup=0
 	update="&update=true"
 elif ! [[ $1 -ge 0 && $1 -le 3 && $1 =~ ^[0-9]+$ ]]; then
-	echo ""
+	echo "$(tput setaf 6)"
 	echo "  1 - HTML Server"
 	echo "  2 - PHP Server"
 	echo "  3 - LEMP Server (Default)"
 	echo "  0 - Maybe later..."
 	echo ""
-	read -p "Select the desired option to configure your server: " setup
+	read -p "$(tput setaf 2)Select the desired option to configure your server: $(tput sgr0)" setup
 	echo ""
-	echo "------------------------------------------------"
-	setup=${setup:-0}
+	setup=${setup:-3}
 else
 	setup=$1
 fi
@@ -122,6 +125,7 @@ fi
 # Write app version
 webyversion=$app_version
 conf_write app-version $webyversion
+[[ $ver =~ ^(alpha|beta)$ ]] && conf_write branch $ver
 
 
 # Ping to Webinoly Stats
@@ -133,7 +137,6 @@ if [[ $statskip != "true" ]]; then
 		type="New"
 	elif [[ $ver == "beta" ]]; then
 		type="Beta"
-		conf_write branch $ver
 	elif [[ -n $update && $ver =~ ^[0-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
 		type="Downgrade"
 		webyversion=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
@@ -170,13 +173,14 @@ fi
 
 echo "${blu}"
 echo "****************************************************************************"
-echo "**********************     D O N A T I O N S     ***************************"
-echo "***   If you like Webinoly, buy me a coffee or a beer to show support.   ***"
+echo "************************${bol}     D O N A T I O N S     ${end}${blu}*************************"
+echo "***   ${dim}If you like Webinoly, buy me a coffee or a beer to show support.${end}${blu}   ***"
 echo "****************************************************************************"
-echo "**********     Bitcoin: 1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3     *************"
-echo "************    PayPal: https://www.paypal.me/qrokes     *******************"
+echo "*************     Bitcoin: 1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3     **********"
+echo "*******   GitHub Sponsors: https://github.com/sponsors/QROkes     **********"
+echo "***************    PayPal: https://www.paypal.me/qrokes     ****************"
 echo "****************************************************************************"
-echo "***   Your regular donations is what keep this project moving forward.   ***"
+echo "***   ${dim}Your regular donations is what keep this project moving forward.${end}${blu}   ***"
 echo "****************************************************************************"
 echo "${end}"
 

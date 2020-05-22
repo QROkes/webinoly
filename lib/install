@@ -122,10 +122,10 @@ messagend_install() {
 	echo ""
 	echo "${gre}"
 	echo "****************************************************************************"
-	echo "******            INSTALLATION HAS FINISHED SUCCESSFULLY              ******"
+	echo "******${bol}            INSTALLATION HAS FINISHED SUCCESSFULLY              ${end}${gre}******"
 	echo "****************************************************************************"
 	echo "********      Save your DB access password in a secure place:       ********"
-	echo "******      root: ${rootpass}       admin: ${adminpass}      ******"
+	echo "******${dim}      root: ${rootpass}       admin: ${adminpass}      ${end}${gre}******"
 	echo "****************************************************************************"
 	echo "${end}"
 }

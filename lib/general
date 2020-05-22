@@ -4,7 +4,7 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.11.2"
+readonly app_version="1.11.3"
 readonly svr_version="1.4"
 readonly os_ubuntu_supported=(xenial bionic)
 readonly php_supported=(7.2 7.3 7.4)
@@ -15,7 +15,8 @@ readonly red=`tput setaf 1`
 readonly gre=`tput setaf 2`
 readonly blu=`tput setaf 6`
 readonly end=`tput sgr0`
-
+readonly bol=`tput bold`
+readonly dim=`tput dim`
 
 # STOP and exit if not root or sudo.
 if [[ $(whoami) != "root" ]]; then

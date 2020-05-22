@@ -39,7 +39,8 @@ bkp_local_db() {
 		exit 1
 	fi
 	
-	[[ -z $destination || $destination == "true" ]] && read -p "${gre}Destination: ${end}" destination
+	# Always go with default path, except if parameter is entered and empty
+	[[ $destination == "true" ]] && read -p "${gre}Destination: ${end}" destination
 	if [[ -z $destination || $destination == "default" ]]; then
 		destination="$HOME/webinoly-backups/$wp"
 		sudo mkdir -p $destination

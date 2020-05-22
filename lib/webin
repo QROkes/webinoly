@@ -721,6 +721,11 @@ webinoly_update() {
 	currentver=$(conf_read app-version)
 	
 	if [[ ( -n $checkver && ${checkver//.} -gt ${currentver//.} ) || ( -n $update && $update != true ) ]]; then
+		if [[ $(conf_read branch) =~ ^(alpha|beta)$ ]] && ! [[ $update =~ ^(alpha|beta)$ ]]; then
+			echo "${red}[ERROR] Beta/alpha versions can not be updated to stable versions!${end}"
+			exit 1
+		fi
+		
 		echo ""
 		[[ -n $update && $update != true ]] && branch="-ver=${update}" || branch=""
 		sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=${app_version}" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
