@@ -727,9 +727,14 @@ webinoly_update() {
 	else
 		checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
 		currentver=$(conf_read app-version)
-		if [[ -n $checkver && ${checkver//.} -gt ${currentver//.} ]]; then
+		if [[ -n $checkver && -n $currentver && ${currentver//.} -ge ${checkver//.} ]]; then
 			echo "${gre}You currently have the latest version!${end}"
 			exit 0
+		elif [[ -z $checkver || -z $currentver ]]; then
+			echo "${red}[ERROR] Version number unavailable!${end}"
+			exit 1
+		else
+			echo "${dim}Updating...${end}"
 		fi
 	fi
 	
