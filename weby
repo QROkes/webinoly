@@ -4,7 +4,7 @@
 # Check OS support
 distr=`echo $(lsb_release -i | cut -d':' -f 2)`
 osver=`echo $(lsb_release -c | cut -d':' -f 2)`
-if ! [[ $distr == "Ubuntu" && $osver =~ ^(xenial|bionic)$ ]]; then
+if ! [[ $distr == "Ubuntu" && $osver =~ ^(xenial|bionic|focal)$ ]]; then
 	echo "$(tput setaf 1)"
 	echo "****************************************************************************"
 	echo "****  This OS is not supported by Webinoly and could not work properly  ****"
@@ -183,6 +183,18 @@ echo "**************************************************************************
 echo "***   ${dim}Your regular donations is what keep this project moving forward.${end}${blu}   ***"
 echo "****************************************************************************"
 echo "${end}"
+
+
+if [[ $osver == "focal" ]]; then
+	conf_write branch beta
+	echo "${red}"
+	echo "****************************************************************************"
+	echo "*******************${bol}     Ubuntu 20.04 (Focal Fossa)      ${end}${red}********************"
+	echo "*****************   Partial support, only for testing.    ******************"
+	echo "**************   Don't use it in production enviroments!    ****************"
+	echo "****************************************************************************"
+	echo "${end}"
+fi
 
 
 # Remove Installation File

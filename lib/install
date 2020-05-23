@@ -76,12 +76,13 @@ LimitNOFILE=$nginxfd" | tee -a /etc/systemd/system/nginx.service.d/nofile_limit.
 	sudo cat /opt/webinoly/templates/general/sysctl >> /etc/sysctl.conf
 	sudo sed -i "/fs.file-max =/c \ fs.file-max = ${newfd}" /etc/sysctl.conf
 	sudo sed -i "/vm.max_map_count =/c \ vm.max_map_count = ${newfd}" /etc/sysctl.conf
+	
 	# BBR is only valid in kernel > v4.9, bionic is at least 4.15
-	if [[ $(check_osname) == "bionic" ]]; then
-		sudo modprobe tcp_bbr
-	else
+	if [[ $(check_osname) == "xenial" ]]; then
 		sudo sed -i '/tcp_congestion_control/s/^/#/' /etc/sysctl.conf
 		sudo sed -i '/tcp_notsent_lowat/s/^/#/' /etc/sysctl.conf
+	else
+		sudo modprobe tcp_bbr
 	fi
 	
 	swap_create
@@ -135,10 +136,10 @@ nginx_install() {
 	api-events_update in1
 	pre_install
 	if [[ ($(conf_read nginx-ppa) == "mainline" || $nginx == "mainline") && $nginx != "stable" ]]; then
-		echo | sudo add-apt-repository ppa:nginx/mainline
+		[[ $(check_osname) != "focal" ]] && echo | sudo add-apt-repository ppa:nginx/mainline
 		conf_write nginx-ppa mainline
 	else
-		echo | sudo add-apt-repository ppa:nginx/stable
+		[[ $(check_osname) != "focal" ]] && echo | sudo add-apt-repository ppa:nginx/stable
 		conf_write nginx-ppa stable
 	fi
 	pre_install
@@ -393,12 +394,12 @@ nginx_tool() {
 	[[ $(conf_read php-tool) == "true" && ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]] && php_tool_site
 
 	# Install LetsEncrypt
-	echo | sudo add-apt-repository ppa:certbot/certbot
+	[[ $(check_osname) != "focal" ]] && echo | sudo add-apt-repository ppa:certbot/certbot
 	pre_install
 	sudo apt -y install certbot
 	
 	# Instalar Duply & Duplicity
-	sudo apt -y install python-boto duplicity duply
+	[[ $(check_osname) == "focal" ]] && sudo apt -y install python3-boto3 duplicity duply || sudo apt -y install python-boto duplicity duply
 	
 	conf_write nginx-tool true
 	api-events_update in10
@@ -437,7 +438,7 @@ php_tool() {
 	[[ $(conf_read nginx) == "true" ]] && php_tool_site
 
 	# Redis (Object Cache)
-	echo | sudo add-apt-repository ppa:chris-lea/redis-server
+	[[ $(check_osname) != "focal" ]] && echo | sudo add-apt-repository ppa:chris-lea/redis-server
 	pre_install
 	sudo apt -y install redis-server php-redis
 	sudo systemctl enable redis-server

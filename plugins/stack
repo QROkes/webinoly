@@ -209,15 +209,7 @@ elif [[ -n $purge && -n $mysql ]]; then
 			# Cases with MariaDB v10.4 support
 			os_name=$(check_osname)
 			sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
-			case "$osname" in
-				"trusty")
-					sudo apt-key del 0xcbcb082a1bb943db
-				;;
-				"xenial"|"bionic"|"cosmic"|"disco")
-					sudo apt-key del 0xF1656F24C74CD1D8
-					
-				;;
-			esac
+			sudo apt-key del 0xF1656F24C74CD1D8
 			
 			if [[ $mysql != "keep-data" ]]; then
 				sudo rm -rf /etc/mysql

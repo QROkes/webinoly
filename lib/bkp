@@ -178,14 +178,14 @@ bkp_s3_profile() {
 		[[ -z $max_age ]] && max_age="1M"
 		sudo sed -i -E "/^[#]?GPG_KEY=/c GPG_KEY='disabled'" $HOME/.duply/$profile/conf
 		sudo sed -i -E "/^[#]?GPG_PW=/c #GPG_PW='_GPG_PASSWORD_'" $HOME/.duply/$profile/conf
-		sudo sed -i -E "/^[#]?TARGET=/c TARGET='s3+http://${bucket}'" $HOME/.duply/$profile/conf
 		sudo sed -i -E "/^[#]?SOURCE=/c SOURCE='$source'" $HOME/.duply/$profile/conf
 		sudo sed -i -E "/^[#]?MAX_AGE=/c MAX_AGE=$max_age" $HOME/.duply/$profile/conf
 		
-		if [[ -z $s3_european_buckets ]]; then
-			sudo echo 'DUPL_PARAMS="$DUPL_PARAMS --s3-use-new-style "' >> $HOME/.duply/$profile/conf
+		if [[ $(check_osname) == "focal" ]]; then
+			sudo sed -i -E "/^[#]?TARGET=/c TARGET='boto3+s3://${bucket}'" $HOME/.duply/$profile/conf
 		else
-			sudo echo 'DUPL_PARAMS="$DUPL_PARAMS --s3-use-new-style --s3-european-buckets "' >> $HOME/.duply/$profile/conf
+			sudo sed -i -E "/^[#]?TARGET=/c TARGET='s3+http://${bucket}'" $HOME/.duply/$profile/conf
+			sudo echo 'DUPL_PARAMS="$DUPL_PARAMS --s3-use-new-style "' >> $HOME/.duply/$profile/conf
 		fi
 		
 		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully created!${end}"
@@ -229,13 +229,28 @@ s3_send() {
 	bucket_validation $bucket
 	
 	folder=$(echo $bucket | cut -f 2- -d "/" -s)
+	[[ -n $folder ]] && keyfol="${folder}/"
 	[[ -n $folder ]] && folder="/${folder}/"
 	
+	export keyfol
 	export folder
 	export bucket=$(echo $bucket | cut -f 1 -d "/")
 	export send_to_s3
-	
-	python - &>/dev/null <<END
+
+	if [[ $(check_osname) == "focal" ]]; then
+		python3 - &>/dev/null <<END
+import os,boto3
+
+filepath = os.environ['send_to_s3']
+BUCKET = os.environ['bucket']
+folder = os.environ['keyfol']
+
+s3_client = boto3.client('s3')
+s3_client.upload_file(filepath, BUCKET, folder + filepath.split('/')[-1])
+
+END
+	else
+		python - &>/dev/null <<END
 import os,boto
 
 filepath = os.environ['send_to_s3']
@@ -248,6 +263,7 @@ k = bucket.new_key(folder + filepath.split('/')[-1])
 k.set_contents_from_filename(filepath)
 
 END
+	fi
 	
 	if [[ $? == 0 ]]; then
 		unset send_to_s3

@@ -717,23 +717,26 @@ create_blackhole_cert() {
 
 
 webinoly_update() {
-	checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
-	currentver=$(conf_read app-version)
-	
-	if [[ ( -n $checkver && ${checkver//.} -gt ${currentver//.} ) || ( -n $update && $update != true ) ]]; then
-		if [[ $(conf_read branch) =~ ^(alpha|beta)$ ]] && ! [[ $update =~ ^(alpha|beta)$ ]]; then
-			echo "${red}[ERROR] Beta/alpha versions can not be updated to stable versions!${end}"
-			exit 1
-		fi
-		
-		echo ""
-		[[ -n $update && $update != true ]] && branch="-ver=${update}" || branch=""
-		sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=${app_version}" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
-		[[ $? == 0 ]] && echo "${gre}Webinoly App has been updated successfully!${end}"
-		api-events_update wy1s
-	else
-		echo "${gre}You currently have the latest version!${end}"
+	if [[ $(conf_read branch) =~ ^(alpha|beta)$ ]] && ! [[ $update =~ ^(alpha|beta)$ ]]; then
+		echo "${red}[ERROR] Beta/alpha versions can not be updated to stable versions!${end}"
+		exit 1
 	fi
+	
+	if [[ -n $update && $update != true ]]; then
+		branch="-ver=${update}"
+	else
+		checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
+		currentver=$(conf_read app-version)
+		if [[ -n $checkver && ${checkver//.} -gt ${currentver//.} ]]; then
+			echo "${gre}You currently have the latest version!${end}"
+			exit 0
+		fi
+	fi
+	
+	sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=${app_version}" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
+	
+	[[ $? == 0 ]] && echo "${gre}Webinoly App has been updated successfully!${end}"
+	api-events_update wy1s
 }
 
 

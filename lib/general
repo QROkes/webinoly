@@ -6,7 +6,7 @@
 
 readonly app_version="1.11.3"
 readonly svr_version="1.4"
-readonly os_ubuntu_supported=(xenial bionic)
+readonly os_ubuntu_supported=(xenial bionic focal)
 readonly php_supported=(7.2 7.3 7.4)
 readonly datadog_agent_ver="7"
 
@@ -212,7 +212,7 @@ pre_install() {
 		api-events_update i1
 		sudo apt -y -qq install dialog
 		sudo apt -y -qq install software-properties-common
-		[[ $(check_osname) != "bionic" ]] && sudo apt -y -qq install python-software-properties
+		[[ $(check_osname) == "xenial" ]] && sudo apt -y -qq install python-software-properties
 		sudo apt -y -qq install pwgen
 		sudo apt -y -qq install unzip
 		sudo apt -y -qq install zip
@@ -232,21 +232,18 @@ app_purge() {
 mysql_client_install() {
 	api-events_update im2
 	local osname=$(check_osname)
+	sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
+	
 	# Cases with MariaDB v10.4 support - https://downloads.mariadb.org/mariadb/repositories/
 	case "$osname" in
 		"xenial")
-			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
 			sudo add-apt-repository "deb [arch=amd64,arm64,i386,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.4/ubuntu $osname main"
 		;;
-		"bionic")
-			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
+		"bionic"|"focal")
 			sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.4/ubuntu $osname main"
 		;;
-		"cosmic"|"disco")
-			sudo apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xF1656F24C74CD1D8
-			sudo add-apt-repository "deb [arch=amd64] http://mirrors.syringanetworks.net/mariadb/repo/10.4/ubuntu $osname main"
-		;;
 	esac
+	
 	pre_install
 	sudo apt -y install mariadb-client
 	conf_write mysql-client true
