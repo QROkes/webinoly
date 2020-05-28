@@ -220,15 +220,15 @@ elif [[ -n $path && -n $domain ]]; then
 			echo "${red}[ERROR] HTTP Authentication is not allowed in subfolders (only root '/' is allowed) for Reverse Proxy sites!${end}"
 			exit 1
 		elif [[ $path =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
-			if [[ -n $( grep -E "^# RedirectFrom: ${path}( \([RegxEact]+\))?$" /etc/nginx/apps.d/$domain-nginx.conf ) ]]; then
-				echo "${red}[ERROR] A redirection was found for this path, you better should protect the final destination!${end}"
-				exit 1
-			fi
-			
 			if [[ ! -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
 				sudo touch /etc/nginx/apps.d/$domain-nginx.conf
 				sudo chmod 644 /etc/nginx/apps.d/$domain-nginx.conf
 				sudo chown -R root:root /etc/nginx/apps.d/$domain-nginx.conf
+			fi
+			
+			if [[ -n $( grep -E "^# RedirectFrom: ${path}( \([RegxEact]+\))?$" /etc/nginx/apps.d/$domain-nginx.conf ) ]]; then
+				echo "${red}[ERROR] A redirection was found for this path, you better should protect the final destination!${end}"
+				exit 1
 			fi
 			
 			exist=$( grep -E "^# Path: ${path}$" /etc/nginx/apps.d/$domain-nginx.conf )
@@ -245,7 +245,7 @@ elif [[ -n $path && -n $domain ]]; then
 				echo "# Path: ${firm}
 location $sign$path {
 	include common/acl.conf;
-	try_files \$uri \$uri/ /index.php?\$args;
+	try_files \$uri \$uri/ /index.php\$is_args\$args;
 }
 # PathEnd" >> /etc/nginx/apps.d/$domain-nginx.conf
 				

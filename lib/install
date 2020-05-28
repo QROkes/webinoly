@@ -43,10 +43,12 @@ linux_optim() {
 	fi
 	
 	local ramkb=$(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
+	local ram=$(($ramkb/1000000))
+	
 	local newfd=$((($ramkb*$fdratio)/100))
 	local nginxfd=$((($newfd*$nginxfdratio)/100))
 	local cachefd=$(($nginxfd/3))
-	local cacheram=$(($nginxfd/1024))
+	local cacheram=$(($nginxfd/1000))
 	
 	[ -d /etc/systemd/system/nginx.service.d ] || sudo mkdir /etc/systemd/system/nginx.service.d
 	[ -f /etc/systemd/system/nginx.service.d/nofile_limit.conf ] || sudo touch /etc/systemd/system/nginx.service.d/nofile_limit.conf
@@ -56,15 +58,13 @@ LimitNOFILE=$nginxfd" | tee -a /etc/systemd/system/nginx.service.d/nofile_limit.
 	sudo sed -i "/worker_rlimit_nofile/c \worker_rlimit_nofile $nginxfd;" /etc/nginx/nginx.conf
 	sudo sed -i "/client_max_body_size/c \	client_max_body_size ${maxuploads}m;" /etc/nginx/nginx.conf
 	sudo sed -i "/open_file_cache max/c \	open_file_cache max=$cachefd inactive=5m;" /etc/nginx/nginx.conf
-	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /var/run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=${cacheram}m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
+	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=${cacheram}m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
 	echo "tmpfs	/run	tmpfs	nodev,nosuid,size=25%,mode=755	0	0" | sudo tee -a /etc/fstab
-	#mkdir -p /var/run/nginx-cache
-	#echo "tmpfs    /var/run/nginx-cache   tmpfs   size=${cacheram}M,mode=0744,uid=www-data,gid=www-data   0   0" | sudo tee -a /etc/fstab
-	#sudo mount /var/run/nginx-cache
 	
-	# https://www.cyberciti.biz/faq/linux-increase-the-maximum-number-of-open-files/
-	# https://ospi.fi/blog/centos-7-raise-nofile-limit-for-nginx.html
-	# https://underyx.me/2015/05/18/raising-the-maximum-number-of-file-descriptors
+	# Related to PHP dynamic pm.children
+	[[ $ram  =~ ^[0-9]+$ && $ram -gt 0 ]] && local keepups=$(($ram*3)) || local keepups=3
+	sudo sed -i "/keepalive /c \	keepalive $keepups;" /etc/nginx/conf.d/upstream.conf
+	
 	# sudo cat /proc/$(cat /run/nginx.pid)/limits   -  ver los recursos actuales del proceso main de nginx
 	# sudo ps aux | grep nginx  ---  ver todos lo procesos corriendo con nginx user
 	[[ $newfd -gt $(ulimit -Hn) ]] && rootfd=$newfd || rootfd=$(ulimit -Hn)
@@ -76,6 +76,13 @@ LimitNOFILE=$nginxfd" | tee -a /etc/systemd/system/nginx.service.d/nofile_limit.
 	sudo cat /opt/webinoly/templates/general/sysctl >> /etc/sysctl.conf
 	sudo sed -i "/fs.file-max =/c \ fs.file-max = ${newfd}" /etc/sysctl.conf
 	sudo sed -i "/vm.max_map_count =/c \ vm.max_map_count = ${newfd}" /etc/sysctl.conf
+	
+	# Default is 65M, if RAM >= 3Gb take 3%, and >= 32Gb only 2%
+	if [[ $ram -gt 30 ]]; then
+		sudo sed -i "/vm.min_free_kbytes =/c \ vm.min_free_kbytes = $((($ramkb*2)/100))" /etc/sysctl.conf
+	elif [[ $ram -gt 2 ]]; then
+		sudo sed -i "/vm.min_free_kbytes =/c \ vm.min_free_kbytes = $((($ramkb*3)/100))" /etc/sysctl.conf
+	fi
 	
 	# BBR is only valid in kernel > v4.9, bionic is at least 4.15
 	if [[ $(check_osname) == "xenial" ]]; then
@@ -105,7 +112,6 @@ linux_purge() {
 		sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/sysctl.conf
 		sudo rm -rf /etc/systemd/system/nginx.service.d
 		sudo sed -i '\/run/d' /etc/fstab
-		#sudo umount /var/run/nginx-cache
 		swap_delete
 		sudo sysctl -p -q
 		sudo mount -o remount tmpfs
@@ -267,8 +273,17 @@ nginx_optim() {
 
 	sudo cat /opt/webinoly/templates/nginx/nginx.conf > /etc/nginx/nginx.conf
 	
-	sudo sed -i '/REQUEST_SCHEME/c \fastcgi_param  SCRIPT_FILENAME        $request_filename;' /etc/nginx/fastcgi_params
-	sudo sed -i '/REDIRECT_STATUS/a \fastcgi_param   HTTP_PROXY      "";' /etc/nginx/fastcgi_params
+	# Remove it, then add it again to prevent multiple # for each server-reset
+	sudo sed -i '/ SERVER_NAME /s/#//' /etc/nginx/fastcgi_params
+	sudo sed -i '/ SERVER_NAME /s/^/#/' /etc/nginx/fastcgi_params
+	
+	echo '# WebinolyCustom
+fastcgi_param  SCRIPT_FILENAME    $request_filename;
+fastcgi_param  SERVER_NAME        $host;
+fastcgi_param  HTTP_HOST          $http_host;
+fastcgi_param  HTTP_PROXY         "";
+fastcgi_param  HTTP_ACCEPT_ENCODING "";
+# WebinolyCustomEnd' >> /etc/nginx/fastcgi_params
 	
 	# Create Direct Access for easy navigation
 	[ -L $HOME/sites-available ] || ln -s /etc/nginx/sites-available $HOME
@@ -329,38 +344,29 @@ php_optim() {
 	sudo sed -i '/opcache.enable=/c\opcache.enable=1' /etc/php/$ver/fpm/php.ini
 	
 	set_timezone &
+	local ramkb=$(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
+	local ram=$(($ramkb/1000000))
+	
+	[[ $ram  =~ ^[0-9]+$ && $ram -gt 0 ]] || ram=1
+	[[ $(($ram*10)) -lt 100 ]] && local maxchil=100 || local maxchil=$(($ram*10))
 
-	sudo sed -i '/pm =/c\pm = ondemand' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i '/pm =/c\pm = dynamic' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm.start_servers =/c\pm.start_servers = $(($ram*3))" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm.min_spare_servers =/c\pm.min_spare_servers = $(($ram*2))" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm.max_spare_servers =/c\pm.max_spare_servers = $(($ram*4))" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm.max_children =/c\pm.max_children = $maxchil" /etc/php/$ver/fpm/pool.d/www.conf
+	
+	sudo sed -i "/pm.max_requests =/c\pm.max_requests = 1000" /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/request_terminate_timeout =/c\request_terminate_timeout = 300' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i '/pm.max_spare_servers =/c\pm.max_spare_servers = 35' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i '/pm.min_spare_servers =/c\pm.min_spare_servers = 10' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i '/pm.start_servers =/c\pm.start_servers = 15' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i '/pm.max_children =/c\pm.max_children = 100' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i '/pm.max_requests =/c\pm.max_requests = 500' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.status_path =/c\pm.status_path = /status' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
 
 	if [[ $(conf_read multi-php) == "true" ]]; then
 		[[ $ver == 7.4 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9004' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
 	else
 		sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
-	fi
-	
-	sudo touch /var/log/php$ver-slog.log
-	sudo cp /etc/php/$ver/fpm/pool.d/www.conf /etc/php/$ver/fpm/pool.d/debug.conf
-	sudo sed -i '/\[www\]/c\[debug]' /etc/php/$ver/fpm/pool.d/debug.conf
-	sudo sed -i '/rlimit_core =/c\rlimit_core = unlimited' /etc/php/$ver/fpm/pool.d/debug.conf
-	sudo sed -i "/slowlog =/c\slowlog = /var/log/php$ver-slog.log" /etc/php/$ver/fpm/pool.d/debug.conf
-	sudo sed -i '/request_slowlog_timeout =/c\request_slowlog_timeout = 10s' /etc/php/$ver/fpm/pool.d/debug.conf
-
-	if [[ $(conf_read multi-php) == "true" ]]; then
-		[[ $ver == 7.4 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
-		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/debug.conf
-		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9005' /etc/php/$ver/fpm/pool.d/debug.conf
-	else
-		sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/debug.conf
 	fi
 	
 	[[ $(conf_read php-tool) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
@@ -504,9 +510,9 @@ swap_delete() {
 
 swap_create() {
 	local swapkb=$(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
-	local swap=$(($swapkb/1048000))
+	local swap=$(($swapkb/1000000))
 	local ramkb=$(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
-	local ram=$(($ramkb/1048000))
+	local ram=$(($ramkb/1000000))
 	
 	# https://help.ubuntu.com/community/SwapFaq
 	if [[ -z $swapkb || $swapkb == "0" ]]; then

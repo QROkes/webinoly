@@ -749,6 +749,7 @@ server_reset() {
 	# Regenerate NGINX conf files
 	if [[ $(conf_read nginx-optim) == "true" && $server_reset =~ ^(nginx|all)$ ]]; then
 		[[ -f /etc/nginx/conf.d/blockips.conf ]] && sudo cp -p /etc/nginx/conf.d/blockips.conf /tmp/webinoly_blockips_backup
+		sudo sed -i '/WebinolyCustom/,/WebinolyCustomEnd/{/.*/d}' /etc/nginx/fastcgi_params
 		sudo rm -rf /etc/nginx/common
 		sudo rm -rf /etc/nginx/conf.d/*
 		linux_purge
@@ -1007,7 +1008,7 @@ config_fastcgi_cache() {
 		if [[ $(conf_read nginx) == "true" ]]; then	
 			sudo sed -i "/fastcgi_cache_valid 200/c \fastcgi_cache_valid 200 ${hit};" /etc/nginx/conf.d/fastcgi.conf
 			sudo sed -i "/fastcgi_cache_valid 301 302 307 404 410/c \fastcgi_cache_valid 301 302 307 404 410 ${oth};" /etc/nginx/conf.d/fastcgi.conf
-			sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path \/var\/run\/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m ${maxsize} inactive=${ina};" /etc/nginx/conf.d/fastcgi.conf
+			sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path \/run\/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m ${maxsize} inactive=${ina};" /etc/nginx/conf.d/fastcgi.conf
 		fi
 		conf_write fastcgi-conf ${hit},${ina},${oth}
 		echo "${gre}FastCGI Cache values has been successfully updated!${end}"
@@ -1118,7 +1119,7 @@ clear_caches() {
 	fi
 	if [[ $clear_cache =~ ^(fastcgi|all)$ ]]; then
 		if [[ $(conf_read nginx) == "true" ]]; then
-			sudo rm -Rf /var/run/nginx-cache/*
+			sudo rm -Rf /run/nginx-cache/*
 			echo "${gre}- FastCgi Cache has been successfully cleared!${end}"
 		else	
 			echo "${red}[ERROR] We can not clear FastCGI Cache because NGINX is not installed!${end}"

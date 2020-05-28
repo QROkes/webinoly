@@ -76,7 +76,7 @@ vm.min_free_kbytes = 65535
 net.ipv4.tcp_syncookies = 1
 net.ipv4.tcp_syn_retries = 2
 net.ipv4.tcp_synack_retries = 2
-net.ipv4.tcp_max_syn_backlog = 4096
+net.ipv4.tcp_max_syn_backlog = 65536
 
 # Disables packet forwarding
 net.ipv4.ip_forward = 0
@@ -189,15 +189,18 @@ net.core.dev_weight = 64
 # Increase the maximum amount of option memory buffers
 net.core.optmem_max = 65535
 
+# When mem allocated by TCP exceeds “pressure”, kernel will put pressure on TCP memory
+net.ipv4.tcp_mem=8388608 8388608 8388608
+
 # Increase the tcp-time-wait buckets pool size to prevent simple DOS attacks
-net.ipv4.tcp_max_tw_buckets = 1440000
+net.ipv4.tcp_max_tw_buckets = 6000000
 
 # try to reuse time-wait connections, but don't recycle them (recycle can break clients behind NAT)
 #net.ipv4.tcp_tw_recycle = 0
 net.ipv4.tcp_tw_reuse = 1
 
 # Limit number of orphans, each orphan can eat up to 16M (max wmem) of unswappable memory
-net.ipv4.tcp_max_orphans = 16384
+net.ipv4.tcp_max_orphans = 262144
 net.ipv4.tcp_orphan_retries = 0
 
 # Limit the maximum memory used to reassemble IP fragments (CVE-2018-5391)

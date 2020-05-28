@@ -4,6 +4,8 @@ echo "${red}"
 echo "Your server configuration will be updated and all changes you manually did will be lost!!"
 echo "${blu}Current server version 'v$oldver' will be upgraded to the newest 'v$newver'. Wait...${end}"
 
+
+# v1.5.0
 onezero_to_oneone() {
 	
 	if [[ $(conf_read mysql-tool) == "true" ]]; then
@@ -42,12 +44,14 @@ must-staple = True" | tee -a /etc/letsencrypt/cli.ini
 }
 
 
+# v1.6.0
 oneone_to_onetwo() {
 	# Forgot doing it in 1.1 update
 	sudo apt-get -y install zip
 }
 
 
+# v1.7.0
 onetwo_to_onethree() {
 	# Nginx "ssl on" directive is now deprecated - remove it!
 	for site in "/etc/nginx/sites-available"/*
@@ -64,6 +68,7 @@ onetwo_to_onethree() {
 }
 
 
+# v1.9.0
 onethree_to_onefour() {
 	sudo rm /opt/webinoly/templates/nginx/conf.d/blockips.conf
 	if [[ $(conf_read nginx) == "true" ]]; then
@@ -100,6 +105,15 @@ onethree_to_onefour() {
 }
 
 
+# v1.12.0
+onefour_to_onefive() {
+	sudo sed -i '/ HTTP_PROXY /d' /etc/nginx/fastcgi_params
+	sudo sed -i '/ SCRIPT_FILENAME /d' /etc/nginx/fastcgi_params
+	sudo rm -rf /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
+	sudo rm -rf /var/log/php$(conf_read php-ver)-slog.log
+}
+
+
 # Version numbers without point
 [[ ${oldver//.} -lt 11 ]] && onezero_to_oneone > /dev/null 2>&1 &
 wait $!
@@ -109,8 +123,9 @@ wait $!
 wait $!
 [[ ${oldver//.} -lt 14 ]] && onethree_to_onefour > /dev/null 2>&1 &
 wait $!
+[[ ${oldver//.} -lt 15 ]] && onefour_to_onefive > /dev/null 2>&1 &
+wait $!
 
 
 sudo webinoly -server-reset
-
 echo "${gre}Your server-configuration has been successfully updated!${end}"
