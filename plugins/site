@@ -138,7 +138,7 @@ elif [[ -n $wp && -n $domain ]]; then
 		createsite
 		sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
 		[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domain -wp-admin=off > /dev/null 2>&1
-		[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domain -yoast-sitemap=on > /dev/null 2>&1
+		[[ $(conf_read yoast-sitemap) == "true" ]] && sudo site $domain -yoast-sitemap=on > /dev/null 2>&1
 	else
 		if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && -d /var/www/$domain/htdocs$subfolder ]]; then
 			echo "${red}[ERROR] Subfolder ${blu}'$subfolder'${red} already exists!${end}"

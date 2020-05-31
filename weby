@@ -150,6 +150,7 @@ if [[ $statskip != "true" ]]; then
 		opt=$oldapp
 	else
 		type="Error"
+		echo "${red}[WARNING] Installation method not recognized!${end}"
 	fi
 
 	wget https://api.webinoly.com/stats/?install=${branch}:${webyversion}:${type}:${opt} --referer="Webinoly-Internal-Verified-Stats" --spider --timeout=15 -t 1 -q

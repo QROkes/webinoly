@@ -141,14 +141,6 @@ net.ipv4.ip_local_port_range = 1024 65535
 # Enable a fix for RFC1337 - time-wait assassination hazards in TCP
 net.ipv4.tcp_rfc1337 = 1
 
-# Do not auto-configure IPv6
-net.ipv6.conf.all.autoconf=0
-net.ipv6.conf.all.accept_ra=0
-net.ipv6.conf.default.autoconf=0
-net.ipv6.conf.default.accept_ra=0
-net.ipv6.conf.eth0.autoconf=0
-net.ipv6.conf.eth0.accept_ra=0
-
 
 
 ###

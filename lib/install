@@ -53,18 +53,14 @@ linux_optim() {
 	[ -d /etc/systemd/system/nginx.service.d ] || sudo mkdir /etc/systemd/system/nginx.service.d
 	[ -f /etc/systemd/system/nginx.service.d/nofile_limit.conf ] || sudo touch /etc/systemd/system/nginx.service.d/nofile_limit.conf
 	sudo echo "[Service]
-LimitNOFILE=$nginxfd" | tee -a /etc/systemd/system/nginx.service.d/nofile_limit.conf
+LimitNOFILE=$nginxfd" >> /etc/systemd/system/nginx.service.d/nofile_limit.conf
 	
 	sudo sed -i "/worker_rlimit_nofile/c \worker_rlimit_nofile $nginxfd;" /etc/nginx/nginx.conf
 	sudo sed -i "/client_max_body_size/c \	client_max_body_size ${maxuploads}m;" /etc/nginx/nginx.conf
 	sudo sed -i "/open_file_cache max/c \	open_file_cache max=$cachefd inactive=5m;" /etc/nginx/nginx.conf
 	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=${cacheram}m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
-	echo "tmpfs	/run	tmpfs	nodev,nosuid,size=25%,mode=755	0	0" | sudo tee -a /etc/fstab
-	
-	# Related to PHP dynamic pm.children
-	[[ $ram  =~ ^[0-9]+$ && $ram -gt 0 ]] && local keepups=$(($ram*3)) || local keepups=3
-	sudo sed -i "/keepalive /c \	keepalive $keepups;" /etc/nginx/conf.d/upstream.conf
-	
+	echo "tmpfs	/run	tmpfs	nodev,nosuid,size=25%,mode=755	0	0" >> /etc/fstab
+		
 	# sudo cat /proc/$(cat /run/nginx.pid)/limits   -  ver los recursos actuales del proceso main de nginx
 	# sudo ps aux | grep nginx  ---  ver todos lo procesos corriendo con nginx user
 	[[ $newfd -gt $(ulimit -Hn) ]] && rootfd=$newfd || rootfd=$(ulimit -Hn)
@@ -112,7 +108,9 @@ linux_purge() {
 		sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/sysctl.conf
 		sudo rm -rf /etc/systemd/system/nginx.service.d
 		sudo sed -i '\/run/d' /etc/fstab
-		swap_delete
+		
+		[[ -z $server_reset || $recalculate == "on" ]] && swap_delete
+		
 		sudo sysctl -p -q
 		sudo mount -o remount tmpfs
 		sudo systemctl daemon-reload
@@ -267,7 +265,6 @@ _EOF_
 #NGINX OPTIM
 nginx_optim() {
 	api-events_update in3
-	sudo service nginx stop
 	sudo cp -R /opt/webinoly/templates/nginx/common /etc/nginx/common
 	sudo cp -R /opt/webinoly/templates/nginx/conf.d/* /etc/nginx/conf.d/
 
@@ -303,9 +300,7 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	fi
 	
 	echo "${gre}Wait while Webinoly optimize your Ubuntu Operating System...${end}"
-	linux_optim > /dev/null 2>&1 &
-	wait $!
-	[[ $(conf_read swap-owner) == "webinoly" ]] && echo "${gre}SWAP file created!${end}"
+	linux_optim
 
 	# Check for dynamic variables.
 	[[ $(conf_read global-access-log-off) == "purged" ]] && sudo log -only-error=off || sudo log -only-error=on
@@ -324,18 +319,19 @@ php_optim() {
 	
 	# Check for dynamic variables
 	[[ -n $1 ]] && ver="$1" || ver=$(conf_read php-ver)
+	[[ -n $(conf_read php-max-child) && $(conf_read php-max-child) =~ ^[0-9]+$ && $(conf_read php-max-child) -gt 2 ]] && local maxchi=$(conf_read php-max-child)
 	[[ -n $(conf_read php-max-mem) && $(conf_read php-max-mem) =~ ^[0-9]+$ && $(conf_read php-max-mem) -gt 0 ]] && local maxmem=$(conf_read php-max-mem) || local maxmem=192
-	[[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ && $(conf_read max-mb-uploads) -gt 0 ]] && local maxuploads=$(conf_read max-mb-uploads) || local maxuploads=50
+	[[ -n $(conf_read php-max-time) && $(conf_read php-max-time) =~ ^[0-9]+$ && $(conf_read php-max-time) -gt 0 ]] && local maxtime=$(conf_read php-max-time) || local maxtime=300
+	[[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ && $(conf_read max-mb-uploads) -gt 0 ]] && local maxup=$(conf_read max-mb-uploads) || local maxup=50
 	
-	sudo systemctl stop php${ver}-fpm
 	sudo sed -i "/memory_limit =/c\memory_limit = ${maxmem}M" /etc/php/$ver/fpm/php.ini
-	sudo sed -i '/max_execution_time =/c\max_execution_time = 300' /etc/php/$ver/fpm/php.ini
-	sudo sed -i '/expose_php =/c\expose_php = Off' /etc/php/$ver/fpm/php.ini
-	sudo sed -i "/upload_max_filesize =/c\upload_max_filesize = ${maxuploads}M" /etc/php/$ver/fpm/php.ini
-	sudo sed -i "/post_max_size =/c\post_max_size = ${maxuploads}M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/max_execution_time =/c\max_execution_time = ${maxtime}" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/upload_max_filesize =/c\upload_max_filesize = ${maxup}M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/post_max_size =/c\post_max_size = ${maxup}M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/max_input_vars =/c\max_input_vars = 3000" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/max_file_uploads =/c\max_file_uploads = 20' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/session.cookie_httponly =/c\session.cookie_httponly = 1' /etc/php/$ver/fpm/php.ini
-	sudo sed -i "/max_input_vars =/c\max_input_vars = 3000" /etc/php/$ver/fpm/php.ini
+	sudo sed -i '/expose_php =/c\expose_php = Off' /etc/php/$ver/fpm/php.ini
 	
 	sudo sed -i "/opcache.memory_consumption=/c\opcache.memory_consumption=${maxmem}" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/opcache.interned_strings_buffer=/c\opcache.interned_strings_buffer=8' /etc/php/$ver/fpm/php.ini
@@ -347,17 +343,23 @@ php_optim() {
 	local ramkb=$(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
 	local ram=$(($ramkb/1000000))
 	
-	[[ $ram  =~ ^[0-9]+$ && $ram -gt 0 ]] || ram=1
-	[[ $(($ram*10)) -lt 100 ]] && local maxchil=100 || local maxchil=$(($ram*10))
-
-	sudo sed -i '/pm =/c\pm = dynamic' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i "/pm.start_servers =/c\pm.start_servers = $(($ram*3))" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i "/pm.min_spare_servers =/c\pm.min_spare_servers = $(($ram*2))" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i "/pm.max_spare_servers =/c\pm.max_spare_servers = $(($ram*4))" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i "/pm.max_children =/c\pm.max_children = $maxchil" /etc/php/$ver/fpm/pool.d/www.conf
+	if [[ $ram  =~ ^[0-9]+$ && $ram -gt 0 ]]; then
+		[[ -z $maxchi ]] && local maxchi=30
+	else	
+		ram=1
+		[[ -z $maxchi ]] && local maxchi=15
+	fi
 	
-	sudo sed -i "/pm.max_requests =/c\pm.max_requests = 1000" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i '/request_terminate_timeout =/c\request_terminate_timeout = 300' /etc/php/$ver/fpm/pool.d/www.conf
+	local maxchil=$(($ram*$maxchi))
+	[[ $(conf_read php-pm) =~ ^(static|ondemand)$ ]] && local phpm=$(conf_read php-pm) || local phpm="dynamic"
+	
+	sudo sed -i "/pm =/c\pm = $phpm" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm.max_children =/c\pm.max_children = $maxchil" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm.start_servers =/c\pm.start_servers = $(($maxchil/3))" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm.min_spare_servers =/c\pm.min_spare_servers = $(($maxchil/3))" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm.max_spare_servers =/c\pm.max_spare_servers = $((2*($maxchil/3)))" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/request_terminate_timeout =/c\request_terminate_timeout = ${maxtime}" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i '/pm.max_requests =/c\pm.max_requests = 1000' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.status_path =/c\pm.status_path = /status' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
 
@@ -371,7 +373,7 @@ php_optim() {
 	
 	[[ $(conf_read php-tool) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
 	conf_write php-optim true
-	sudo systemctl start php${ver}-fpm
+	sudo systemctl restart php${ver}-fpm
 	api-events_update ip4
 }
 
@@ -415,9 +417,9 @@ nginx_tool() {
 php_tool_site() {
 	api-events_update ip6
 	# Status pages
-	sudo mkdir -p /var/www/$(conf_read tools-port)/htdocs/fpm/status
-	sudo touch /var/www/$(conf_read tools-port)/htdocs/fpm/status/php
-	sudo touch /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug
+	sudo touch /var/www/$(conf_read tools-port)/htdocs/ping
+	sudo touch /var/www/$(conf_read tools-port)/htdocs/status
+	sudo touch /var/www/$(conf_read tools-port)/htdocs/nginx_status	
 	
 	#PHP info site
 	sudo mkdir -p /var/www/$(conf_read tools-port)/htdocs/php
@@ -499,11 +501,15 @@ swap_delete() {
 	local swapkb=$(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
 	if [[ -n $swapkb && $swapkb =~ ^[0-9]+$ && $swapkb -gt 0 && $(conf_read swap-owner) == "webinoly" ]]; then
 		api-events_update pn9
-		sudo swapoff -a -v > /dev/null
-		sudo sed -i '/\/swapfile/d' /etc/fstab
-		sudo rm /swapfile
-		conf_delete swap-owner
-		api-events_update pn10
+		sudo swapoff -a -v > /dev/null 2>&1
+		sudo rm -rf /swapfile
+		if [[ ! -f /swapfile ]]; then
+			sudo sed -i '/\/swapfile/d' /etc/fstab
+			conf_delete swap-owner
+			api-events_update pn10
+		else
+			echo "${dim}SWAP file is busy or can't be removed!${end}"
+		fi
 	fi
 }
 
@@ -542,7 +548,7 @@ swap_create() {
 		fi
 
 		if [[ -z $newswap || $newswap == 0 ]]; then
-			echo "${red}[ERROR] Webinoly could not create a new Swap Partition! ${end}"
+			echo "${red}[ERROR] Webinoly could not create a new SWAP file! ${end}"
 		else
 			# Create SWAP Partition
 			sudo dd if=/dev/zero of=/swapfile bs=${newswap}M count=1024
@@ -559,9 +565,7 @@ swap_create() {
 		fi
 		api-events_update in6
 	else
-		if [[ $(conf_read swap-owner) != "webinoly" ]]; then
-			conf_write swap-owner system
-		fi
-		echo "${gre}SWAP Memory (${swap}Gb) detected!${end}"
+		[[ $(conf_read swap-owner) != "webinoly" ]] && conf_write swap-owner system
+		echo "${gre}SWAP file (${swap}Gb) detected!${end}"
 	fi
 }

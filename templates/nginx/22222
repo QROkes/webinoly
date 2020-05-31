@@ -2,7 +2,6 @@
 
 # WebinolyNginxServerStart
 server {
-
 	listen 22222 default_server deferred;
 	listen [::]:22222 default_server;
 
@@ -11,15 +10,11 @@ server {
 
 	root /var/www/22222/htdocs;
 	index index.php index.htm index.html;
-
-	# Turn on directory listing
+	
 	autoindex on;
-
-	# HTTP Authentication on port 22222
+	
 	include common/auth.conf;
 	include common/acl.conf;
-
-	# PHP Support
 	include common/php.conf;
 	include common/locations.conf;
 
@@ -29,18 +24,9 @@ server {
 		access_log off;
 	}
 	location ~ ^/(status|ping)$ {
-		include fastcgi_params;
-		fastcgi_pass php;
-	}
-
-	# Display menu at location /fpm/status/
-	location =  /fpm/status/ {}
-
-	location ~ /fpm/status/(.*) {
 		try_files $uri =404;
 		include fastcgi_params;
-		fastcgi_param  SCRIPT_NAME  /status;
-		fastcgi_pass $1;
+		fastcgi_pass php;
 	}
 
 	# phpMyAdmin protection
@@ -50,6 +36,5 @@ server {
 		access_log off;
 		log_not_found off;
 	}
-	
 }
 # WebinolyNginxServerEnd

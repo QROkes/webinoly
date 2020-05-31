@@ -97,7 +97,7 @@ onethree_to_onefour() {
 				
 				if [[ $(is_wp $domi) == "true" ]]; then
 					[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domi -wp-admin=off
-					[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domi -yoast-sitemap=on
+					[[ $(conf_read yoast-sitemap) == "true" ]] && sudo site $domi -yoast-sitemap=on
 				fi
 			fi
 		done
@@ -111,6 +111,11 @@ onefour_to_onefive() {
 	sudo sed -i '/ SCRIPT_FILENAME /d' /etc/nginx/fastcgi_params
 	sudo rm -rf /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf
 	sudo rm -rf /var/log/php$(conf_read php-ver)-slog.log
+	
+	sudo touch /var/www/$(conf_read tools-port)/htdocs/ping
+	sudo touch /var/www/$(conf_read tools-port)/htdocs/status
+	sudo touch /var/www/$(conf_read tools-port)/htdocs/nginx_status
+	sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/fpm
 }
 
 

@@ -992,7 +992,7 @@ wp_subfolder() {
 	sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 	
 	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domain -wp-admin=off -subfolder=$subfolder > /dev/null 2>&1
-	[[ $(conf_read yoast-sitemap) != "purged" ]] && sudo site $domain -yoast-sitemap=on -subfolder=$subfolder > /dev/null 2>&1
+	[[ $(conf_read yoast-sitemap) == "true" ]] && sudo site $domain -yoast-sitemap=on -subfolder=$subfolder > /dev/null 2>&1
 	
 	# Activate FastCgi cache
 	if [[ $cache == "on" ]]; then
