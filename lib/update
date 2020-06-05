@@ -116,6 +116,14 @@ onefour_to_onefive() {
 	sudo touch /var/www/$(conf_read tools-port)/htdocs/status
 	sudo touch /var/www/$(conf_read tools-port)/htdocs/nginx_status
 	sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/fpm
+	
+	if [[ $(conf_read nginx-ppa) == "mainline" ]]; then
+		echo | sudo add-apt-repository --remove 'ppa:nginx/development'
+		echo | sudo add-apt-repository ppa:ondrej/nginx-mainline
+	else
+		echo | sudo add-apt-repository --remove 'ppa:nginx/stable'
+		echo | sudo add-apt-repository ppa:ondrej/nginx
+	fi
 }
 
 

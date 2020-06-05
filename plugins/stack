@@ -61,11 +61,15 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			
 			sudo service nginx stop
 			sudo apt -y purge nginx nginx-common
-			[[ $(conf_read nginx-ppa) == "mainline" ]] && echo | sudo add-apt-repository --remove 'ppa:nginx/development' || echo | sudo add-apt-repository --remove 'ppa:nginx/stable'
+			
+			[[ $(conf_read nginx-ppa) == "mainline" ]] && echo | sudo add-apt-repository --remove 'ppa:ondrej/nginx-mainline' || echo | sudo add-apt-repository --remove 'ppa:ondrej/nginx'
+			
 			api-events_update pn4
 			api-events_update pn5
-			sudo apt -y purge certbot python-boto duplicity duply
-			echo | sudo add-apt-repository --remove 'ppa:certbot/certbot'
+			
+			[[ $(check_osname) == "focal" ]] && sudo apt -y purge certbot python3-boto3 duplicity duply || sudo apt -y purge certbot python-boto duplicity duply
+			[[ $(check_osname) != "focal" ]] && echo | sudo add-apt-repository --remove 'ppa:certbot/certbot'
+			
 			# Remove SSL Cron
 			if [[ -f /var/spool/cron/crontabs/root ]]; then
 				sudo sed -i '/MAILTO=/d' /var/spool/cron/crontabs/root

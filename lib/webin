@@ -420,8 +420,7 @@ webinoly_verify() {
 	
 	
 	# Linux Optim
-	local swapkb=$(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
-	if [[ $(conf_read linux-optim) == "true" && ( -z $swapkb || $swapkb == "0" ) && $(conf_read swap-mem) != 0 ]]; then
+	if [[ $(conf_read linux-optim) == "true" && ( -z $swapm || $swapm == "0" ) && $(conf_read swap-mem) != 0 ]]; then
 		echo "[ERROR] SWAP Memory File not found!"
 		error="1"
 	fi
@@ -491,20 +490,17 @@ webinoly_verify() {
 
 
 system_info() {
-	# We use 1000 instead of 1024 for better accuracy in the real world, I don't know why!
-	ramv=$(($(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1000))
-	[[ $ramv -ge 1000 ]] && ramv="$(($ramv/1000))Gb" || ramv="${ramv}Mb"
-	swapv=$(($(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1000))
-	[[ $swapv -ge 1000 ]] && swapv="$(($swapv/1000))Gb" || swapv="${swapv}Mb"
+	[[ $ram == 0 ]] && local ramv="${ramb}Mb" || ramv="${ram}Gb"
+	[[ $swap == 0 ]] && local swapv="${swapm}Mb" || swapv="${swap}Gb"
 	
 	echo "${blu}"
 	echo "[SYSTEM]"
 	echo "Operating System: $(sudo cat /proc/version) "
 	echo "$(sudo lsb_release -d) "
 	echo "$(sudo lsb_release -c) "
-	echo "Cores: $(grep ^processor /proc/cpuinfo | wc -l) "
-	echo "RAM: ${ramv} "
-	echo "SWAP: ${swapv} "
+	echo "Cores: $cores"
+	echo "RAM: $ramv "
+	echo "SWAP: $swapv "
 	echo "File descriptors: $(sudo cat /proc/sys/fs/file-max) "
 	echo ""
 	echo [Disk Usage]
