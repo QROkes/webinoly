@@ -111,7 +111,7 @@ if [[ -n $delete_all ]]; then
 # Create PHP site
 elif [[ -n $php && -n $domain ]]; then
 	createsite
-	[[ $(conf_read php-info) != "false" ]] && sudo sed -i '/php.conf/c \	include common/phpinfo.conf;' /etc/nginx/sites-available/$domain
+	[[ $(conf_read php-info) != "false" ]] && sudo sed -i '/common\/php.conf/c \	include common/phpinfo.conf;' /etc/nginx/sites-available/$domain
 	
 	
 # Create MYSQL site

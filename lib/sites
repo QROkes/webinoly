@@ -140,6 +140,7 @@ wpinstall() {
 	
 	# Download WP (latest version)
 	if [[ $type == [123] ]]; then
+		echo "${dim}Downloading WordPress...${blu}"
 		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
 		if [[ ! -s /var/www/$domain/htdocs/wp.tar.gz ]]; then
 			echo "${red}[ERROR] Downloading WordPress failed!${end}"
@@ -1181,10 +1182,10 @@ wp_cache() {
 	if [[ $cache == "off" && -f /etc/nginx/sites-available/$domain ]]; then
 		api-events_update si9
 		if [[ -n $subfolder && $(is_wp_cache $domain $subfolder) == "true" ]]; then
-			sudo sed -i "/$domain$subname-wpfc.conf;/c \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
+			sudo sed -i "/apps.d\/$domain$subname-wpfc.conf;/c \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
 			echo "${gre}FastCGI Cache in${blu} $domain$subfolder ${gre}has been disabled!${end}"
 		elif [[ $(is_wp_cache $domain) == "true" ]]; then
-			sudo sed -i '/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
+			sudo sed -i '/common\/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
 			echo "${gre}FastCGI Cache in${blu} $domain ${gre}has been disabled!${end}"
 		else
 			if [[ ( -z $subfolder && $(is_wp $domain) == "false" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "false" ) ]]; then
@@ -1197,8 +1198,8 @@ wp_cache() {
 	elif [[ $cache == "on" && -f /etc/nginx/sites-available/$domain ]]; then
 		api-events_update si8
 		if [[ ( -z $subfolder && $(is_php $domain) == "true" && $(is_wp $domain) == "true" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "true" && $(is_wp_cache $domain $subfolder) == "false" ) ]]; then
-			[[ -z $subfolder ]] && sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
-			[[ -n $subfolder ]] && sudo sed -i "/$domain$subname-php.conf;/c \	include apps.d/$domain$subname-wpfc.conf;" /etc/nginx/sites-available/$domain
+			[[ -z $subfolder ]] && sudo sed -i '/ common\/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
+			[[ -n $subfolder ]] && sudo sed -i "/ apps.d\/$domain$subname-php.conf;/c \	include apps.d/$domain$subname-wpfc.conf;" /etc/nginx/sites-available/$domain
 			if [[ $(is_parked $domain) == "false" && ( ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/nginx-helper || ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/redis-cache ) ]]; then
 				echo "${gre}"
 				echo "We recommend Nginx Helper Plugin and Redis Object Cache Plugin as an easy way to manage FastCGI and Redis Cache on your WordPress site."

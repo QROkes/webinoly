@@ -2,10 +2,10 @@
 source /opt/webinoly/lib/general
 
 readonly cores=$(grep ^processor /proc/cpuinfo | wc -l)
-readonly swapm=$(($(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1000))
+readonly swapm=$(($(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024))
 readonly swap=$(($swapm/1000))
-readonly ramb=$(($(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1000))
-[[ $(($ramb%1000)) -gt 800 ]] && readonly ram=$(($ramb/900)) || readonly ram=$(($ramb/1000))
+readonly ramb=$(($(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024))
+[[ $(($ramb%1000)) -gt 700 ]] && readonly ram=$((($ramb/1000)+1)) || readonly ram=$(($ramb/1000))
 
 
 set_timezone() {
@@ -75,20 +75,13 @@ LimitNOFILE=$nginxfd" >> /etc/systemd/system/nginx.service.d/nofile_limit.conf
 	sudo cat /opt/webinoly/templates/general/sysctl >> /etc/sysctl.conf
 	sudo sed -i "/fs.file-max =/c \ fs.file-max = ${newfd}" /etc/sysctl.conf
 	sudo sed -i "/vm.max_map_count =/c \ vm.max_map_count = ${newfd}" /etc/sysctl.conf
+	sudo modprobe tcp_bbr
 	
 	# Default is 65M, if RAM >= 3Gb take 3%, and >= 32Gb only 2%
 	if [[ $ram -gt 30 ]]; then
 		sudo sed -i "/vm.min_free_kbytes =/c \ vm.min_free_kbytes = $(($ramb*20))" /etc/sysctl.conf
 	elif [[ $ram -gt 2 ]]; then
 		sudo sed -i "/vm.min_free_kbytes =/c \ vm.min_free_kbytes = $(($ramb*30))" /etc/sysctl.conf
-	fi
-	
-	# BBR is only valid in kernel > v4.9, bionic is at least 4.15
-	if [[ $(check_osname) == "xenial" ]]; then
-		sudo sed -i '/tcp_congestion_control/s/^/#/' /etc/sysctl.conf
-		sudo sed -i '/tcp_notsent_lowat/s/^/#/' /etc/sysctl.conf
-	else
-		sudo modprobe tcp_bbr
 	fi
 	
 	swap_create
@@ -143,10 +136,10 @@ nginx_install() {
 	api-events_update in1
 	pre_install
 	if [[ ($(conf_read nginx-ppa) == "mainline" || $nginx == "mainline") && $nginx != "stable" ]]; then
-		[[ $(check_osname) != "focal" ]] && echo | sudo add-apt-repository ppa:ondrej/nginx-mainline
+		echo | sudo add-apt-repository ppa:ondrej/nginx-mainline
 		conf_write nginx-ppa mainline
 	else
-		[[ $(check_osname) != "focal" ]] && echo | sudo add-apt-repository ppa:ondrej/nginx
+		echo | sudo add-apt-repository ppa:ondrej/nginx
 		conf_write nginx-ppa stable
 	fi
 	pre_install
@@ -174,7 +167,7 @@ php_install() {
 		# Default PHP version
 		conf_write php-ver 7.4
 	fi
-	ver=$(conf_read php-ver)
+	local ver=$(conf_read php-ver)
 	
 	# Multi-PHP
 	if [[ $(conf_read multi-php) == "true" && -n $1 && $(check_php_version $1) == "true" && $(conf_read php) == "true" && $1 != $ver ]]; then
@@ -346,7 +339,7 @@ php_optim() {
 	set_timezone &
 	
 	if [[ -z $maxchil ]]; then	
-		if [[ $ram  =~ ^[0-9]+$ && $ram -gt 3 ]]; then
+		if [[ $ram  =~ ^[0-9]+$ && ( $ram -gt 3 || $cores -gt 2 ) ]]; then
 			local maxchil=$((5*$ram*$cores))
 			[[ $maxchil -gt 100 ]] && maxchil=100
 		elif [[ $ram  =~ ^[0-9]+$ && $ram -gt 0 ]]; then
@@ -408,12 +401,12 @@ nginx_tool() {
 	[[ $(conf_read php-tool) == "true" && ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]] && php_tool_site
 
 	# Install LetsEncrypt
-	[[ $(check_osname) != "focal" ]] && echo | sudo add-apt-repository ppa:certbot/certbot
+	[[ $(check_osname) == "bionic" ]] && echo | sudo add-apt-repository ppa:certbot/certbot
 	pre_install
 	sudo apt -y install certbot
 	
 	# Instalar Duply & Duplicity
-	[[ $(check_osname) == "focal" ]] && sudo apt -y install python3-boto3 duplicity duply || sudo apt -y install python-boto duplicity duply
+	[[ $(check_osname) == "bionic" ]] && sudo apt -y install python-boto duplicity duply || sudo apt -y install python3-boto3 duplicity duply
 	
 	conf_write nginx-tool true
 	api-events_update in10
@@ -452,7 +445,7 @@ php_tool() {
 	[[ $(conf_read nginx) == "true" ]] && php_tool_site
 
 	# Redis (Object Cache)
-	[[ $(check_osname) != "focal" ]] && echo | sudo add-apt-repository ppa:chris-lea/redis-server
+	echo | sudo add-apt-repository ppa:chris-lea/redis-server
 	pre_install
 	sudo apt -y install redis-server php-redis
 	sudo systemctl enable redis-server

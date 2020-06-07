@@ -265,10 +265,6 @@ webinoly_verify() {
 			echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf not found!"
 			error="1"
 		fi
-		if [[ ! -f /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf ]]; then
-			echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/pool.d/debug.conf not found!"
-			error="1"
-		fi
 		if [[ ! -f /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf ]]; then
 			echo "[ERROR] File: /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf not found!"
 			error="1"
@@ -285,12 +281,8 @@ webinoly_verify() {
 	
 	# PHP Tools
 	if [[ $(conf_read php-tool) == "true" && $(conf_read nginx) == "true" ]]; then
-		if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/fpm/status/php ]]; then
-			echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/fpm/status/php not found!"
-			error="1"
-		fi
-		if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug ]]; then
-			echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug not found!"
+		if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/status ]]; then
+			echo "[ERROR] File: /var/www/$(conf_read tools-port)/htdocs/status not found!"
 			error="1"
 		fi
 		if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
@@ -299,13 +291,9 @@ webinoly_verify() {
 		fi
 	fi
 	if [[ $(conf_read php-tool) != "true" && $(conf_read nginx) == "true" ]]; then
-		if [[ -f /var/www/$(conf_read tools-port)/htdocs/fpm/status/php ]]; then
+		if [[ -f /var/www/$(conf_read tools-port)/htdocs/status ]]; then
 			echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
 			warning="1"
-		fi
-		if [[ -f /var/www/$(conf_read tools-port)/htdocs/fpm/status/debug ]]; then
-			echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
-			error="1"
 		fi
 		if [[ -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
 			echo "[WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!"
@@ -519,7 +507,7 @@ system_info() {
 		echo ""
 		echo "[CACHE]"
 		echo "FastCGI 200: $( grep -F "fastcgi_cache_valid 200" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | tr -d ';')"
-		echo "FastCGI 3xx/4xx: $( grep -F "fastcgi_cache_valid 301 302 307 404" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | tr -d ';' )"
+		echo "FastCGI 3xx/4xx: $( grep -F "fastcgi_cache_valid 301 " /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | tr -d ';' )"
 		echo "FastCGI inactive: $( grep -F "fastcgi_cache_path" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | cut -d'=' -f 2 | tr -d ';')"
 		echo "FastCGI max-size: $( grep -F "fastcgi_cache_path" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 2 | rev | cut -f 2 -d '=' )"
 		echo "open_file_cache_valid: $(grep open_file_cache_valid /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';')"
@@ -630,13 +618,23 @@ smtp_setup() {
 	sudo sed -i '/myorigin =/c \myorigin = /etc/mailname' /etc/postfix/main.cf
 	sudo sed -i "/myhostname =/c\myhostname = $mainhost" /etc/postfix/main.cf
 	sudo sed -i "/relayhost/c\relayhost = $host:587" /etc/postfix/main.cf
-	sudo sed -i '/relayhost/a \smtp_tls_note_starttls_offer = yes' /etc/postfix/main.cf
+	sudo sed -i '/mydestination =/c \mydestination = localhost' /etc/postfix/main.cf
+
+	# Ensure we have no duplicate parameters
+	sudo sed -i '/^smtp_tls_security_level/s/^/#/' /etc/postfix/main.cf
+	sudo sed -i '/^smtp_tls_note_starttls_offer/s/^/#/' /etc/postfix/main.cf
+	sudo sed -i '/^smtp_use_tls/s/^/#/' /etc/postfix/main.cf
+	sudo sed -i '/^smtp_sasl_password_maps/s/^/#/' /etc/postfix/main.cf
+	sudo sed -i '/^smtp_sasl_security_options/s/^/#/' /etc/postfix/main.cf
+	sudo sed -i '/^smtp_sasl_auth_enable/s/^/#/' /etc/postfix/main.cf
+
 	sudo sed -i '/relayhost/a \smtp_tls_security_level = encrypt' /etc/postfix/main.cf
+	sudo sed -i '/relayhost/a \smtp_tls_note_starttls_offer = yes' /etc/postfix/main.cf
 	sudo sed -i '/relayhost/a \smtp_use_tls = yes' /etc/postfix/main.cf
 	sudo sed -i '/relayhost/a \smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd' /etc/postfix/main.cf
 	sudo sed -i '/relayhost/a \smtp_sasl_security_options = noanonymous' /etc/postfix/main.cf
 	sudo sed -i '/relayhost/a \smtp_sasl_auth_enable = yes' /etc/postfix/main.cf
-	sudo sed -i '/mydestination =/c \mydestination = localhost' /etc/postfix/main.cf
+	
 	sudo postconf -e 'smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt'
 
 	echo "$host:587 $user:$pass" > /etc/postfix/sasl_passwd

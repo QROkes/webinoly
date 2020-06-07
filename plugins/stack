@@ -23,7 +23,7 @@ fi
 if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 	api-events_update pn1
 	if [[ $(conf_read nginx) != "true" ]]; then
-		echo "${gre}Nginx is not installed, hence can not be deleted! ${end}"
+		echo "${dim}Nginx is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 	else
 		echo ""
@@ -67,8 +67,8 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			api-events_update pn4
 			api-events_update pn5
 			
-			[[ $(check_osname) == "focal" ]] && sudo apt -y purge certbot python3-boto3 duplicity duply || sudo apt -y purge certbot python-boto duplicity duply
-			[[ $(check_osname) != "focal" ]] && echo | sudo add-apt-repository --remove 'ppa:certbot/certbot'
+			[[ $(check_osname) == "bionic" ]] && sudo apt -y purge certbot python-boto duplicity duply || sudo apt -y purge certbot python3-boto3 duplicity duply
+			[[ $(check_osname) == "bionic" ]] && echo | sudo add-apt-repository --remove 'ppa:certbot/certbot'
 			
 			# Remove SSL Cron
 			if [[ -f /var/spool/cron/crontabs/root ]]; then
@@ -103,7 +103,7 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 elif [[ -n $purge && -n $php ]]; then
 	api-events_update pp1
 	if [[ $(conf_read php) != "true" ]]; then
-		echo "${gre}PHP is not installed, hence can not be deleted! ${end}"
+		echo "${dim}PHP is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 	else
 		echo ""
@@ -122,7 +122,10 @@ elif [[ -n $purge && -n $php ]]; then
 		if [[ $answer == [Yy] || $(conf_read force-flag) == "true" ]]; then
 			[[ $(conf_read mysql-tool) == "true" ]] && stack -pma -purge=force
 			sudo service php*-fpm stop
-			sudo apt -y purge php*-fpm php*-curl php*-gd php*-imap php*-mcrypt php*-readline php*-common php*-recode php*-mysql php*-cli php*-mbstring php*-bcmath php*-mysql php*-opcache php*-zip php*-xml php*-soap php-imagick graphviz php-pear php-msgpack
+			local ver=$(conf_read php-ver)
+			
+			sudo apt -y purge php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
+			
 			sudo apt -y purge php-memcached php-memcache memcached
 			sudo apt -y purge redis-server php-redis postfix
 			echo | sudo add-apt-repository --remove 'ppa:ondrej/php'
@@ -174,7 +177,7 @@ elif [[ -n $purge && -n $php ]]; then
 elif [[ -n $purge && -n $mysql ]]; then
 	api-events_update pm1
 	if [[ $(conf_read mysql) != "true" ]]; then
-		echo "${gre}MySQL is not installed, hence can not be deleted! ${end}"
+		echo "${dim}MySQL is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 	else
 		echo ""
@@ -242,7 +245,7 @@ elif [[ -n $purge && -n $mysql ]]; then
 elif [[ -n $purge && -n $pma ]]; then
 	api-events_update pm2
 	if [[ $(conf_read mysql-tool) != "true" ]]; then
-		echo "${gre}phpMyAdmin is not installed, hence can not be deleted! ${end}"
+		echo "${dim}phpMyAdmin is not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 	else
 		echo ""
@@ -418,7 +421,7 @@ elif [[ -n $purge_server_all ]]; then
 	echo ""
 	echo "${red}¡ C A U T I O N !  You are about to remove Webinoly Stack completely from your server!"
 	echo "This action will remove Nginx, PHP, MySQL and all the additional tools."
-	echo ""
+	echo "${end}"
 	if [[ $(conf_read force-flag) != "true" && $force != 1 ]]; then
 		echo " ${blu}Are you sure [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
