@@ -435,14 +435,22 @@ is_ssl() {
 	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "ssl_certificate_key") ]] && echo "true" || echo "false"
 }
 
+is_html_only() {
+	local ndx=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -E "index .?index.html index.htm")
+	local loc=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "location / { try_files ")
+	[[ -f /etc/nginx/sites-available/$1 && -n $ndx && -n $loc && $(is_php $1) != "true" && $(is_wp $1) != "true" ]] && echo "true" || echo "false"
+}
+
 is_php() {
-	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "php.conf;") ]] && echo "true" || echo "false"
+	local php=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/php.conf;")
+	local phpx=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/phpx.conf;")
+	[[ -f /etc/nginx/sites-available/$1 && ( -n $php || -n $phpx ) ]] && echo "true" || echo "false"
 }
 
 is_wp() {
 	# $1 = domain, $2 = WP subfolder
 	[[ -n $2 ]] && local subname=$(echo $2 | sed "s/\//_/g")
-	if [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpcommon") ]]; then
+	if [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/wpcommon") ]]; then
 		echo "true"
 	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -f /etc/nginx/apps.d/$1$subname-wpcommon.conf && -f /var/www/$1/htdocs$2/wp-config.php ]]; then
 		echo "true"
@@ -454,7 +462,7 @@ is_wp() {
 is_wp_cache() {
 	# $1 = domain, $2 = WP subfolder
 	[[ -n $2 ]] && local subname=$(echo $2 | sed "s/\//_/g")
-	if [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "wpfc.conf;") ]]; then
+	if [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/wpfc.conf;") ]]; then
 		echo "true"
 	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/# WebinolyCustom/,$p' /etc/nginx/sites-available/$1 | grep -F "$1$subname-wpfc.conf;") ]]; then
 		echo "true"

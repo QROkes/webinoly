@@ -19,7 +19,7 @@ Webinoly provides a set of tools and commands that facilitate the web server adm
 - Log viewer in real time.
 
 ### Requirements
-* Ubuntu 18.04 or 16.04
+* Ubuntu 20.04 or 18.04
 
 ## Usage
 
@@ -29,6 +29,9 @@ wget -qO weby qrok.es/wy && sudo bash weby 3
 
 # Create your first site.
 sudo site example.com -wp
+
+# Authentication
+sudo httpauth -add
 ```
 
 ## Documentation

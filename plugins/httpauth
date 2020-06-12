@@ -26,8 +26,11 @@ if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; the
 	echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
 	exit 1
 fi
-if [[ -n $subfolder && ( -z $wp_admin || -z $domain ) ]]; then
+if [[ -n $subfolder && $(is_wp $domain $subfolder) != "true" ]]; then
 	echo "${red}[ERROR] Subfolder option is only supported for WordPress sites!${end}"
+	exit 1
+elif [[ -n $subfolder && ( -n $domain || -n $wp_admin || -n $path ) && ! -d /var/www/$domain/htdocs$subfolder ]]; then
+	echo "${red}[ERROR] Subfolder not found!${end}"
 	exit 1
 else
 	subname=$(echo $subfolder | sed "s/\//_/g")
@@ -165,11 +168,15 @@ elif [[ -n $whitelist ]]; then
 				if [[ ! -f /etc/nginx/apps.d/whitelist-acl.conf ]]; then
 					sudo touch /etc/nginx/apps.d/whitelist-acl.conf
 					sudo chmod 644 /etc/nginx/apps.d/whitelist-acl.conf
-					sudo chown -R root:root /etc/nginx/apps.d/whitelist-acl.conf
+					sudo chown -R root:root /etc/nginx/apps.d/whitelist-acl.conf	
+					echo "
+allow 127.0.0.1;
+deny all;" >> /etc/nginx/apps.d/whitelist-acl.conf
 				fi
+				
 				exist=$( grep -E "^allow $whitelist;$" /etc/nginx/apps.d/whitelist-acl.conf )
 				if [[ -z $exist ]]; then
-					echo "allow ${whitelist};" >> /etc/nginx/apps.d/whitelist-acl.conf
+					sudo sed -i "1i allow ${whitelist};" /etc/nginx/apps.d/whitelist-acl.conf
 					echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully whitelisted!${end}"
 				else
 					echo "${gre}IP '$whitelist' is already whitelisted!${end}"
@@ -245,7 +252,7 @@ elif [[ -n $path && -n $domain ]]; then
 				echo "# Path: ${firm}
 location $sign$path {
 	include common/acl.conf;
-	try_files \$uri \$uri/ /index.php\$is_args\$args;
+	try_files \$uri \$uri/ $subfolder/index.php\$is_args\$args;
 }
 # PathEnd" >> /etc/nginx/apps.d/$domain-nginx.conf
 				

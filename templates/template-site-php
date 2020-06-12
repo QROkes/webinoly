@@ -11,7 +11,7 @@ server {
 	
 	root /var/www/domain.com/htdocs;
 		
-	index  index.php index.html index.htm;
+	index index.php index.html index.htm;
 	
 	include common/auth.conf;
 	

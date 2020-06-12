@@ -970,27 +970,24 @@ wp_subfolder() {
 	sudo cp /etc/nginx/common/wpfc.conf /etc/nginx/apps.d/$domain$subname-wpfc.conf
 	sudo cp /etc/nginx/common/wpcommon.conf /etc/nginx/apps.d/$domain$subname-wpcommon.conf
 	sudo cp /etc/nginx/common/wpcommon-noauth.conf /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
-	sudo cp /etc/nginx/common/locations.conf /etc/nginx/apps.d/$domain$subname-locations.conf
 	sudo cp /etc/nginx/common/yoast-sitemap.conf /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
 	
-	sudo sed -i "/^location \/ {/,/^}$/{/.*/d}" /etc/nginx/apps.d/$domain$subname-php.conf
-	sudo sed -i "/^location \/ {/,/^}$/{/.*/d}" /etc/nginx/apps.d/$domain$subname-wpfc.conf
-	sudo sed -i '/DO NOT MODIFY,/r /opt/webinoly/templates/template-site-wpsubfolder' /etc/nginx/apps.d/$domain$subname-php.conf
-	sudo cat /opt/webinoly/templates/template-site-wpsubfolder >> /etc/nginx/apps.d/$domain$subname-wpfc.conf
-	sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-php.conf
-	sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
-	sudo sed -i "s/domain/$domain/g" /etc/nginx/apps.d/$domain$subname-php.conf
-	sudo sed -i "s/domain/$domain/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
-	sudo sed -i "s/subname/$subname/g" /etc/nginx/apps.d/$domain$subname-php.conf
-	sudo sed -i "s/subname/$subname/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
-	sudo sed -i "s#/index.php#$subfolder/index.php#g" /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
+	sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-php.conf
+	sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+	sudo sed -i "/^location ~\* /c location ~* $subfolder/\.*\\\.php\$ {" /etc/nginx/apps.d/$domain$subname-php.conf
+	sudo sed -i "/^location ~\* /c location ~* $subfolder/\.*\\\.php\$ {" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+	sudo sed -i "s#/index.php#$subfolder/index.php#" /etc/nginx/apps.d/$domain$subname-php.conf
+	sudo sed -i "s#/index.php#$subfolder/index.php#" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+	sudo sed -i "/^# DO NOT MODIFY, /a include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
+	sudo sed -i "/^# DO NOT MODIFY, /a include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 	
-	sed -ri "s/^location(.*)\/([a-z].*)$/location\1subfolder\/\2/" /etc/nginx/apps.d/$domain$subname-locations.conf
 	sed -ri "s/location(.*) \/(.*) \{$/location\1 subfolder\/\2 \{/" /etc/nginx/apps.d/$domain$subname-wpcommon.conf
 	sed -ri "s/location(.*) \/(.*) \{$/location\1 subfolder\/\2 \{/" /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
-	sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-locations.conf
 	sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon.conf
 	sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
+	sudo sed -i "s#/index.php#$subfolder/index.php#g" /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
+	
+	[[ $(is_html_only $domain) == "true" ]] && sudo sed -i '/index /c \	index index.html index.htm index.php;' /etc/nginx/sites-available/$domain
 	
 	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domain -wp-admin=off -subfolder=$subfolder > /dev/null 2>&1
 	[[ $(conf_read yoast-sitemap) == "true" ]] && sudo site $domain -yoast-sitemap=on -subfolder=$subfolder > /dev/null 2>&1

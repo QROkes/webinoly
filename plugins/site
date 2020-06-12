@@ -111,7 +111,7 @@ if [[ -n $delete_all ]]; then
 # Create PHP site
 elif [[ -n $php && -n $domain ]]; then
 	createsite
-	[[ $(conf_read php-info) != "false" ]] && sudo sed -i '/common\/php.conf/c \	include common/phpinfo.conf;' /etc/nginx/sites-available/$domain
+	[[ $(conf_read php-info) != "false" ]] && sudo sed -i '/common\/php.conf/c \	include common/phpx.conf;' /etc/nginx/sites-available/$domain
 	
 	
 # Create MYSQL site
@@ -127,7 +127,7 @@ elif [[ -n $mysql && -z $domain ]]; then
 # Create HTML site
 elif [[ -n $html && -n $domain ]]; then
 	createsite
-	sudo sed -i '/index/c \	index  index.html index.htm;' /etc/nginx/sites-available/$domain
+	sudo sed -i '/index /c \	index index.html index.htm;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/index/a \	location / { try_files $uri $uri/ =404; }' /etc/nginx/sites-available/$domain
 	sudo sed -i '/php.conf/d' /etc/nginx/sites-available/$domain
 
@@ -141,12 +141,13 @@ elif [[ -n $wp && -n $domain ]]; then
 		[[ $(conf_read yoast-sitemap) == "true" ]] && sudo site $domain -yoast-sitemap=on > /dev/null 2>&1
 	else
 		if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && -d /var/www/$domain/htdocs$subfolder ]]; then
-			echo "${red}[ERROR] Subfolder ${blu}'$subfolder'${red} already exists!${end}"
+			echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
 			exit 1
 		elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && ! -d /var/www/$domain/htdocs$subfolder ]]; then
 			wpinstall
 		else
-			createsite
+			echo "${red}[ERROR] Subfolder cannot be created because${blu} $domain ${red}was not found!${end}"
+			exit 1
 		fi
 		
 		wp_subfolder
