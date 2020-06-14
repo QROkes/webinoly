@@ -84,8 +84,8 @@ fi
 if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; then
 	echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
 	exit 1
-elif [[ -n $subfolder && $type != [123] && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from && -z $replace_content ]]; then
-	echo "${red}[ERROR] Subfolder option is only supported for WordPress sites!${end}"
+elif [[ -n $subfolder && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from && -z $replace_content && -z $wp && -z $html && -z $php && -z $mysql ]]; then
+	echo "${red}[ERROR] Subfolder option not supported!${end}"
 	exit 1
 elif [[ -n $subfolder && ( -n $delete || -n $cache || -n $yoast_sitemap || -n $multisite_convert || -n $replace_content ) && ! -d /var/www/$domain/htdocs$subfolder ]]; then
 	echo "${red}[ERROR] Subfolder not found!${end}"
@@ -108,28 +108,48 @@ if [[ -n $delete_all ]]; then
 	delete_all_sites
 
 	
-# Create PHP site
-elif [[ -n $php && -n $domain ]]; then
-	createsite
-	[[ $(conf_read php-info) != "false" ]] && sudo sed -i '/common\/php.conf/c \	include common/phpx.conf;' /etc/nginx/sites-available/$domain
+# Create PHP or MySQL site
+elif [[ -n $mysql || ( -n $php && -n $domain ) ]]; then
+	if [[ -n $domain ]]; then
+		if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && ( -d /var/www/$domain/htdocs$subfolder || -f /etc/nginx/apps.d/$domain$subname-php.conf || -f /etc/nginx/apps.d/$domain$subname-phpx.conf ) ]]; then
+			echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
+			exit 1
+		elif [[ -n $subfolder ]]; then
+			php_subfolder
+			sudo mkdir -p /var/www/$domain/htdocs$subfolder
+			sudo chown -R www-data:www-data /var/www
+			[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
+			echo "${gre}PHP Subfolder ${blu}'$subfolder' ${gre}successfully added!${end}"
+		else
+			createsite
+			[[ $(conf_read php-info) != "false" ]] && sudo sed -i '/common\/php.conf/c \	include common/phpx.conf;' /etc/nginx/sites-available/$domain
+		fi
+	fi
 	
-	
-# Create MYSQL site
-elif [[ -n $mysql && -n $domain ]]; then
-	# We use WP function to create DB when type=0 WP files are not installed.
-	createsite
-	wpinstall
-elif [[ -n $mysql && -z $domain ]]; then
-	# Hack to create a DB easily (without site).
-	wpinstall
+	[[ -n $mysql ]] && wpinstall
 
 
 # Create HTML site
 elif [[ -n $html && -n $domain ]]; then
-	createsite
-	sudo sed -i '/index /c \	index index.html index.htm;' /etc/nginx/sites-available/$domain
-	sudo sed -i '/index/a \	location / { try_files $uri $uri/ =404; }' /etc/nginx/sites-available/$domain
-	sudo sed -i '/php.conf/d' /etc/nginx/sites-available/$domain
+	if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder ]]; then
+		htmlsub=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "location $subfolder/ {")
+	fi
+	
+	if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && ( -d /var/www/$domain/htdocs$subfolder || -n $htmlsub ) ]]; then
+		echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
+		exit 1
+	elif [[ -z $subfolder ]]; then
+		create_empty_site
+		sudo sed -i '/index /c \	index index.html index.htm;' /etc/nginx/sites-available/$domain
+	fi
+	
+	sudo sed -i "/index/a \	location $subfolder/ { try_files \$uri \$uri/ =404; }" /etc/nginx/sites-available/$domain
+	if [[ -n $subfolder ]]; then
+		sudo mkdir -p /var/www/$domain/htdocs$subfolder
+		sudo chown -R www-data:www-data /var/www
+		[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
+		echo "${gre}HTML Subfolder ${blu}'$subfolder' ${gre}successfully added!${end}"
+	fi
 
 
 # Create WP site
@@ -146,8 +166,7 @@ elif [[ -n $wp && -n $domain ]]; then
 		elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && ! -d /var/www/$domain/htdocs$subfolder ]]; then
 			wpinstall
 		else
-			echo "${red}[ERROR] Subfolder cannot be created because${blu} $domain ${red}was not found!${end}"
-			exit 1
+			create_empty_site
 		fi
 		
 		wp_subfolder
