@@ -295,7 +295,7 @@ elif [[ -n $html || -n $nginx ]]; then
 		echo "${gre}Nginx has been successfully Optimized by Webinoly! ${end}"
 		echo ""
 	else
-		echo "${red}Nginx is already installed!${end}"
+		echo "${dim}Nginx is already installed!${end}"
 		if [[ $(conf_read nginx-optim) != "true" ]]; then
 			nginx_optim
 			echo "${gre}"
@@ -336,7 +336,7 @@ elif [[ -n $php ]]; then
 		echo "${gre}PHP has been successfully Optimized by Webinoly! ${end}"
 		echo ""
 	else
-		echo "${red}PHP is already installed!${end}"
+		echo "${dim}PHP is already installed!${end}"
 		if [[ $(conf_read php-optim) != "true" ]]; then
 			php_optim
 			echo "${gre}"
@@ -357,7 +357,7 @@ elif [[ -n $mysql ]]; then
 		[[ -z $notools && $(conf_read mysql) == "true" && $(conf_read php) == "true" && $(conf_read nginx) == "true" && $(conf_read nginx-tool) == "true" ]] && stack -pma || echo "${gre}phpMyAdmin was NOT installed!${end}"
 		messagend_install
 	else
-		echo "${red}MySQL is already installed!${end}"
+		echo "${dim}MySQL is already installed!${end}"
 		if [[ $(conf_read mysql-tool) != "true" && -z $notools ]]; then
 			stack -pma
 			[[ $(conf_read mysql-tool) == "true" ]] && echo "${gre}MySQL Tools has been re-installed!${end}"
@@ -370,7 +370,7 @@ elif [[ -n $pma ]]; then
 		clear_force_flag
 		exit 1
 	fi
-	[[ $(conf_read mysql-tool) != "true" ]] && mysql_tool || echo "${red}phpMyAdmin is already installed!${end}"
+	[[ $(conf_read mysql-tool) != "true" ]] && mysql_tool || echo "${dim}phpMyAdmin is already installed!${end}"
 
 elif [[ -n $lemp ]]; then
 	api-events_update st1

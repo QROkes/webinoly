@@ -113,12 +113,12 @@ elif [[ -n $wp_admin ]]; then
 			if [[ -z $subfolder ]]; then
 				sudo sed -i '/wpcommon-noauth.conf/c \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
 			else
-				sudo sed -i "/wpcommon-noauth.conf/c \	include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
-				sudo sed -i "/wpcommon-noauth.conf/c \	include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
+				sudo sed -i "/wpcommon-noauth.conf/c \include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+				sudo sed -i "/wpcommon-noauth.conf/c \include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
 			fi
-			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain$subfolder -${gre} has been enabled! ${end}"
+			echo "${gre}WordPress Admin HTTP Authentication for${blu} $domain$subfolder ${gre}has been enabled! ${end}"
 		else
-			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain$subfolder -${gre} is already enabled! ${end}"
+			echo "${gre}WordPress Admin HTTP Authentication for${blu} $domain$subfolder ${gre}is already enabled! ${end}"
 			nginx_not="true" # Nginx-Reload not-needed.
 		fi
 	
@@ -127,12 +127,12 @@ elif [[ -n $wp_admin ]]; then
 			if [[ -z $subfolder ]]; then
 				sudo sed -i '/wpcommon.conf/c \	include common/wpcommon-noauth.conf;' /etc/nginx/sites-available/$domain
 			else
-				sudo sed -i "/wpcommon.conf/c \	include apps.d/$domain$subname-wpcommon-noauth.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
-				sudo sed -i "/wpcommon.conf/c \	include apps.d/$domain$subname-wpcommon-noauth.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
+				sudo sed -i "/wpcommon.conf/c \include apps.d/$domain$subname-wpcommon-noauth.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+				sudo sed -i "/wpcommon.conf/c \include apps.d/$domain$subname-wpcommon-noauth.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
 			fi
-			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain$subfolder -${gre} has been disabled! ${end}"
+			echo "${gre}WordPress Admin HTTP Authentication for${blu} $domain$subfolder ${gre}has been disabled! ${end}"
 		else
-			echo "${gre}WordPress Admin HTTP Authentication for ${blu}- $domain$subfolder -${gre} is already disabled! ${end}"
+			echo "${gre}WordPress Admin HTTP Authentication for${blu} $domain$subfolder ${gre}is already disabled! ${end}"
 			nginx_not="true" # Nginx-Reload not-needed.
 		fi
 	elif [[ $wp_admin == "on" ]]; then
@@ -256,7 +256,7 @@ location $sign$path {
 }
 # PathEnd" >> /etc/nginx/apps.d/$domain-nginx.conf
 				
-				if [[ $(is_php $domain) == "false" && $(is_wp $domain) == "false" ]]; then
+				if [[ $(is_php $domain) == "false" && $(is_wp $domain $subfolder) == "false" ]]; then
 					sudo sed -i "/^# Path: $(echo $path | sed "s#/#\\\/#g")/,/^# PathEnd/{/try_files/d}" /etc/nginx/apps.d/$domain-nginx.conf
 				fi
 				

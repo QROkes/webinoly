@@ -444,7 +444,7 @@ is_html_only() {
 is_php() {
 	local php=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/php.conf;")
 	local phpx=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/phpx.conf;")
-	[[ -f /etc/nginx/sites-available/$1 && ( -n $php || -n $phpx ) ]] && echo "true" || echo "false"
+	[[ -f /etc/nginx/sites-available/$1 && ( -n $php || -n $phpx ) && $(is_wp $1) == "false" ]] && echo "true" || echo "false"
 }
 
 is_wp() {
