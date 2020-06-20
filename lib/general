@@ -435,17 +435,67 @@ is_ssl() {
 	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "ssl_certificate_key") ]] && echo "true" || echo "false"
 }
 
-is_html_only() {
-	local ndx=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -E "index .?index.html index.htm")
-	local loc=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "location / { try_files ")
-	[[ -f /etc/nginx/sites-available/$1 && -n $ndx && -n $loc && $(is_php $1) != "true" && $(is_wp $1) != "true" ]] && echo "true" || echo "false"
+is_html() {
+	# $1 = domain, $2 = subfolder
+	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "location $2/ { try_files ") ]] && echo "true" || echo "false"
 }
 
 is_php() {
-	local php=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/php.conf;")
-	local phpx=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/phpx.conf;")
-	[[ -f /etc/nginx/sites-available/$1 && ( -n $php || -n $phpx ) && $(is_wp $1) == "false" ]] && echo "true" || echo "false"
+	# $1 = domain, $2 = subfolder
+	if [[ -f /etc/nginx/sites-available/$1 ]]; then
+		local isphp=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -E " common/phpx?\.conf;")
+		
+		if [[ -n $2 && $(is_wp $1 $2) == "false" ]]; then
+			local subname=$(echo $2 | sed "s/\//_/g")
+			if [[ -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -E " apps\.d/$1$subname-phpx?\.conf;") ]]; then
+				echo "true"
+			else
+				echo "false"
+			fi
+		elif [[ -n $isphp && $(is_wp $1) == "false" ]]; then
+			echo "true"
+		else
+			echo "false"
+		fi
+	else
+		echo "false"
+	fi
 }
+
+
+is_proxy() {
+	# $1 = domain, $2 = subfolder
+	[[ -n $2 ]] && local subname=$(echo $2 | sed "s/\//_/g")
+	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " apps.d/$1$subname-proxy.conf;") ]] && echo "true" || echo "false"
+}
+
+
+is_parked() {
+	[[ -f /etc/nginx/sites-available/$1 && ! -d /var/www/$1 && $(is_proxy $1) == "false" ]] && echo "true" || echo "false"
+}
+
+
+is_subfolder() {
+	# $1 = domain, $2 = subfolder
+	if [[ -n $1 && -n $2 ]]; then
+		if [[ $(is_wp $1 $2) == "true" ]]; then
+			echo "wp"
+		elif [[ $(is_php $1 $2) == "true" ]]; then
+			echo "php"
+		elif [[ $(is_proxy $1 $2) == "true" ]]; then
+			echo "proxy"
+		elif [[ $(is_html $1 $2) == "true" ]]; then
+			echo "html"
+		elif [[ -d /var/www/$1/htdocs/$2 ]]; then
+			echo "true"
+		else
+			echo "false"
+		fi
+	else
+		echo "false"
+	fi
+}
+
 
 is_wp() {
 	# $1 = domain, $2 = WP subfolder
@@ -510,15 +560,6 @@ is_wp_installed() {
 	else
 		echo "false"
 	fi
-}
-
-
-is_proxy() {
-	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "proxy_pass") ]] && echo "true" || echo "false"
-}
-
-is_parked() {
-	[[ -f /etc/nginx/sites-available/$1 && ! -d /var/www/$1 && $(is_proxy $1) == "false" ]] && echo "true" || echo "false"
 }
 
 

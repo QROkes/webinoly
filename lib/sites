@@ -538,7 +538,7 @@ deletesite() {
 
 	# Check if site contains WP in subfolders.
 	if [[ -z $dbdel || $dbdel = [Yy] ]]; then
-		for site in "/etc/nginx/apps.d/$domain_"*-php.conf
+		for site in "/etc/nginx/apps.d/$domain_"*-wpcommon.conf
 		do 
 			subfolder="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 			if [[ -n $subfolder && -f /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
@@ -972,7 +972,7 @@ php_subfolder() {
 	[[ -n $wp || $(conf_read php-info) == "false" ]] && local file="php.conf" || local file="phpx.conf"
 	
 	sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-$file;" /etc/nginx/sites-available/$domain
-	[[ $(is_html_only $domain) == "true" ]] && sudo sed -i '/index /c \	index index.html index.htm index.php;' /etc/nginx/sites-available/$domain
+	[[ $(is_html $domain) == "true" ]] && sudo sed -i '/index /c \	index index.html index.htm index.php;' /etc/nginx/sites-available/$domain
 	
 	sudo cp /etc/nginx/common/$file /etc/nginx/apps.d/$domain$subname-$file
 	sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-$file
@@ -1150,15 +1150,19 @@ reverse_proxy() {
 	if ! [[ -n $proxydata && $(is_url $proxydata) =~ ^(http|https|true)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid host and port!${end}"
 		exit 1
+	elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" ]]; then
+		echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
+		exit 1
 	fi
-		
+	
+	[[ -z $subfolder ]] && create_empty_site
+	
 	is_url $proxydata -split
 	[[ -n $url_scheme ]] && url_scheme="$url_scheme://" || url_scheme="http://"
 	[[ -n $url_port ]] && url_port=":$url_port"
 	rpurl="$url_host$url_port$url_path"
 	[[ $(echo $rpurl | rev | cut -c-1) != "/" ]] && rpurl="${rpurl}/"
 	
-	create_empty_site
 	sudo cp /opt/webinoly/templates/template-site-proxy /etc/nginx/apps.d/$domain$subname-proxy.conf
 	sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-proxy.conf;" /etc/nginx/sites-available/$domain
 	[[ -n $subfolder ]] && sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-proxy.conf
@@ -1180,6 +1184,8 @@ reverse_proxy() {
 	code="${code##*$'\n'}"
 	[[ -n $code ]] && local mes="(Code: ${code})"
 	[[ $code =~ ^(2|3|4)[0-9][0-9]$ ]] || echo "${red}[WARNING] Seems like your Reverse Proxy host is not responding! ${mes}${end}"
+	
+	[[ -n $subfolder ]] && echo "${gre}Reverse proxy${blu} $subfolder ${gre}subfolder successfully created!${end}"
 }
 
 
