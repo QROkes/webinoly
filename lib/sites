@@ -1158,27 +1158,22 @@ reverse_proxy() {
 	rpurl="$url_host$url_port$url_path"
 	[[ $(echo $rpurl | rev | cut -c-1) != "/" ]] && rpurl="${rpurl}/"
 	
-	# Support for custom nginx rules.
-	sudo mkdir -p /var/www/.proxy
-	
-	createsite
-	sudo sed -i '/include /d' /etc/nginx/sites-available/$domain
-	sudo sed -i '/root /d' /etc/nginx/sites-available/$domain
-	sudo sed -i '/index /d' /etc/nginx/sites-available/$domain
-	sudo sed -i '/error_log /r /opt/webinoly/templates/template-site-proxy' /etc/nginx/sites-available/$domain
-	sudo sed -i "s/domain.com/$domain/g"  /etc/nginx/sites-available/$domain
+	create_empty_site
+	sudo cp /opt/webinoly/templates/template-site-proxy /etc/nginx/apps.d/$domain$subname-proxy.conf
+	sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-proxy.conf;" /etc/nginx/sites-available/$domain
+	[[ -n $subfolder ]] && sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	
 	if [[ $url_host != "localhost" && $url_host != "127.0.0.1" ]]; then
-		sudo sed -i "/proxy_set_header Host/d" /etc/nginx/sites-available/$domain
-		sudo sed -i "/proxy_set_header X-/d" /etc/nginx/sites-available/$domain
-		sudo sed -i "/proxy_redirect ws:/d" /etc/nginx/sites-available/$domain
-		sudo sed -i '/proxy_read_timeout/a \		proxy_intercept_errors on;' /etc/nginx/sites-available/$domain
-		sudo sed -i '/proxy_read_timeout/a \		proxy_ignore_headers   Set-Cookie;' /etc/nginx/sites-available/$domain
+		sudo sed -i "/proxy_set_header Host/d" /etc/nginx/apps.d/$domain$subname-proxy.conf
+		sudo sed -i "/proxy_set_header X-/d" /etc/nginx/apps.d/$domain$subname-proxy.conf
+		sudo sed -i "/proxy_redirect ws:/d" /etc/nginx/apps.d/$domain$subname-proxy.conf
+		sudo sed -i '/proxy_read_timeout/a \	proxy_intercept_errors on;' /etc/nginx/apps.d/$domain$subname-proxy.conf
+		sudo sed -i '/proxy_read_timeout/a \	proxy_ignore_headers   Set-Cookie;' /etc/nginx/apps.d/$domain$subname-proxy.conf
 	else
-		sudo sed -i "s#ws://localhost:8080/#ws://${rpurl}#g"  /etc/nginx/sites-available/$domain
+		sudo sed -i "s#ws://localhost:8080/#ws://${rpurl}#g"  /etc/nginx/apps.d/$domain$subname-proxy.conf
 	fi
 	
-	sudo sed -i "s#http://localhost:8080/#${url_scheme}${rpurl}#g"  /etc/nginx/sites-available/$domain
+	sudo sed -i "s#http://localhost:8080/#${url_scheme}${rpurl}#g"  /etc/nginx/apps.d/$domain$subname-proxy.conf
 	
 	# Check host and port
 	local code=$(wget -t 1 --timeout=5 --server-response --spider $rpurl 2>&1 | awk '/^  HTTP/{print $2}')
