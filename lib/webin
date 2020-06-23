@@ -1759,3 +1759,77 @@ database_import() {
 	fi	
 }
 
+
+http_header_referrer() {
+	[[ -z $header_referrer || $header_referrer == "true" ]] && read -p "${blu}Referrer header value: ${end}" header_referrer
+	if ! [[ $header_referrer =~ ^(no-referrer|no-referrer-when-downgrade|origin|origin-when-cross-origin|same-origin|strict-origin|strict-origin-when-cross-origin|unsafe-url)$ ]]; then
+		echo "${red}[ERROR] Invalid referrer header value!${end}"
+		exit 1
+	fi
+	
+	conf_write header-referrer $header_referrer
+	[[ $(conf_read nginx) == "true" ]] && sudo sed -i "/^add_header Referrer-Policy /c\add_header Referrer-Policy \"$header_referrer\";" /etc/nginx/common/headers-html.conf
+	echo "${gre}HTTP Header successfully configured!${end}"
+}
+
+
+http_header_hsts() {
+	[[ -z $header_hsts || $header_hsts == "true" ]] && read -p "${blu}HSTS header value: ${end}" header_hsts
+	if ! [[ $header_hsts =~ ^([0-9]+|off|preload|default)$ ]]; then
+		echo "${red}[ERROR] Invalid HSTS header value!${end}"
+		exit 1
+	elif [[ $header_hsts =~ ^[0-9]+$ && $header_hsts -gt 31536000 ]]; then
+		echo "${red}[ERROR] HSTS max-age greater than 1 year not allowed without preload (2 years).${end}"
+		exit 1
+	fi
+	
+	if [[ $(conf_read nginx) == "true" ]]; then
+		if [[ $header_hsts == "off" ]]; then
+			sudo sed -i '/^add_header Strict-Transport-Security /s/^/#/' /etc/nginx/common/headers-https.conf
+		else
+			local set_hsts="$header_hsts; includeSubDomains"
+			[[ $header_hsts == "default" ]] && set_hsts="31536000"
+			[[ $header_hsts == "preload" ]] && set_hsts="63072000; includeSubDomains; preload"
+			sudo sed -Ei "/^#?add_header Strict-Transport-Security /c\add_header Strict-Transport-Security \"max-age=${set_hsts}\";" /etc/nginx/common/headers-https.conf
+		fi
+	fi
+	
+	[[ $header_hsts == "default" ]] && conf_delete header-hsts || conf_write header-hsts $header_hsts
+	[[ $header_hsts == "off" ]] && echo "${gre}HSTS Header successfully disabled!${end}" || echo "${gre}HTTP Header successfully configured!${end}"
+}
+
+
+http_header_csp() {
+	[[ $header_csp != "off" && $header_csp != "reload" ]] && read -p "${blu}CSP header value: ${end}" header_csp
+	[[ $header_csp == "reload" && -s /opt/webinoly/templates/source/csp_webinoly.data ]] && header_csp=$(sed -n '1p' /opt/webinoly/templates/source/csp_webinoly.data)
+	if [[ -z $header_csp ]]; then
+		echo "${red}[ERROR] Invalid CSP header value!${end}"
+		exit 1
+	fi
+	
+	if [[ $(conf_read nginx) == "true" ]]; then
+		if [[ $header_csp == "off" ]]; then
+			sudo sed -i '/^add_header Content-Security-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
+			sudo rm -rf /opt/webinoly/templates/source/csp_webinoly.data
+		else
+			[[ $csp_report_only == "on" ]] && local cspro="-Report-Only"
+			sudo sed -Ei "/^#?add_header Content-Security-Policy/c\add_header Content-Security-Policy${cspro} \"${header_csp}\";" /etc/nginx/common/headers-html.conf			
+		fi
+	fi
+	
+	if [[ $header_csp == "off" ]]; then
+		echo "${gre}CSP Header successfully disabled!${end}"
+	elif [[ $header_csp != "reload" ]]; then
+		if [[ ! -f /opt/webinoly/templates/source/csp_webinoly.data ]]; then
+			sudo touch /opt/webinoly/templates/source/csp_webinoly.data
+			sudo chmod 644 /opt/webinoly/templates/source/csp_webinoly.data
+			sudo chown -R root:root /opt/webinoly/templates/source/csp_webinoly.data
+		else
+			sudo truncate -s 0 /opt/webinoly/templates/source/csp_webinoly.data
+		fi
+		
+		echo "$header_csp" >> /opt/webinoly/templates/source/csp_webinoly.data
+		echo "${gre}HTTP Header successfully configured!${end}"
+	fi
+}
+

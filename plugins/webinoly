@@ -272,6 +272,14 @@ elif [[ -n $info ]]; then
 	nginx_not="true" # Nginx-Reload not-needed.
 
 
+elif [[ -n $header_referrer ]]; then
+	http_header_referrer
+elif [[ -n $header_hsts ]]; then
+	http_header_hsts
+elif [[ -n $header_csp ]]; then
+	http_header_csp
+
+
 else
 	echo "${red}[ERROR] Please enter a valid option!${end}"
 	exit 1

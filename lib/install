@@ -302,6 +302,9 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	# Check for dynamic variables.
 	[[ $(conf_read global-access-log-off) == "purged" ]] && sudo log -only-error=off || sudo log -only-error=on
 	[[ -n $(conf_read fastcgi-conf) ]] && sudo webinoly -config-cache=[$(conf_read fastcgi-conf)]
+	[[ -n $(conf_read header-referrer) ]] && sudo webinoly -header-referrer=$(conf_read header-referrer)
+	[[ -n $(conf_read header-hsts) ]] && sudo webinoly -header-hsts=$(conf_read header-hsts)
+	[[ -s /opt/webinoly/templates/source/csp_webinoly.data ]] && sudo webinoly -header-csp=reload
 
 	conf_write server-version $svr_version
 	conf_write nginx-optim true
