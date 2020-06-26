@@ -1833,3 +1833,136 @@ http_header_csp() {
 	fi
 }
 
+
+custom_cache_global() {
+	if [[ -n $list ]]; then
+		[[ -n $raw || $list == "raw" ]] && echo "" || echo "${gre}"
+		
+		if [[ -f /etc/nginx/apps.d/global_custom_cache.conf ]]; then
+			[[ -n $query_string_never_cache ]] && local id="NeverCacheQueryString"
+			[[ -n $query_string_cache ]] && local id="CacheQueryString"
+			[[ -n $skip_cache ]] && local id="CacheSkipURL"
+			
+			local isem=$(sudo sed -n "/# Value: /{h;d;}; H; /# $id/{x;p;}" /etc/nginx/apps.d/global_custom_cache.conf)
+			
+			if [[ -n $raw || $list == "raw" ]]; then
+				sudo sed -n "/# Value: /{h;d;}; H; /# $id/{x;p;}" /etc/nginx/apps.d/global_custom_cache.conf | sed -n '/# Value:/p' | sed 's/# Value: //g'
+			else
+				sudo sed -n "/# Value: /{h;d;}; H; /# $id/{x;p;}" /etc/nginx/apps.d/global_custom_cache.conf | sed -n '/# Value:/p' | sed 's/# Value: /+ /g'
+			fi
+		fi
+		[[ -z $isem && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No Cache Rules were found!${end}"
+	
+		[[ -n $raw || $list == "raw" ]] && echo "" || echo "${end}"
+	elif [[ -n $delete ]]; then
+		echo ""
+		[[ $skip_cache == "true" ]] && read -p "${blu}Cache Skip URL to delete: ${end}" skip_cache
+		[[ $query_string_cache == "true" ]] && read -p "${blu}Cache Query String to delete: ${end}" query_string_cache
+		[[ $query_string_never_cache == "true" ]] && read -p "${blu}Never Cache this Query String to delete: ${end}" query_string_never_cache
+		if [[ -z $query_string_cache && -z $query_string_never_cache && -z $skip_cache ]]; then
+			echo "${red}[ERROR] Please, enter a valid value!${end}"
+			exit 1
+		fi
+		
+		if [[ -f /etc/nginx/apps.d/global_custom_cache.conf ]]; then
+			[[ -n $query_string_never_cache ]] && local value=$query_string_never_cache
+			[[ -n $query_string_cache ]] && local value=$query_string_cache
+			[[ -n $skip_cache ]] && local value=$skip_cache
+			
+			# SED need escaped characters: Put a backslash before $.*/[\]^()
+			local escaped_value=$(echo $value | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g" | sed -E "s/\(/\\\(/g" | sed -E "s/\)/\\\)/g")
+		
+			sudo sed -Ei "/^# Value: $escaped_value( .*)?$/,/^# CacheRuleEnd/{/.*/d}" /etc/nginx/apps.d/global_custom_cache.conf
+			[[ ! -s /etc/nginx/apps.d/global_custom_cache.conf ]] && sudo rm /etc/nginx/apps.d/global_custom_cache.conf
+		fi
+		echo "${gre}Redirection successfully removed!${end}"
+	else
+		echo ""
+		[[ $skip_cache == "true" ]] && read -p "${blu}Cache Skip URL: ${end}" skip_cache
+		[[ $query_string_cache == "true" ]] && read -p "${blu}Cache Query String: ${end}" query_string_cache
+		[[ $query_string_never_cache == "true" ]] && read -p "${blu}Never Cache this Query String: ${end}" query_string_never_cache
+		echo ""
+		
+		if [[ -z $query_string_cache && -z $query_string_never_cache && -z $skip_cache ]]; then
+			echo "${red}[ERROR] Please, enter a valid value!${end}"
+			exit 1
+		elif [[ $skip_cache == "/" && -z $regex ]]; then
+			echo "${red}[ERROR] Root folder not allowed, use regex or disable site cache!${end}"
+			exit 1
+		elif [[ -n $regex ]] && ! [[ $regex =~ ^(sensitive|insensitive)$ ]]; then
+			echo "${red}[ERROR] Invalid regex value!${end}"
+			exit 1
+		elif [[ -n $skip_cache && $(is_url_path $skip_cache) != "true" ]]; then
+			echo "${red}[ERROR] Invalid URL!${end}"
+			exit 1
+		elif [[ -z $regex && -n $query_string_cache ]] && ! [[ $query_string_cache =~ ^([\]A-Za-z0-9_\/\.-:\!\*\'\[\(\)\;@\&\=\+\$\,\?#\~\%]+)?$ ]]; then
+			echo "${red}[ERROR] Invalid Query String!${end}"
+			exit 1
+		elif [[ -z $regex && -n $query_string_never_cache ]] && ! [[ $query_string_never_cache =~ ^([\]A-Za-z0-9_\/\.-:\!\*\'\[\(\)\;@\&\=\+\$\,\?#\~\%]+)?$ ]]; then
+			echo "${red}[ERROR] Invalid Query String!${end}"
+			exit 1
+		fi
+		
+		if [[ ! -f /etc/nginx/apps.d/global_custom_cache.conf ]]; then
+			sudo touch /etc/nginx/apps.d/global_custom_cache.conf
+			sudo chmod 644 /etc/nginx/apps.d/global_custom_cache.conf
+			sudo chown -R root:root /etc/nginx/apps.d/global_custom_cache.conf
+		fi
+		
+		[[ -n $query_string_never_cache ]] && local value=$query_string_never_cache
+		[[ -n $query_string_cache ]] && local value=$query_string_cache
+		[[ -n $skip_cache ]] && local value=$skip_cache
+		
+		# SED need escaped characters: Put a backslash before $.*/[\]^
+		local escaped_value=$(echo $value | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g")
+		
+		local exist=$( grep -E "^# Value: $escaped_value( .*)?$" /etc/nginx/apps.d/global_custom_cache.conf )
+		
+		if [[ -z $exist ]]; then
+			if [[ $regex == "sensitive" ]]; then
+				sign="~"
+				code="$value (Regex)"
+			elif [[ $regex == "insensitive" ]]; then
+				sign="~*"
+				code="$value (Regex)"
+			else
+				sign="="
+				code="$value"
+			fi
+			
+			if [[ -n $query_string_never_cache ]]; then
+				echo "# Value: $code
+# NeverCacheQueryString
+if (\$query_string $sign $value) {
+	set \$skip_cache 1;
+}
+# CacheRuleEnd" >> /etc/nginx/apps.d/global_custom_cache.conf
+			elif [[ -n $query_string_cache ]]; then
+				# Sed can not write when file is empty
+				[[ ! -s /etc/nginx/apps.d/global_custom_cache.conf ]] && echo ' ' >> /etc/nginx/apps.d/global_custom_cache.conf
+				sudo sed -i "1i # Value: $code\n# CacheQueryString\nif (\$query_string $sign $value) {\n	set \$skip_cache 0;\n}\n# CacheRuleEnd" /etc/nginx/apps.d/global_custom_cache.conf
+			elif [[ -n $skip_cache ]]; then
+				echo "# Value: $code
+# CacheSkipURL
+if (\$request_uri $sign $value) {
+	set \$skip_cache 1;
+}
+# CacheRuleEnd" >> /etc/nginx/apps.d/global_custom_cache.conf
+			fi
+			
+			# Last verification
+			if ! sudo nginx -t > /dev/null 2>&1; then
+				[[ -n $query_string_never_cache ]] && sudo webinoly -query-string-never-cache=$query_string_never_cache -delete > /dev/null 2>&1
+				[[ -n $query_string_cache ]] && sudo webinoly -query-string-cache=$query_string_cache -delete > /dev/null 2>&1
+				[[ -n $skip_cache ]] && sudo webinoly -skip-cache=$skip_cache -delete > /dev/null 2>&1
+				echo "${red}[ERROR] Seems like you are using some invalid Nginx values or characters!${end}"
+				exit 1
+			fi
+			
+			echo "${gre}Cache rule successfully added!${end}"
+		else
+			echo "${gre}Cache rule already exists!${end}"
+		fi
+	fi
+}
+
