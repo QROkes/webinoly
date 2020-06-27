@@ -1886,6 +1886,9 @@ custom_cache_global() {
 		if [[ -z $query_string_cache && -z $query_string_never_cache && -z $skip_cache ]]; then
 			echo "${red}[ERROR] Please, enter a valid value!${end}"
 			exit 1
+		elif [[ -n $regex && ( -n $query_string_cache || -n $query_string_never_cache ) ]]; then
+			echo "${red}[ERROR] Regex not allowed for Query-String custom rules!${end}"
+			exit 1
 		elif [[ $skip_cache == "/" && -z $regex ]]; then
 			echo "${red}[ERROR] Root folder not allowed, use regex or disable site cache!${end}"
 			exit 1
@@ -1895,10 +1898,10 @@ custom_cache_global() {
 		elif [[ -n $skip_cache && $(is_url_path $skip_cache) != "true" ]]; then
 			echo "${red}[ERROR] Invalid URL!${end}"
 			exit 1
-		elif [[ -z $regex && -n $query_string_cache ]] && ! [[ $query_string_cache =~ ^([\]A-Za-z0-9_\/\.-:\!\*\'\[\(\)\;@\&\=\+\$\,\?#\~\%]+)?$ ]]; then
+		elif [[ -z $regex && -n $query_string_cache ]] && ! [[ $query_string_cache =~ ^([\]A-Za-z0-9_\/\.:\!\*\'\[\(\)\;@\&\=\+\$\,\?#\~\%\-]+)?$ ]]; then
 			echo "${red}[ERROR] Invalid Query String!${end}"
 			exit 1
-		elif [[ -z $regex && -n $query_string_never_cache ]] && ! [[ $query_string_never_cache =~ ^([\]A-Za-z0-9_\/\.-:\!\*\'\[\(\)\;@\&\=\+\$\,\?#\~\%]+)?$ ]]; then
+		elif [[ -z $regex && -n $query_string_never_cache ]] && ! [[ $query_string_never_cache =~ ^([\]A-Za-z0-9_\/\.:\!\*\'\[\(\)\;@\&\=\+\$\,\?#\~\%\-]+)?$ ]]; then
 			echo "${red}[ERROR] Invalid Query String!${end}"
 			exit 1
 		fi
@@ -1933,21 +1936,17 @@ custom_cache_global() {
 			if [[ -n $query_string_never_cache ]]; then
 				echo "# Value: $code
 # NeverCacheQueryString
-if (\$query_string $sign $value) {
+if (\$arg_${value}) {
 	set \$skip_cache 1;
 }
 # CacheRuleEnd" >> /etc/nginx/apps.d/global_custom_cache.conf
 			elif [[ -n $query_string_cache ]]; then
 				# Sed can not write when file is empty
 				[[ ! -s /etc/nginx/apps.d/global_custom_cache.conf ]] && echo ' ' >> /etc/nginx/apps.d/global_custom_cache.conf
-				sudo sed -i "1i # Value: $code\n# CacheQueryString\nif (\$query_string $sign $value) {\n	set \$skip_cache 0;\n}\n# CacheRuleEnd" /etc/nginx/apps.d/global_custom_cache.conf
+				sudo sed -i "1i # Value: $code\n# CacheQueryString\nif (\$arg_${value}) {\n	set \$skip_cache 0;\n}\n# CacheRuleEnd" /etc/nginx/apps.d/global_custom_cache.conf
 			elif [[ -n $skip_cache ]]; then
-				echo "# Value: $code
-# CacheSkipURL
-if (\$request_uri $sign $value) {
-	set \$skip_cache 1;
-}
-# CacheRuleEnd" >> /etc/nginx/apps.d/global_custom_cache.conf
+				[[ ! -s /etc/nginx/apps.d/global_custom_cache.conf ]] && echo ' ' >> /etc/nginx/apps.d/global_custom_cache.conf
+				sudo sed -i "1i # Value: $code\n# CacheSkipURL\nif (\$request_uri $sign $value) {\n	set \$skip_cache 1;\n}\n# CacheRuleEnd" /etc/nginx/apps.d/global_custom_cache.conf
 			fi
 			
 			# Last verification

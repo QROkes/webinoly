@@ -370,7 +370,7 @@ is_domain() {
 
 is_url_path() {
 	# Should start with / and after that all should be valid characters.
-	if [[ -n $1 && $1 =~ ^\/([\]A-Za-z0-9_\/\.-:\!\*\'\[\(\)\;@\&\=\+\$\,\?#\~\%]+)?$ ]]; then
+	if [[ -n $1 && $1 =~ ^\/([\]A-Za-z0-9_\/\.:\!\*\'\[\(\)\;@\&\=\+\$\,\?#\~\%\-]+)?$ ]]; then
 		echo "true"
 	else
 		echo "false"

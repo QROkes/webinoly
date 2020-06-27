@@ -115,6 +115,7 @@ elif [[ -n $mysql || ( -n $php && -n $domain ) ]]; then
 			echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
 			exit 1
 		elif [[ -n $subfolder ]]; then
+			[[ ! -f /etc/nginx/sites-available/$domain ]] && create_empty_site
 			php_subfolder
 			sudo mkdir -p /var/www/$domain/htdocs$subfolder
 			sudo chown -R www-data:www-data /var/www

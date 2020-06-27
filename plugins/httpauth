@@ -168,15 +168,12 @@ elif [[ -n $whitelist ]]; then
 				if [[ ! -f /etc/nginx/apps.d/whitelist-acl.conf ]]; then
 					sudo touch /etc/nginx/apps.d/whitelist-acl.conf
 					sudo chmod 644 /etc/nginx/apps.d/whitelist-acl.conf
-					sudo chown -R root:root /etc/nginx/apps.d/whitelist-acl.conf	
-					echo "
-allow 127.0.0.1;
-deny all;" >> /etc/nginx/apps.d/whitelist-acl.conf
+					sudo chown -R root:root /etc/nginx/apps.d/whitelist-acl.conf
 				fi
 				
 				exist=$( grep -E "^allow $whitelist;$" /etc/nginx/apps.d/whitelist-acl.conf )
 				if [[ -z $exist ]]; then
-					sudo sed -i "1i allow ${whitelist};" /etc/nginx/apps.d/whitelist-acl.conf
+					echo "allow ${whitelist};" >> /etc/nginx/apps.d/whitelist-acl.conf
 					echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully whitelisted!${end}"
 				else
 					echo "${gre}IP '$whitelist' is already whitelisted!${end}"
@@ -256,7 +253,7 @@ location $sign$path {
 }
 # PathEnd" >> /etc/nginx/apps.d/$domain-nginx.conf
 				
-				if [[ $(is_php $domain) == "false" && $(is_wp $domain $subfolder) == "false" ]]; then
+				if [[ $(is_php $domain $subfolder) == "false" && $(is_wp $domain $subfolder) == "false" ]]; then
 					sudo sed -i "/^# Path: $(echo $path | sed "s#/#\\\/#g")/,/^# PathEnd/{/try_files/d}" /etc/nginx/apps.d/$domain-nginx.conf
 				fi
 				
