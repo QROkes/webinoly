@@ -80,7 +80,10 @@ elif [[ -n $delete ]]; then
 	api-events_update ha2
 	[[ $delete == true ]] && read -p "${blu}HTTP-Auth User: ${end}" userpurge || userpurge=$delete
 	[[ -f /etc/nginx/$authfile ]] && exist=$( grep -F "${userpurge}:" /etc/nginx/$authfile )
-	if [[ -z $exist ]]; then
+	if [[ -z $userpurge ]]; then
+		echo "${red}[ERROR] Please, enter a valid username!${end}"
+		exit 1
+	elif [[ -z $exist ]]; then
 		echo "${red}[ERROR] User '$userpurge' does not exist!${end}"
 		exit 1
 	fi
@@ -302,7 +305,12 @@ location $sign$path {
 		fi
 	fi
 
-elif [[ $list == "protected" && -n $domain ]]; then
+elif [[ $list == "protected" ]]; then
+	if [[ -z $domain ]]; then
+		echo "${red}[ERROR] Please, enter a valid domain name!${end}"
+		exit 1
+	fi
+	
 	root=$( grep -F "acl.conf;" /etc/nginx/sites-available/$domain )
 	if [[ -n $root ]]; then
 		echo ""

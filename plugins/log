@@ -14,7 +14,9 @@ error() {
 	echo "${red}[ERROR] Log file not found! ${end}"
 	exit 1
 }
-
+waiting_for_log() {
+	echo "${blu}[Log File is Empty] ${dim}Waiting to receive some data, you will see it in real-time here...${end}"
+}
 
 # Check for custom "lines" value
 [[ -n $(conf_read log-lines) && $(conf_read log-lines) =~ ^[0-9]+$ && $(conf_read log-lines) -gt 0 ]] && clines=$(conf_read log-lines) || clines=10
@@ -46,10 +48,13 @@ if [[ -n $purge ]]; then
 	
 elif [[ -n $mail || -n $email ]]; then
 	if [[ -f /var/log/mail.log && -f /var/log/mail.err ]]; then
+		[[ ! -s /var/log/mail.log && ! -s /var/log/mail.err ]] && waiting_for_log
 		sudo tail -f --lines=$clines /var/log/mail.log /var/log/mail.err
 	elif [[ -f /var/log/mail.log ]]; then
+		[[ ! -s /var/log/mail.log ]] && waiting_for_log
 		sudo tail -f --lines=$clines /var/log/mail.log
 	elif [[ -f /var/log/mail.err ]]; then
+		[[ ! -s /var/log/mail.err ]] && waiting_for_log
 		sudo tail -f --lines=$clines /var/log/mail.err
 	else
 		error
@@ -59,18 +64,21 @@ elif [[ -n $fpm || -n $php ]]; then
 	# REMOVE: Temporal check because we change log path in v1.11.0
 	php_log_path=$(grep -w "^error_log = .*" /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf | cut -f 3 -d ' ')
 	if [[ -f $php_log_path ]]; then
+		[[ ! -s $php_log_path ]] && waiting_for_log
 		sudo tail -f --lines=$clines $php_log_path
 	else
 		error
 	fi
 elif [[ -n $le ]]; then
 	if [[ -f /var/log/letsencrypt/letsencrypt.log ]]; then
+		[[ ! -s /var/log/letsencrypt/letsencrypt.log ]] && waiting_for_log
 		sudo tail -f --lines=$clines /var/log/letsencrypt/letsencrypt.log
 	else
 		error
 	fi
 elif [[ -n $ssh ]]; then
 	if [[ -f /var/log/auth.log ]]; then
+		[[ ! -s /var/log/auth.log ]] && waiting_for_log
 		sudo tail -f --lines=$clines /var/log/auth.log
 	else
 		error
@@ -99,6 +107,7 @@ elif [[ -n $mysql ]]; then
 		elif [[ -n $disable && $isgrl == 0 ]]; then
 			echo "${gre}MariaDB General log is already disabled!${end}"
 		elif [[ -s /var/log/mysql/mysql.log && $isgrl == 1 ]]; then
+			[[ ! -s /var/log/mysql/mysql.log ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/mysql/mysql.log
 		elif [[ $isgrl != 1 ]]; then
 			echo "${red}[ERROR] MariaDB General log is not enabled!${end}"
@@ -124,6 +133,7 @@ elif [[ -n $mysql ]]; then
 		elif [[ -n $disable && $islow == 0 ]]; then
 			echo "${gre}MariaDB Slow Query log is already disabled!${end}"
 		elif [[ -s /var/log/mysql/mariadb-slow.log && $islow == 1 ]]; then
+			[[ ! -s /var/log/mysql/mariadb-slow.log ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/mysql/mariadb-slow.log
 		elif [[ $islow != 1 ]]; then
 			echo "${red}[ERROR] MariaDB Slow Query log is not enabled!${end}"
@@ -151,6 +161,7 @@ elif [[ -n $mysql ]]; then
 		elif [[ -n $disable && -z $isbin ]]; then
 			echo "${gre}MariaDB Binary log is already disabled!${end}"
 		elif [[ -s /var/log/mysql/mariadb-bin && -n $isbin ]]; then
+			[[ ! -s /var/log/mysql/mariadb-bin ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/mysql/mariadb-bin
 		elif [[ -z $isbin ]]; then
 			echo "${red}[ERROR] MariaDB Binary log is not enabled!${end}"
@@ -161,23 +172,29 @@ elif [[ -n $mysql ]]; then
 		fi
 		
 	# Error Log
-	else
+	elif [[ $mysql =~ ^(error|true)$ ]]; then
 		# REMOVE: Temporal check because we change log path in v1.11.0 - by default mysql send logs to syslog
 		if [[ ! -f /etc/mysql/conf.d/mysqld_safe_syslog.cnf && -s /var/log/mysql/error.log ]]; then
+			[[ ! -s /var/log/mysql/error.log ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/mysql/error.log
 		elif [[ -f /etc/mysql/conf.d/mysqld_safe_syslog.cnf && -s /var/log/syslog ]]; then
+			[[ ! -s /var/log/syslog ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/syslog
 		else
 			echo "${red}[ERROR] MariaDB Error log (syslog) file not found or still empty!${end}"
 			exit 1
 		fi
 		
+	else
+		echo "${red}[ERROR] Invalid value for MySQL Log!${end}"
+		exit 1
 	fi
 
 
 # Syslog
 elif [[ -n $syslog ]]; then
 	if [[ -s /var/log/syslog ]]; then
+		[[ ! -s /var/log/syslog ]] && waiting_for_log
 		sudo tail -f --lines=$clines /var/log/syslog
 	else
 		echo "${red}[ERROR] MariaDB Error log (syslog) file not found or still empty!${end}"
@@ -282,7 +299,11 @@ elif [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 			else
 				echo "${gre}WordPress Debug mode for${blu} $domain ${gre}is already disabled!${end}"
 			fi
+		elif [[ $wp != "true" ]]; then
+			echo "${red}[ERROR] Invalid value for WP parameter!${end}"
+			exit 1
 		elif [[ -f /var/www/$domain/htdocs$subfolder/wp-content/debug.log && $iswpdeb == "true" ]]; then
+			[[ ! -s /var/www/$domain/htdocs$subfolder/wp-content/debug.log ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/www/$domain/htdocs$subfolder/wp-content/debug.log
 		elif [[ $iswpdeb != "true" ]]; then
 			echo "${red}[ERROR] WordPress Debug Mode is not enabled!${end}"
@@ -297,8 +318,10 @@ elif [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 	
 	# Access and error logs
 	elif [[ -n $error && -f /var/log/nginx/$domain.error.log ]]; then
+		[[ ! -s /var/log/nginx/$domain.error.log ]] && waiting_for_log
 		sudo tail -f --lines=$clines /var/log/nginx/$domain.error.log
 	elif [[ -f /var/log/nginx/$domain.access.log && -z $error && -z $wp ]]; then
+		[[ ! -s /var/log/nginx/$domain.access.log ]] && waiting_for_log
 		sudo tail -f --lines=$clines /var/log/nginx/$domain.access.log
 	else
 		echo "${red}[ERROR] Log file not found!${end}"
