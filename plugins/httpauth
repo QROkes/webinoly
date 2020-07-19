@@ -25,10 +25,6 @@ fi
 if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; then
 	echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
 	exit 1
-fi
-if [[ -n $subfolder && $(is_wp $domain $subfolder) != "true" ]]; then
-	echo "${red}[ERROR] Subfolder option is only supported for WordPress sites!${end}"
-	exit 1
 elif [[ -n $subfolder && ( -n $domain || -n $wp_admin || -n $path ) && ! -d /var/www/$domain/htdocs$subfolder ]]; then
 	echo "${red}[ERROR] Subfolder not found!${end}"
 	exit 1
@@ -223,9 +219,6 @@ elif [[ -n $path && -n $domain ]]; then
 				echo "${gre}Path: ${blu}'$path'${gre} is already protected!${end}"
 				nginx_not="true" # Nginx-Reload not-needed.
 			fi
-		elif [[ $(is_proxy $domain) == "true" ]]; then
-			echo "${red}[ERROR] HTTP Authentication is not allowed in subfolders (only root '/' is allowed) for Reverse Proxy sites!${end}"
-			exit 1
 		elif [[ $path =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
 			if [[ ! -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
 				sudo touch /etc/nginx/apps.d/$domain-nginx.conf

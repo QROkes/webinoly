@@ -73,6 +73,9 @@ elif [[ -n $le ]]; then
 	if [[ -f /var/log/letsencrypt/letsencrypt.log ]]; then
 		[[ ! -s /var/log/letsencrypt/letsencrypt.log ]] && waiting_for_log
 		sudo tail -f --lines=$clines /var/log/letsencrypt/letsencrypt.log
+	elif [[ ! -L /usr/bin/letsencrypt ]]; then
+		echo "${red}[ERROR] Seems like Let's Encrypt is not installed!${end}"
+		exit 1
 	else
 		error
 	fi
@@ -332,7 +335,7 @@ elif [[ -n $domain && ! -f /etc/nginx/sites-available/$domain ]]; then
 	echo "${red}[ERROR] Domain not found!${end}"
 	exit 1
 
-elif [[ -z $domain ]]; then
+elif [[ -z $domain && ( -n $error || $empty_param == "true" ) ]]; then
 	# Check if Access Log is enabled
 	check_for_nginx
 	islog=$( grep -F "access_log off;" /etc/nginx/nginx.conf )
