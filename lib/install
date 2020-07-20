@@ -398,7 +398,7 @@ Disallow: /' > /var/www/$(conf_read tools-port)/htdocs/robots.txt
 
 nginx_tool() {
 	api-events_update in9
-	[[ -z $(conf_read tools-port) ]] && tools_port 22222
+	[[ -z $(conf_read tools-port) ]] && conf_write tools-port 22222
 	[[ $(conf_read php) == "true" ]] && nginx_tool_site
 	# in case php was installed before nginx
 	[[ $(conf_read php-tool) == "true" && ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]] && php_tool_site

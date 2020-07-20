@@ -807,18 +807,39 @@ show_db_data() {
 
 
 change_tools_port() {
-	[[ $tools_port != true ]] && tools_port $tools_port || tools_port
-	newport="$(conf_read tools-port)"
-	if [[ $oldport != $newport && $(conf_read nginx-tool) == "true" && $(conf_read nginx) == "true" ]]; then
-		# MV in some edge cases fails to rename, specially when so much files are within the directories.
-		sudo mkdir -p /var/www/$newport
-		sudo cp -rp /var/www/$oldport/* /var/www/$newport
-		sudo rm -rf /var/www/$oldport
+	local oldport=$(conf_read tools-port)
+	if [[ $tools_port == true ]]; then
+		[[ -z $oldport ]] && local oldport="22222"	
+		read -p "${blu}Tools Port [Current: $oldport]: " port
+	else
+		port=$tools_port
+	fi
+	
+	if [[ -z $port || ( -n $oldport && $port == $oldport ) ]]; then
+		echo "${gre}Tools-Port not changed! ${end}"
+	elif [[ $port =~ ^[0-9]+$ && $port -ge 0 && $port -le 65535 ]]; then
+		if [[ -f /etc/nginx/sites-available/$port ]]; then
+			echo "${red}[ERROR] Conflict naming found $tools_port sitename is already in use!${end}"
+			exit 1
+		fi
 		
-		sudo mv /etc/nginx/sites-available/$oldport /etc/nginx/sites-available/$newport
-		sudo rm /etc/nginx/sites-enabled/$oldport
-		sudo ln -s /etc/nginx/sites-available/$newport /etc/nginx/sites-enabled/$newport
-		sudo sed -i "s/${oldport}/${newport}/g"  /etc/nginx/sites-available/$newport
+		if [[ $(conf_read nginx-tool) == "true" && $(conf_read nginx) == "true" ]]; then
+			# MV in some edge cases fails to rename, specially when so much files are within the directories.
+			sudo mkdir -p /var/www/$port
+			sudo cp -rp /var/www/$oldport/* /var/www/$port
+			sudo rm -rf /var/www/$oldport
+			
+			sudo mv /etc/nginx/sites-available/$oldport /etc/nginx/sites-available/$port
+			sudo rm /etc/nginx/sites-enabled/$oldport
+			sudo ln -s /etc/nginx/sites-available/$port /etc/nginx/sites-enabled/$port
+			sudo sed -i "s/${oldport}/${port}/g"  /etc/nginx/sites-available/$port
+		fi
+		
+		conf_write tools-port $port
+		echo "${gre}Port${blu} $port ${gre}has been enabled to access all your Tools! ${end}"
+	else
+		echo "${red}[ERROR] Please, enter a valid port number (1-65535)!${end}"
+		exit 1
 	fi
 }
 
@@ -827,10 +848,15 @@ set_tools_site() {
 	if [[ $tools_site == true ]]; then
 		echo "${gre}Please, enter a valid domain to access the Tools Section! ${end}"
 		read -p "${blu}Domain: ${end}" tools_site
-		tools_site=${tools_site:-NeverMatchDotCom}
+		tools_site=${tools_site,,}
 	fi	
 	
-	if [[ -f /etc/nginx/sites-available/$tools_site && -f /etc/nginx/sites-available/$(conf_read tools-port) && $tools_site != "default" ]]; then
+	if [[ -z $tools_site ]]; then
+		echo "${red}[ERROR] Please, enter a valid value!${end}"
+		exit 1
+	elif [[ ( $tools_site == "default" && -z $(conf_read tools-site) ) || ( -n $(conf_read tools-site) && $tools_site == $(conf_read tools-site) ) ]]; then
+		echo "${gre}Tools-Site is already set to${blu} $tools_site${end}"
+	elif [[ -f /etc/nginx/sites-available/$tools_site && -f /etc/nginx/sites-available/$(conf_read tools-port) && $tools_site != "default" ]]; then
 		# Check for previous assigned domain and remove
 		if [[ -n $(conf_read tools-site) ]]; then
 			sudo sed -i '/server_name/d' /etc/nginx/sites-available/$(conf_read tools-port)
@@ -853,7 +879,21 @@ set_tools_site() {
 			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) ssl http2 deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
 			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) ssl http2;" /etc/nginx/sites-available/$(conf_read tools-port)
 			sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$tools_site/}" /etc/nginx/sites-available/$(conf_read tools-port)
+			
+			local ssl_cer=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$tools_site | grep -F "ssl_certificate " | tr -d '\t')
+			local ssl_key=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$tools_site | grep -F "ssl_certificate_key " | tr -d '\t')
+			local ssl_tru=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$tools_site | grep -F "ssl_trusted_certificate " | tr -d '\t')
+			
+			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s#ssl_certificate .*;#$ssl_cer#}" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s#ssl_certificate_key .*;#$ssl_key#}" /etc/nginx/sites-available/$(conf_read tools-port)
+			
+			if [[ -z $ssl_tru ]]; then
+				sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/ssl_stapling/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+				sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/ssl_trusted_certificate/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+			else
+				sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s#ssl_trusted_certificate .*;#$ssl_tru#}" /etc/nginx/sites-available/$(conf_read tools-port)
+			fi
+			
 			sudo sed -i '/locations.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$(conf_read tools-port)
 			sudo sed -i "/WebinolySSLend/i \	error_page 497  https:\/\/\$host:\$server_port\$request_uri;" /etc/nginx/sites-available/$(conf_read tools-port)
 			create_blackhole_cert
@@ -870,7 +910,7 @@ set_tools_site() {
 		fi
 		
 		conf_write tools-site $tools_site
-		echo "${gre}Domain ${blu}- ${tools_site}:$(conf_read tools-port) -${gre} was successfully assigned to access your server tools!${end}"
+		echo "${gre}Domain${blu} ${tools_site}:$(conf_read tools-port) ${gre}was successfully assigned to access your server tools!${end}"
 	elif [[ $tools_site == "default" ]]; then
 		sudo rm -rf /etc/nginx/sites-available/$(conf_read tools-port)
 		sudo cp /opt/webinoly/templates/nginx/22222 /etc/nginx/sites-available/$(conf_read tools-port)
@@ -957,8 +997,12 @@ config_fastcgi_cache() {
 		inactive=$(echo "${inaline//;}" | rev | cut -d' ' -f 1 | rev)
 		inaval=$(echo "${inactive}" | cut -d'=' -f 2)
 		maxsize=$(echo "${inaline}" | rev | cut -d' ' -f 2 | rev)
-		othline=$( grep -F "fastcgi_cache_valid 301 302 307 404 410" /etc/nginx/conf.d/fastcgi.conf )
+		othline=$( grep -F "fastcgi_cache_valid 301 302 303 307 308 404 410 451" /etc/nginx/conf.d/fastcgi.conf )
 		othval=$(echo "${othline//;}" | rev | cut -d' ' -f 1 | rev)
+	elif [[ -n $(conf_read fastcgi-conf) ]]; then
+		hitval=$( echo $(conf_read fastcgi-conf) | cut -d',' -f 1 -s )
+		inaval=$( echo $(conf_read fastcgi-conf) | cut -d',' -f 2 -s )
+		othval=$( echo $(conf_read fastcgi-conf) | cut -d',' -f 3 -s )
 	else
 		hitval="Not yet defined"
 		inaval="Not yet defined"
@@ -981,7 +1025,7 @@ config_fastcgi_cache() {
 		read -p "   Set new value: " ina
 		ina=${ina:-$inaval}
 		echo ""
-		echo "FastCGI Cache Valid for Errors and Redirections (HttpCode: 301, 302, 307, 404, 410) actual value is: $othval"
+		echo "FastCGI Cache Valid for Errors and Redirections (301 302 303 307 308 404 410 451) actual value is: $othval"
 		read -p "   Set new value: " oth
 		oth=${oth:-$othval}
 		echo ""
@@ -1001,7 +1045,7 @@ config_fastcgi_cache() {
 	if [[ "$hit" =~ ^[0-9]+[smhdwMy]$ && "$ina" =~ ^[0-9]+[smhdwMy]$ && "$oth" =~ ^[0-9]+[smhdwMy]$ ]]; then
 		if [[ $(conf_read nginx) == "true" ]]; then	
 			sudo sed -i "/fastcgi_cache_valid 200/c \fastcgi_cache_valid 200 ${hit};" /etc/nginx/conf.d/fastcgi.conf
-			sudo sed -i "/fastcgi_cache_valid 301 302 307 404 410/c \fastcgi_cache_valid 301 302 307 404 410 ${oth};" /etc/nginx/conf.d/fastcgi.conf
+			sudo sed -i "/fastcgi_cache_valid 301 302 /c \fastcgi_cache_valid 301 302 303 307 308 404 410 451 ${oth};" /etc/nginx/conf.d/fastcgi.conf
 			sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path \/run\/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m ${maxsize} inactive=${ina};" /etc/nginx/conf.d/fastcgi.conf
 		fi
 		conf_write fastcgi-conf ${hit},${ina},${oth}
