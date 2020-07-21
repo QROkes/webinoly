@@ -813,10 +813,7 @@ redirection_manager() {
 		fi
 		
 		if [[ -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
-			# SED need escaped characters: Put a backslash before $.*/[\]^
-			local escaped_path=$(echo $from | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g")
-		
-			sudo sed -i "/^# RedirectFrom: $escaped_path/,/^# RedirectEnd/{/.*/d}" /etc/nginx/apps.d/$domain-nginx.conf
+			sudo sed -Ei "/^# RedirectFrom: $(escaped_string $from)( .*)?$/,/^# RedirectEnd/{/.*/d}" /etc/nginx/apps.d/$domain-nginx.conf
 			
 			if [[ ! -s /etc/nginx/apps.d/$domain-nginx.conf ]]; then
 				sudo rm /etc/nginx/apps.d/$domain-nginx.conf
@@ -867,12 +864,9 @@ redirection_manager() {
 			sudo chown -R root:root /etc/nginx/apps.d/$domain-nginx.conf
 		fi
 		
-		# SED need escaped characters: Put a backslash before $.*/[\]^
-		local escaped_path=$(echo $from | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g")
-		
-		local exisa=$( grep -G "^# RedirectFrom: $escaped_path$" /etc/nginx/apps.d/$domain-nginx.conf )
-		local exisb=$( grep -G "^# RedirectFrom: $escaped_path (Regex)$" /etc/nginx/apps.d/$domain-nginx.conf )
-		local exisc=$( grep -G "^# RedirectFrom: $escaped_path (Exact)$" /etc/nginx/apps.d/$domain-nginx.conf )
+		local exisa=$( grep -G "^# RedirectFrom: $(escaped_string $from)$" /etc/nginx/apps.d/$domain-nginx.conf )
+		local exisb=$( grep -G "^# RedirectFrom: $(escaped_string $from) (Regex)$" /etc/nginx/apps.d/$domain-nginx.conf )
+		local exisc=$( grep -G "^# RedirectFrom: $(escaped_string $from) (Exact)$" /etc/nginx/apps.d/$domain-nginx.conf )
 		
 		# Can have both at the same time, one exact and another.
 		if [[ ( -z $exisc && $exact == "true" ) || ( -z $exisa && -z $exisb && -z $exact ) ]]; then
@@ -955,12 +949,12 @@ delete_all_sites() {
 	do
 		[[ $delete_all == "keep-db" ]] && delete="keep-db" || delete="force"
 		domain=$(echo $site | cut -f 5 -d "/")
-		[[ $domain != "default" && $domain != $(conf_read tools-port) ]] && deletesite
+		[[ $domain != "default" && $domain != $(conf_read tools-port) && $domi != *".dpkg-"* ]] && deletesite
 	done
 	
 	# Delete all files - double check!
 	# -rf is necessary to not generate an error when is empty.
-	sudo rm -rf /etc/nginx/sites-available/!(default|$(conf_read tools-port))
+	sudo rm -rf /etc/nginx/sites-available/!(default|$(conf_read tools-port)|*".dpkg-"*)
 	sudo rm -rf /etc/nginx/sites-enabled/!(default|$(conf_read tools-port))
 	sudo rm -rf /var/www/!(html|$(conf_read tools-port))
 	echo ""
@@ -1341,9 +1335,14 @@ clone_wp_site() {
 	sudo sed -i "/DB_USER/c \define('DB_USER', '$dom');" $wpcon
 	sudo sed -i "/DB_PASSWORD/c \define('DB_PASSWORD', '$AUTOGENPASS_WPDB');" $wpcon
 	sudo sed -i "/'WP_CACHE_KEY_SALT'/d" $wpcon
-	sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'redis_object_cache_for_wp_$domain$(echo $subfolder | sed "s/\//_/g")');" $wpcon
+	sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'wp_$domain$(echo $subfolder | sed "s/\//_/g")');" $wpcon
 	
 	if [[ $replace_content != "off" ]]; then
+		# In case www is forced
+		replace_content="[http://www.$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
+		replace_content="[https://www.$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
+		replace_content="[www.$clone_from,$domain]" && wp_replace_content > /dev/null 2>&1
+		
 		replace_content="[http://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
 		replace_content="[https://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
 		replace_content="[$clone_from,$domain]" && wp_replace_content > /dev/null 2>&1
@@ -1391,7 +1390,7 @@ list_sites() {
 	for site in "/etc/nginx/sites-available"/*
 	do
 		domi=$(echo $site | cut -f 5 -d "/")
-		if [[ $domi != "default" && $domi != $(conf_read tools-port) ]]; then
+		if [[ $domi != "default" && $domi != $(conf_read tools-port) && $domi != *".dpkg-"* ]]; then
 			[[ -d /var/www/$domi ]] && sign="${gre} +" || sign="${blu} *${gre}"
 			[[ ! -L /etc/nginx/sites-enabled/$domi ]] && sign="${red} -"
 			outlist="$sign $domi ${end}"

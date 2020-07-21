@@ -37,7 +37,7 @@ must-staple = True" | tee -a /etc/letsencrypt/cli.ini
 		for site in "/etc/nginx/sites-available"/*
 		do
 			domi=$(echo $site | cut -f 5 -d "/")
-			[[ $domi != "html" && $domi != $(conf_read tools-port) ]] && sudo sed -i "/#include \/var\/www\//c\	include /var/www/$domi/*-nginx.conf;" /etc/nginx/sites-available/$domi
+			[[ $domi != "html" && $domi != $(conf_read tools-port) && $domi != *".dpkg-"* ]] && sudo sed -i "/#include \/var\/www\//c\	include /var/www/$domi/*-nginx.conf;" /etc/nginx/sites-available/$domi
 		done
 	fi
 	

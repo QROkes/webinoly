@@ -1263,7 +1263,7 @@ set_default_nginx_response() {
 			
 			sudo rm -rf /etc/nginx/sites-enabled/default
 			conf_write default-site $default_site
-			echo "${gre}Site ${blu}- ${default_site} -${gre} was successfully assigned as default site!${end}"
+			echo "${gre}Site${blu} ${default_site} ${gre}was successfully assigned as default site!${end}"
 		else
 			[[ -f /etc/nginx/sites-available/$default_site ]] && echo "${red}Site found but is disabled.${end}"
 			echo "${red}[ERROR] Please, enter a valid option (default, blackhole or domain.com). ${end}"
@@ -1913,10 +1913,7 @@ custom_cache_global() {
 			[[ -n $query_string_cache ]] && local value=$query_string_cache
 			[[ -n $skip_cache ]] && local value=$skip_cache
 			
-			# SED need escaped characters: Put a backslash before $.*/[\]^()
-			local escaped_value=$(echo $value | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g" | sed -E "s/\(/\\\(/g" | sed -E "s/\)/\\\)/g")
-		
-			sudo sed -Ei "/^# Value: $escaped_value( .*)?$/,/^# CacheRuleEnd/{/.*/d}" /etc/nginx/apps.d/global_custom_cache.conf
+			sudo sed -Ei "/^# Value: $(escaped_string $value)( .*)?$/,/^# CacheRuleEnd/{/.*/d}" /etc/nginx/apps.d/global_custom_cache.conf
 			[[ ! -s /etc/nginx/apps.d/global_custom_cache.conf ]] && sudo rm /etc/nginx/apps.d/global_custom_cache.conf
 		fi
 		echo "${gre}Redirection successfully removed!${end}"
@@ -1939,7 +1936,7 @@ custom_cache_global() {
 		elif [[ -n $regex ]] && ! [[ $regex =~ ^(sensitive|insensitive)$ ]]; then
 			echo "${red}[ERROR] Invalid regex value!${end}"
 			exit 1
-		elif [[ -n $skip_cache && $(is_url_path $skip_cache) != "true" ]]; then
+		elif [[ -z $regex &&  -n $skip_cache && $(is_url_path $skip_cache) != "true" ]]; then
 			echo "${red}[ERROR] Invalid URL!${end}"
 			exit 1
 		elif [[ -z $regex && -n $query_string_cache ]] && ! [[ $query_string_cache =~ ^([\]A-Za-z0-9_\/\.:\!\*\'\[\(\)\;@\&\=\+\$\,\?#\~\%\-]+)?$ ]]; then
@@ -1960,10 +1957,7 @@ custom_cache_global() {
 		[[ -n $query_string_cache ]] && local value=$query_string_cache
 		[[ -n $skip_cache ]] && local value=$skip_cache
 		
-		# SED need escaped characters: Put a backslash before $.*/[\]^
-		local escaped_value=$(echo $value | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g")
-		
-		local exist=$( grep -E "^# Value: $escaped_value( .*)?$" /etc/nginx/apps.d/global_custom_cache.conf )
+		local exist=$( grep -E "^# Value: $(escaped_string $value)( .*)?$" /etc/nginx/apps.d/global_custom_cache.conf )
 		
 		if [[ -z $exist ]]; then
 			if [[ $regex == "sensitive" ]]; then
