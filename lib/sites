@@ -523,16 +523,22 @@ db_delete() {
 
 
 deletesite() {
-	if [[ ( $domain == $(conf_read tools-site) || $domain == $(conf_read default-site) ) && -z $delete_all ]]; then
-		echo "${red}[WARNING] This site is set as default site or used to access your server tools."
-		echo "Deleting this site can cause unexpected behaviour in your server, please reassign your default/tools site to an existing domain."
-		echo "${end}"
-	fi
-	if [[ $domain == $(conf_read tools-site) && -z $delete_all ]]; then
+	if [[ $domain == $(conf_read tools-site) && -z $delete_all && $delete != "force" ]]; then
 		echo "${red}[ERROR] Can not delete a site that is assigned to access your server tools (Tools-Site)!${end}"
 		exit 1
+	elif [[ $domain == $(conf_read default-site) && -z $delete_all && $delete != "force" ]]; then
+		echo "${red}[ERROR] Can not delete a site that is set as default site!${end}"
+		exit 1
 	fi
-
+	if [[ $domain == $(conf_read tools-site) && ( -n $delete_all || $delete == "force" ) ]]; then
+		echo "${red}[WARNING] This site is set to be used to access your server tools. Deleting this site can cause unexpected behaviour in your server."
+		sudo webinoly -tools-site=default
+	fi
+	if [[ $domain == $(conf_read default-site) && ( -n $delete_all || $delete == "force" ) ]]; then
+		echo "${red}[WARNING] This site is set as default site. Deleting this site can cause unexpected behaviour in your server."
+		sudo webinoly -default-site=default
+	fi
+	
 	[[ $delete == "force" ]] && local dbdel="Y"
 	[[ $delete == "keep-db" ]] && local dbdel="N"
 
@@ -1338,14 +1344,11 @@ clone_wp_site() {
 	sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'wp_$domain$(echo $subfolder | sed "s/\//_/g")');" $wpcon
 	
 	if [[ $replace_content != "off" ]]; then
+		replace_content="[http://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
+		replace_content="[https://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
 		# In case www is forced
 		replace_content="[http://www.$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
 		replace_content="[https://www.$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
-		replace_content="[www.$clone_from,$domain]" && wp_replace_content > /dev/null 2>&1
-		
-		replace_content="[http://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
-		replace_content="[https://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
-		replace_content="[$clone_from,$domain]" && wp_replace_content > /dev/null 2>&1
 	fi
 	
 	echo "${gre}Site ${blu}'$domain$subfolder'${gre} is now a successfull clone of ${blu}'$clone_from$subfolder'${end}"

@@ -502,7 +502,7 @@ mysql_tool() {
 swap_delete() {
 	if [[ -n $swap && $swap =~ ^[0-9]+$ && $(conf_read swap-owner) == "webinoly" ]]; then
 		api-events_update pn9
-		sudo swapoff -a -v > /dev/null 2>&1
+		sudo swapoff -a -v
 		sudo rm -rf /swapfile
 		if [[ ! -f /swapfile ]]; then
 			sudo sed -i '/\/swapfile/d' /etc/fstab
