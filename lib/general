@@ -453,8 +453,19 @@ is_proxy() {
 }
 
 
+is_forward() {
+	if [[ -f /etc/nginx/sites-available/$1 ]]; then
+		local index=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "index ")
+		local return=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "return 301 ")
+		[[ ! -d /var/www/$1 && -z $index && -n $return ]] && echo "true" || echo "false"
+	else
+		echo "false"
+	fi
+}
+
+
 is_parked() {
-	[[ -f /etc/nginx/sites-available/$1 && ! -d /var/www/$1 && $(is_proxy $1) == "false" ]] && echo "true" || echo "false"
+	[[ -f /etc/nginx/sites-available/$1 && ! -d /var/www/$1 && $(is_proxy $1) == "false" && $(is_forward $1) == "false" && ( $(is_html $1) == "true" || $(is_php $1) == "true" || $(is_wp $1) == "true" ) ]] && echo "true" || echo "false"
 }
 
 

@@ -194,7 +194,6 @@ elif [[ -n $multisite_convert && -f /etc/nginx/sites-available/$domain ]]; then
 
 # Parked Domain
 elif [[ -n $parked && -n $domain ]]; then
-	createsite
 	parked_domain
 
 	

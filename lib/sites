@@ -1088,7 +1088,15 @@ parked_domain() {
 	if [[ ! -f /etc/nginx/sites-available/$parked ]]; then
 		echo "${red}[ERROR] Main site domain not found! ${end}"
 		exit 1
+	elif ! [[ $(is_html $parked) == "true" || $(is_php $parked) == "true" || $(is_wp $parked) == "true" ]]; then
+		echo "${red}[ERROR] Site type not supported as parked (HTML, PHP and WP)! ${end}"
+		exit 1
+	elif [[ $(is_parked $parked) == "true" ]]; then
+		echo "${red}[ERROR] Parking a site using a parked site as main site is not allowed! ${end}"
+		exit 1
 	fi
+	
+	createsite
 	
 	# Nginx conf file for the new parked domain
 	sername=$(grep -o "server_name .*;" /etc/nginx/sites-available/$domain)
