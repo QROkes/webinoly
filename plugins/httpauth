@@ -202,6 +202,11 @@ elif [[ -n $whitelist ]]; then
 
 elif [[ -n $path && -n $domain ]]; then
 	if [[ -z $purge ]]; then
+		if [[ $(is_forward $domain) == "true" ]]; then
+			echo "${red}[ERROR] Forwarded domains are not allowed!${end}"
+			exit 1
+		fi
+		
 		[[ $path == true ]] && read -p "${blu}Path to protect: ${end}" path
 		
 		# Check for reserved paths.
