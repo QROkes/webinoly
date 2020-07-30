@@ -117,8 +117,8 @@ linux_purge() {
 
 
 messagend_install() {
-	local rootpass=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-	local adminpass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+	local ROOT_PW=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+	local ADMIN_PW=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 	
 	echo ""
 	echo "${gre}"
@@ -126,7 +126,7 @@ messagend_install() {
 	echo "******${bol}            INSTALLATION HAS FINISHED SUCCESSFULLY              ${end}${gre}******"
 	echo "****************************************************************************"
 	echo "********      Save your DB access password in a secure place:       ********"
-	echo "******${dim}      root: ${rootpass}       admin: ${adminpass}      ${end}${gre}******"
+	echo "******${dim}      root: ${ROOT_PW}       admin: ${ADMIN_PW}      ${end}${gre}******"
 	echo "****************************************************************************"
 	echo "${end}"
 }

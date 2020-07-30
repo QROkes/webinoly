@@ -97,7 +97,6 @@ wpinstall() {
 		local dom=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
 	fi
 	
-	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 	local AUTOGENPASS_WPDB=`pwgen -s -1 16`
 	local setupmysql="y"
 	local setupwp="y"
@@ -140,7 +139,7 @@ wpinstall() {
 	
 	# Download WP (latest version)
 	if [[ $type == [123] ]]; then
-		echo "${dim}Downloading WordPress...${blu}"
+		echo "${dim}Downloading WordPress...${end}${blu}"
 		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
 		if [[ ! -s /var/www/$domain/htdocs/wp.tar.gz ]]; then
 			echo "${red}[ERROR] Downloading WordPress failed!${end}"
@@ -205,6 +204,19 @@ wpinstall() {
 				fi
 			fi
 			
+			# Check for MySQL Connection
+			if [[ ( $dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dburoot $dbproot) != "true" ) ]]; then
+				# Reset variables
+				local dburl=""
+				local dbport=""
+				local dburoot=""
+				local dbproot=""
+				
+				# While loop
+				done="0"
+				continue 1;
+			fi
+			
 			# ************* Ask for DB Name and validate data *************** #
 			dom=$(dbword_check $dom)
 			[[ $type == [2345] ]] || read -p "Database Name [$dom]:" dbname
@@ -214,34 +226,9 @@ wpinstall() {
 			if [[ "$setupmysql" == [yY] ]]; then
 				local newdbname="$dbname"
 				while [[ $dbname == $newdbname && $dbreuse != [yY] ]]; do
-					# Chech connection to DB first
-					if [[ $dbhost == "localhost" ]]; then
-						sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit"
-						if [[ $? != "0" ]]; then
-							done="0"
-							# Remove the Unattended feature and ask for values.
-							[[ $type == [2345] ]] && type=1
-							echo "${red}============================================"
-							echo "    [Error]: Database conection failed."
-							echo "============================================${blu}"
-							echo ""
-							continue 2;
-						fi
-					else
-						sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" -e "quit"
-						if [[ $? != "0" ]]; then
-							done="0"
-							[[ $type == [2345] ]] && type=1
-							echo "${red}============================================"
-							echo "    [Error]: Database conection failed."
-							echo "============================================${blu}"
-							echo ""
-							continue 2;
-						fi
-					fi
 					if [[ $dbhost == "localhost" ]]; then
 						# https://stackoverflow.com/questions/7364709/bash-script-check-if-mysql-database-exists-perform-action-based-on-result
-						local newdbname=$(sudo mysqlshow --user=root -p$ROOT_PASS | grep -ow $dbname)
+						local newdbname=$(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $dbname)
 					else
 						local newdbname=$(sudo mysqlshow -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" | grep -ow $dbname)
 					fi
@@ -286,35 +273,13 @@ wpinstall() {
 			
 			# Check for duplicate database users, if already exists ask for another dbuser to create the new user
 			if [[ "$setupmysql" == [yY] ]]; then
-				local newdbuser="$dbuser"
+				local newdbuser=$dbuser
 				while [[ $dbuser == $newdbuser && $dbureuse != [yY] ]]; do
-					# Chech connection to DB first
-					if [[ $dbhost == "localhost" ]]; then
-						sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit"
-						if [[ $? != "0" ]]; then
-							done="0"
-							echo "${red}============================================"
-							echo "    [Error]: Database conection failed."
-							echo "============================================${blu}"
-							echo ""
-							continue 2;
-						fi
-					else
-						sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" -e "quit"
-						if [[ $? != "0" ]]; then
-							done="0"
-							echo "${red}============================================"
-							echo "    [Error]: Database conection failed."
-							echo "============================================${blu}"
-							echo ""
-							continue 2;
-						fi
-					fi
 					if [[ $dbhost == "localhost" ]]; then
 						# https://stackoverflow.com/questions/7364709/bash-script-check-if-mysql-database-exists-perform-action-based-on-result
-						local newdbuser=$(sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "SELECT User FROM mysql.user;" | grep -ow $dbuser)
+						[[ -z $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "SELECT User FROM mysql.user;" | grep -ow $dbuser) ]] && newdbuser=""
 					else
-						local newdbuser=$(sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" -e "SELECT User FROM mysql.user;" | grep -ow $dbuser)
+						[[ -z $(sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" -e "SELECT User FROM mysql.user;" | grep -ow $dbuser) ]] && newdbuser=""
 					fi
 					
 					if [[ $newdbuser == $dbuser || $dbuser != $(dbword_check $dbuser user) ]]; then
@@ -331,7 +296,7 @@ wpinstall() {
 						if [[ $dbuser != $(dbword_check $dbuser user) ]]; then
 							if [[ $type == [24] ]]; then
 								newdbuser="Webinoly_$(pwgen -s -1)"
-								dbuser="$newdbuser"
+								dbuser=$newdbuser
 								continue 1;
 							fi
 							echo "${red}[ERROR] The DB User can not be a reserved word or should only contain allowed characters!${blu}"
@@ -341,8 +306,8 @@ wpinstall() {
 						if [[ $dbureuse != [yY] ]]; then
 							echo ""
 							read -p "Please enter a new DB_User for your Database: " newdbuser
-							[[ -z "$newdbuser" ]] && newdbuser="$dbuser"
-							dbuser="$newdbuser"
+							[[ -z "$newdbuser" ]] && newdbuser=$dbuser
+							dbuser=$newdbuser
 						elif [[ $dbureuse == [yY] ]]; then
 							# If you want to use the User that already exist, abort DB creation.
 							setupmysql="n"
@@ -366,7 +331,7 @@ wpinstall() {
 			if [[ "$setupmysql" == [yY]  ]] ; then
 				if [[ $dbhost == "localhost" ]]; then
 					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
-					sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS <<_EOF_
+					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 CREATE DATABASE $dbname;
 CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
 GRANT ALL PRIVILEGES ON ${dbname}.* TO ${dbuser}@${dbhost} IDENTIFIED BY '${dbpass}';
@@ -451,74 +416,28 @@ _EOF_
 }
 
 
-db_delete() {
-	local done="0"
-	
+db_delete() {	
 	wp_dbdata $1
 	[[ -z $wpconfpath ]] && return
+	[[ $wp_dbhost != "localhost" ]] && check_for_mysql_client
+	
+	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) != "true" ) ]]; then
+		echo "[ERROR] Database cannot be deleted${blu} $domain ${end}"
+		return
+	fi
 	
 	dbsetup="DELETE FROM mysql.user WHERE User='$wp_dbuser';DROP DATABASE IF EXISTS $wp_dbname;DELETE FROM mysql.db WHERE Db='$wp_dbname' OR Db='$wp_dbname\\_%';FLUSH PRIVILEGES;"
-	while [[ $done != "1" ]]
-	do
-		done="1"
-		if [[ $wp_dbhost == "localhost" ]]; then
-			# Check if MySQL installed
-			if [[ ! -d /etc/mysql || $(conf_read mysql) != "true" || $(conf_read mysql-client) != "true" ]]; then
-				echo "${red}[ERROR] Seems like MySQL is not installed or Webinoly can not detect it!"
-				echo " - Database can not be deleted -${blu} $domain ${end}"
-				return
-			fi
-			local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-			sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup"
-			if [ $? != "0" ]; then
-				done="0"
-				echo "${red}============================================"
-				echo "    [Error]: Database delete failed."
-				echo "============================================"
-				echo ""
-				echo "${blu}  Retry [Y/n]? "
-				while read -r -n 1 -s answer; do
-					answer=${answer:-y}
-					[[ $answer = [YyNn] ]] && break
-				done
-				[[ $answer  == [Nn] ]] && done="1"
-			else
-				echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
-			fi
+	if [[ $wp_dbhost == "localhost" ]]; then
+		sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup"
+		echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
+	else
+		if [[ $wp_uroot == "root" && -z $wp_proot ]]; then
+			echo "${red}Action aborted, database not deleted!${end}"
 		else
-			if [[ $wp_uroot == "root" && -z $wp_proot ]]; then
-				echo "${red}Action aborted, database not deleted!"
-				continue 1;
-			else
-				if [[ $(conf_read mysql-client) != "true" ]]; then
-					echo "${gre}MySQL Client is not installed and we need it to stablish a connection with your Database."
-					echo "Wait while we install MySQL Client... installing!!!${end}"
-					mysql_client_install > /dev/null 2>&1 &
-					echo "${gre}MySQL Client has been successfully installed!${end}"
-				fi
-				
-				sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup"
-				if [ $? != "0" ]; then
-					done="0"
-					echo "${red}============================================"
-					echo "    [Error]: Database delete failed."
-					echo "============================================"
-					echo ""
-					echo "${blu}  Retry [Y/n]? "
-					while read -r -n 1 -s answer; do
-						answer=${answer:-y}
-						[[ $answer = [YyNn] ]] && break
-					done
-					[[ $answer  == [Nn] ]] && done="1"
-					[[ $answer  == [Yy] ]] && wp_dbdata $1
-				else
-					echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
-				fi
-			fi
-			echo "${end}"
+			sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup"
+			echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
 		fi
-	done
-	
+	fi
 }
 
 
@@ -693,18 +612,15 @@ edit_wp_db_url() {
 	if [[ -n $1 && -n $2 && $(is_wp $1) == "true" && $(is_wp_installed $1) == "true" ]]; then
 		local doms=$(echo $1$subfolder | sed "s/[^0-9A-Za-z]/_/g")
 		
-		if [[ $wp_dbhost == "localhost" ]]; then
-			ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-			sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS <<_EOF_
+		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
+			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 USE $doms;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
 FLUSH PRIVILEGES;
 _EOF_
 
-		else
-echo ""
-
+		elif [[ $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) == "true" ]]; then
 			sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" <<_EOF_
 USE $doms;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
@@ -1337,12 +1253,11 @@ clone_wp_site() {
 	fi
 
 	local dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
-	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 	local AUTOGENPASS_WPDB=`pwgen -s -1 16`
 	
 	if [[ $wp_dbhost == "localhost" ]]; then
 		site -mysql=[localhost,$dom,$dom,$AUTOGENPASS_WPDB] > /dev/null 2>&1
-		mysqldump -u root -p$ROOT_PASS $wp_dbname | mysql -u root -p$ROOT_PASS $dom
+		mysqldump -u admin -p$ADMIN_PASS $wp_dbname | mysql -u admin -p$ADMIN_PASS $dom
 		edit_wp_db_url $domain "http://${domain}${subfolder}"
 	else
 		site -mysql=[$wp_dbhost,$dom,$dom,$AUTOGENPASS_WPDB,$wp_uroot,$wp_proot] > /dev/null 2>&1
@@ -1386,16 +1301,16 @@ wp_replace_content() {
 	fi
 	
 	wp_dbdata $domain
+	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) != "true" ) ]]; then
+		exit 1
+	fi
+	
 	query="USE $wp_dbname; UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'$search','$replace'); FLUSH PRIVILEGES;"
 	
 	if [[ $wp_dbhost == "localhost" ]]; then
-		ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-		sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$query"
-	elif [[ -n $wp_dbhost ]]; then
-		sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$query"
+		sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$query"
 	else
-		echo "${red}[ERROR] Invalid WP database host!${end}"
-		exit 1
+		sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$query"
 	fi
 	echo "${gre}Content successfully replaced in your WP site!${end}"
 }

@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# STOP and exit if not root or sudo.
+if [[ $(whoami) != "root" ]]; then
+	echo "${red}Please run this script as root or using sudo.${end}"
+	exit 1
+fi
+
 # Don't remove dumb re-check!
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
@@ -18,11 +24,50 @@ readonly end=`tput sgr0`
 readonly bol=`tput bold`
 readonly dim=`tput dim`
 
-# STOP and exit if not root or sudo.
-if [[ $(whoami) != "root" ]]; then
-	echo "${red}Please run this script as root or using sudo.${end}"
-	exit 1
-fi
+
+
+
+# ***********************************************
+# Configuration Management Functions   **********
+# ***********************************************
+
+conf_read() {
+	if [[ ! -f /opt/webinoly/webinoly.conf ]]; then
+		echo "${red}[ERROR] Config file not found!${end}"
+		exit 1
+	fi
+	
+	local val=$(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf | cut -f 2 -d ':')
+	echo $val
+}
+
+conf_delete() {
+	if [[ ! -f /opt/webinoly/webinoly.conf ]]; then
+		echo "${red}[ERROR] Config file not found!${end}"
+		exit 1
+	fi
+	
+	sed -i "/^${1}:/d" /opt/webinoly/webinoly.conf
+}
+
+conf_write() {
+	[[ ! -f /opt/webinoly/webinoly.conf ]] && sudo touch /opt/webinoly/webinoly.conf
+	conf_delete $1
+	echo "$1:$2" >> /opt/webinoly/webinoly.conf
+}
+
+
+# ***********************************************
+# Useful variables   ****************************
+# ***********************************************
+readonly ADMIN_PASS=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+
+
+
+
+# ***********************************************
+# General Functions   ***************************
+# ***********************************************
 
 
 check_ubuntu_release() {
@@ -127,37 +172,45 @@ check_for_mysql() {
 }
 check_for_mysql_client() {
 	if [[ $(conf_read mysql-client) != "true" ]]; then
-		echo "${gre}MySQL Client is not installed and we need it to stablish a connection with your external server."
-		echo "Wait while we install MySQL Client... installing!!!${end}"
+		echo "${gre}MySQL Client is not installed and we need it to stablish a connection with your external server.${end}"
+		echo "${dim}Wait while we install MySQL Client...${end}"
 		mysql_client_install > /dev/null 2>&1 &
+		wait $!
 		echo "${gre}MySQL Client has been successfully installed!${end}"
 	fi
 }
 
 
-conf_read() {
-	if [[ ! -f /opt/webinoly/webinoly.conf ]]; then
-		echo "${red}[ERROR] Config file not found!${end}"
-		exit 1
+check_mysql_connection() {
+	if [[ -n $1 && -n $2 && -n $3 && -n $4 && $(conf_read mysql-client) == "true"  ]]; then
+		sudo mysql --connect-timeout=10 -h "$1" -P "$2" -u"$3" -p"$4" -e "quit"
+		if [[ $? != "0" ]]; then
+			echo "${red}============================================" >&2
+			echo "    [Error]  Database conection failed." >&2
+			echo "============================================${end}" >&2
+			echo "" >&2
+			echo "false"
+		else
+			echo "true"
+		fi
+	elif [[ ${1,,} == "localhost" && $(conf_read mysql) == "true" ]]; then
+		sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "quit"
+		if [[ $? != "0" ]]; then
+			echo "${red}============================================" >&2
+			echo "    [Error]  Database conection failed." >&2
+			echo "============================================${end}" >&2
+			echo "" >&2
+			echo "false"
+		else
+			echo "true"
+		fi
+	else
+		echo "${red}============================================" >&2
+		echo "    [Error]  Database conection failed." >&2
+		echo "============================================${end}" >&2
+		echo "" >&2
+		echo "false"
 	fi
-	
-	local val=$(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf | cut -f 2 -d ':')
-	echo $val
-}
-
-conf_delete() {
-	if [[ ! -f /opt/webinoly/webinoly.conf ]]; then
-		echo "${red}[ERROR] Config file not found!${end}"
-		exit 1
-	fi
-	
-	sed -i "/^${1}:/d" /opt/webinoly/webinoly.conf
-}
-
-conf_write() {
-	[[ ! -f /opt/webinoly/webinoly.conf ]] && sudo touch /opt/webinoly/webinoly.conf
-	conf_delete $1
-	echo "$1:$2" >> /opt/webinoly/webinoly.conf
 }
 
 
@@ -520,11 +573,10 @@ is_wp_multisite() {
 	local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}sitemeta' LIMIT 1;"
 	local dbsetuc="USE $wp_dbname; SELECT meta_value FROM ${wp_dbpref}sitemeta where meta_key='subdomain_install';"
 	
-	if [[ $wp_dbhost == "localhost" ]]; then
-		local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-		wpmu=$(sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup")
-		[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetuc")
-	elif [[ -n $wp_dburl ]]; then
+	if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
+		wpmu=$(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup")
+		[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetuc")
+	elif [[ $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) == "true" ]]; then
 		wpmu=$(sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup")
 		[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetuc")
 	fi
@@ -546,10 +598,9 @@ is_wp_installed() {
 	wp_dbdata $1
 	local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
 	
-	if [[ $wp_dbhost == "localhost" ]]; then
-		local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-		[[ -n $(sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "$dbsetup") ]] && echo "true" || echo "false"
-	elif [[ -n $wp_dburl ]]; then
+	if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
+		[[ -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup") ]] && echo "true" || echo "false"
+	elif [[ $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) == "true" ]]; then
 		[[ -n $(sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup") ]] && echo "true" || echo "false"
 	else
 		echo "false"

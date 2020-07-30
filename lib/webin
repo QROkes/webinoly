@@ -399,7 +399,6 @@ webinoly_verify() {
 		error="1"
 	fi
 	
-	local ADMIN_PASS=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 	[[ -z $ADMIN_PASS ]] && local ADMIN_PASS="dUmb"
 	if ! sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "quit" 2>/dev/null && [[ $(conf_read mysql) == "true" ]]; then
 		echo "[ERROR] MySQL Connection to localhost failed! (admin)"
@@ -665,11 +664,12 @@ mysql_change_password() {
 		exit 1
 	fi
 	
-	if [[ -z $user || -z $pass || $user == *"'"* || $pass == *"'"* || ! ( $user =~ ^(root|admin)$  ) ]]; then
+	if [[ -z $user || -z $pass || $user == *"'"* || $pass == *"'"* || ${#pass} -lt 8  || ! ( $user =~ ^(root|admin)$  ) ]]; then
 		echo "${red}[ERROR] Please, enter a valid username and password!"
-		echo "Only 'root and admin' users allowed and password can not contain a 'single quote' character.${end}"
+		echo "Only 'root and admin' users allowed and password can not contain a 'single quote' and must be at least 8 characters long.${end}"
 		exit 1
 	fi
+	
 	
 	sudo mysql --connect-timeout=10 --user=root -p$( echo $(conf_read mysql-root) | openssl enc -d -a -salt ) -e "ALTER USER '${user}'@'localhost' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
 	[[ $? != 0 ]] && catcherror=true
@@ -794,8 +794,8 @@ show_db_data() {
 		rpass=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 		apass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 		echo ""
-		[[ $dbpass == "raw" || -n $raw ]] && echo "root:$rpass" || echo "${gre}  root: $rpass"
-		[[ $dbpass == "raw" || -n $raw ]] && echo "admin:$apass" || echo "  admin: $apass ${end}"
+		[[ $dbpass == "raw" || -n $raw ]] && echo "root:$rpass" || echo "${gre}${bol}  root:${end}${gre}${dim} $rpass ${end}"
+		[[ $dbpass == "raw" || -n $raw ]] && echo "admin:$apass" || echo "${gre}${bol}  admin:${end}${gre}${dim} $apass ${end}"
 		echo ""
 	else
 		echo "${red}"
@@ -1651,7 +1651,6 @@ instances:
 
 dd_mysql() {
 	if [[ ! -f /etc/datadog-agent/conf.d/mysql.d/conf.yaml ]]; then
-		local ADMIN_PASS=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 		sudo touch /etc/datadog-agent/conf.d/mysql.d/conf.yaml
 		sudo chmod 644 /etc/datadog-agent/conf.d/mysql.d/conf.yaml
 		sudo chown dd-agent:dd-agent /etc/datadog-agent/conf.d/mysql.d/conf.yaml
@@ -1786,21 +1785,24 @@ database_import() {
 		if [[ $(echo "${external_db}" | cut -c-1) != "[" || $(echo "${external_db}" | rev | cut -c-1) != "]" || -z $uroot || -z $proot || -z $dburl || -z $dbport ]]; then
 			echo "${red}[ERROR] Invalid data for External Database!${end}"
 			exit 1
+		elif [[ $(check_mysql_connection $dburl $dbport $uroot $proot) != "true" ]]; then
+			echo "${red}[ERROR] Cannot connect with your External Database!${end}"
+			exit 1
 		fi
-		
-		sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$uroot" -p"$proot" < $file
-	else
-		check_for_mysql -ask
-		local ADMIN_PASS=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
-		sudo mysql -u admin -p$ADMIN_PASS < $file
 	fi
-
-	if [[ $? == 0 ]]; then
+	
+	if [[ -n $external_db ]]; then
+		echo "${dim}Wait while we import your db... ${end}"
+		sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$uroot" -p"$proot" < $file
+		echo "${gre}Database successfully imported!${end}"
+	elif [[ -z $external_db && $(check_mysql_connection localhost) == "true" ]]; then
+		check_for_mysql -ask
+		sudo mysql -u admin -p$ADMIN_PASS < $file
 		echo "${gre}Database successfully imported!${end}"
 	else
-		echo "${red}[ERROR] A connection can not be established with MySQL!${end}"
+		echo "${red}[ERROR] A connection can not be established with MySQL localhost!${end}"
 		exit 1
-	fi	
+	fi
 }
 
 

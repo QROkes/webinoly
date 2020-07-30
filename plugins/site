@@ -349,6 +349,10 @@ elif [[ -n $clone_from ]]; then
 	fi
 	
 	wp_dbdata $clone_from #We need to call this function in the parent shell to preserve variables and avoid asking two times for the same values in case of external db.
+	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) != "true" ) ]]; then
+		exit 1
+	fi
+	
 	if [[ $(is_wp_installed $clone_from) != "true" ]]; then
 		echo "${red}[ERROR] Seems like WordPress is still not configured in your${blu} '$clone_from' ${red}site!${end}"
 		exit 1

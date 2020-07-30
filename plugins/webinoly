@@ -148,6 +148,8 @@ elif [[ -n $mysql_password ]]; then
 	if [[ $(conf_read mysql) != "true" ]]; then
 		echo "${red}[ERROR] Seems like MySQL is not installed!${end}"
 		exit 1
+	elif [[ $(check_mysql_connection localhost) != "true" ]]; then
+		exit 1
 	fi
 	mysql_change_password
 	nginx_not="true" # Nginx-Reload not-needed.
