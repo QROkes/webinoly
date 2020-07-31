@@ -152,6 +152,7 @@ nginx_install() {
 
 	sudo cp -p /etc/nginx/sites-available/default /opt/webinoly/templates/source/
 	sudo cp -p /etc/nginx/nginx.conf /opt/webinoly/templates/source/
+	sudo systemctl enable nginx
 	sudo nginx -t && sudo service nginx start
 	conf_write nginx true
 	echo "${gre}Nginx has been installed successfully! ${end}"
@@ -490,7 +491,7 @@ mysql_tool() {
 		sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs/pma
 		
 		conf_write mysql-tool true
-		echo "${gre}PhpMyAdmin has been installed successfully! ${end}"
+		echo "${gre}phpMyAdmin has been installed successfully! ${end}"
 	else
 		echo "${red}[ERROR] Downloading phpMyAdmin failed!${end}"
 	fi
@@ -516,8 +517,11 @@ swap_delete() {
 
 
 swap_create() {
+	# Need a fresh value here, not use the global var.
+	local sw=$(($(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024000))
+
 	# https://help.ubuntu.com/community/SwapFaq
-	if [[ -z $swap || $swap == "0" ]]; then
+	if [[ -z $sw || $sw == "0" ]]; then
 		api-events_update in5
 		if [[ -n $(conf_read swap-mem) && $(conf_read swap-mem) =~ ^[0-9]+$ ]]; then
 			local newswap=$(conf_read swap-mem)
@@ -562,6 +566,6 @@ swap_create() {
 		api-events_update in6
 	else
 		[[ $(conf_read swap-owner) != "webinoly" ]] && conf_write swap-owner system
-		echo "${gre}SWAP file (${swap}Gb) detected!${end}"
+		echo "${gre}SWAP file (${sw}Gb) detected!${end}"
 	fi
 }

@@ -122,7 +122,7 @@ elif [[ -n $purge && -n $php ]]; then
 		if [[ $answer == [Yy] || $(conf_read force-flag) == "true" ]]; then
 			[[ $(conf_read mysql-tool) == "true" ]] && stack -pma -purge=force
 			sudo service php*-fpm stop
-			local ver=$(conf_read php-ver)
+			ver=$(conf_read php-ver)
 			
 			sudo apt -y purge php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
 			

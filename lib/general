@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# STOP and exit if not root or sudo.
-if [[ $(whoami) != "root" ]]; then
-	echo "${red}Please run this script as root or using sudo.${end}"
-	exit 1
-fi
-
 # Don't remove dumb re-check!
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
@@ -25,6 +19,11 @@ readonly bol=`tput bold`
 readonly dim=`tput dim`
 
 
+# STOP and exit if not root or sudo.
+if [[ $(whoami) != "root" ]]; then
+	echo "${red}Please run this script as root or using sudo.${end}"
+	exit 1
+fi
 
 
 # ***********************************************

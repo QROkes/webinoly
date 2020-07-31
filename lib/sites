@@ -1273,10 +1273,10 @@ clone_wp_site() {
 	
 	if [[ $replace_content != "off" ]]; then
 		replace_content="[http://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
-		replace_content="[https://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
+		replace_content="[https://$clone_from,https://$domain]" && wp_replace_content > /dev/null 2>&1
 		# In case www is forced
 		replace_content="[http://www.$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
-		replace_content="[https://www.$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
+		replace_content="[https://www.$clone_from,https://$domain]" && wp_replace_content > /dev/null 2>&1
 	fi
 	
 	echo "${gre}Site ${blu}'$domain$subfolder'${gre} is now a successfull clone of ${blu}'$clone_from$subfolder'${end}"

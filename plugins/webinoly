@@ -273,6 +273,7 @@ elif [[ -n $header_csp ]]; then
 
 
 elif [[ -n $query_string_cache || -n $query_string_never_cache || -n $skip_cache ]]; then
+	check_for_nginx
 	custom_cache_global
 	
 
