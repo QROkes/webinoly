@@ -521,28 +521,6 @@ is_parked() {
 }
 
 
-is_subfolder() {
-	# $1 = domain, $2 = subfolder
-	if [[ -n $1 && -n $2 ]]; then
-		if [[ $(is_wp $1 $2) == "true" ]]; then
-			echo "wp"
-		elif [[ $(is_php $1 $2) == "true" ]]; then
-			echo "php"
-		elif [[ $(is_proxy $1 $2) == "true" ]]; then
-			echo "proxy"
-		elif [[ $(is_html $1 $2) == "true" ]]; then
-			echo "html"
-		elif [[ -d /var/www/$1/htdocs/$2 ]]; then
-			echo "true"
-		else
-			echo "false"
-		fi
-	else
-		echo "false"
-	fi
-}
-
-
 is_wp() {
 	# $1 = domain, $2 = WP subfolder
 	[[ -n $2 ]] && local subname=$(echo $2 | sed "s/\//_/g")
@@ -601,6 +579,44 @@ is_wp_installed() {
 		[[ -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup") ]] && echo "true" || echo "false"
 	elif [[ $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) == "true" ]]; then
 		[[ -n $(sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup") ]] && echo "true" || echo "false"
+	else
+		echo "false"
+	fi
+}
+
+
+is_subfolder() {
+	# $1 = domain, $2 = subfolder
+	if [[ -n $1 && -n $2 ]]; then
+		if [[ $(is_wp $1 $2) == "true" ]]; then
+			echo "wp"
+		elif [[ $(is_php $1 $2) == "true" ]]; then
+			echo "php"
+		elif [[ $(is_proxy $1 $2) == "true" ]]; then
+			echo "proxy"
+		elif [[ $(is_html $1 $2) == "true" ]]; then
+			echo "html"
+		elif [[ -d /var/www/$1/htdocs/$2 ]]; then
+			echo "true"
+		else
+			echo "false"
+		fi
+	else
+		echo "false"
+	fi
+}
+
+
+is_empty_root_site() {
+	# $1 = domain
+	if [[ -n $1 ]]; then
+		if [[ $(is_wp $1) == "true" || $(is_php $1) == "true" || $(is_proxy $1) == "true" || $(is_html $1) == "true" || $(is_parked $1) == "true" || $(is_forward $1) == "true" ]]; then
+			echo "false"
+		elif [[ -f /etc/nginx/sites-available/$domain ]]; then
+			echo "true"
+		else
+			echo "false"
+		fi
 	else
 		echo "false"
 	fi

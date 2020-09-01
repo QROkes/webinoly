@@ -893,7 +893,7 @@ php_subfolder() {
 	[[ -n $wp || $(conf_read php-info) == "false" ]] && local file="php.conf" || local file="phpx.conf"
 	
 	sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-$file;" /etc/nginx/sites-available/$domain
-	[[ $(is_html $domain) == "true" ]] && sudo sed -i '/index /c \	index index.html index.htm index.php;' /etc/nginx/sites-available/$domain
+	sudo sed -i '/index /c \	index index.php index.html index.htm;' /etc/nginx/sites-available/$domain
 	
 	sudo cp /etc/nginx/common/$file /etc/nginx/apps.d/$domain$subname-$file
 	sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-$file
@@ -1084,7 +1084,11 @@ reverse_proxy() {
 		exit 1
 	fi
 	
-	[[ -z $subfolder ]] && create_empty_site
+	if [[ ( -z $subfolder || ( -n $subfolder && ! -f /etc/nginx/sites-available/$domain )) && $(is_empty_root_site $domain) == "false" ]]; then
+		create_empty_site
+	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "true" ]]; then
+		echo "${gre}Subfolder configuration found: Main site at${blu} $domain ${gre}root has been successfully set as Reverse-Proxy!${end}"
+	fi
 	
 	is_url $proxydata -split
 	[[ -n $url_scheme ]] && url_scheme="$url_scheme://" || url_scheme="http://"
