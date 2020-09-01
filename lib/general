@@ -4,7 +4,7 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.12.1"
+readonly app_version="1.13.0"
 readonly svr_version="1.5"
 readonly os_ubuntu_supported=(bionic focal)
 readonly php_supported=(7.2 7.3 7.4)
@@ -283,9 +283,9 @@ app_purge() {
 mysql_client_install() {
 	api-events_update im2
 	
-	# Cases with MariaDB v10.4 support - https://downloads.mariadb.org/mariadb/repositories/
+	# https://downloads.mariadb.org/mariadb/repositories/
 	sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
-	sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.4/ubuntu $(check_osname) main"
+	sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.5/ubuntu $(check_osname) main"
 	
 	pre_install
 	sudo apt -y install mariadb-client

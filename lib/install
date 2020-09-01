@@ -232,8 +232,8 @@ mysql_install() {
 	fi
 	
 	# MariaDB Installation
-	echo "mariadb-server-10.4 mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections
-	echo "mariadb-server-10.4 mysql-server/root_password_again password $AUTOGENPASS_ROOT" | debconf-set-selections
+	echo "mariadb-server-10.5 mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections
+	echo "mariadb-server-10.5 mysql-server/root_password_again password $AUTOGENPASS_ROOT" | debconf-set-selections
 	sudo apt -y install mariadb-server
 
 	# Binaly logs disabled by default and Error logging not in syslog (syslog is default).

@@ -426,8 +426,8 @@ webinoly_verify() {
 	if [[ $(conf_read php) == "true" && $(php -v | grep -m1 "" | sed 's/PHP \([^\-]*\).*/\1/' | cut -f 1-2 -d'.') != "7.4" ]]; then
 		echo "[INFO] PHP v7.4 is recommended to get an optimal perfomance!"
 	fi
-	if [[ $(conf_read mysql) == "true" && $(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.') != "10.4" ]]; then
-		echo "[INFO] MariaDB (MySQL) v10.4 is recommended to get an optimal perfomance!"
+	if [[ $(conf_read mysql) == "true" && $(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.') != "10.5" ]]; then
+		echo "[INFO] MariaDB (MySQL) v10.5 is recommended to get an optimal perfomance!"
 	fi
 	
 	# Check OS support

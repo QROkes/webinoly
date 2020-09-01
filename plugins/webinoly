@@ -2,7 +2,7 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
-# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -yoast-sitemap, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -header-referrer, -header-hsts, -header-csp, -skip-cache, -query-string-cache, -query-string-never-cache
+# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -header-referrer, -header-hsts, -header-csp, -skip-cache, -query-string-cache, -query-string-never-cache
 # Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre, -no-recovery, -recalculate
 
 source /opt/webinoly/lib/webin
@@ -124,19 +124,6 @@ elif [[ -n $conf_value ]]; then
 		exit 1
 	fi
 	nginx_not="true" # Nginx-Reload not-needed.
-
-
-elif [[ -n $yoast_sitemap ]]; then
-	if [[ $yoast_sitemap == "on" ]]; then
-		conf_write yoast-sitemap true
-		echo "${gre}Yoast Sitemap Support was successfully enabled!${end}"
-	elif [[ $yoast_sitemap == "off" ]]; then
-		conf_write yoast-sitemap purged
-		echo "${gre}Yoast Sitemap Support was successfully disabled!${end}"
-	else
-		echo "${red}[ERROR] Please, enter a valid option to enable/disable Yoast Sitemap Support!${end}"
-		exit 1
-	fi
 
 
 elif [[ -n $default_site ]]; then

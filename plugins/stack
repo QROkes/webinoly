@@ -213,7 +213,6 @@ elif [[ -n $purge && -n $mysql ]]; then
 			sudo apt -y purge debconf-utils
 			sudo apt -y autoremove
 			
-			# Cases with MariaDB v10.4 support
 			os_name=$(check_osname)
 			sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
 			sudo apt-key del 0xF1656F24C74CD1D8
