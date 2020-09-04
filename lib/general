@@ -585,6 +585,25 @@ is_wp_installed() {
 }
 
 
+is_wp_debug() {
+	[[ -n $1 && -f /var/www/$1/wp-config.php && $( grep -F "'WP_DEBUG'" /var/www/$1/wp-config.php | cut -f 3 -d "'" -s | cut -d " " -f 2 -s ) == "true" ]] && echo "true" || echo "false"
+}
+
+
+is_wp_auth() {
+	[[ -f /etc/nginx/sites-available/$1 && -n $( grep -F "wpcommon.conf;" /etc/nginx/sites-available/$1 ) ]] && echo "true" || echo "false"
+}
+
+
+is_force_redirect() {
+	if [[ -f /etc/nginx/sites-available/$1 && -n $( grep -F "WebinolyWWWredirectStart" /etc/nginx/sites-available/$1 ) ]]; then
+		[[ -n $(sed -n -e '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/p' /etc/nginx/sites-available/$1 | grep -F "server_name www.${1};") ]] && echo "root" || echo "www"
+	else
+		echo "off"
+	fi
+}
+
+
 is_subfolder() {
 	# $1 = domain, $2 = subfolder
 	if [[ -n $1 && -n $2 ]]; then
@@ -646,8 +665,30 @@ is_log() {
 	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "nginx/$1.access.log ") ]] && echo "true" || echo "false"
 }
 
+
 escaped_string() {
 	# Escaped characters: Put a backslash before $.*/[\]^()
 	echo $(echo $1 | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g" | sed -E "s/\(/\\\(/g" | sed -E "s/\)/\\\)/g")
+}
+
+
+site_type() {
+	if [[ -z $1 ]]; then
+		echo "false"
+	elif [[ $(is_parked $1) == "true" ]]; then
+		echo "Parked"
+	elif [[ $(is_wp $1) == "true" ]]; then
+		echo "WordPress"
+	elif [[ $(is_php $1) == "true" ]]; then
+		echo "PHP"
+	elif [[ $(is_html $1) == "true" ]]; then
+		echo "HTML"
+	elif [[ $(is_proxy $1) == "true" ]]; then
+		echo "Reverse Proxy"
+	elif [[ $(is_forward $1) == "true" ]]; then
+		echo "Forward"
+	else
+		echo "false"
+	fi
 }
 

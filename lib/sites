@@ -1324,29 +1324,117 @@ list_sites() {
 	echo ""
 	for site in "/etc/nginx/sites-available"/*
 	do
-		domi=$(echo $site | cut -f 5 -d "/")
-		if [[ $domi != "default" && $domi != $(conf_read tools-port) && $domi != *".dpkg-"* ]]; then
-			[[ -d /var/www/$domi ]] && sign="${gre} +" || sign="${blu} *${gre}"
-			[[ ! -L /etc/nginx/sites-enabled/$domi ]] && sign="${red} -"
-			outlist="$sign $domi ${end}"
+		local domi=$(echo $site | cut -f 5 -d "/")
+		[[ $domi == "default" || $domi == $(conf_read tools-port) || $domi == *".dpkg-"* ]] && continue
+		
+		if [[ $list != "true" ]]; then
+			[[ ${list,,} == "disabled" && -L /etc/nginx/sites-enabled/$domi ]] && continue
+			[[ ${list,,} == "main" && ( ! -L /etc/nginx/sites-enabled/$domi || ! -d /var/www/$domi ) ]] && continue
 			
-			if [[ $list == "raw" || $raw =~ ^(all|parked|disabled|main|true)$ ]]; then
-				outlist="$domi"
-				[[ $raw == "parked" && -d /var/www/$domi ]] && outlist=""
-				[[ $raw == "disabled" && -L /etc/nginx/sites-enabled/$domi ]] && outlist=""
-				[[ $raw == "main" && ( ! -L /etc/nginx/sites-enabled/$domi || ! -d /var/www/$domi ) ]] && outlist=""
-			elif [[ -n $raw ]]; then
-				echo "${red}[ERROR] Please, enter a valid value for RAW!${end}"
-				exit 1
+			[[ ${list,,} == "parked" && $(is_parked $domi) != "true" ]] && continue
+			[[ ${list,,} == "wordpress" && $(is_wp $domi) != "true" ]] && continue
+			[[ ${list,,} == "php" && $(is_php $domi) != "true" ]] && continue
+			[[ ${list,,} == "html" && $(is_html $domi) != "true" ]] && continue
+			[[ ${list,,} == "proxy" && $(is_proxy $domi) != "true" ]] && continue
+			[[ ${list,,} == "forward" && $(is_forward $domi) != "true" ]] && continue
+			
+			[[ ${list,,} == "tools" && $(conf_read tools-site) != $domi ]] && continue
+			[[ ${list,,} == "default" && $(conf_read default-site) != $domi ]] && continue
+			
+			[[ ${list,,} == "ssl" && $(is_ssl $domi) != "true" ]] && continue
+			[[ ${list,,} == "nossl" && $(is_ssl $domi) == "true" ]] && continue
+			
+			[[ ${list,,} == "accesslog" && $(is_log $domi) != "true" ]] && continue
+			[[ ${list,,} == "noaccesslog" && $(is_log $domi) == "true" ]] && continue
+			
+			# Only WordPress options
+			[[ ${list,,} =~ ^(cache|nocache|adminauth|noadminauth|debug|nodebug)$ && $(is_wp $domi) != "true" ]] && continue
+			
+			[[ ${list,,} == "cache" && $(is_wp_cache $domi) != "true" ]] && continue
+			[[ ${list,,} == "nocache" && $(is_wp_cache $domi) == "true" ]] && continue
+			
+			[[ ${list,,} == "adminauth" && $(is_wp_auth $domi) != "true" ]] && continue
+			[[ ${list,,} == "noadminauth" && $(is_wp_auth $domi) == "true" ]] && continue
+			
+			[[ ${list,,} == "debug" && $(is_wp_debug $domi) != "true" ]] && continue
+			[[ ${list,,} == "nodebug" && $(is_wp_debug $domi) == "true" ]] && continue
+		fi
+		
+		if [[ -z $raw && $list != "raw" ]]; then
+			[[ -d /var/www/$domi ]] && local sign="${gre} +" || local sign="${blu} *${gre}"
+			[[ ! -L /etc/nginx/sites-enabled/$domi ]] && local sign="${red} -"
+			
+			[[ $(conf_read default-site) == $domi ]] && local check="${blu}${dim}($(site_type $domi))(Default)" || local check="${blu}${dim}($(site_type $domi))"
+			[[ $(conf_read tools-site) == $domi ]] && local check="${check}(Tools)"
+			[[ $(is_ssl $domi) != "true" ]] && local check="${check}${red}(NoSSL)" || local check="${check}${red}"
+			[[ $(is_log $domi) == "true" ]] && local check="${check}(AccessLog)"
+			
+			if [[ $(is_wp $domi) == "true" ]]; then
+				[[ $(is_wp_cache $domi) != "true" ]] && local check="${check}(NoCache)"
+				[[ $(is_wp_auth $domi) != "true" ]] && local check="${check}(NoAdminAuth)"
+				[[ $(is_wp_debug $domi) == "true" ]] && local check="${check}(Debug)"
 			fi
 			
-			if [[ -n $outlist ]]; then
-				echo "$outlist"
-				nonemptylist=true
-			fi
+			local outlist="$sign $domi $check ${end}"
+		elif [[ $list == "raw" || $raw =~ ^(all|parked|disabled|main|true)$ ]]; then
+			local outlist="$domi"
+		elif [[ -n $raw ]]; then
+			echo "${red}[ERROR] Please, enter a valid value for RAW!${end}"
+			exit 1
+		fi
+		
+		if [[ -n $outlist ]]; then
+			echo "$outlist"
+			local nonemptylist=true
 		fi
 	done
 	[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No sites were found!${end}"
+	echo ""
+}
+
+
+site_info() {
+	local typesite=$(site_type $domain)
+	if [[ $typesite == "false" ]]; then
+		echo "${red}[ERROR] Unrecognized site! ${end}"
+		exit 1
+	fi
+	
+	[[ -L /etc/nginx/sites-enabled/$domain ]] && local status="Enabled" || local status="Disabled"
+	
+	echo ""
+	echo "${blu}Type:${end} $typesite"
+	echo "${blu}Status:${end} $status"
+	
+	if [[ $typesite != "Forward" ]]; then
+		echo "${blu}SSL:${end} $(is_ssl $domain)"
+		echo "${blu}Access Logs:${end} $(is_log $domain)"
+		echo "${blu}Force Redirect:${end} $(is_force_redirect $domain)"
+		[[ $typesite != "Parked" && $typesite != "Reverse Proxy" ]] && echo "${blu}Size:${end} $(sudo du -sh /var/www/$domain | cut -d"/" -f 1 -s)"
+	fi
+	
+	if [[ $typesite == "WordPress" ]]; then
+		echo ""
+		echo "${blu}Cache:${end} $(is_wp_cache $domain)"
+		echo "${blu}Multisite:${end} $(is_wp_multisite $domain)"
+		echo "${blu}WP Auth:${end} $(is_wp_auth $domain)"
+		echo "${blu}Debug:${end} $(is_wp_debug $domain)"
+		echo ""
+		
+		wp_dbdata $domain
+		echo "${blu}Database:${end} $wp_dbhost"
+		echo "${blu}DB Name:${end} $wp_dbname"
+		echo "${blu}DB User:${end} $wp_dbuser"
+		echo "${blu}DB Prefix:${end} $wp_dbpref"
+	fi
+	
+	if [[ $typesite == "Reverse Proxy" ]]; then
+		echo "${blu}Source Server:${end} $(grep "proxy_pass " /etc/nginx/apps.d/$domain-proxy.conf | cut -d " " -f 2 -s | rev | cut -c 2- | rev)"
+	elif [[ $typesite == "Parked" ]]; then
+		echo "${blu}Main Site:${end} $(grep "root " /etc/nginx/sites-available/$domain | cut -d "/" -f 4 -s)"
+	elif [[ $typesite == "Forward" ]]; then
+		echo "${blu}Forwarded to:${end} $(grep "return 301 " /etc/nginx/sites-available/$domain | cut -d " " -f 3 -s | cut -d "$" -f 1 -s)"
+	fi
 	echo ""
 }
 
