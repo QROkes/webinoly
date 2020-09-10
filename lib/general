@@ -586,7 +586,13 @@ is_wp_installed() {
 
 
 is_wp_debug() {
-	[[ -n $1 && -f /var/www/$1/wp-config.php && $( grep -F "'WP_DEBUG'" /var/www/$1/wp-config.php | cut -f 3 -d "'" -s | cut -d " " -f 2 -s ) == "true" ]] && echo "true" || echo "false"
+	if [[ -n $2 && -f /var/www/$1/htdocs$2/wp-config.php ]]; then
+		local wpconfpath="/var/www/$1/htdocs$2/wp-config.php"
+	elif [[ -f /var/www/$1/wp-config.php ]]; then
+		local wpconfpath="/var/www/$1/wp-config.php"
+	fi
+	
+	[[ -n $wpconfpath && $( grep -F "'WP_DEBUG'" $wpconfpath | cut -f 3 -d "'" -s | cut -d " " -f 2 -s ) == "true" ]] && echo "true" || echo "false"
 }
 
 

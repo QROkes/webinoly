@@ -289,18 +289,24 @@ elif [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 				sudo sed -i "/'WP_DEBUG'/c \define('WP_DEBUG', true );" $wpath
 				sudo sed -i "/'WP_DEBUG'/a \define('WP_DEBUG_DISPLAY', $dis );" $wpath
 				sudo sed -i "/'WP_DEBUG'/a \define('WP_DEBUG_LOG', true );" $wpath
-				echo "${gre}WordPress Debug mode for${blu} $domain ${gre}has been successfully enabled!${end}"
+				
+				[[ -n $env ]] && sudo site $domain -env=$env -skip-debug
+				
+				echo "${gre}WordPress Debug mode for${blu} $domain$subfolder ${gre}has been successfully enabled!${end}"
 			else
-				echo "${gre}WordPress Debug mode for${blu} $domain ${gre}is already enabled!${end}"
+				echo "${gre}WordPress Debug mode for${blu} $domain$subfolder ${gre}is already enabled!${end}"
 			fi
 		elif [[ $wp == "off" ]]; then
 			if [[ $iswpdeb == "true" ]]; then
 				sudo sed -i "/'WP_DEBUG'/c \define('WP_DEBUG', false );" $wpath
 				sudo sed -i "/'WP_DEBUG_LOG'/d" $wpath
 				sudo sed -i "/'WP_DEBUG_DISPLAY'/d" $wpath
-				echo "${gre}WordPress Debug mode for${blu} $domain ${gre}has been successfully disabled!${end}"
+				
+				[[ -n $env ]] && sudo site $domain -env=$env -skip-debug
+				
+				echo "${gre}WordPress Debug mode for${blu} $domain$subfolder ${gre}has been successfully disabled!${end}"
 			else
-				echo "${gre}WordPress Debug mode for${blu} $domain ${gre}is already disabled!${end}"
+				echo "${gre}WordPress Debug mode for${blu} $domain$subfolder ${gre}is already disabled!${end}"
 			fi
 		elif [[ $wp != "true" ]]; then
 			echo "${red}[ERROR] Invalid value for WP parameter!${end}"
@@ -315,6 +321,7 @@ elif [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 			echo "${red}[ERROR] WordPress log file not found or still empty!${end}"
 			exit 1
 		fi
+		
 	elif [[ -n $wp ]]; then
 		echo "${red}[ERROR] WordPress configuration file not found!${end}"
 		exit 1

@@ -1216,6 +1216,11 @@ yoast_sitemap() {
 
 
 clone_wp_site() {
+	if [[ -f /etc/nginx/sites-available/$domain && $overwrite == "on" ]]; then
+		echo "${blu}Site already exists! ${dim} Overwriting...${end}"
+		[[ -z $subfolder ]] && sudo site $domain -delete=force > /dev/null 2>&1 || sudo site $domain -subfolder=$subfolder -delete=force > /dev/null 2>&1
+	fi
+	
 	if [[ -n $subfolder ]]; then
 		local wpcon="/var/www/$domain/htdocs$subfolder/wp-config.php"
 		
@@ -1223,7 +1228,6 @@ clone_wp_site() {
 		sudo cp /etc/nginx/apps.d/$clone_from$subname-wpfc.conf /etc/nginx/apps.d/$domain$subname-wpfc.conf
 		sudo cp /etc/nginx/apps.d/$clone_from$subname-wpcommon.conf /etc/nginx/apps.d/$domain$subname-wpcommon.conf
 		sudo cp /etc/nginx/apps.d/$clone_from$subname-wpcommon-noauth.conf /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
-		sudo cp /etc/nginx/apps.d/$clone_from$subname-locations.conf /etc/nginx/apps.d/$domain$subname-locations.conf
 		sudo cp /etc/nginx/apps.d/$clone_from$subname-yoast-sitemap.conf /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
 		
 		sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-php.conf
@@ -1283,7 +1287,9 @@ clone_wp_site() {
 		replace_content="[https://www.$clone_from,https://$domain]" && wp_replace_content > /dev/null 2>&1
 	fi
 	
-	echo "${gre}Site ${blu}'$domain$subfolder'${gre} is now a successfull clone of ${blu}'$clone_from$subfolder'${end}"
+	echo "${gre}Site${blu} $domain$subfolder ${gre}is now a successfull clone of${blu} $clone_from$subfolder ${end}"
+	[[ -n $env && -z $subfolder ]] && sudo site $domain -env=$env
+	[[ -n $env && -n $subfolder ]] && sudo site $domain -env=$env -subfolder=$subfolder
 }
 
 
@@ -1436,5 +1442,70 @@ site_info() {
 		echo "${blu}Forwarded to:${end} $(grep "return 301 " /etc/nginx/sites-available/$domain | cut -d " " -f 3 -s | cut -d "$" -f 1 -s)"
 	fi
 	echo ""
+}
+
+
+wp_env_type() {
+	if [[ $(is_wp $domain $subfolder) != "true" ]]; then
+		echo "${red}[ERROR] Site${blu} $domain ${red}is not a WordPress site!${end}"
+		exit 1
+	elif ! [[ $env =~ ^(production|staging|development|local)$ ]]; then
+		echo "${red}[ERROR] Invalid value for WP environment type!${end}"
+		exit 1
+	fi
+	
+	[[ -z $subfolder ]] && local wpath="/var/www/$domain/wp-config.php" || local wpath="/var/www/$domain/htdocs$subfolder/wp-config.php"
+	[[ -n $( grep -F "'WP_ENVIRONMENT_TYPE'" $wpath ) ]] && sudo sed -i "/'WP_ENVIRONMENT_TYPE'/d" $wpath
+	
+	if [[ $env == "production" ]]; then
+		local index="1"
+		[[ -n $cache ]] && wp_cache
+	else
+		local index="0"
+		sudo sed -i "/stop editing/i \define('WP_ENVIRONMENT_TYPE', '$env');" $wpath
+		if [[ -n $cache ]]; then
+			wp_cache
+		elif [[ $(is_wp_cache $domain $subfolder) == "true" ]]; then
+			cache="off"
+			wp_cache
+		fi
+	fi
+	
+	# Not change WP debug when invoked from LOG command
+	if [[ -z $skip_debug ]]; then
+		if [[ $env =~ ^(production|staging)$ && $(is_wp_debug $domain $subfolder) == "true" ]]; then
+			[[ -z $subfolder ]] && log $domain -wp=off || log $domain -wp=off -subfolder=$subfolder
+		elif [[ $env =~ ^(development|local)$ && $(is_wp_debug $domain $subfolder) != "true" ]]; then
+			[[ -z $subfolder ]] && log $domain -wp=on || log $domain -wp=on -subfolder=$subfolder
+		fi
+	fi
+	
+	# WordPress Reading Settings: Discourage Search Engines
+	wp_dbdata $domain
+	
+	if [[ $(is_wp_installed $domain) == "true" ]]; then
+		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
+			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+USE $wp_dbname;
+UPDATE ${wp_dbpref}options SET option_value='$index' WHERE option_name='blog_public';
+FLUSH PRIVILEGES;
+_EOF_
+		
+		elif [[ $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) == "true" ]]; then
+			sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" <<_EOF_
+USE $wp_dbname;
+UPDATE ${wp_dbpref}options SET option_value='$index' WHERE option_name='blog_public';
+FLUSH PRIVILEGES;
+_EOF_
+		
+		else
+			local index=""
+		fi
+		
+		[[ $index == "0" ]] && echo "${gre}Discourage Search Engines WP option has been enabled for${blu} $domain$subfolder ${gre}site!${end}"
+		[[ $index == "1" ]] && echo "${gre}Discourage Search Engines WP option has been disabled for${blu} $domain$subfolder ${gre}site!${end}"
+	fi
+	
+	echo "${gre}WordPress Environment Type has been set successfully!${end}"
 }
 

@@ -2,8 +2,8 @@
 
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
-# Options: -html, -php, -mysql, -wp, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -yoast-sitemap, -multisite-convert, -clone-from, -replace-content, -redirection, -forward, -info
-# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp, -subfolder, -from, -to, -http-code, -regex, -manual
+# Options: -html, -php, -mysql, -wp, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -yoast-sitemap, -multisite-convert, -clone-from, -replace-content, -redirection, -forward, -info, -env
+# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp, -subfolder, -from, -to, -http-code, -regex, -manual, -overwrite
 
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
@@ -84,13 +84,16 @@ fi
 if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; then
 	echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
 	exit 1
-elif [[ -n $subfolder && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from && -z $replace_content && -z $wp && -z $html && -z $php && -z $mysql && -z $proxy ]]; then
+elif [[ -n $subfolder && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from && -z $replace_content && -z $wp && -z $html && -z $php && -z $mysql && -z $proxy && -z $env ]]; then
 	echo "${red}[ERROR] Subfolder option not supported!${end}"
 	exit 1
 elif [[ -n $subfolder && ( -n $cache || -n $yoast_sitemap || -n $multisite_convert || -n $replace_content ) && ! -d /var/www/$domain/htdocs$subfolder ]]; then
 	echo "${red}[ERROR] Subfolder not found!${end}"
 	exit 1
 elif [[ -n $subfolder && -n $clone_from && ! -d /var/www/$clone_from/htdocs$subfolder ]]; then
+	echo "${red}[ERROR] Subfolder not found!${end}"
+	exit 1
+elif [[ -n $subfolder && -z $clone_from && -n $env && ! -d /var/www/$domain/htdocs$subfolder ]]; then
 	echo "${red}[ERROR] Subfolder not found!${end}"
 	exit 1
 else
@@ -171,6 +174,7 @@ elif [[ -n $wp && -n $domain ]]; then
 		sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
 		[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domain -wp-admin=off > /dev/null 2>&1
 		[[ $(conf_read yoast-sitemap) == "true" ]] && sudo site $domain -yoast-sitemap=on > /dev/null 2>&1
+		[[ -n $env ]] && sudo site $domain -env=$env
 	else
 		if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && $(is_subfolder $domain $subfolder) != "false" ]]; then
 			echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
@@ -182,6 +186,7 @@ elif [[ -n $wp && -n $domain ]]; then
 		fi
 		
 		wp_subfolder
+		[[ -n $env ]] && sudo site $domain -env=$env -subfolder=$subfolder
 	fi
 
 
@@ -329,10 +334,6 @@ elif [[ -n $ssl ]]; then
 		exit 1
 	fi
 
-# FastCGI Cache
-elif [[ -n $cache ]]; then
-	wp_cache
-
 
 # Force www or non-www redirect (www, root, off)
 elif [[ -n $force_redirect && -f /etc/nginx/sites-available/$domain ]]; then
@@ -349,10 +350,10 @@ elif [[ -n $clone_from ]]; then
 	if [[ ! -f /etc/nginx/sites-available/$clone_from ]]; then
 		echo "${red}[ERROR] Site/domain ${blu}'$clone_from'${red} not found!${end}"
 		exit 1
-	elif [[ -f /etc/nginx/sites-available/$domain && -z $subfolder ]]; then
+	elif [[ -f /etc/nginx/sites-available/$domain && -z $subfolder && $overwrite != "on" ]]; then
 		echo "${red}[ERROR] Can not create site${blu} $domain ${red}because already exists!${end}"
 		exit 1
-	elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && -d /var/www/$domain/htdocs$subfolder ]]; then
+	elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && -d /var/www/$domain/htdocs$subfolder && $overwrite != "on" ]]; then
 		echo "${red}[ERROR] Subfolder ${blu}'$subfolder'${red} already exists!${end}"
 		exit 1
 	elif [[ $(is_wp $clone_from $subfolder) != "true" ]]; then
@@ -385,6 +386,17 @@ elif [[ -n $replace_content && -f /etc/nginx/sites-available/$domain ]]; then
 		wp_replace_content
 	fi
 
+
+# WordPress Environment Type
+elif [[ -n $env && -f /etc/nginx/sites-available/$domain ]]; then
+	wp_env_type
+	nginx_not="true" # Nginx-Reload not-needed.
+	
+
+# FastCGI Cache
+elif [[ -n $cache ]]; then
+	wp_cache
+	
 
 # List Sites
 elif [[ -n $list && -z $redirection ]]; then
