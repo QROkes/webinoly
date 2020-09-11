@@ -280,9 +280,9 @@ elif [[ -n $delete && -f /etc/nginx/sites-available/$domain ]]; then
 
 # SSL (Letsencrypt)
 elif [[ -n $ssl ]]; then
-	if [[ $ssl == "renew" && -z $domain ]]; then
+	if [[ $ssl =~ ^(renew|force-renewal-all)$ && -z $domain ]]; then
 			# Post-Hook removed because we always restart nginx at the end of site command
-			sudo certbot renew
+			[[ $ssl == "renew" ]] && sudo certbot renew || sudo certbot renew --force-renewal
 	elif [[ ( $ssl == "on" || $ssl == "force-renewal" ) && -f /etc/nginx/sites-available/$domain ]]; then
 		api-events_update si10
 		if [[ $(is_ssl $domain) == "true" && $ssl != "force-renewal" ]]; then

@@ -95,14 +95,8 @@ site_ssl_on() {
 	do
 		echo "${blu}"
 		read -p "Please, enter an email to register your new certificate: ${end}" cermail
-		if [[ "$cermail" =~ ^[a-z0-9_\+-]+(\.[a-z0-9_\+-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.([a-z]{2,4})$ ]]; then
-			conf_write mail $cermail
-			echo "${gre}Email address has been successfuly validated and saved! ${end}"
-		else
-			cermail=""
-			echo "${red}Please enter a valid email address!"
-		fi
-		echo "${end}"
+		email_update $cermail
+		[[ $(conf_read mail) != $cermail ]] && cermail=""
 	done
 	
 	# Create new certificate

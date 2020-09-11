@@ -698,3 +698,22 @@ site_type() {
 	fi
 }
 
+
+email_update() {
+	echo "${blu}"
+	if [[ -z $1 && ( -z $email || $email == "true" ) ]]; then
+		read -p "Email address: ${end}" mail
+	else
+		[[ -z $1 ]] && local mail=$email || local mail=$1
+	fi
+	
+	if [[ $mail =~ ^[a-z0-9_\+-]+(\.[a-z0-9_\+-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.([a-z]{2,4})$ ]]; then
+		conf_write mail $mail
+		[[ -d /etc/letsencrypt/renewal ]] && sudo certbot update_account --email $mail
+		echo "${gre}Email address has been successfuly validated and saved!"
+	else
+		echo "${red}Please enter a valid email address!"
+	fi
+	echo "${end}"
+}
+
