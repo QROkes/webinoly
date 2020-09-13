@@ -237,22 +237,26 @@ wp_dbdata() {
 	[[ ${wp_dbhost,,} == "localhost" ]] && wp_dbhost=${wp_dbhost,,}
 	[[ -z $wp_dbport ]] && wp_dbport="3306"
 	
-	if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
-		echo "" >&2
-		echo "${gre}External DB${blu} '${wp_dburl}:${wp_dbport}' ${gre}found in${blu} $domain ${gre}(Press 'Enter' key twice to skip)" >&2
-		read -p "${blu}External DB root username [root]: " wp_uroot
-		wp_uroot=${wp_uroot:-root}
-		read -p "External DB root password: " wp_proot
-		
-		external_db="[$wp_uroot,$wp_proot]"
-	elif [[ -n $external_db ]]; then
-		dbdata=${external_db:1:-1}
+	if [[ -n $external_db ]]; then
+		local dbdata=${external_db:1:-1}
 		wp_uroot=$(echo "${dbdata}" | cut -d',' -f 1 -s)
 		wp_proot=$(echo "${dbdata}" | cut -d',' -f 2 -s)
 		if [[ $(echo "${external_db}" | cut -c-1) != "[" || $(echo "${external_db}" | rev | cut -c-1) != "]" || -z $wp_uroot || -z $wp_proot ]]; then
 			echo "${red}[ERROR] Invalid data for External Database!${end}" >&2
 			exit 1
 		fi
+	elif [[ -n $(conf_read external-dbu) && -n $(conf_read external-dbp) && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
+		wp_uroot=$(conf_read external-dbu)
+		wp_proot=$( echo $(conf_read external-dbp) | openssl enc -d -a -salt )
+		external_db="[$wp_uroot,$wp_proot]"
+		echo "${blu}External DB credentials found!${end}" >&2
+	elif [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
+		echo "" >&2
+		echo "${gre}External DB${blu} '${wp_dburl}:${wp_dbport}' ${gre}found in${blu} $domain ${gre}(Press 'Enter' key twice to skip)" >&2
+		read -p "${blu}External DB username: " wp_uroot
+		read -p "External DB password: " wp_proot
+		
+		external_db="[$wp_uroot,$wp_proot]"
 	fi
 }
 

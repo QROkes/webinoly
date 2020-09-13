@@ -23,6 +23,21 @@ if [[ -n $wp || -n $mysql ]]; then
 	[[ $wp == "default"  ]] && wp=true
 	[[ $mysql == "default"  ]] && mysql=true
 
+	# Check for saved DB external data
+	if [[ ( $wp == "true" || $mysql == "true" ) && -n $(conf_read external-dbh) && -n $(conf_read external-dbu) && -n $(conf_read external-dbp) ]]; then
+		dona=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
+		
+		if [[ -n $(conf_read external-dbh) && -n $(conf_read external-dbx) ]]; then
+			exth="$(conf_read external-dbh):$(conf_read external-dbx)"
+		elif [[ -n $(conf_read external-dbh) ]]; then
+			exth=$(conf_read external-dbh)
+		fi
+		
+		[[ $wp == "true" ]] && wp=[true,true,$exth,$dona,$dona,random,wp_,$(conf_read external-dbu),$(conf_read external-dbp)]
+		[[ $mysql == "true" ]] && mysql=[$exth,$dona,$dona,random,$(conf_read external-dbu),$(conf_read external-dbp)]
+		echo "${blu}External DB credentials found!${end}"
+	fi
+
 	if [[ ( -n $wp && $wp != true ) || ( -n $mysql && $mysql != true ) ]]; then
 		if [[ $wp == "custom" || $mysql == "custom" ]]; then
 			[[ -n $mysql ]] && type="0" || type="1"

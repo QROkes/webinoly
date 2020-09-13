@@ -790,16 +790,44 @@ server_reset() {
 
 
 show_db_data() {
+	if [[ -n $(conf_read external-dbu) && -n $(conf_read external-dbp) ]]; then
+		local extu=$(conf_read external-dbu)
+		local extp=$( echo $(conf_read external-dbp) | openssl enc -d -a -salt )
+		
+		if [[ -n $(conf_read external-dbh) && -n $(conf_read external-dbx) ]]; then
+			local exth="$(conf_read external-dbh):$(conf_read external-dbx)"
+		elif [[ -n $(conf_read external-dbh) ]]; then
+			local exth=$(conf_read external-dbh)
+		fi
+	fi
+	
 	if [[ -n $(conf_read mysql-root) || -n $(conf_read mysql-admin) ]]; then
-		rpass=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-		apass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+		local rpass=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+		local apass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 		echo ""
-		[[ $dbpass == "raw" || -n $raw ]] && echo "root:$rpass" || echo "${gre}${bol}  root:${end}${gre}${dim} $rpass ${end}"
-		[[ $dbpass == "raw" || -n $raw ]] && echo "admin:$apass" || echo "${gre}${bol}  admin:${end}${gre}${dim} $apass ${end}"
+		[[ ( $dbpass == "raw" || -n $raw ) || -z $extu ]] || echo "${gre}Localhost Credentials${end}"
+		[[ $dbpass == "raw" || -n $raw ]] && echo "root:$rpass" || echo "${blu}${bol}  root:${end}${blu}${dim} $rpass ${end}"
+		[[ $dbpass == "raw" || -n $raw ]] && echo "admin:$apass" || echo "${blu}${bol}  admin:${end}${blu}${dim} $apass ${end}"
 		echo ""
 	else
+		echo "${blu}"
+		echo "Localhost credentials not found!"
+		echo "${end}"
+	fi
+	
+	if [[ -n $extu ]]; then
+		echo ""
+		[[ $dbpass == "raw" || -n $raw ]] || echo "${gre}External DB Credentials${end}"
+		[[ ( $dbpass == "raw" || -n $raw ) && -n $exth ]] && echo "Host:$exth" 
+		[[ ( $dbpass != "raw" && -z $raw ) && -n $exth ]] && echo "${blu}${bol}  Host:${end}${blu}${dim} $exth ${end}"
+		[[ $dbpass == "raw" || -n $raw ]] && echo "User:$extu" || echo "${blu}${bol}  User:${end}${blu}${dim} $extu ${end}"
+		[[ $dbpass == "raw" || -n $raw ]] && echo "Password:$extp" || echo "${blu}${bol}  Password:${end}${blu}${dim} $extp ${end}"
+		echo ""
+	fi
+	
+	if [[ -z $rpass && -z $extu ]]; then
 		echo "${red}"
-		echo "[ERROR] DB Passwords not found!"
+		echo "[ERROR] DB Credentials not found!"
 		echo "${end}"
 		exit 1
 	fi
@@ -1772,7 +1800,13 @@ database_import() {
 		echo "${red}[ERROR] Please, enter a valid file path!${end}"
 		exit 1
 	fi
-
+	
+	if [[ -n $(conf_read external-dbh) && -n $(conf_read external-dbu) && -n $(conf_read external-dbp) ]]; then
+		[[ -n $(conf_read external-dbx) ]] && local exthost="$(conf_read external-dbh):$(conf_read external-dbx)" || local exthost="$(conf_read external-dbh)"
+		external_db="[$(conf_read external-dbu),$( echo $(conf_read external-dbp) | openssl enc -d -a -salt ),$exthost]"
+		echo "${blu}External DB credentials found!${end}"
+	fi
+	
 	if [[ -n $external_db ]]; then
 		check_for_mysql_client
 		local dbdata=${external_db:1:-1}
@@ -2003,5 +2037,49 @@ if (\$arg_${value}) {
 			echo "${gre}Cache rule already exists!${end}"
 		fi
 	fi
+}
+
+
+ext_db_save() {
+	if [[ $external_db_save == "true" ]]; then
+		read -p "${blu} User: ${end}" user
+		read -p "${blu} Password: ${end}" pass
+		
+		if [[ -z $user || -z $pass || $user =~ [:]+ || $pass =~ [:]+ ]]; then
+			echo "${red}[ERROR] Invalid data for External Database!${end}"
+			exit 1
+		fi
+		
+		read -p "${blu} Host: ${end}" host
+	else
+		local dbdata=${external_db_save:1:-1}
+		local user=$(echo "${dbdata}" | cut -d',' -f 1 -s)
+		local pass=$(echo "${dbdata}" | cut -d',' -f 2 -s)
+		local host=$(echo "${dbdata}" | cut -d',' -f 3 -s)
+		
+		if [[ $(echo "${external_db_save}" | cut -c-1) != "[" || $(echo "${external_db_save}" | rev | cut -c-1) != "]" || -z $user || -z $pass || $user =~ [:]+ || $pass =~ [:]+ ]]; then
+			echo "${red}[ERROR] Invalid data for External Database!${end}"
+			exit 1
+		fi
+	fi
+	
+	if [[ -n $host ]]; then
+		is_url $host -split
+		if [[ -z $url_path && ( $(is_url $host) =~ ^(http|https|true)$ || $(is_ip $url_host) == "true" ) ]]; then
+			conf_write external-dbh $url_host
+			[[ -n $url_port ]] && conf_write external-dbx $url_port || conf_delete external-dbx
+		else
+			echo "${red}[ERROR] Invalid database host/port!${end}"
+			exit 1
+		fi
+	else
+		conf_delete external-dbh
+		conf_delete external-dbx
+	fi
+	
+	conf_write external-dbu $user
+	conf_write external-dbp $( echo $pass | openssl enc -a -salt )
+	
+	echo "${gre}External DB data successfully saved!${end}"
 }
 

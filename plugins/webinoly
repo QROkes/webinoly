@@ -2,7 +2,7 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
-# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -header-referrer, -header-hsts, -header-csp, -skip-cache, -query-string-cache, -query-string-never-cache, -email
+# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -header-referrer, -header-hsts, -header-csp, -skip-cache, -query-string-cache, -query-string-never-cache, -email, -external-db-save
 # Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre, -no-recovery, -recalculate
 
 source /opt/webinoly/lib/webin
@@ -266,6 +266,11 @@ elif [[ -n $query_string_cache || -n $query_string_never_cache || -n $skip_cache
 
 elif [[ -n $email ]]; then
 	email_update
+	nginx_not="true" # Nginx-Reload not-needed.
+	
+	
+elif [[ -n $external_db_save ]]; then
+	ext_db_save
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 
