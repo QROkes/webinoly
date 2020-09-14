@@ -24,7 +24,15 @@ waiting_for_log() {
 
 
 if [[ -n $purge ]]; then
-	if [[ $purge != "force" ]]; then
+	if [[ $purge =~ ^(nginx|letsencrypt|mysql|redis|force)$ ]]; then
+		answer="Y"
+		if [[ $purge =~ ^(nginx|letsencrypt|mysql|redis)$ ]]; then
+			fol="/$purge"
+			mes="($purge) "
+		else
+			fol=""
+		fi
+	elif [[ $purge =~ ^(all|true)$ ]]; then
 		echo "${gre}"
 		echo "All your logs GZ files will be removed from your server!"
 		echo "${blu}Are you sure [y/N]? "
@@ -34,12 +42,16 @@ if [[ -n $purge ]]; then
 			[[ $answer = [YyNn] ]] && break
 		done
 	else
-		answer="Y"
+		echo "${red}[ERROR] Invalid log value!${end}"
+		exit 1
 	fi
 	
-	if [[ $answer == [Yy] ]]; then
-		sudo find /var/log -name "*.gz" -type f -delete
-		echo "${gre}All your logs GZ files has been successfully removed from your server!${end}"
+	if [[ ! -d /var/log$fol ]]; then
+		echo "${red}[ERROR] Log folder not found!${end}"
+		exit 1
+	elif [[ $answer == [Yy] ]]; then
+		sudo find /var/log$fol -name "*.gz" -type f -delete
+		echo "${gre}All your logs ${mes}GZ files has been successfully removed from your server!${end}"
 	else
 		echo "${red}Action aborted!${end}"
 		exit 1
