@@ -174,12 +174,9 @@ wpinstall() {
 					url_path=""
 					done="0"
 					continue 1
-				elif [[ $(is_url $dbhost) =~ ^(http|https)$ ]]; then	
+				elif [[ $(is_url $dbhost) =~ ^(http|https|true)$ ]]; then	
 					local dburl=$url_host
 					local dbport=$url_port
-				elif [[ $(is_url $dbhost) == "true" || $(is_ip $dburl) == "true" ]]; then	
-					local dburl=$(echo "$dbhost" | cut -f 1 -d ':')
-					local dbport=$(echo "$dbhost" | cut -f 2 -d ':' -s)
 				else
 					echo "${red}[ERROR] Invalid database host/port!${blu}"
 					done="0"
@@ -196,11 +193,9 @@ wpinstall() {
 				echo "${blu}"
 				
 				if [[ $type == 1 || ($type == [35] && ( -z $dburoot || -z $dbproot )) ]]; then
-					read -p "External DB root username [root]: " dburoot
-					read -p "External DB root password: " dbproot
+					read -p "External DB username: " dburoot
+					read -p "External DB password: " dbproot
 					echo ""
-					local dburoot=${dburoot:-root}
-					local dbproot=${dbproot:-nodefined}
 				fi
 			fi
 			
@@ -214,6 +209,7 @@ wpinstall() {
 				
 				# While loop
 				done="0"
+				echo "${blu}"
 				continue 1;
 			fi
 			
@@ -593,7 +589,8 @@ createsite() {
 	# Activate FastCgi cache
 	if [[ $cache == "on" && $type == [123] ]]; then
 		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
-		wp_cache_plugins
+		[[ -z $wp_cache_plugins || $wp_cache_plugins == "on" ]] && wp_cache_plugins
+		echo "${gre}WordPress Cache successfully enabled!${end}"
 	fi
 	
 	# Check if only-error log is enabled
@@ -610,11 +607,9 @@ edit_wp_db_url() {
 	#Example: edit_wp_db_url example.com "http://${domain}${subfolder}"
 	wp_dbdata $1
 	if [[ -n $1 && -n $2 && $(is_wp $1) == "true" && $(is_wp_installed $1) == "true" ]]; then
-		local doms=$(echo $1$subfolder | sed "s/[^0-9A-Za-z]/_/g")
-		
 		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
 			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
-USE $doms;
+USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
 FLUSH PRIVILEGES;
@@ -622,7 +617,7 @@ _EOF_
 
 		elif [[ $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) == "true" ]]; then
 			sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" <<_EOF_
-USE $doms;
+USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
 FLUSH PRIVILEGES;
@@ -929,7 +924,8 @@ wp_subfolder() {
 	# Activate FastCgi cache
 	if [[ $cache == "on" ]]; then
 		sudo sed -i "/$domain$subname-php.conf;/c \	include apps.d/$domain$subname-wpfc.conf;" /etc/nginx/sites-available/$domain
-		wp_cache_plugins
+		[[ -z $wp_cache_plugins || $wp_cache_plugins == "on" ]] && wp_cache_plugins
+		echo "${gre}WordPress Cache successfully enabled!${end}"
 	fi
 		
 	sudo chown -R www-data:www-data /var/www
@@ -1145,16 +1141,22 @@ wp_cache() {
 			[[ -z $subfolder ]] && sudo sed -i '/ common\/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
 			[[ -n $subfolder ]] && sudo sed -i "/ apps.d\/$domain$subname-php.conf;/c \	include apps.d/$domain$subname-wpfc.conf;" /etc/nginx/sites-available/$domain
 			if [[ $(is_parked $domain) == "false" && ( ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/nginx-helper || ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/redis-cache ) ]]; then
-				echo "${gre}"
-				echo "We recommend Nginx Helper Plugin and Redis Object Cache Plugin as an easy way to manage FastCGI and Redis Cache on your WordPress site."
-				echo "${blu}Do you want to install it now [Y/n]? ${end}"
-				while read -r -n 1 -s answer; do
-				  answer=${answer:-y}
-				  if [[ $answer = [YyNn] ]]; then
-					[[ $answer = [Yy] ]] && wp_cache_plugins
-					break
-				  fi
-				done
+				if [[ -z $wp_cache_plugins ]]; then
+					echo "${gre}"
+					echo "We recommend Nginx Helper Plugin and Redis Object Cache Plugin as an easy way to manage FastCGI and Redis Cache on your WordPress site."
+					echo "${blu}Do you want to install it now [Y/n]? ${end}"
+					while read -r -n 1 -s answer; do
+					  answer=${answer:-y}
+					  if [[ $answer = [YyNn] ]]; then
+						[[ $answer = [Yy] ]] && wp_cache_plugins
+						break
+					  fi
+					done
+				elif [[ $wp_cache_plugins == "on" ]]; then
+					wp_cache_plugins
+				else
+					echo "${blu}WordPress Cache Plugins check bypassed! ${end}"
+				fi
 			fi
 			echo "${gre}"
 			echo "FastCGI Cache in${blu} $domain$subfolder ${gre}has been successfully enabled! "

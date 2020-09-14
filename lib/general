@@ -713,6 +713,8 @@ email_update() {
 	
 	if [[ $mail =~ ^[a-z0-9_\+-]+(\.[a-z0-9_\+-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.([a-z]{2,4})$ ]]; then
 		conf_write mail $mail
+		[[ ! -f /root/.forward ]] && sudo touch /root/.forward || sudo truncate -s 0 /root/.forward
+		sudo echo "$mail" >> /root/.forward
 		[[ -d /etc/letsencrypt/renewal ]] && sudo certbot update_account --email $mail
 		echo "${gre}Email address has been successfuly validated and saved!"
 	else
