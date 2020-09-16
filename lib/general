@@ -485,8 +485,8 @@ is_php() {
 		local isphp=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -E " common/phpx?\.conf;")
 		
 		if [[ -n $2 && $(is_wp $1 $2) == "false" ]]; then
-			local subname=$(echo $2 | sed "s/\//_/g")
-			if [[ -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -E " apps\.d/$1$subname-phpx?\.conf;") ]]; then
+			local subn=$(echo $2 | sed "s/\//_/g")
+			if [[ -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -E " apps\.d/$1$subn-phpx?\.conf;") ]]; then
 				echo "true"
 			else
 				echo "false"
@@ -504,8 +504,8 @@ is_php() {
 
 is_proxy() {
 	# $1 = domain, $2 = subfolder
-	[[ -n $2 ]] && local subname=$(echo $2 | sed "s/\//_/g")
-	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " apps.d/$1$subname-proxy.conf;") ]] && echo "true" || echo "false"
+	[[ -n $2 ]] && local subn=$(echo $2 | sed "s/\//_/g")
+	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " apps.d/$1$subn-proxy.conf;") ]] && echo "true" || echo "false"
 }
 
 
@@ -527,10 +527,10 @@ is_parked() {
 
 is_wp() {
 	# $1 = domain, $2 = WP subfolder
-	[[ -n $2 ]] && local subname=$(echo $2 | sed "s/\//_/g")
+	[[ -n $2 ]] && local subn=$(echo $2 | sed "s/\//_/g")
 	if [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/wpcommon") ]]; then
 		echo "true"
-	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -f /etc/nginx/apps.d/$1$subname-wpcommon.conf && -f /var/www/$1/htdocs$2/wp-config.php ]]; then
+	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -f /etc/nginx/apps.d/$1$subn-wpcommon.conf && -f /var/www/$1/htdocs$2/wp-config.php ]]; then
 		echo "true"
 	else
 		echo "false"
@@ -539,10 +539,10 @@ is_wp() {
 
 is_wp_cache() {
 	# $1 = domain, $2 = WP subfolder
-	[[ -n $2 ]] && local subname=$(echo $2 | sed "s/\//_/g")
+	[[ -n $2 ]] && local subn=$(echo $2 | sed "s/\//_/g")
 	if [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/wpfc.conf;") ]]; then
 		echo "true"
-	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/# WebinolyCustom/,$p' /etc/nginx/sites-available/$1 | grep -F "$1$subname-wpfc.conf;") ]]; then
+	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/# WebinolyCustom/,$p' /etc/nginx/sites-available/$1 | grep -F "$1$subn-wpfc.conf;") ]]; then
 		echo "true"
 	else
 		echo "false"

@@ -133,6 +133,13 @@ elif [[ -n $mysql || ( -n $php && -n $domain ) ]]; then
 			echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
 			exit 1
 		elif [[ -n $subfolder ]]; then
+			
+			# Temporary FIX
+			if [[ $(is_proxy $domain) == "true" ]]; then
+				echo "${red}[ERROR] Subfolders are not supported when main site is Reverse Proxy! (We will fix this issue soon)${end}"
+				exit 1
+			fi
+			
 			[[ ! -f /etc/nginx/sites-available/$domain ]] && create_empty_site
 			php_subfolder
 			sudo mkdir -p /var/www/$domain/htdocs$subfolder
@@ -155,6 +162,13 @@ elif [[ -n $mysql || ( -n $php && -n $domain ) ]]; then
 
 # Create HTML site
 elif [[ -n $html && -n $domain ]]; then
+	
+	# Temporary FIX
+	if [[ $(is_proxy $domain) == "true" ]]; then
+		echo "${red}[ERROR] Subfolders are not supported when main site is Reverse Proxy! (We will fix this issue soon)${end}"
+		exit 1
+	fi
+	
 	if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" ]]; then
 		echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
 		exit 1
@@ -191,6 +205,12 @@ elif [[ -n $wp && -n $domain ]]; then
 		[[ $(conf_read yoast-sitemap) == "true" ]] && sudo site $domain -yoast-sitemap=on > /dev/null 2>&1
 		[[ -n $env ]] && sudo site $domain -env=$env
 	else
+		# Temporary FIX
+		if [[ $(is_proxy $domain) == "true" ]]; then
+			echo "${red}[ERROR] Subfolders are not supported when main site is Reverse Proxy! (We will fix this issue soon)${end}"
+			exit 1
+		fi
+	
 		if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && $(is_subfolder $domain $subfolder) != "false" ]]; then
 			echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
 			exit 1
