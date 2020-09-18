@@ -3,7 +3,7 @@
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
 # Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -header-referrer, -header-hsts, -header-csp, -skip-cache, -query-string-cache, -query-string-never-cache, -email, -external-db-save
-# Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre, -no-recovery, -recalculate
+# Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre, -no-recovery, -recalculate, -dbname
 
 source /opt/webinoly/lib/webin
 source /opt/webinoly/lib/bkp
@@ -172,7 +172,7 @@ elif [[ -n $smtp ]]; then
 
 elif [[ -n $backup ]]; then
 	check_for_nginx_tool
-	if [[ -n $list ]]; then
+	if [[ -n $list && -z $add_db_pre ]]; then
 		bkp_s3_list
 	elif [[ $backup == "local" ]]; then
 		bkp_local_db

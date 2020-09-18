@@ -28,21 +28,69 @@ bucket_validation() {
 bkp_local_db() {
 	check_for_mysql_client
 	
-	[[ -z $wp || $wp == "true" ]] && read -p "${gre}WordPress site: ${end}" wp
+	if [[ ( -z $wp || $wp == "true") && ( -z $dbname || $dbname == "true" ) ]]; then
+		read -p "${gre}WordPress site (domain) or Database name: ${end}" dbq
+		if [[ -n $dbq && -f /etc/nginx/sites-available/$dbq ]]; then
+			wp=$dbq
+		elif [[ -n $dbq ]]; then
+			dbname=$dbq
+			wp=""
+		else
+			echo "${red}[ERROR] Invalid value!${end}"
+			exit 1
+		fi
+	fi
 	
-	wp_dbdata $wp
-	if [[ -z $wp || $(is_wp $wp $subfolder) != "true"  ]]; then
-		echo "${red}[ERROR] Please, enter a valid WP site!${end}"
-		exit 1
-	elif [[ $(is_wp_installed $wp) != "true"  ]]; then
-		echo "${red}[ERROR] Your WP site database is still empty!${end}"
-		exit 1
+	if [[ -n $wp ]]; then
+		if [[ $(is_wp $wp $subfolder) != "true"  ]]; then
+			echo "${red}[ERROR] Please, enter a valid WP site!${end}"
+			exit 1
+		elif [[ $(is_wp_installed $wp) != "true"  ]]; then
+			echo "${red}[ERROR] Your WP site database is still empty!${end}"
+			exit 1
+		else
+			wp_dbdata $wp
+			local dbname=$wp_dbname
+			local dburl=$wp_dburl
+			local dbport=$wp_dbport
+			local uroot=$wp_uroot
+			local proot$wp_proot
+		fi
+	else
+		if [[ -z $external_db ]]; then
+			local checkdbname=$(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $dbname)
+		else
+			local dbdata=${external_db:1:-1}
+			local uroot=$(echo "${dbdata}" | cut -d',' -f 1 -s)
+			local proot=$(echo "${dbdata}" | cut -d',' -f 2 -s)
+			local dbhost=$(echo "${dbdata}" | cut -d',' -f 3 -s)
+			local dburl=$(echo "$dbhost" | cut -f 1 -d ':')
+			local dbport=$(echo "$dbhost" | cut -f 2 -d ':' -s)
+		
+			if [[ $(echo "${external_db}" | cut -c-1) != "[" || $(echo "${external_db}" | rev | cut -c-1) != "]" || -z $uroot || -z $proot || -z $dburl || -z $dbport ]]; then
+				echo "${red}[ERROR] Invalid data for External Database!${end}"
+				exit 1
+			elif [[ $(check_mysql_connection $dburl $dbport $uroot $proot) != "true" ]]; then
+				echo "${red}[ERROR] Cannot connect with your External Database!${end}"
+				exit 1
+			fi
+			
+			local checkdbname=$(sudo mysqlshow -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" | grep -ow $dbname)
+		fi
+		
+		if [[ $checkdbname != $dbname  ]]; then
+			echo "${red}[ERROR] Database not found!${end}"
+			exit 1
+		fi
+		
 	fi
 	
 	# Always go with default path, except if parameter is entered and empty
 	[[ $destination == "true" ]] && read -p "${gre}Destination: ${end}" destination
+	[[ -n $wp ]] && local fn=$wp || local fn=$dbname
+	
 	if [[ -z $destination || $destination == "default" ]]; then
-		destination="$HOME/webinoly-backups/$wp"
+		destination="$HOME/webinoly-backups/$fn"
 		sudo mkdir -p $destination
 	
 	# Must start with / and can not end with /
@@ -54,16 +102,15 @@ bkp_local_db() {
 		exit 1
 	fi
 	
-	local filename="webinoly-backup-db_${wp}_$(date +%F)-$(date +%T).sql"
-	if [[ $wp_dbhost == "localhost" ]]; then
-		local adminpass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
-		sudo mysqldump --user=admin --password=$adminpass --single-transaction --lock-tables --quick --databases $wp_dbname > $destination/$filename
+	local filename="webinoly-backup-db_${fn}_$(date +%F)-$(date +%T).sql"
+	if [[ $wp_dbhost == "localhost" && -z $dbhost ]]; then
+		sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick --databases $dbname > $destination/$filename
 	else
-		sudo mysqldump -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" --single-transaction --lock-tables --quick --databases $wp_dbname > $destination/$filename
+		sudo mysqldump -h "$dburl" -P "$dbport" -u"$uroot" -p"$proot" --single-transaction --lock-tables --quick --databases $dbname > $destination/$filename
 	fi
 	
 	if [[ -s $destination/$filename ]]; then
-		echo "${gre}Database local backup successfully done!${end}"
+		echo "${gre}Database local backup successfully done!${end}${dim} ($destination/$filename)${end}"
 		[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket
 		[[ -n $max && $max =~ ^[0-9]+$ ]] && sudo ls -1t $destination | tail -n +$((max+1)) | xargs -d '\n' -I '%' sudo rm -f $destination/%
 	else
@@ -126,13 +173,46 @@ bkp_s3_profile() {
 	elif [[ -n $restore ]]; then
 		check_duply_profile
 		
-		if [[ $restore == "true" ]]; then
-			echo ""
-			# We don't do a restore path validation because duply can handle it better.
-			read -p "${gre}Restore destination folder: ${end}" restore
+		# Temporary check!!!! Should be removed soon!!!
+		if [[ $restore != "true" && -z $destination ]]; then
+			echo "${red}[ERROR] Backup Restore syntax has changed, destination paramater is needed!${end}"
+			exit 1
 		fi
 		
-		sudo duply $profile restore $restore $date
+		if [[ -z $destination || $destination == "true" ]]; then
+			echo ""
+			# We don't do a destination path validation because duply can handle it better.
+			read -p "${gre}Restore destination folder: ${end}" destination
+			
+			if [[ -z $destination ]]; then
+				echo "${red}[ERROR] Invalid destination path!${end}"
+				exit 1
+			fi
+		fi
+		
+		[[ $restore != "true" ]] && sudo duply $profile fetch $restore $destination $date || sudo duply $profile restore $destination $date
+		
+		
+	elif [[ -n $add_db_pre && -n $list ]]; then
+		check_duply_profile
+		
+		if [[ -s $HOME/.duply/$profile/pre ]]; then
+			echo ""
+			echo "${gre}The following lines will be executed every time just before (PRE)${blu} '$profile' ${gre}backup is run:${blu}"
+			cat $HOME/.duply/$profile/pre
+			echo "${end}"
+		else
+			echo "${red}[ERROR] PRE Database backups is empty!${end}"
+			exit 1
+		fi
+	
+	
+	elif [[ -n $add_db_pre && -n $purge ]]; then
+		check_duply_profile	
+		sudo rm -rf $HOME/.duply/$profile/pre
+		echo "${gre}PRE Database backups for${blu} '$profile' ${gre}has been successfully removed!${end}"
+		
+		
 	elif [[ -n $add_db_pre ]]; then
 		check_duply_profile
 		
@@ -143,8 +223,8 @@ bkp_s3_profile() {
 			exit 1
 		fi
 		
-		wp_dbdata $add_db_pre
-		if [[ $wp_dbhost != "localhost" ]]; then
+		wp_dbdata $add_db_pre false
+		if [[ $wp_dbhost != "localhost" && -z $(conf_read external-dbu) && -z $(conf_read external-dbp) ]]; then
 			echo "${red}[ERROR] Database host is not localhost!${end}"
 			exit 1
 		fi
