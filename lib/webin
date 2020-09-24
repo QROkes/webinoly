@@ -1828,10 +1828,12 @@ database_import() {
 	if [[ -n $external_db ]]; then
 		echo "${dim}Wait while we import your db... ${end}"
 		sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$uroot" -p"$proot" < $file
+		sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$uroot" -p"$proot" -e "FLUSH PRIVILEGES;"
 		echo "${gre}Database successfully imported!${end}"
 	elif [[ -z $external_db && $(check_mysql_connection localhost) == "true" ]]; then
 		check_for_mysql -ask
 		sudo mysql -u admin -p$ADMIN_PASS < $file
+		sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "FLUSH PRIVILEGES;"
 		echo "${gre}Database successfully imported!${end}"
 	else
 		echo "${red}[ERROR] A connection can not be established with MySQL localhost!${end}"
@@ -2081,5 +2083,171 @@ ext_db_save() {
 	conf_write external-dbp $( echo $pass | openssl enc -a -salt )
 	
 	echo "${gre}External DB data successfully saved!${end}"
+}
+
+
+conf_read_exported() {
+	local val=$(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf.exported | cut -f 2 -d ':')
+	echo $val
+}
+
+
+check_exported_conf() {
+	
+	# Check for stack variables
+	[[ -n $(conf_read_exported tools-port) ]] && conf_write tools-port $(conf_read_exported tools-port)
+	[[ -n $(conf_read_exported fastcgi-conf) ]] && conf_write fastcgi-conf $(conf_read_exported fastcgi-conf)
+	[[ -n $(conf_read_exported fd-ratio) ]] && conf_write fd-ratio $(conf_read_exported fd-ratio)
+	[[ -n $(conf_read_exported nginx-fd-ratio) ]] && conf_write nginx-fd-ratio $(conf_read_exported nginx-fd-ratio)
+	[[ -n $(conf_read_exported swap-mem) ]] && conf_write swap-mem $(conf_read_exported swap-mem)
+	[[ -n $(conf_read_exported nginx-ppa) ]] && conf_write nginx-ppa $(conf_read_exported nginx-ppa)
+	[[ -n $(conf_read_exported timezone) ]] && conf_write timezone $(conf_read_exported timezone)
+	
+	[[ -n $(conf_read_exported php-ver) ]] && conf_write php-ver $(conf_read_exported php-ver)
+	[[ -n $(conf_read_exported php-info) ]] && conf_write php-info $(conf_read_exported php-info)
+	[[ -n $(conf_read_exported max-mb-uploads) ]] && conf_write max-mb-uploads $(conf_read_exported max-mb-uploads)
+	[[ -n $(conf_read_exported redis-max-mem) ]] && conf_write redis-max-mem $(conf_read_exported redis-max-mem)
+	[[ -n $(conf_read_exported php-max-mem) ]] && conf_write php-max-mem $(conf_read_exported php-max-mem)
+	[[ -n $(conf_read_exported php-pm) ]] && conf_write php-pm $(conf_read_exported php-pm)
+	[[ -n $(conf_read_exported php-max-child) ]] && conf_write php-max-child $(conf_read_exported php-max-child)
+	[[ -n $(conf_read_exported php-max-time) ]] && conf_write php-max-time $(conf_read_exported php-max-time)
+
+	
+	# Built stack based on exported conf
+	if [[ $(conf_read_exported nginx) == "true" && $(conf_read_exported nginx-tool) == "true" ]]; then
+		sudo stack -nginx
+	elif [[ $(conf_read_exported nginx) == "true" ]]; then
+		sudo stack -nginx -notools
+	fi
+	
+	if [[ $(conf_read_exported php) == "true" && $(conf_read_exported php-tool) == "true" ]]; then
+		sudo stack -php
+	elif [[ $(conf_read_exported php) == "true" ]]; then
+		sudo stack -php -notools
+	fi
+	
+	if [[ $(conf_read_exported mysql) == "true" && $(conf_read_exported mysql-tool) == "true" ]]; then
+		sudo stack -mysql
+	elif [[ $(conf_read_exported mysql) == "true" ]]; then
+		sudo stack -mysql -notools
+	elif [[ $(conf_read_exported mysql-client) == "true" ]]; then
+		mysql_client_install
+	fi
+
+	
+	# Load custom conf
+	[[ -n $(conf_read_exported login-www-data) ]] && sudo webinoly -login-www-data=on
+	[[ -n $(conf_read_exported mail) ]] && sudo webinoly -email=$(conf_read_exported mail)
+	[[ -n $(conf_read_exported header-hsts) ]] && sudo webinoly -header-hsts=$(conf_read_exported header-hsts)
+	[[ -n $(conf_read_exported header-referrer) ]] && sudo webinoly -header-referrer=$(conf_read_exported header-referrer)
+	[[ -s /opt/webinoly/templates/source/csp_webinoly.data ]] && sudo webinoly -header-csp=reload
+	
+	[[ -n $(conf_read_exported log-lines) ]] && conf_write log-lines $(conf_read_exported log-lines)
+	[[ -n $(conf_read_exported awsiamrole) ]] && conf_write awsiamrole $(conf_read_exported awsiamrole)
+	[[ -n $(conf_read_exported wp-admin-auth) ]] && conf_write wp-admin-auth $(conf_read_exported wp-admin-auth)
+	[[ -n $(conf_read_exported global-access-log-off) ]] && conf_write global-access-log-off $(conf_read_exported global-access-log-off)
+	[[ -n $(conf_read_exported external-dbh) ]] && conf_write external-dbh $(conf_read_exported external-dbh)
+	[[ -n $(conf_read_exported external-dbx) ]] && conf_write external-dbx $(conf_read_exported external-dbx)
+	[[ -n $(conf_read_exported external-dbu) ]] && conf_write external-dbu $(conf_read_exported external-dbu)
+	[[ -n $(conf_read_exported external-dbp) ]] && conf_write external-dbp $(conf_read_exported external-dbp)
+
+}
+
+
+export_server() {
+	check_for_nginx
+	local filename="webinoly_full_backup_$(date +%F)-$(date +%T)"
+	
+	# Create Temporary Files
+	sudo cp /opt/webinoly/webinoly.conf /opt/webinoly/webinoly.conf.exported
+	[[ $(conf_read mysql) == "true" && -z $skip_db ]] && sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick --all-databases > /var/www/webinoly_all_databases_backup
+	
+	# Create TAR file
+	[[ -d /var/www/html ]] && local exclude="--exclude=/var/www/html" || local exclude=""
+	[[ -d /var/www/$(conf_read tools-port) ]] && local exclude="$exclude --exclude=/var/www/$(conf_read tools-port)"
+	[[ -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && local exclude="$exclude --exclude=/etc/nginx/sites-available/$(conf_read tools-port)"
+	[[ -L /etc/nginx/sites-enabled/$(conf_read tools-port) ]] && local exclude="$exclude --exclude=/etc/nginx/sites-enabled/$(conf_read tools-port)"
+	[[ -f /etc/nginx/sites-available/default ]] && local exclude="$exclude --exclude=/etc/nginx/sites-available/default"
+	[[ -L /etc/nginx/sites-enabled/default ]] && local exclude="$exclude --exclude=/etc/nginx/sites-enabled/default"
+	
+	[[ -f /opt/webinoly/webinoly.conf.exported ]] && local include="/opt/webinoly/webinoly.conf.exported" || local include=""
+	[[ -d /etc/nginx/apps.d ]] && local include="$include /etc/nginx/apps.d"
+	[[ -d /etc/nginx/sites-available ]] && local include="$include /etc/nginx/sites-available"
+	[[ -d /etc/nginx/sites-enabled ]] && local include="$include /etc/nginx/sites-enabled"
+	[[ -d /var/www ]] && local include="$include /var/www"
+	[[ -d /etc/letsencrypt ]] && local include="$include /etc/letsencrypt"
+	[[ -f /etc/nginx/.htpasswd ]] && local include="$include /etc/nginx/.htpasswd"
+	[[ -f $HOME/.aws/credentials ]] && local include="$include $HOME/.aws/credentials"
+	[[ -f /opt/webinoly/templates/source/csp_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/csp_webinoly.data"
+	
+	sudo tar $exclude -Pcf $HOME/$filename $include
+
+	
+	# Remove Temporary Files
+	sudo rm -rf /opt/webinoly/webinoly.conf.exported
+	[[ $(conf_read mysql) == "true" && -z $skip_db ]] && sudo rm -rf /var/www/webinoly_all_databases_backup
+	
+	if [[ -s $HOME/$filename ]]; then
+		echo "${gre}Webinoly Complete Server Backup exported successfully!${end}${dim} ($HOME/$filename) ${end}"
+	else
+		[[ -f $HOME/$filename ]] && sudo rm -rf $HOME/$filename
+		echo "${red}[ERROR] Unexpected error occurred while trying to export your server files!${end}"
+		exit 1
+	fi
+}
+
+
+import_server() {
+	[[ -z $file || $file == "true" ]] && read -p "Path file to import: " file
+	if [[ ! -s $file ]]; then
+		echo "${red}[ERROR] File not found or empty!${end}"
+		exit 1
+	elif ! tar -tvf $file --absolute-names | grep -o "/opt/webinoly/webinoly.conf.exported"; then
+		echo "${red}[ERROR] Invalid File, Webinoly configuration not found!${end}"
+		exit 1
+	fi
+
+	if [[ $import =~ ^(stack|full)$ ]]; then
+		tar -C / -xf $file /opt/webinoly/webinoly.conf.exported --absolute-names
+		check_exported_conf
+		echo "${gre}Webinoly Stack Server was built using your imported configuration!${end}"
+	fi
+
+	if [[ $import =~ ^(true|sites|full)$ ]]; then
+		sudo tar -Pxf $file
+		
+		# Check imported configuration file to prevent issues
+		[[ ! -f /opt/webinoly/webinoly.conf.exported ]] && echo "${red}[ERROR] Exported Configuration file not found!${end}"
+		
+		if [[ $(conf_read_exported php) == "true" && $(conf_read php) != "true" ]]; then
+			echo "${red}[ERROR] PHP is not installed, some exported files may not work properly!${end}"
+		fi
+		if [[ $(conf_read_exported server-version) != $(conf_read server-version) ]]; then
+			echo "${red}[ERROR] Webinoly stack version is different, unexpected errors may occur!${end}"
+		fi
+		
+		if [[ -s /var/www/webinoly_all_databases_backup && $(conf_read mysql) == "true" && -z $skip_db ]]; then
+			sudo webinoly -db-import -file=/var/www/webinoly_all_databases_backup
+			[[ -n $(conf_read_exported mysql-root) ]] && conf_write mysql-root $(conf_read_exported mysql-root)
+			[[ -n $(conf_read_exported mysql-admin) ]] && conf_write mysql-admin $(conf_read_exported mysql-admin)
+			sudo rm -rf /var/www/webinoly_all_databases_backup
+		elif [[ -s /var/www/webinoly_all_databases_backup && $(conf_read mysql) != "true" && -z $skip_db ]]; then
+			echo "${red}[ERROR] Database backup found but can not be restored because MySQL is not installed!${end}"
+			exit 1
+		fi
+		
+		echo "${gre}Webinoly Full Server Backup imported successfully!${end}"
+	fi
+	
+	
+	# Default-Site and Tools Site Settings!
+	[[ -f /etc/nginx/sites-available/$(conf_read_exported tools-site) ]] && sudo webinoly -tools-site=$(conf_read_exported default-site)
+	
+	if [[ -f /etc/nginx/sites-available/$(conf_read_exported default-site) ]]; then
+		remove_nginx_default_server $(conf_read_exported default-site)
+		sudo webinoly -default-site=$(conf_read_exported default-site)
+	fi
+		
+	sudo mv /opt/webinoly/webinoly.conf.exported /opt/webinoly/webinoly.conf.imported_$(date +%F)-$(date +%T)
 }
 

@@ -2,8 +2,8 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
-# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -header-referrer, -header-hsts, -header-csp, -skip-cache, -query-string-cache, -query-string-never-cache, -email, -external-db-save
-# Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre, -no-recovery, -recalculate, -dbname
+# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -config-cache, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -header-referrer, -header-hsts, -header-csp, -skip-cache, -query-string-cache, -query-string-never-cache, -email, -external-db-save, -export, -import
+# Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre, -no-recovery, -recalculate, -dbname, -skip-db
 
 source /opt/webinoly/lib/webin
 source /opt/webinoly/lib/bkp
@@ -171,17 +171,33 @@ elif [[ -n $smtp ]]; then
 
 
 elif [[ -n $backup ]]; then
-	check_for_nginx_tool
+	[[ $import =~ ^(stack|full)$ ]] || check_for_nginx_tool
+	
 	if [[ -n $list && -z $add_db_pre ]]; then
 		bkp_s3_list
 	elif [[ $backup == "local" ]]; then
-		bkp_local_db
+		if [[ -n $export ]]; then
+			if [[ $export == "true" ]]; then
+				export_server
+			elif [[ -f /etc/nginx/sites-available/$export ]]; then
+				echo "${red}[ERROR] Export for individual sites still not supported! (Soon!)${end}"
+				exit 1
+			else
+				echo "${red}[ERROR] Please, enter a valid value for export site/server parameter!${end}"
+				exit 1
+			fi
+		elif [[ -n $import ]]; then
+			import_server
+		else
+			bkp_local_db
+		fi
 	elif [[ $backup == "s3" ]]; then
 		[[ -n $send_to_s3 ]] && s3_send || bkp_s3_profile
 	else
 		bkp_wizard
 	fi
-	nginx_not="true" # Nginx-Reload not-needed.
+	
+	[[ -z $import ]] && nginx_not="true" # Nginx-Reload not-needed.
 
 
 elif [[ -n $aws_s3_credentials ]]; then
