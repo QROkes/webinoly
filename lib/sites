@@ -606,7 +606,7 @@ createsite() {
 edit_wp_db_url() {
 	#Example: edit_wp_db_url example.com "http://${domain}${subfolder}"
 	wp_dbdata $1
-	if [[ -n $1 && -n $2 && $(is_wp $1) == "true" && $(is_wp_installed $1) == "true" ]]; then
+	if [[ -n $1 && -n $2 && $(is_wp $1 $subfolder) == "true" && $(is_wp_installed $1) == "true" ]]; then
 		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
 			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 USE $wp_dbname;
@@ -1227,6 +1227,8 @@ clone_wp_site() {
 		sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-php.conf
 		sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 		
+		[[ ! -f /etc/nginx/sites-available/$domain ]] && create_empty_site
+		
 		local dest=$( echo $subfolder | rev | cut -f 2- -d "/" -s | rev )
 		sudo mkdir -p /var/www/$domain/htdocs$dest
 		sudo cp -r /var/www/$clone_from/htdocs$subfolder /var/www/$domain/htdocs$dest
@@ -1237,9 +1239,9 @@ clone_wp_site() {
 
 	sudo chown -R www-data:www-data /var/www/$domain
 
-	if [[ -f /etc/nginx/sites-available/$domain ]]; then
+	if [[ -n $subfolder ]]; then
 		sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
-	else
+	elif [[ -z $subfolder && ! -f /etc/nginx/sites-available/$domain ]]; then
 		sudo cp /etc/nginx/sites-available/$clone_from /etc/nginx/sites-available/$domain
 		sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 		sudo sed -i "s/$clone_from/$domain/g"  /etc/nginx/sites-available/$domain
@@ -1252,10 +1254,39 @@ clone_wp_site() {
 		# Fix server_name according to new domain/site.
 		[[ $subdomain == "true" ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
 		sudo sed -i "/server_name /c \	$sername" /etc/nginx/sites-available/$domain
+		
+		# Clone Subfolder conf files from apps.d
+		for appfile in /etc/nginx/apps.d/$clone_from*.conf
+		do
+			if [[ -s $appfile ]]; then
+				local newfile=$(echo $appfile | sed "s/$clone_from/$domain/")
+				sudo cp $appfile $newfile
+				
+				# Check if site contains WP in subfolders.
+				if [[ $appfile == "/etc/nginx/apps.d/$domain_"*-wpcommon.conf ]]; then
+					local wpsub="/$(echo $appfile | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+					if [[ -n $wpsub && -f /var/www/$domain/htdocs$wpsub/wp-config.php ]]; then
+						echo "${gre}${dim}WordPress installed in a subfolder${blu} '${wpsub}' ${gre}was found, we will clone it too...${end}"
+						sudo site $domain -subfolder=$wpsub -delete=keep-db > /dev/null 2>&1
+						sudo site $domain -clone-from=$clone_from -subfolder=$wpsub
+					fi
+				fi
+			fi
+		done
+		
+	else
+		echo "${red}[ERROR] Unexpected error, site you're trying to clone already exists!${end}"
+		exit 1
 	fi
 
 	local dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
 	local AUTOGENPASS_WPDB=`pwgen -s -1 16`
+	
+	sudo sed -i "/DB_NAME/c \define('DB_NAME', '$dom');" $wpcon
+	sudo sed -i "/DB_USER/c \define('DB_USER', '$dom');" $wpcon
+	sudo sed -i "/DB_PASSWORD/c \define('DB_PASSWORD', '$AUTOGENPASS_WPDB');" $wpcon
+	sudo sed -i "/'WP_CACHE_KEY_SALT'/d" $wpcon
+	sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'wp_$domain$(echo $subfolder | sed "s/\//_/g")');" $wpcon
 	
 	if [[ $wp_dbhost == "localhost" ]]; then
 		site -mysql=[localhost,$dom,$dom,$AUTOGENPASS_WPDB] > /dev/null 2>&1
@@ -1266,12 +1297,6 @@ clone_wp_site() {
 		mysqldump -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" $wp_dbname | mysql -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" $dom
 		edit_wp_db_url $domain "http://${domain}${subfolder}"
 	fi
-	
-	sudo sed -i "/DB_NAME/c \define('DB_NAME', '$dom');" $wpcon
-	sudo sed -i "/DB_USER/c \define('DB_USER', '$dom');" $wpcon
-	sudo sed -i "/DB_PASSWORD/c \define('DB_PASSWORD', '$AUTOGENPASS_WPDB');" $wpcon
-	sudo sed -i "/'WP_CACHE_KEY_SALT'/d" $wpcon
-	sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'wp_$domain$(echo $subfolder | sed "s/\//_/g")');" $wpcon
 	
 	if [[ $replace_content != "off" ]]; then
 		replace_content="[http://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1

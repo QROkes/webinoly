@@ -129,17 +129,16 @@ if [[ -n $delete_all ]]; then
 # Create PHP or MySQL site
 elif [[ -n $mysql || ( -n $php && -n $domain ) ]]; then
 	if [[ -n $domain ]]; then
+		# Temporary FIX
+		if [[ $(is_proxy $domain) == "true" || ( -f /etc/nginx/sites-available/$domain && -n $(grep -F "proxy.conf;" /etc/nginx/sites-available/$domain)) ]]; then
+			echo "${red}[ERROR] Incompatible with your current Reverse-Proxy site! (We will fix this issue soon)${end}"
+			exit 1
+		fi
+		
 		if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" ]]; then
 			echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
 			exit 1
-		elif [[ -n $subfolder ]]; then
-			
-			# Temporary FIX
-			if [[ $(is_proxy $domain) == "true" ]]; then
-				echo "${red}[ERROR] Subfolders are not supported when main site is Reverse Proxy! (We will fix this issue soon)${end}"
-				exit 1
-			fi
-			
+		elif [[ -n $subfolder ]]; then	
 			[[ ! -f /etc/nginx/sites-available/$domain ]] && create_empty_site
 			php_subfolder
 			sudo mkdir -p /var/www/$domain/htdocs$subfolder
@@ -164,8 +163,8 @@ elif [[ -n $mysql || ( -n $php && -n $domain ) ]]; then
 elif [[ -n $html && -n $domain ]]; then
 	
 	# Temporary FIX
-	if [[ $(is_proxy $domain) == "true" ]]; then
-		echo "${red}[ERROR] Subfolders are not supported when main site is Reverse Proxy! (We will fix this issue soon)${end}"
+	if [[ $(is_proxy $domain) == "true" || ( -f /etc/nginx/sites-available/$domain && -n $(grep -F "proxy.conf;" /etc/nginx/sites-available/$domain)) ]]; then
+		echo "${red}[ERROR] Incompatible with your current Reverse-Proxy site! (We will fix this issue soon)${end}"
 		exit 1
 	fi
 	
@@ -192,6 +191,12 @@ elif [[ -n $html && -n $domain ]]; then
 
 # Create WP site
 elif [[ -n $wp && -n $domain ]]; then
+	# Temporary FIX
+	if [[ $(is_proxy $domain) == "true" || ( -f /etc/nginx/sites-available/$domain && -n $(grep -F "proxy.conf;" /etc/nginx/sites-available/$domain)) ]]; then
+		echo "${red}[ERROR] Incompatible with your current Reverse-Proxy site! (We will fix this issue soon)${end}"
+		exit 1
+	fi
+	
 	if [[ -z $subfolder ]]; then
 		if [[ $(is_empty_root_site $domain) == "true" ]]; then		
 			wpinstall
@@ -205,12 +210,6 @@ elif [[ -n $wp && -n $domain ]]; then
 		[[ $(conf_read yoast-sitemap) == "true" ]] && sudo site $domain -yoast-sitemap=on > /dev/null 2>&1
 		[[ -n $env ]] && sudo site $domain -env=$env
 	else
-		# Temporary FIX
-		if [[ $(is_proxy $domain) == "true" ]]; then
-			echo "${red}[ERROR] Subfolders are not supported when main site is Reverse Proxy! (We will fix this issue soon)${end}"
-			exit 1
-		fi
-	
 		if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && $(is_subfolder $domain $subfolder) != "false" ]]; then
 			echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
 			exit 1
@@ -254,6 +253,13 @@ elif [[ -n $parked && -n $domain ]]; then
 	
 # Reverse proxy
 elif [[ -n $proxy && -n $domain ]]; then
+	
+	# Temporary FIX
+	if [[ -n $subfolder && -f /etc/nginx/sites-available/$domain && $(is_proxy $domain) != "true" ]]; then
+		echo "${red}[ERROR] Reverse Proxy subfolders only can be installed when main site is reverse proxy! (We will fix this issue soon)${end}"
+		exit 1
+	fi
+	
 	reverse_proxy
 	
 
@@ -296,7 +302,7 @@ elif [[ -n $delete && -f /etc/nginx/sites-available/$domain ]]; then
 		if [[ $(is_subfolder $domain $subfolder) == "false" ]]; then
 			echo "${red}[ERROR] Subfolder site not found!${end}"
 			exit 1
-		elif [[ -f /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
+		elif [[ -f /var/www/$domain/htdocs$subfolder/wp-config.php && $delete != "keep-db" ]]; then
 			db_delete $domain
 		fi
 		
@@ -405,7 +411,7 @@ elif [[ -n $clone_from ]]; then
 	fi
 	
 	if [[ $(is_wp_installed $clone_from) != "true" ]]; then
-		echo "${red}[ERROR] Seems like WordPress is still not configured in your${blu} '$clone_from' ${red}site!${end}"
+		echo "${red}[ERROR] Seems like WordPress is still not configured in your${blu} '${clone_from}${subfolder}' ${red}site!${end}"
 		exit 1
 	else
 		clone_wp_site
