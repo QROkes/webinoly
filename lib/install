@@ -438,6 +438,10 @@ redis_optim() {
 	sudo sed -i "/# maxmemory <bytes>/c\maxmemory ${maxmem}mb" /etc/redis/redis.conf
 	sudo sed -i "/^maxmemory /c\maxmemory ${maxmem}mb" /etc/redis/redis.conf
 	sudo sed -i "/# maxmemory-policy/c\maxmemory-policy allkeys-lfu" /etc/redis/redis.conf
+	sed 's|^port.*|port 0|' -i /etc/redis/redis.conf
+	sed 's|^# unixsocket .*|unixsocket /var/run/redis/redis.sock|' -i /etc/redis/redis.conf
+	sed 's|^# unixsocketperm .*|unixsocketperm 775|' -i /etc/redis/redis.conf
+	usermod -aG redis www-data
 	sudo service redis-server restart
 }
 
