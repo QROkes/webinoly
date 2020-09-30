@@ -411,6 +411,8 @@ _EOF_
 		# Redis Conf
 		sudo sed -i "/stop editing/i \define('WP_REDIS_SELECTIVE_FLUSH', true);" $wpcon
 		sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'wp_$domain$(echo $subfolder | sed "s/\//_/g")');" $wpcon
+		sudo sed -i "/stop editing/i \define('WP_REDIS_SCHEME', 'unix');" $wpcon
+		sudo sed -i "/stop editing/i \define('WP_REDIS_PATH', '/var/run/redis/redis.sock');" $wpcon
 	fi
 	
 }
