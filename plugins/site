@@ -8,6 +8,7 @@
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
 
+source /opt/webinoly/lib/general
 source /opt/webinoly/lib/sites
 check_for_parameters $@
 api-events_update sis
@@ -33,8 +34,9 @@ if [[ -n $wp || -n $mysql ]]; then
 			exth=$(conf_read external-dbh)
 		fi
 		
-		[[ $wp == "true" ]] && wp=[true,true,$exth,$dona,$dona,random,wp_,$(conf_read external-dbu),$(conf_read external-dbp)]
-		[[ $mysql == "true" ]] && mysql=[$exth,$dona,$dona,random,$(conf_read external-dbu),$(conf_read external-dbp)]
+		extp=$( echo $(conf_read external-dbp) | openssl enc -d -a -salt )
+		[[ $wp == "true" ]] && wp=[true,true,$exth,$dona,$dona,random,wp_,$(conf_read external-dbu),$extp]
+		[[ $mysql == "true" ]] && mysql=[$exth,$dona,$dona,random,$(conf_read external-dbu),$extp]
 		echo "${blu}External DB credentials found!${end}"
 	fi
 
@@ -106,9 +108,6 @@ elif [[ -n $subfolder && ( -n $cache || -n $yoast_sitemap || -n $multisite_conve
 	echo "${red}[ERROR] Subfolder not found!${end}"
 	exit 1
 elif [[ -n $subfolder && -n $clone_from && ! -d /var/www/$clone_from/htdocs$subfolder ]]; then
-	echo "${red}[ERROR] Subfolder not found!${end}"
-	exit 1
-elif [[ -n $subfolder && -z $clone_from && -n $env && ! -d /var/www/$domain/htdocs$subfolder ]]; then
 	echo "${red}[ERROR] Subfolder not found!${end}"
 	exit 1
 else
@@ -257,6 +256,9 @@ elif [[ -n $proxy && -n $domain ]]; then
 	# Temporary FIX
 	if [[ -n $subfolder && -f /etc/nginx/sites-available/$domain && $(is_proxy $domain) != "true" ]]; then
 		echo "${red}[ERROR] Reverse Proxy subfolders only can be installed when main site is reverse proxy! (We will fix this issue soon)${end}"
+		exit 1
+	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "true" && -z $(grep -F "proxy.conf;" /etc/nginx/sites-available/$domain) ]]; then
+		echo "${red}[ERROR] Reverse-Proxy site incompatible with your current subfolders! (We will fix this issue soon)${end}"
 		exit 1
 	fi
 	

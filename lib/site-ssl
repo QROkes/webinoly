@@ -3,7 +3,6 @@
 # This is a library for Site Manager Plugin
 # Functions for SSL On/Off
 
-source /opt/webinoly/lib/general
 
 ssl_nginx() {
 	sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /etc/nginx/sites-available/$domain

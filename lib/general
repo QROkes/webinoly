@@ -232,6 +232,7 @@ wp_dbdata() {
 	wp_dbname=$( grep -F "DB_NAME" $wpconfpath | cut -f 4 -d "'" -s)
 	wp_dbuser=$( grep -F "DB_USER" $wpconfpath | cut -f 4 -d "'" -s)
 	wp_dbhost=$( grep -F "DB_HOST" $wpconfpath | cut -f 4 -d "'" -s)
+	wp_dbpass=$( grep -F "DB_PASSWORD" $wpconfpath | cut -f 4 -d "'" -s)
 	wp_dburl=$(echo "$wp_dbhost" | cut -f 1 -d ':')
 	wp_dbport=$(echo "$wp_dbhost" | cut -f 2 -d ':' -s)
 	wp_dbpref=$( grep -F "table_prefix" $wpconfpath | cut -f 2 -d "'" -s)
@@ -719,11 +720,35 @@ email_update() {
 		conf_write mail $mail
 		[[ ! -f /root/.forward ]] && sudo touch /root/.forward || sudo truncate -s 0 /root/.forward
 		sudo echo "$mail" >> /root/.forward
-		[[ -d /etc/letsencrypt/renewal ]] && sudo certbot update_account --email $mail
+		[[ -d /etc/letsencrypt/renewal ]] && sudo certbot update_account --email $mail --no-eff-email
 		echo "${gre}Email address has been successfuly validated and saved!"
 	else
 		echo "${red}Please enter a valid email address!"
 	fi
 	echo "${end}"
+}
+
+
+edit_wp_db_url() {
+	#Example: edit_wp_db_url example.com "http://${domain}${subfolder}"
+	wp_dbdata $1
+	if [[ -n $1 && -n $2 && $(is_wp $1 $subfolder) == "true" && $(is_wp_installed $1) == "true" ]]; then
+		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
+			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+USE $wp_dbname;
+UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
+UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
+FLUSH PRIVILEGES;
+_EOF_
+
+		elif [[ $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) == "true" ]]; then
+			sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" <<_EOF_
+USE $wp_dbname;
+UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
+UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
+FLUSH PRIVILEGES;
+_EOF_
+		fi
+	fi
 }
 

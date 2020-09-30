@@ -603,30 +603,6 @@ createsite() {
 }
 
 
-edit_wp_db_url() {
-	#Example: edit_wp_db_url example.com "http://${domain}${subfolder}"
-	wp_dbdata $1
-	if [[ -n $1 && -n $2 && $(is_wp $1 $subfolder) == "true" && $(is_wp_installed $1) == "true" ]]; then
-		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
-USE $wp_dbname;
-UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
-UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
-FLUSH PRIVILEGES;
-_EOF_
-
-		elif [[ $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) == "true" ]]; then
-			sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" <<_EOF_
-USE $wp_dbname;
-UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
-UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
-FLUSH PRIVILEGES;
-_EOF_
-		fi
-	fi
-}
-
-
 force_redirect() {
 	if ! [[ $force_redirect =~ ^(www|root|off)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid argument!${end}"
@@ -1267,8 +1243,10 @@ clone_wp_site() {
 					local wpsub="/$(echo $appfile | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 					if [[ -n $wpsub && -f /var/www/$domain/htdocs$wpsub/wp-config.php ]]; then
 						echo "${gre}${dim}WordPress installed in a subfolder${blu} '${wpsub}' ${gre}was found, we will clone it too...${end}"
+						# Silenced because some times files are still not all copied and this commands reload nginx causing unexpected errors.
+						# At the end when all the files are copied everything is fine and nothing to worry!
 						sudo site $domain -subfolder=$wpsub -delete=keep-db > /dev/null 2>&1
-						sudo site $domain -clone-from=$clone_from -subfolder=$wpsub
+						sudo site $domain -clone-from=$clone_from -subfolder=$wpsub > /dev/null 2>&1
 					fi
 				fi
 			fi
