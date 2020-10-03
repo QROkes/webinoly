@@ -57,7 +57,21 @@ bkp_local_db() {
 			local proot=$wp_proot
 		fi
 	else
+		if [[ -n $(conf_read external-dbu) && -n $(conf_read external-dbp) && -n $(conf_read external-dbh) ]]; then
+			local uroot=$(conf_read external-dbu)
+			local proot=$( echo $(conf_read external-dbp) | openssl enc -d -a -salt )
+			local dburl=$(conf_read external-dbh)
+			[[ -n $(conf_read external-dbx) ]] && local dbport=$(conf_read external-dbx) || local dbport="3306"
+			
+			external_db="[$uroot,$proot,${dburl}:${dbport}]"
+			echo "${blu}External DB credentials found!${end}" >&2
+		fi
+		
 		if [[ -z $external_db ]]; then
+			if [[ $(check_mysql_connection localhost) != "true" ]]; then
+				echo "${red}[ERROR] Cannot connect with your database (localhost)!${end}"
+				exit 1
+			fi
 			local checkdbname=$(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $dbname)
 		else
 			local dbdata=${external_db:1:-1}

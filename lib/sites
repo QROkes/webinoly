@@ -417,8 +417,8 @@ db_delete() {
 	[[ -z $wpconfpath ]] && return
 	[[ $wp_dbhost != "localhost" ]] && check_for_mysql_client
 	
-	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) != "true" ) ]]; then
-		echo "[ERROR] Database cannot be deleted${blu} $domain ${end}"
+	if [[ ( $wp_dbhost == "localhost" &&  ( $(conf_read mysql) != "true" || $(check_mysql_connection localhost) != "true" )) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) != "true" ) ]]; then
+		echo "${red}[ERROR] Database${blu} $domain ${red}cannot be deleted!${end}"
 		return
 	fi
 	
@@ -1389,9 +1389,10 @@ list_sites() {
 		if [[ -n $outlist ]]; then
 			echo "$outlist"
 			local nonemptylist=true
+			local count=$(($count+1))
 		fi
 	done
-	[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No sites were found!${end}"
+	[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No sites were found!${end}" || echo -e "\n${blu}Found:${end} $count sites"
 	echo ""
 }
 
@@ -1413,8 +1414,9 @@ site_info() {
 		echo "${blu}SSL:${end} $(is_ssl $domain)"
 		echo "${blu}Access Logs:${end} $(is_log $domain)"
 		echo "${blu}Force Redirect:${end} $(is_force_redirect $domain)"
-		[[ $typesite != "Parked" && $typesite != "Reverse Proxy" ]] && echo "${blu}Size:${end} $(sudo du -sh /var/www/$domain | cut -d"/" -f 1 -s)"
 	fi
+	
+	[[ $typesite =~ ^(Forward|Parked|Reverse Proxy) ]] || echo "${blu}Size:${end} $(sudo du -sh /var/www/$domain | cut -d"/" -f 1 -s)"
 	
 	if [[ $typesite == "WordPress" ]]; then
 		echo ""

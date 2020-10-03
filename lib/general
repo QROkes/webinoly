@@ -4,7 +4,7 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.13.0"
+readonly app_version="1.13.1"
 readonly svr_version="1.5"
 readonly os_ubuntu_supported=(bionic focal)
 readonly php_supported=(7.2 7.3 7.4)
@@ -646,7 +646,7 @@ is_empty_root_site() {
 	if [[ -n $1 ]]; then
 		if [[ $(is_wp $1) == "true" || $(is_php $1) == "true" || $(is_proxy $1) == "true" || $(is_html $1) == "true" || $(is_parked $1) == "true" || $(is_forward $1) == "true" ]]; then
 			echo "false"
-		elif [[ -f /etc/nginx/sites-available/$domain ]]; then
+		elif [[ -f /etc/nginx/sites-available/$1 ]]; then
 			echo "true"
 		else
 			echo "false"
@@ -702,8 +702,10 @@ site_type() {
 		echo "Reverse Proxy"
 	elif [[ $(is_forward $1) == "true" ]]; then
 		echo "Forward"
+	elif [[ $(is_empty_root_site $1) == "true" ]]; then
+		echo "Subfolders"
 	else
-		echo "false"
+		echo "Unknown"
 	fi
 }
 

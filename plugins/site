@@ -415,6 +415,9 @@ elif [[ -n $clone_from ]]; then
 	if [[ $(is_wp_installed $clone_from) != "true" ]]; then
 		echo "${red}[ERROR] Seems like WordPress is still not configured in your${blu} '${clone_from}${subfolder}' ${red}site!${end}"
 		exit 1
+	elif [[ $(is_wp_multisite $clone_from) != "false" ]]; then
+		echo "${red}[ERROR] WordPress Multisite can not be cloned!${end}"
+		exit 1
 	else
 		clone_wp_site
 	fi

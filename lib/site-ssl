@@ -41,8 +41,16 @@ ssl_nginx() {
 	sudo sed -i "/#server_name;/c \	$sername" /etc/nginx/sites-available/$domain
 
 	# In case this domain is used as tools-site or default-site
-	[[ $(conf_read tools-site) == $domain ]] && sudo webinoly -tools-site=$domain
-	[[ $(conf_read default-site) == $domain ]] && sudo webinoly -default-site=$domain
+	if [[ $(conf_read default-site) == $domain ]]; then
+		sudo webinoly -default-site=default > /dev/null 2>&1
+		sudo webinoly -default-site=$domain > /dev/null 2>&1
+		echo "${gre}${dim}Default Site updated with SSL!${end}"
+	fi
+	if [[ $(conf_read tools-site) == $domain ]]; then
+		sudo webinoly -tools-site=default > /dev/null 2>&1
+		sudo webinoly -tools-site=$domain > /dev/null 2>&1
+		echo "${gre}${dim}Tools Site updated with SSL!${end}"
+	fi
 }
 
 
@@ -146,9 +154,9 @@ site_ssl_on() {
 
 		[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "https://${domain}"
 		
-		echo "${gre}SSL have been successfully enabled for your site -${blu} $domain${end}"
+		echo "${gre}SSL have been successfully enabled for your site${blu} $domain${end}"
 	elif [[ -f /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
-		echo "${gre}SSL Cert ${blu}- $domain$ - ${gre}has been Forced to Renew!${end}"
+		echo "${gre}SSL Cert${blu} $domain ${gre}has been Forced to Renew!${end}"
 	elif [[ ! -f /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
 		echo "${red}"
 		echo "[ERROR] Unable to create the new certificate!"
@@ -177,8 +185,16 @@ site_ssl_off() {
 	sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
 	
 	# In case this domain is used as tools-site or default-site
-	[[ $(conf_read tools-site) == $domain ]] && sudo webinoly -tools-site=$domain
-	[[ $(conf_read default-site) == $domain ]] && sudo webinoly -default-site=$domain
+	if [[ $(conf_read default-site) == $domain ]]; then
+		sudo webinoly -default-site=default > /dev/null 2>&1
+		sudo webinoly -default-site=$domain > /dev/null 2>&1
+		echo "${gre}${dim}Default Site updated with SSL!${end}"
+	fi
+	if [[ $(conf_read tools-site) == $domain ]]; then
+		sudo webinoly -tools-site=default > /dev/null 2>&1
+		sudo webinoly -tools-site=$domain > /dev/null 2>&1
+		echo "${gre}${dim}Tools Site updated with SSL!${end}"
+	fi
 	
 	[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "http://${domain}"
 	
@@ -196,5 +212,5 @@ site_ssl_off() {
 		echo "${end}"
 	fi
 	[[ $answer == [Yy] ]] && ssl_revoke
-	echo "${gre}SSL has been successfully disabled for your site -${blu} $domain${end}"
+	echo "${gre}SSL has been successfully disabled for your site${blu} $domain${end}"
 }
