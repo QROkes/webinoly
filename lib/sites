@@ -1325,6 +1325,12 @@ wp_replace_content() {
 
 list_sites() {
 	echo ""
+	
+	if ! [[ ${list,,} =~ ^(true|disabled|main|parked|wordpress|php|html|proxy|forward|tools|default|ssl|nossl|accesslog|noaccesslog|cache|nocache|adminauth|noadminauth|debug|nodebug)$ ]]; then
+		echo "${red}[ERROR] Invalid value for list filter! ${end}"
+		exit 1
+	fi
+	
 	for site in "/etc/nginx/sites-available"/*
 	do
 		local domi=$(echo $site | cut -f 5 -d "/")

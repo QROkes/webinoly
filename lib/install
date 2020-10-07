@@ -541,8 +541,21 @@ swap_create() {
 			local newswap="8"
 		elif [[ $ram -le 128 ]]; then
 			local newswap="11"
-		elif [[ $ram -gt 128 ]]; then
-			local newswap="15"
+		elif [[ $ram -le 256 ]]; then
+			local newswap="16"
+		elif [[ $ram -le 512 ]]; then
+			local newswap="23"
+		elif [[ $ram -le 1024 ]]; then
+			local newswap="32"
+		elif [[ $ram -le 2048 ]]; then
+			local newswap="46"
+		elif [[ $ram -le 4096 ]]; then
+			local newswap="64"
+		elif [[ $ram -le 8192 ]]; then
+			local newswap="91"
+		elif [[ $ram -gt 8192 ]]; then
+			local newswap="100"
+		
 		else
 			local newswap="0"
 		fi
