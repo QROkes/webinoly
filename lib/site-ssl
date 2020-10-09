@@ -176,7 +176,7 @@ ssl_revoke() {
 
 site_ssl_off() {
 	# Don't ask if SSL is Custom
-	[[ -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -F "WebinolySSLCustomCert") ]] && revoke="off"
+	[[ $(is_ssl_le $domain) != "true" ]] && revoke="off"
 	
 	sudo sed -i '/listen 443/c \	listen 80;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/listen \[::\]:443/c \	listen [::]:80;' /etc/nginx/sites-available/$domain

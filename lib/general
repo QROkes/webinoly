@@ -479,6 +479,17 @@ is_ssl() {
 	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "ssl_certificate_key") ]] && echo "true" || echo "false"
 }
 
+
+is_ssl_le() {
+	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "ssl_certificate_key /etc/letsencrypt/live/") && -z $(grep -F "WebinolySSLCustomCert" /etc/nginx/sites-available/$1) ]] && echo "true" || echo "false"
+}
+
+
+is_ssl_staging() {
+	[[ -f /etc/letsencrypt/renewal/$1.conf && -n $(grep -E "^server = " /etc/letsencrypt/renewal/$1.conf | cut -d'=' -f 2 -s | grep -F "acme-staging-") ]] && echo "true" || echo "false"
+}
+
+
 is_html() {
 	# $1 = domain, $2 = subfolder
 	[[ -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "location $2/ { try_files ") ]] && echo "true" || echo "false"

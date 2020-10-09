@@ -1326,7 +1326,7 @@ wp_replace_content() {
 list_sites() {
 	echo ""
 	
-	if ! [[ ${list,,} =~ ^(true|disabled|main|parked|wordpress|php|html|proxy|forward|tools|default|ssl|nossl|accesslog|noaccesslog|cache|nocache|adminauth|noadminauth|debug|nodebug)$ ]]; then
+	if ! [[ ${list,,} =~ ^(true|disabled|main|parked|wordpress|php|html|proxy|forward|tools|default|ssl|nossl|sslstaging|accesslog|noaccesslog|cache|nocache|adminauth|noadminauth|debug|nodebug)$ ]]; then
 		echo "${red}[ERROR] Invalid value for list filter! ${end}"
 		exit 1
 	fi
@@ -1352,6 +1352,7 @@ list_sites() {
 			
 			[[ ${list,,} == "ssl" && $(is_ssl $domi) != "true" ]] && continue
 			[[ ${list,,} == "nossl" && $(is_ssl $domi) == "true" ]] && continue
+			[[ ${list,,} == "sslstaging" && ( $(is_ssl $domi) != "true" || $(is_ssl_staging $domi) != "true") ]] && continue
 			
 			[[ ${list,,} == "accesslog" && $(is_log $domi) != "true" ]] && continue
 			[[ ${list,,} == "noaccesslog" && $(is_log $domi) == "true" ]] && continue
@@ -1376,6 +1377,7 @@ list_sites() {
 			[[ $(conf_read default-site) == $domi ]] && local check="${blu}${dim}($(site_type $domi))(Default)" || local check="${blu}${dim}($(site_type $domi))"
 			[[ $(conf_read tools-site) == $domi ]] && local check="${check}(Tools)"
 			[[ $(is_ssl $domi) != "true" ]] && local check="${check}${red}(NoSSL)" || local check="${check}${red}"
+			[[ $(is_ssl $domi) == "true" && $(is_ssl_staging $domi) == "true" ]] && local check="${check}(SSL-Staging)"
 			[[ $(is_log $domi) == "true" ]] && local check="${check}(AccessLog)"
 			
 			if [[ $(is_wp $domi) == "true" ]]; then
@@ -1417,7 +1419,17 @@ site_info() {
 	echo "${blu}Status:${end} $status"
 	
 	if [[ $typesite != "Forward" ]]; then
-		echo "${blu}SSL:${end} $(is_ssl $domain)"
+		if [[ $(is_ssl $domain) == "true" && $(is_ssl_le $domain) == "true" && $(is_ssl_staging $domain) != "true" ]]; then
+			local ssl="Let's Encrypt"
+		elif [[ $(is_ssl $domain) == "true" && $(is_ssl_le $domain) == "true" && $(is_ssl_staging $domain) == "true" ]]; then
+			local ssl="Let's Encrypt (Staging)"
+		elif [[ $(is_ssl $domain) == "true" && $(is_ssl_le $domain) != "true" ]]; then
+			local ssl="Custom"
+		else
+			local ssl="false"
+		fi
+		
+		echo "${blu}SSL:${end} $ssl"
 		echo "${blu}Access Logs:${end} $(is_log $domain)"
 		echo "${blu}Force Redirect:${end} $(is_force_redirect $domain)"
 	fi
