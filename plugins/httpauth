@@ -215,6 +215,20 @@ elif [[ -n $path && -n $domain ]]; then
 			exit 1
 		fi
 		
+		# Check if path is in a configured nginx subfolder
+		if [[ -z $subfolder && -n $(echo $path | cut -d'/' -f 2 -s) ]]; then
+			x="1"
+			while [[ -n $(echo $path | rev | cut -d'/' -f ${x}- -s | rev) ]]
+			do
+				if [[ $(is_subfolder $domain $(echo $path | rev | cut -d'/' -f ${x}- -s | rev)) != "false" ]]; then
+					echo "${red}[ERROR] Subfolder parameter not found!${end}"
+					exit 1
+				fi
+				x=$(($x+1))
+			done
+		fi
+		
+		
 		if [[ $path == "/" ]]; then
 			exist=$( grep -F "acl.conf;" /etc/nginx/sites-available/$domain )
 			if [[ -z $exist ]]; then

@@ -523,7 +523,7 @@ createsite() {
 	api-events_update si1
 	
 	# First check if valid TLD
-	[[ -z $tld ]] && echo "${red}[WARNING] Domain name is not a valid TLD (Top Level Domain).${end}"
+	[[ -z $tld ]] && echo "${dim}[WARNING] Domain name is not a valid TLD (Top Level Domain).${end}"
 	
 	# Check domain and then prevent reserved characters for file names.
 	if [[ $(is_domain $domain) != "true" ]]; then
@@ -598,6 +598,14 @@ createsite() {
 	
 	sudo chown -R www-data:www-data /var/www
 	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
+
+	# Warning Messages
+	if [[ $type == [123] && $(conf_read wp-admin-auth) != "purged" && ! -s /etc/nginx/.htpasswd && ! -s /etc/nginx/apps.d/.htpasswd-$domain ]]; then
+		echo "${dim}[WARNING] HTTP Authentication Credentials not found and you may need it to complete the WordPress installation process!!${end}"
+	fi
+	if [[ $(conf_read login-www-data) != "true" ]]; then
+		echo "${dim}[WARNING] Login for www-data is not enabled and you may need it to upload your site files!${end}"
+	fi
 
 	echo "${gre}Site${blu} $domain$subfolder ${gre}has been successfully created!${end}"
 }
