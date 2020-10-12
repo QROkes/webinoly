@@ -189,10 +189,10 @@ php_install() {
 		sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 	fi
 	pre_install
-	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
+	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary graphviz php-pear
 	
 	# Removed/deprecated in 7.4
-	[[ $ver != "7.4" ]] && sudo apt -y install php${ver}-recode
+	[[ $ver =~ ^(7.2|7.3)$ ]] && sudo apt -y install php${ver}-recode
 	
 	def=$(conf_read php-ver)
 	if [[ $(conf_read php-v${def}) != "true" ]]; then
@@ -444,6 +444,8 @@ redis_optim() {
 
 php_tool() {
 	api-events_update ip5
+	local ver=$(conf_read php-ver)
+	
 	# in case nginx was installed before php
 	[[ $(conf_read nginx-tool) == "true" && ! -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && nginx_tool_site
 	[[ $(conf_read nginx) == "true" ]] && php_tool_site
@@ -451,11 +453,11 @@ php_tool() {
 	# Redis (Object Cache)
 	echo | sudo add-apt-repository ppa:chris-lea/redis-server
 	pre_install
-	sudo apt -y install redis-server php-redis
+	sudo apt -y install redis-server php${ver}-redis
 	sudo systemctl enable redis-server
 	
 	# Memcached (Object Cache)
-	sudo apt -y install php-memcached php-memcache memcached
+	sudo apt -y install php${ver}-memcached php-memcache memcached
 	
 	# Postfix mail
 	echo "postfix postfix/main_mailer_type        select  Internet Site" | debconf-set-selections

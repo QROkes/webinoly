@@ -7,7 +7,7 @@
 readonly app_version="1.13.1"
 readonly svr_version="1.5"
 readonly os_ubuntu_supported=(bionic focal)
-readonly php_supported=(7.2 7.3 7.4)
+readonly php_supported=(7.2 7.3 7.4 8.0)
 readonly datadog_agent_ver="7"
 
 # echo colors

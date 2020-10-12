@@ -132,10 +132,14 @@ elif [[ -n $purge && -n $php ]]; then
 			sudo service php*-fpm stop
 			ver=$(conf_read php-ver)
 			
-			sudo apt -y purge php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php-imagick graphviz php-pear php-msgpack
+			sudo apt -y purge php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary graphviz php-pear
 			
-			sudo apt -y purge php-memcached php-memcache memcached
-			sudo apt -y purge redis-server php-redis postfix
+			sudo apt -y purge php${ver}-memcached php-memcache memcached
+			sudo apt -y purge redis-server php${ver}-redis postfix
+			
+			# For old packages - before ondrej split modules
+			sudo apt -y purge php-memcached php-imagick php-msgpack php-redis
+			
 			echo | sudo add-apt-repository --remove 'ppa:ondrej/php'
 			echo | sudo add-apt-repository --remove 'ppa:chris-lea/redis-server'
 			sudo apt -y autoremove
