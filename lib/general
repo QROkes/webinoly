@@ -537,7 +537,8 @@ is_forward() {
 
 
 is_parked() {
-	[[ -f /etc/nginx/sites-available/$1 && ! -d /var/www/$1 && $(is_proxy $1) == "false" && $(is_forward $1) == "false" && ( $(is_html $1) == "true" || $(is_php $1) == "true" || $(is_wp $1) == "true" ) ]] && echo "true" || echo "false"
+	# Last weird proxy check is for parked with proxy main site
+	[[ -f /etc/nginx/sites-available/$1 && ! -d /var/www/$1 && $(is_proxy $1) == "false" && $(is_forward $1) == "false" && ( $(is_html $1) == "true" || $(is_php $1) == "true" || $(is_wp $1) == "true" || $(is_proxy $(grep -E "include /var/www/.*/\*-nginx.conf;" /etc/nginx/sites-available/$1 | cut -d'/' -f 4 -s)) == "true" ) ]] && echo "true" || echo "false"
 }
 
 

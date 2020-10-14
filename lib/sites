@@ -603,7 +603,7 @@ createsite() {
 	if [[ $type == [123] && $(conf_read wp-admin-auth) != "purged" && ! -s /etc/nginx/.htpasswd && ! -s /etc/nginx/apps.d/.htpasswd-$domain ]]; then
 		echo "${dim}[WARNING] HTTP Authentication Credentials not found and you may need it to complete the WordPress installation process!!${end}"
 	fi
-	if [[ $(conf_read login-www-data) != "true" ]]; then
+	if [[ $(conf_read login-www-data) != "true" && -z $forward && -z $proxy && -z $parked ]]; then
 		echo "${dim}[WARNING] Login for www-data is not enabled and you may need it to upload your site files!${end}"
 	fi
 
@@ -1013,6 +1013,7 @@ parked_domain() {
 	sudo sed -i "/include apps.d\/$parked-nginx.conf/d" /etc/nginx/sites-available/$domain
 	sudo sed -i "/server_name/c \	$sername" /etc/nginx/sites-available/$domain
 	sudo sed -i "s/$parked/$domain/g"  /etc/nginx/sites-available/$domain
+	sudo sed -i "/include apps.d\/.*-proxy.conf;/{s/$domain/$parked/g}"  /etc/nginx/sites-available/$domain
 	sudo sed -i "/root/c \	root /var/www/$parked/htdocs;" /etc/nginx/sites-available/$domain
 	cusconl=$( grep -o "include /var/www/$domain/.*" /etc/nginx/sites-available/$domain | sed "s/$domain/$parked/" )
 	sed -i "/include \/var\/www\/$domain/c \	${cusconl}" /etc/nginx/sites-available/$domain

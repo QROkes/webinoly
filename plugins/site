@@ -426,7 +426,10 @@ elif [[ -n $clone_from ]]; then
 # Replace Content
 elif [[ -n $replace_content && -f /etc/nginx/sites-available/$domain ]]; then
 	if [[ $(is_wp $domain $subfolder) != "true" ]]; then
-		echo "${red}[ERROR] Site${blu} $domain ${red}is not a WordPress site!${end}"
+		echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WordPress site!${end}"
+		exit 1
+	elif [[ $(is_parked $domain) == "true" ]]; then
+		echo "${red}[ERROR] Parked sites are not allowed for replace-content!${end}"
 		exit 1
 	else
 		wp_replace_content
