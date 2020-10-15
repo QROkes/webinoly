@@ -117,10 +117,13 @@ bkp_local_db() {
 	fi
 	
 	[[ -z $filename ]] && local filename="webinoly-backup-db_${fn}_$(date +%F)-$(date +%T).sql"
-	if [[ $wp_dbhost == "localhost" || -z $external_db ]]; then
+	if [[ ( $wp_dbhost == "localhost" || -z $external_db ) && $(check_mysql_connection localhost) == "true" ]]; then
 		sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick --databases $dbname > $destination/$filename
-	else
+	elif [[ $(check_mysql_connection $dburl $dbport $uroot $proot) == "true" ]]; then
 		sudo mysqldump -h "$dburl" -P "$dbport" -u"$uroot" -p"$proot" --single-transaction --lock-tables --quick --databases $dbname > $destination/$filename
+	else
+		echo "${red}[ERROR] DB Connection failed!${end}"
+		exit 1
 	fi
 	
 	if [[ -s $destination/$filename ]]; then
@@ -452,7 +455,9 @@ export_server() {
 	# Create Temporary Files
 	sudo cp /opt/webinoly/webinoly.conf /opt/webinoly/webinoly.conf.exported
 	
-	[[ $(conf_read mysql) == "true" && -z $skip_db ]] && sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick --all-databases > /var/www/webinoly_backup_dball
+	if [[ $(conf_read mysql) == "true" && -z $skip_db && $(check_mysql_connection localhost) == "true" ]]; then
+		sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick --all-databases > /var/www/webinoly_backup_dball
+	fi
 	
 	if [[ $(conf_read smtp) == "true" ]]; then
 		sudo touch /var/www/webinoly_backup_smtp
