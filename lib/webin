@@ -480,80 +480,105 @@ system_info() {
 	[[ $ram == 0 ]] && local ramv="${ramb}Mb" || ramv="${ram}Gb"
 	[[ $swap == 0 ]] && local swapv="${swapm}Mb" || swapv="${swap}Gb"
 	
-	echo "${blu}"
-	echo "[SYSTEM]"
-	echo "Operating System: $(sudo cat /proc/version) "
-	echo "$(sudo lsb_release -d) "
-	echo "$(sudo lsb_release -c) "
-	echo "Cores: $cores"
-	echo "RAM: $ramv "
-	echo "SWAP: $swapv "
-	echo "File descriptors: $(sudo cat /proc/sys/fs/file-max) "
 	echo ""
-	echo [Disk Usage]
+	echo "${blu}${bol}[Operating System]${end}"
+	echo "${blu}OS Info:${end}${dim} $(sudo cat /proc/version) ${end}"
+	echo "${blu}Description:${end}${dim} $(sudo lsb_release -d | cut -d':' -f 2- -s) ${end}"
+	echo "${blu}Codename:${end}${dim} $(sudo lsb_release -c | cut -d':' -f 2- -s) ${end}"
+	echo "${blu}Cores:${end}${dim} $cores ${end}"
+	echo "${blu}RAM:${end}${dim} $ramv ${end}"
+	echo "${blu}SWAP:${end}${dim} $swapv ${end}"
+	echo "${blu}File descriptors (OS):${end}${dim} $(sudo cat /proc/sys/fs/file-max) ${end}"
+	[[ $(conf_read nginx) == "true" ]] && echo "${blu}File descriptors (Nginx):${end}${dim} $(grep 'Max open files' /proc/$(cat /run/nginx.pid)/limits | cut -f 15 -d ' ') ${end}"
+	echo "${blu}Hostname:${end}${dim} $(sudo hostname) ${end}"
+	echo ""
+	echo "${blu}${bol}[Disk Usage]${end}${dim}"
 	sudo df -Th /
-	echo ""
+	echo "${end}"
 	
-	echo "[NGINX]"
+	echo "${blu}${bol}[NGINX]${end}"
 	if [[ $(conf_read nginx) == "true" ]]; then
-		echo "nginx branch: $(conf_read nginx-ppa)"
-		sudo nginx -v
-		echo "nginx file descriptors: $(grep 'Max open files' /proc/$(cat /run/nginx.pid)/limits | cut -f 15 -d ' ') "
-		echo "worker_processes: $(grep worker_processes /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';') "
-		echo "worker_connections: $(grep worker_connections /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';')"
-		echo "worker_rlimit_nofile: $(grep worker_rlimit_nofile /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';')"
-		echo "client_max_body_size: $(grep client_max_body_size /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';')"
+		echo "${blu}Branch:${end}${dim} $(conf_read nginx-ppa) ${end}"
+		echo "${blu}Version:${end}${dim} $(sudo nginx -v 2>&1 | cut -d'/' -f 2- -s) ${end}"
+		echo "${blu}worker_processes:${end}${dim} $(grep worker_processes /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';') ${end}"
+		echo "${blu}worker_connections:${end}${dim} $(grep worker_connections /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';') ${end}"
+		echo "${blu}worker_rlimit_nofile:${end}${dim} $(grep worker_rlimit_nofile /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';') ${end}"
+		echo "${blu}client_max_body_size:${end}${dim} $(grep client_max_body_size /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';') ${end}"
 		echo ""
-		echo "[CACHE]"
-		echo "FastCGI 200: $( grep -F "fastcgi_cache_valid 200" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | tr -d ';')"
-		echo "FastCGI 3xx/4xx: $( grep -F "fastcgi_cache_valid 301 " /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | tr -d ';' )"
-		echo "FastCGI inactive: $( grep -F "fastcgi_cache_path" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | cut -d'=' -f 2 | tr -d ';')"
-		echo "FastCGI max-size: $( grep -F "fastcgi_cache_path" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 2 | rev | cut -f 2 -d '=' )"
-		echo "open_file_cache_valid: $(grep open_file_cache_valid /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';')"
-		echo "open_file_cache max: $(grep -w open_file_cache /etc/nginx/nginx.conf | cut -f 2 -d ' ' | cut -f 2 -d '=')"
-		echo "open_file_cache inactive: $(grep -w open_file_cache /etc/nginx/nginx.conf | cut -f 3 -d ' ' | cut -f 2 -d '=' | tr -d ';')"
+		echo "${blu}${bol}[NGINX Cache Settings]${end}"
+		echo "${blu}FastCGI 200:${end}${dim} $( grep -F "fastcgi_cache_valid 200" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | tr -d ';') ${end}"
+		echo "${blu}FastCGI 3xx/4xx:${end}${dim} $( grep -F "fastcgi_cache_valid 301 " /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | tr -d ';' ) ${end}"
+		echo "${blu}FastCGI inactive:${end}${dim} $( grep -F "fastcgi_cache_path" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 1 | rev | cut -d'=' -f 2 | tr -d ';') ${end}"
+		echo "${blu}FastCGI max-size:${end}${dim} $( grep -F "fastcgi_cache_path" /etc/nginx/conf.d/fastcgi.conf | rev | cut -d' ' -f 2 | rev | cut -f 2 -d '=' ) ${end}"
+		echo "${blu}open_file_cache_valid:${end}${dim} $(grep open_file_cache_valid /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';') ${end}"
+		echo "${blu}open_file_cache max:${end}${dim} $(grep -w open_file_cache /etc/nginx/nginx.conf | cut -f 2 -d ' ' | cut -f 2 -d '=') ${end}"
+		echo "${blu}open_file_cache inactive:${end}${dim} $(grep -w open_file_cache /etc/nginx/nginx.conf | cut -f 3 -d ' ' | cut -f 2 -d '=' | tr -d ';') ${end}"
 		echo ""
 	else
-		echo "${red} NGINX is not installed! ${blu}"
+		echo "${red}${dim} NGINX is not installed! ${end}"
 		echo ""
 	fi
 	
-	echo "[PHP]"
+	echo "${blu}${bol}[PHP]${end}"
 	if [[ $(conf_read php) == "true" ]]; then
-		echo $(php -v | grep -m1 "")
-		echo "memory_limit: $(grep memory_limit /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' )"
-		echo "post_max_size: $(grep post_max_size /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' )"
-		echo "upload_max_filesize: $(grep upload_max_filesize /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' )"
-		echo "max_file_uploads: $(grep max_file_uploads /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' )"
-		echo "max_execution_time: $(grep max_execution_time /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' )"
+		echo "${blu}Info:${end}${dim} $(php -v | grep -m1 "") ${end}"
+		echo "${blu}memory_limit:${end}${dim} $(grep memory_limit /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' -s ) ${end}"
+		echo "${blu}post_max_size:${end}${dim} $(grep post_max_size /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' -s ) ${end}"
+		echo "${blu}upload_max_filesize:${end}${dim} $(grep upload_max_filesize /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' -s ) ${end}"
+		echo "${blu}max_file_uploads:${end}${dim} $(grep max_file_uploads /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' -s ) ${end}"
+		echo "${blu}max_execution_time:${end}${dim} $(grep max_execution_time /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' -s ) ${end}"
+		echo ""
+		echo "${blu}Process Manager:${end}${dim} $(grep -E "^pm.?=.?*+" /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf | cut -f 2 -d '=' -s ) ${end}"
+		echo "${blu}pm.max_children:${end}${dim} $(grep -E "^pm.max_children.?=.?*+" /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf | cut -f 2 -d '=' -s ) ${end}"
+		echo "${blu}pm.start_servers:${end}${dim} $(grep -E "^pm.start_servers.?=.?*+" /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf | cut -f 2 -d '=' -s ) ${end}"
+		echo "${blu}pm.min_spare_servers:${end}${dim} $(grep -E "^pm.min_spare_servers.?=.?*+" /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf | cut -f 2 -d '=' -s ) ${end}"
+		echo "${blu}pm.max_spare_servers:${end}${dim} $(grep -E "^pm.max_spare_servers.?=.?*+" /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf | cut -f 2 -d '=' -s ) ${end}"
 		echo ""
 	else
-		echo "${red} PHP is not installed! ${blu}"
+		echo "${red}${dim} PHP is not installed! ${end}"
 		echo ""
 	fi
 	
-	echo "[MYSQL]"
+	echo "${blu}${bol}[MYSQL]${end}"
 	if [[ $(conf_read mysql) == "true" ]]; then
 		
-		[[ $(conf_read mysql-tool) == "true" ]] && pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'") || pmaver="Not installed!"
+		[[ $(conf_read mysql-tool) == "true" ]] && local pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'") || local pmaver="Not installed!"
 		
-		sudo mysql --version
-		echo "PhpMyAdmin: $pmaver"
+		echo "${blu}Info:${end}${dim} $(sudo mysql --version) ${end}"
+		echo "${blu}phpMyAdmin:${end}${dim} $pmaver ${end}"
 		echo ""		
 	else
-		echo "${red} MySQL is not installed! ${blu}"
+		echo "${red}${dim} MySQL is not installed! ${end}"
 		echo ""
 	fi
-
-	echo "[Raw Conf]"
-	if [[ -f /opt/webinoly/webinoly.conf ]]; then
-		sudo cat /opt/webinoly/webinoly.conf
+	
+	echo "${blu}${bol}[Webinoly]${end}"
+	[[ -n $(conf_read default-site) ]] && local ds=$(conf_read default-site) || local ds="default"
+	[[ -n $(conf_read tools-site) ]] && local ts=$(conf_read tools-site) || local ts="default"
+	[[ -n $(conf_read timezone) ]] && local tz=$(conf_read timezone) || local tz="Undefined"
+	
+	echo "${blu}Default site:${end}${dim} $ds ${end}"
+	echo "${blu}Tools site:${end}${dim} $ts ${end}"
+	echo "${blu}Tools port:${end}${dim} $(conf_read tools-port) ${end}"
+	echo "${blu}Timezone:${end}${dim} $tz ${end}"
+	if [[ $(conf_read smtp) == "true" ]]; then
+		echo "${blu}SMTP Host:${end}${dim} $(sudo cat /etc/mailname | head -n 1) ${end}"
+		echo "${blu}SMTP Mainsite:${end}${dim} $(grep -E "^relayhost.?=.?*+" /etc/postfix/main.cf | cut -f 2 -d '=' -s) ${end}"
 	else
-		echo "${red} [ERROR] Configuration File not found! ${blu}"
+		echo "${blu}SMTP:${end}${dim} None ${end}"
+	fi
+	echo ""
+	
+	echo "${blu}${bol}[Internal]${end}"
+	if [[ -f /opt/webinoly/webinoly.conf ]]; then
+		echo -n "${blu}${dim}"
+		sudo cat /opt/webinoly/webinoly.conf
+		echo "${end}"
+	else
+		echo "${red} [ERROR] Configuration File not found! ${end}"
 	fi
 	
 	echo ""
-	echo "${end}"
 }
 
 
