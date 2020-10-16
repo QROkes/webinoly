@@ -977,6 +977,11 @@ set_tools_site() {
 		echo "${red}[ERROR] Domain/site not found. ${end}"
 		exit 1
 	fi
+
+	# Warning Message
+	if [[ ( ! -s /etc/nginx/.htpasswd && $tools_site == "default" ) || ( ! -s /etc/nginx/.htpasswd && $tools_site != "default" && -f /etc/nginx/sites-available/$tools_site && ! -s /etc/nginx/apps.d/.htpasswd-$tools_site ) ]]; then
+		echo "${dim}[WARNING] HTTP Authentication Credentials not found and you may need it to access these tools!${end}"
+	fi
 }
 
 

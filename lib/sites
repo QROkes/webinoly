@@ -210,7 +210,7 @@ wpinstall() {
 				# While loop
 				done="0"
 				echo "${blu}"
-				continue 1;
+				continue 1
 			fi
 			
 			# ************* Ask for DB Name and validate data *************** #
@@ -219,7 +219,7 @@ wpinstall() {
 			dbname=${dbname:-$dom}
 			
 			# Check for duplicate database names, if already exists ask for another dbname to create the new db
-			if [[ "$setupmysql" == [yY] ]]; then
+			if [[ $setupmysql == [yY] ]]; then
 				local newdbname="$dbname"
 				while [[ $dbname == $newdbname && $dbreuse != [yY] ]]; do
 					if [[ $dbhost == "localhost" ]]; then
@@ -244,7 +244,7 @@ wpinstall() {
 							if [[ $type == [24] ]]; then
 								newdbname="Webinoly_$(pwgen -s -1)"
 								dbname="$newdbname"
-								continue 1;
+								continue 1
 							fi
 							echo "${red}[ERROR] The DB Name can not be a reserved word or should only contain allowed characters!${blu}"
 							dbreuse="n"
@@ -268,7 +268,7 @@ wpinstall() {
 			dbuser=${dbuser:-$dom}
 			
 			# Check for duplicate database users, if already exists ask for another dbuser to create the new user
-			if [[ "$setupmysql" == [yY] ]]; then
+			if [[ $setupmysql == [yY] || $dbreuse == [yY] ]]; then
 				local newdbuser=$dbuser
 				while [[ $dbuser == $newdbuser && $dbureuse != [yY] ]]; do
 					if [[ $dbhost == "localhost" ]]; then
@@ -293,7 +293,7 @@ wpinstall() {
 							if [[ $type == [24] ]]; then
 								newdbuser="Webinoly_$(pwgen -s -1)"
 								dbuser=$newdbuser
-								continue 1;
+								continue 1
 							fi
 							echo "${red}[ERROR] The DB User can not be a reserved word or should only contain allowed characters!${blu}"
 							dbureuse="n"
@@ -305,15 +305,15 @@ wpinstall() {
 							[[ -z "$newdbuser" ]] && newdbuser=$dbuser
 							dbuser=$newdbuser
 						elif [[ $dbureuse == [yY] ]]; then
-							# If you want to use the User that already exist, abort DB creation.
+							# If you want to use a user that already exist, abort DB creation.
 							setupmysql="n"
 						fi
 					fi
 				done
 			fi
 			
-			if [[ $type != [2345] ]]; then
-				read -p "Password [$AUTOGENPASS_WPDB]:" dbpass
+			if [[ $type != [2345] || $dbreuse == [yY] || $dbureuse == [yY] ]]; then
+				read -p "${blu}Password [$AUTOGENPASS_WPDB]:" dbpass
 				# Not ask for wp_prefix when type=0 (mysql only site)
 				[[ $type == [045] ]] || read -p "Database Prefix [wp_]:" dbpref
 				echo "${end}"
@@ -323,9 +323,22 @@ wpinstall() {
 				dbpref=${dbpref:-wp_}
 			fi
 		
-			# DB Creation
-			if [[ "$setupmysql" == [yY]  ]] ; then
-				if [[ $dbhost == "localhost" ]]; then
+			
+			# If DBname and DBuser (both) will be reused, we need to check if data is valid to establish connection
+			if [[ $dbreuse == [yY] && $dbureuse == [yY] && (( $dbhost == "localhost" && $(check_mysql_connection localhost $dbuser $dbpass) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dbuser $dbpass) != "true" )) ]]; then
+				done="0"
+				continue 1
+			elif [[ $dbreuse == [yY] && $dbureuse == [yY] ]]; then
+				echo "${gre}${dim}DB name and user successfully validated!${end}"
+			fi
+			# If only DBname will be reuse it, we need to reassing a new dbuser to this DB.
+			[[ $setupmysql != [yY] && $dbreuse == [yY] && $dbureuse != [yY] ]] && local dbreassign="db"
+			[[ $setupmysql != [yY] && $dbreuse != [yY] && $dbureuse == [yY] ]] && local dbreassign="dbuser"
+			
+		
+			# Database Configuration!
+			if [[ $setupmysql == [yY] || -n $dbreassign ]] ; then
+				if [[ $dbhost == "localhost" && -z $dbreassign ]]; then
 					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
 					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 CREATE DATABASE $dbname;
@@ -333,14 +346,8 @@ CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
 GRANT ALL PRIVILEGES ON ${dbname}.* TO ${dbuser}@${dbhost} IDENTIFIED BY '${dbpass}';
 FLUSH PRIVILEGES;
 _EOF_
-					if [ $? != "0" ]; then
-						done="0"
-						echo "${red}============================================"
-						echo "    [Error]: Database creation failed."
-						echo "============================================${end}"
-						echo ""
-					fi
-				else
+				
+				elif [[ -z $dbreassign ]]; then
 					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
 					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
 CREATE DATABASE ${dbname};
@@ -349,13 +356,58 @@ GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname
 FLUSH PRIVILEGES;
 _EOF_
 
-					if [ $? != "0" ]; then
-						done="0"
-						echo "${red}============================================"
-						echo "    [Error]: Database creation failed."
-						echo "============================================${end}"
-						echo ""
-					fi
+
+				# Reuse Database
+				elif [[ $dbhost == "localhost" && $dbreassign == "db" ]]; then
+					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
+					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
+GRANT ALL PRIVILEGES ON ${dbname}.* TO ${dbuser}@${dbhost} IDENTIFIED BY '${dbpass}';
+FLUSH PRIVILEGES;
+_EOF_
+				
+				elif [[ $dbreassign == "db" ]]; then
+					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
+					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
+CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
+GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to '${dbuser}'@'%';
+FLUSH PRIVILEGES;
+_EOF_
+
+
+				# Reuse User
+				elif [[ $dbhost == "localhost" && $dbreassign == "dbuser" ]]; then
+					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
+					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+CREATE DATABASE ${dbname};
+GRANT ALL PRIVILEGES ON ${dbname}.* TO ${dbuser}@${dbhost} IDENTIFIED BY '${dbpass}';
+FLUSH PRIVILEGES;
+_EOF_
+				
+				elif [[ $dbreassign == "dbuser" ]]; then
+					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
+					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
+CREATE DATABASE ${dbname};
+GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to '${dbuser}'@'%';
+FLUSH PRIVILEGES;
+_EOF_
+
+
+				else
+					# Just in case
+					echo "${red}[ERROR] Whoops...Something went wrong!${end}"
+				fi
+				
+				if [ $? != "0" ]; then
+					done="0"
+					echo "${red}============================================"
+					echo "  [Error]: Database configuration failed."
+					echo "============================================${end}"
+					echo ""
+				elif [[ $dbreassign == "db" ]]; then 
+					echo "${gre}${dim}Database successfully reassigned and configured!${end}"
+				elif [[ $dbreassign == "dbuser" ]]; then 
+					echo "${gre}${dim}DB User successfully reassigned and configured!${end}"
 				fi
 			fi
 			
@@ -366,7 +418,7 @@ _EOF_
 				  done=${done:-y}
 				  [[ $done = [YyNn] ]] && break
 				done
-				[[ $done  == [nN] ]] && done="1"
+				[[ $done == [nN] ]] && done="1"
 			fi
 		done
 	fi
@@ -464,7 +516,7 @@ deletesite() {
 			subfolder="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 			if [[ -n $subfolder && -f /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
 				if ! [[ $delete =~ ^(force|keep-db)$ ]]; then
-					echo "${blu}Delete Database ${end}'$domain$subfolder'${blu} [Y/n]?${end}"
+					echo "${blu}Delete Database [Y/n]?${end}"
 					while read -r -n 1 -s dbsubdel; do
 					  local dbsubdel=${dbsubdel:-y}
 					  [[ $dbsubdel = [YyNn] ]] && break
@@ -482,7 +534,7 @@ deletesite() {
 	# Determine if main site is WP, so you should delete the DB too.
 	if [[ ( -z $dbdel || $dbdel = [Yy] ) && ( -f /var/www/$domain/wp-config.php || -f /var/www/$domain/htdocs/wp-config.php ) ]]; then
 		if ! [[ $delete =~ ^(force|keep-db)$ ]]; then
-			echo "${blu}Delete Database ${end}'$domain$subfolder'${blu} [Y/n]?${end}"
+			echo "${blu}Delete Database [Y/n]?${end}"
 			while read -r -n 1 -s dbdel; do
 			  local dbdel=${dbdel:-y}
 			  [[ $dbdel = [YyNn] ]] && break

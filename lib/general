@@ -193,7 +193,16 @@ check_mysql_connection() {
 			echo "true"
 		fi
 	elif [[ ${1,,} == "localhost" && $(conf_read mysql) == "true" ]]; then
-		sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "quit"
+		# In case of custom DB user
+		if [[ -n $2 && -n $3 ]]; then
+			local dbu=$2
+			local dbp=$3
+		else
+			local dbu="admin"
+			local dbp=$ADMIN_PASS
+		fi
+		
+		sudo mysql --connect-timeout=10 --user=$dbu -p$dbp -e "quit"
 		if [[ $? != "0" ]]; then
 			echo "${red}============================================" >&2
 			echo "    [Error]  Database conection failed." >&2
