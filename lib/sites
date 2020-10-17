@@ -313,22 +313,29 @@ wpinstall() {
 			fi
 			
 			if [[ $type != [2345] || $dbreuse == [yY] || $dbureuse == [yY] ]]; then
-				read -p "${blu}Password [$AUTOGENPASS_WPDB]:" dbpass
-				# Not ask for wp_prefix when type=0 (mysql only site)
-				[[ $type == [045] ]] || read -p "Database Prefix [wp_]:" dbpref
-				echo "${end}"
+				if [[ $dbureuse == [yY] ]]; then
+					read -p "${blu}Current Password:" dbpass
+					if [[ -z $dbpass ]]; then
+						done="0"
+						continue 1
+					fi
+				else
+					read -p "${blu}Create Password [$AUTOGENPASS_WPDB]:" dbpass
+					dbpass=${dbpass:-$AUTOGENPASS_WPDB}
+				fi
 				
-				# If empty, assign defalut values
-				dbpass=${dbpass:-$AUTOGENPASS_WPDB}
+				# Not ask for wp_prefix when type=0 (mysql only site)
+				[[ $type == 1 ]] && read -p "Database Prefix [wp_]:" dbpref
 				dbpref=${dbpref:-wp_}
+				echo "${end}"
 			fi
 		
 			
-			# If DBname and DBuser (both) will be reused, we need to check if data is valid to establish connection
-			if [[ $dbreuse == [yY] && $dbureuse == [yY] && (( $dbhost == "localhost" && $(check_mysql_connection localhost $dbuser $dbpass) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dbuser $dbpass) != "true" )) ]]; then
+			# If DBuser will be reused, we need to check if data is valid to establish connection
+			if [[ $dbureuse == [yY] && (( $dbhost == "localhost" && $(check_mysql_connection localhost $dbuser $dbpass) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dbuser $dbpass) != "true" )) ]]; then
 				done="0"
 				continue 1
-			elif [[ $dbreuse == [yY] && $dbureuse == [yY] ]]; then
+			elif [[ $dbureuse == [yY] ]]; then
 				echo "${gre}${dim}DB name and user successfully validated!${end}"
 			fi
 			# If only DBname will be reuse it, we need to reassing a new dbuser to this DB.
@@ -343,7 +350,7 @@ wpinstall() {
 					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 CREATE DATABASE $dbname;
 CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
-GRANT ALL PRIVILEGES ON ${dbname}.* TO ${dbuser}@${dbhost} IDENTIFIED BY '${dbpass}';
+GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
 _EOF_
 				
@@ -362,7 +369,7 @@ _EOF_
 					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
 					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
-GRANT ALL PRIVILEGES ON ${dbname}.* TO ${dbuser}@${dbhost} IDENTIFIED BY '${dbpass}';
+GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
 _EOF_
 				
@@ -380,7 +387,7 @@ _EOF_
 					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
 					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 CREATE DATABASE ${dbname};
-GRANT ALL PRIVILEGES ON ${dbname}.* TO ${dbuser}@${dbhost} IDENTIFIED BY '${dbpass}';
+GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
 _EOF_
 				
