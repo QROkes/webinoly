@@ -367,9 +367,10 @@ php_optim() {
 	sudo sed -i '/ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
 
 	if [[ $(conf_read multi-php) == "true" ]]; then
+		[[ $ver == 8.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/www.conf
 		[[ $ver == 7.4 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/www.conf
 	else
 		sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
 	fi
@@ -457,7 +458,7 @@ php_tool() {
 	sudo systemctl enable redis-server
 	
 	# Memcached (Object Cache)
-	sudo apt -y install php${ver}-memcached php-memcache memcached
+	sudo apt -y install php${ver}-memcached php${ver}-memcache memcached
 	
 	# Postfix mail
 	echo "postfix postfix/main_mailer_type        select  Internet Site" | debconf-set-selections

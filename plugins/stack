@@ -134,11 +134,11 @@ elif [[ -n $purge && -n $php ]]; then
 			
 			sudo apt -y purge php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary graphviz php-pear
 			
-			sudo apt -y purge php${ver}-memcached php-memcache memcached
+			sudo apt -y purge php${ver}-memcached php${ver}-memcache memcached
 			sudo apt -y purge redis-server php${ver}-redis postfix
 			
 			# For old packages - before ondrej split modules
-			sudo apt -y purge php-memcached php-imagick php-msgpack php-redis
+			sudo apt -y purge php-memcached php-memcache php-imagick php-msgpack php-redis
 			
 			echo | sudo add-apt-repository --remove 'ppa:ondrej/php'
 			echo | sudo add-apt-repository --remove 'ppa:chris-lea/redis-server'
@@ -159,6 +159,7 @@ elif [[ -n $purge && -n $php ]]; then
 			
 			conf_write php purged
 			conf_write php-optim purged
+			[[ $(conf_read php-v8.0) == "true" ]] && conf_write php-v8.0 purged
 			[[ $(conf_read php-v7.4) == "true" ]] && conf_write php-v7.4 purged
 			[[ $(conf_read php-v7.3) == "true" ]] && conf_write php-v7.3 purged
 			[[ $(conf_read php-v7.2) == "true" ]] && conf_write php-v7.2 purged
