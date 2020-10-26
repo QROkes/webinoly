@@ -104,11 +104,11 @@ if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; the
 elif [[ -n $subfolder && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from && -z $replace_content && -z $wp && -z $html && -z $php && -z $mysql && -z $proxy && -z $env ]]; then
 	echo "${red}[ERROR] Subfolder option not supported!${end}"
 	exit 1
-elif [[ -n $subfolder && ( -n $cache || -n $yoast_sitemap || -n $multisite_convert || -n $replace_content ) && ! -d /var/www/$domain/htdocs$subfolder ]]; then
-	echo "${red}[ERROR] Subfolder not found!${end}"
+elif [[ -n $subfolder && ( -n $cache || -n $yoast_sitemap || -n $multisite_convert || -n $replace_content ) && $(is_subfolder $domain $subfolder) != "wp" ]]; then
+	echo "${red}[ERROR] Subfolder not found or is not a WP site!${end}"
 	exit 1
-elif [[ -n $subfolder && -n $clone_from && ! -d /var/www/$clone_from/htdocs$subfolder ]]; then
-	echo "${red}[ERROR] Subfolder not found!${end}"
+elif [[ -n $subfolder && -n $clone_from && $(is_subfolder $clone_from $subfolder) != "wp" ]]; then
+	echo "${red}[ERROR] Subfolder not found or is not a WP site!${end}"
 	exit 1
 else
 	subname=$(echo $subfolder | sed "s/\//_/g")
@@ -396,11 +396,11 @@ elif [[ -n $clone_from ]]; then
 	elif [[ -f /etc/nginx/sites-available/$domain && -z $subfolder && $overwrite != "on" ]]; then
 		echo "${red}[ERROR] Can not create site${blu} $domain ${red}because already exists!${end}"
 		exit 1
-	elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && -d /var/www/$domain/htdocs$subfolder && $overwrite != "on" ]]; then
+	elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" && $overwrite != "on" ]]; then
 		echo "${red}[ERROR] Subfolder ${blu}'$subfolder'${red} already exists!${end}"
 		exit 1
 	elif [[ $(is_wp $clone_from $subfolder) != "true" ]]; then
-		echo "${red}[ERROR] Site${blu} '$clone_from' ${red}is not a WordPress site!${end}"
+		echo "${red}[ERROR] Site${blu} ${clone_from}${subfolder} ${red}is not a WordPress site!${end}"
 		exit 1
 	elif [[ $(is_parked $clone_from) == "true" ]]; then
 		echo "${red}[ERROR] Cloning a parked site is not allowed!${end}"

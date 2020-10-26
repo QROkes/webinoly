@@ -25,7 +25,7 @@ fi
 if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; then
 	echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
 	exit 1
-elif [[ -n $subfolder && ( -n $domain || -n $wp_admin || -n $path ) && ! -d /var/www/$domain/htdocs$subfolder ]]; then
+elif [[ -n $subfolder && ( -n $domain || -n $wp_admin || -n $path ) && $(is_subfolder $domain $subfolder) == "false" ]]; then
 	echo "${red}[ERROR] Subfolder not found!${end}"
 	exit 1
 else
@@ -220,7 +220,7 @@ elif [[ -n $path && -n $domain ]]; then
 			x="1"
 			while [[ -n $(echo $path | rev | cut -d'/' -f ${x}- -s | rev) ]]
 			do
-				if [[ $(is_subfolder $domain $(echo $path | rev | cut -d'/' -f ${x}- -s | rev)) != "false" ]]; then
+				if ! [[ $(is_subfolder $domain $(echo $path | rev | cut -d'/' -f ${x}- -s | rev)) =~ ^(true|false)$ ]]; then
 					echo "${red}[ERROR] Subfolder parameter not found!${end}"
 					exit 1
 				fi

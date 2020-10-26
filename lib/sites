@@ -1315,6 +1315,7 @@ clone_wp_site() {
 						# At the end when all the files are copied everything is fine and nothing to worry!
 						sudo site $domain -subfolder=$wpsub -delete=keep-db > /dev/null 2>&1
 						sudo site $domain -clone-from=$clone_from -subfolder=$wpsub > /dev/null 2>&1
+						[[ -n $env ]] && sudo site $domain -env=$env -subfolder=$wpsub > /dev/null 2>&1
 					fi
 				fi
 			fi
