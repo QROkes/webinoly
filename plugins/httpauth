@@ -97,18 +97,14 @@ elif [[ -n $delete ]]; then
 elif [[ -n $wp_admin ]]; then
 	api-events_update ha3
 	if [[ -n $domain ]]; then
-		if [[ ( -z $subfolder && $(is_wp $domain) == "false" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "false" ) ]]; then
+		if [[ $(is_wp $domain $subfolder) == "false" ]]; then
 			echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WP site!${end}"
 			exit 1
-		elif [[ -n $subfolder && $(is_wp $domain $subfolder) == "true" ]]; then
-			iswpadon=$( grep -F "wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-php.conf )
-		else
-			iswpadon=$( grep -F "wpcommon.conf;" /etc/nginx/sites-available/$domain )
 		fi
 	fi
 	
 	if [[ $wp_admin == "on" && -n $domain ]]; then
-		if [[ -z $iswpadon ]]; then
+		if [[ $(is_wp_auth $domain $subfolder) != "true" ]]; then
 			if [[ -z $subfolder ]]; then
 				sudo sed -i '/wpcommon-noauth.conf/c \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
 			else
@@ -122,7 +118,7 @@ elif [[ -n $wp_admin ]]; then
 		fi
 	
 	elif [[ $wp_admin == "off" && -n $domain ]]; then
-		if [[ -n $iswpadon ]]; then
+		if [[ $(is_wp_auth $domain $subfolder) == "true" ]]; then
 			if [[ -z $subfolder ]]; then
 				sudo sed -i '/wpcommon.conf/c \	include common/wpcommon-noauth.conf;' /etc/nginx/sites-available/$domain
 			else

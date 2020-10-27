@@ -42,11 +42,11 @@ bkp_local_db() {
 	fi
 	
 	if [[ -n $wp ]]; then
-		wp_dbdata $wp # Here to not ask twice for external-db data
+		wp_dbdata $wp $subfolder # Here to not ask twice for external-db data
 		if [[ $(is_wp $wp $subfolder) != "true"  ]]; then
 			echo "${red}[ERROR] Please, enter a valid WP site!${end}"
 			exit 1
-		elif [[ $(is_wp_installed $wp) != "true"  ]]; then
+		elif [[ $(is_wp_installed $wp $subfolder) != "true"  ]]; then
 			echo "${red}[ERROR] Your WP site database is still empty!${end}"
 			exit 1
 		else
@@ -240,7 +240,8 @@ bkp_s3_profile() {
 			exit 1
 		fi
 		
-		wp_dbdata $add_db_pre false
+		[[ -z $subfolder ]] && local sbf="false" || sbf=$subfolder
+		wp_dbdata $add_db_pre $sbf false
 		if [[ $wp_dbhost != "localhost" && -z $(conf_read external-dbu) && -z $(conf_read external-dbp) ]]; then
 			echo "${red}[ERROR] Database host is not localhost!${dim} (External databases are supported with -external-db-save)${end}"
 			exit 1
