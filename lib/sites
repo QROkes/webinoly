@@ -448,31 +448,32 @@ _EOF_
 		cp /var/www/$domain/htdocs$subfolder/wp-config-sample.php $wpcon
 		
 		# Fill new wp-config with data
-		sudo sed -i "/DB_NAME/c \define('DB_NAME', '$dbname');" $wpcon
-		sudo sed -i "/DB_USER/c \define('DB_USER', '$dbuser');" $wpcon
-		sudo sed -i "/DB_PASSWORD/c \define('DB_PASSWORD', '$dbpass');" $wpcon
-		sudo sed -i "/DB_HOST/c \define('DB_HOST', '$dbhost');" $wpcon
+		wp_config_write $domain DB_NAME \'$dbname\' $subfolder
+		wp_config_write $domain DB_USER \'$dbuser\' $subfolder
+		wp_config_write $domain DB_PASSWORD \'$dbpass\' $subfolder
+		wp_config_write $domain DB_HOST \'$dbhost\' $subfolder
+		
 		sudo sed -i "/table_prefix/c \$table_prefix  = '$dbpref';" $wpcon
 		
-		sudo sed -i "/'AUTH_KEY'/c \define('AUTH_KEY',        '$(pwgen -s -1 64)');" $wpcon
-		sudo sed -i "/'SECURE_AUTH_KEY'/c \define('SECURE_AUTH_KEY', '$(pwgen -s -1 64)');" $wpcon
-		sudo sed -i "/'LOGGED_IN_KEY'/c \define('LOGGED_IN_KEY',   '$(pwgen -s -1 64)');" $wpcon
-		sudo sed -i "/'NONCE_KEY'/c \define('NONCE_KEY',       '$(pwgen -s -1 64)');" $wpcon
-		sudo sed -i "/'AUTH_SALT'/c \define('AUTH_SALT',       '$(pwgen -s -1 64)');" $wpcon
-		sudo sed -i "/'SECURE_AUTH_SALT'/c \define('SECURE_AUTH_SALT','$(pwgen -s -1 64)');" $wpcon
-		sudo sed -i "/'LOGGED_IN_SALT'/c \define('LOGGED_IN_SALT',  '$(pwgen -s -1 64)');" $wpcon
-		sudo sed -i "/'NONCE_SALT'/c \define('NONCE_SALT',      '$(pwgen -s -1 64)');" $wpcon
+		wp_config_write $domain AUTH_KEY \'$(pwgen -s -1 64)\' $subfolder
+		wp_config_write $domain SECURE_AUTH_KEY \'$(pwgen -s -1 64)\' $subfolder
+		wp_config_write $domain LOGGED_IN_KEY \'$(pwgen -s -1 64)\' $subfolder
+		wp_config_write $domain NONCE_KEY \'$(pwgen -s -1 64)\' $subfolder
+		wp_config_write $domain AUTH_SALT \'$(pwgen -s -1 64)\' $subfolder
+		wp_config_write $domain SECURE_AUTH_SALT \'$(pwgen -s -1 64)\' $subfolder
+		wp_config_write $domain LOGGED_IN_SALT \'$(pwgen -s -1 64)\' $subfolder
+		wp_config_write $domain NONCE_SALT \'$(pwgen -s -1 64)\' $subfolder
 		
 		# Redis Conf
-		sudo sed -i "/stop editing/i \define('WP_REDIS_SELECTIVE_FLUSH', true);" $wpcon
-		sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'wp_$domain$(echo $subfolder | sed "s/\//_/g")');" $wpcon
+		wp_config_write $domain WP_REDIS_SELECTIVE_FLUSH true $subfolder
+		wp_config_write $domain WP_CACHE_KEY_SALT \'wp_$domain$(echo $subfolder | sed "s/\//_/g")\' $subfolder
 	fi
 	
 }
 
 
 db_delete() {	
-	wp_dbdata $1 $subfolder
+	wp_conf_retrieve $1 $subfolder
 	[[ -z $wp_config ]] && return
 	[[ $wp_dbhost != "localhost" ]] && check_for_mysql_client
 	
@@ -978,8 +979,7 @@ wp_subfolder() {
 
 
 wp_multisite_convertion() {
-	wp_dbdata $domain $subfolder
-	sudo sed -i "/stop editing/i \define('WP_ALLOW_MULTISITE', true);" $wp_config
+	wp_config_write $domain WP_ALLOW_MULTISITE true $subfolder
 
 	echo "${blu}"
 	echo "In your WordPress dashboard, go to ${end}“Tools -> Network Setup”${blu},"
@@ -1003,25 +1003,25 @@ wp_multisite_convertion() {
 	done
 	
 	if [[ $passed == "false" && $pas == "quit" ]]; then
-		sudo sed -i "/WP_ALLOW_MULTISITE/d" $wp_config
+		wp_config_delete $domain WP_ALLOW_MULTISITE $subfolder
 		echo "${red}[ERROR] Action aborted!${end}"
 		exit 1
 	elif [[ $passed =~ ^(subdomain|subdirectory)$ ]]; then
 		# Multisite wp-config
-		sudo sed -i "/stop editing/i \define('MULTISITE', true);" $wp_config
-		sudo sed -i "/stop editing/i \define('DOMAIN_CURRENT_SITE', '$domain');" $wp_config
-		sudo sed -i "/stop editing/i \define('PATH_CURRENT_SITE', '$subfolder/');" $wp_config
-		sudo sed -i "/stop editing/i \define('SITE_ID_CURRENT_SITE', 1);" $wp_config
-		sudo sed -i "/stop editing/i \define('BLOG_ID_CURRENT_SITE', 1);" $wp_config
+		wp_config_write $domain MULTISITE true $subfolder
+		wp_config_write $domain DOMAIN_CURRENT_SITE \'$domain\' $subfolder
+		wp_config_write $domain PATH_CURRENT_SITE \'$subfolder/\' $subfolder
+		wp_config_write $domain SITE_ID_CURRENT_SITE 1 $subfolder
+		wp_config_write $domain BLOG_ID_CURRENT_SITE 1 $subfolder
 		
 		[[ $pas == "quit" ]] && echo "${red}Can not cancel because the installation was already done!${end}"
 		
 		if [[ $passed == "subdomain" ]]; then
-			sudo sed -i "/stop editing/i \define('SUBDOMAIN_INSTALL', true);" $wp_config
+			wp_config_write $domain SUBDOMAIN_INSTALL true $subfolder
 			sudo sed -i "/server_name /c \	server_name $domain *.$domain;" /etc/nginx/sites-available/$domain
 			echo "${gre}Subdomain Multisite configuration has been successfully completed!${end}"
 		elif [[ $passed == "subdirectory" ]]; then
-			sudo sed -i "/stop editing/i \define('SUBDOMAIN_INSTALL', false);" $wp_config			
+			wp_config_write $domain SUBDOMAIN_INSTALL false $subfolder
 			
 			if [[ -z $subfolder ]]; then
 				sudo sed -i '/locations.conf/i \	include common/wpsubdir.conf;' /etc/nginx/sites-available/$domain
@@ -1036,7 +1036,7 @@ wp_multisite_convertion() {
 			echo "${gre}Subdirectory Multisite configuration has been successfully completed!${end}"
 		fi
 	else
-			sudo sed -i "/WP_ALLOW_MULTISITE/d" $wp_config
+			wp_config_delete $domain WP_ALLOW_MULTISITE $subfolder
 			echo "${red}[ERROR] Multisite installation incomplete or not detected!${end}"
 			exit 1
 	fi
@@ -1326,11 +1326,10 @@ clone_wp_site() {
 	local dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
 	local AUTOGENPASS_WPDB=`pwgen -s -1 16`
 	
-	sudo sed -i "/DB_NAME/c \define('DB_NAME', '$dom');" $(echo $wp_config | sed "s/$clone_from/$domain/")
-	sudo sed -i "/DB_USER/c \define('DB_USER', '$dom');" $(echo $wp_config | sed "s/$clone_from/$domain/")
-	sudo sed -i "/DB_PASSWORD/c \define('DB_PASSWORD', '$AUTOGENPASS_WPDB');" $(echo $wp_config | sed "s/$clone_from/$domain/")
-	sudo sed -i "/'WP_CACHE_KEY_SALT'/d" $(echo $wp_config | sed "s/$clone_from/$domain/")
-	sudo sed -i "/stop editing/i \define('WP_CACHE_KEY_SALT', 'wp_$domain$(echo $subfolder | sed "s/\//_/g")');" $(echo $wp_config | sed "s/$clone_from/$domain/")
+	wp_config_write $domain DB_NAME \'$dom\' $subfolder
+	wp_config_write $domain DB_USER \'$dom\' $subfolder
+	wp_config_write $domain DB_PASSWORD \'$AUTOGENPASS_WPDB\' $subfolder
+	wp_config_write $domain WP_CACHE_KEY_SALT \'wp_$domain$(echo $subfolder | sed "s/\//_/g")\' $subfolder
 	
 	if [[ $wp_dbhost == "localhost" ]]; then
 		site -mysql=[localhost,$dom,$dom,$AUTOGENPASS_WPDB] > /dev/null 2>&1
@@ -1373,7 +1372,7 @@ wp_replace_content() {
 		exit 1
 	fi
 	
-	wp_dbdata $domain $subfolder
+	wp_conf_retrieve $domain $subfolder
 	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) != "true" ) ]]; then
 		exit 1
 	fi
@@ -1510,7 +1509,7 @@ site_info() {
 		echo "${blu}Debug:${end} $(is_wp_debug $domain)"
 		echo ""
 		
-		wp_dbdata $domain
+		wp_conf_retrieve $domain
 		echo "${blu}Database:${end} $wp_dbhost"
 		echo "${blu}DB Name:${end} $wp_dbname"
 		echo "${blu}DB User:${end} $wp_dbuser"
@@ -1537,15 +1536,13 @@ wp_env_type() {
 		exit 1
 	fi
 	
-	wp_dbdata $domain $subfolder
-	[[ -n $( grep -F "'WP_ENVIRONMENT_TYPE'" $wp_config ) ]] && sudo sed -i "/'WP_ENVIRONMENT_TYPE'/d" $wp_config
-	
 	if [[ $env == "production" ]]; then
 		local index="1"
+		wp_config_delete $domain WP_ENVIRONMENT_TYPE $subfolder
 		[[ -n $cache ]] && wp_cache
 	else
 		local index="0"
-		sudo sed -i "/stop editing/i \define('WP_ENVIRONMENT_TYPE', '$env');" $wp_config
+		wp_config_write $domain WP_ENVIRONMENT_TYPE \'$env\' $subfolder
 		if [[ -n $cache ]]; then
 			wp_cache
 		elif [[ $(is_wp_cache $domain $subfolder) == "true" ]]; then
@@ -1564,6 +1561,8 @@ wp_env_type() {
 	fi
 	
 	# WordPress Reading Settings: Discourage Search Engines
+	wp_conf_retrieve $domain $subfolder
+	
 	if [[ $(is_wp_installed $domain $subfolder) == "true" ]]; then
 		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
 			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_

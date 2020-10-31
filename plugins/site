@@ -407,7 +407,7 @@ elif [[ -n $clone_from ]]; then
 		exit 1
 	fi
 	
-	wp_dbdata $clone_from $subfolder #We need to call this function in the parent shell to preserve variables and avoid asking two times for the same values in case of external db.
+	wp_conf_retrieve $clone_from $subfolder #We need to call this function in the parent shell to preserve variables and avoid asking two times for the same values in case of external db.
 	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) != "true" ) ]]; then
 		exit 1
 	fi
