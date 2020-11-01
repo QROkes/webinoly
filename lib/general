@@ -223,16 +223,25 @@ check_mysql_connection() {
 
 
 wp_config_path() {
-	if [[ -n $2 && $2 != "false" && -f /var/www/$1/htdocs$2/wp-config.php ]]; then
-		echo "/var/www/$1/htdocs$2/wp-config.php"
-	elif [[ ( -z $2 || $2 == "false" ) && -f /var/www/$1/wp-config.php ]]; then
-		echo "/var/www/$1/wp-config.php"
-	elif [[ ( -z $2 || $2 == "false" ) && -f /var/www/$1/htdocs/wp-config.php ]]; then
-		echo "/var/www/$1/htdocs/wp-config.php"
-	elif [[ ( -z $2 || $2 == "false" ) && $(is_wp $1) == "true" && $(is_parked $1) == "true" ]]; then
-		echo "$(grep -G "root .*;" /etc/nginx/sites-available/$1 | sed -r 's/^.*root (.*)htdocs;$/\1/')wp-config.php"
-	else
-		return
+	# If this file exist is because is WP parked
+	# We can not use is_parked here because it will cause an infinite loop (is_parked uses this function)
+	# if parked: check if parked before use this path value
+	if [[ -f /etc/nginx/sites-available/$1 ]]; then
+		local parpath="$(grep -G "root .*;" /etc/nginx/sites-available/$1 | sed -r 's/^.*root (.*)htdocs;$/\1/')wp-config.php"
+	
+		if [[ -n $2 && $2 != "false" && -f /var/www/$1/htdocs$2/wp-config.php ]]; then
+			echo "/var/www/$1/htdocs$2/wp-config.php"
+			
+		# WP take this file first (if exist) and then look one folder below.
+		elif [[ ( -z $2 || $2 == "false" ) && -f /var/www/$1/htdocs/wp-config.php ]]; then
+			echo "/var/www/$1/htdocs/wp-config.php"
+		elif [[ ( -z $2 || $2 == "false" ) && -f /var/www/$1/wp-config.php ]]; then
+			echo "/var/www/$1/wp-config.php"
+		elif [[ ( -z $2 || $2 == "false" ) && -f $parpath ]]; then
+			echo "$parpath"
+		else
+			return
+		fi
 	fi
 }
 
@@ -282,6 +291,13 @@ wp_conf_retrieve() {
 	# $3 is set to false if you want to skip external_db questions.
 	
 	wp_config=$(wp_config_path $1 $2)
+	# Just in case: We should always check is_wp before calling this function
+	# The best error message is the one that never shows up! :)
+	if [[ -z $wp_config || ! -f $wp_config ]]; then
+		echo "${red}[ERROR] WordPress configuration file not found!${end}"
+		return
+	fi
+	
 	wp_dbname=$( wp_config_read $1 DB_NAME $2 )
 	wp_dbuser=$( wp_config_read $1 DB_USER $2 )
 	wp_dbhost=$( wp_config_read $1 DB_HOST $2 )
@@ -597,12 +613,7 @@ is_parked() {
 
 is_wp() {
 	# $1 = domain, $2 = WP subfolder
-	if [[ -n $2 ]]; then
-		local subn=$(echo $2 | sed "s/\//_/g")
-		local sn=$2
-	else
-		local sn="false"
-	fi
+	[[ -n $2 ]] && local subn=$(echo $2 | sed "s/\//_/g")	
 	
 	if [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/wpcommon") ]]; then
 		[[ -f $(wp_config_path $1) ]] && echo "true" || echo "false"

@@ -292,6 +292,11 @@ elif [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 	fi
 	
 	# WordPress Logs
+	if [[ -n $wp && $(is_parked $domain) == "true" ]]; then
+		echo "${red}[ERROR] Parked sites not allowed! ${dim}(WP debug should be used in main site)${end}"
+		exit 1
+	fi
+	
 	if [[ -n $wp && $(is_wp $domain $subfolder) == "true" ]]; then
 		iswpdeb=$( is_wp_debug $domain $subfolder )
 		
