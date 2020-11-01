@@ -1408,7 +1408,7 @@ wp_replace_content() {
 list_sites() {
 	echo ""
 	
-	if ! [[ ${list,,} =~ ^(true|disabled|main|parked|wordpress|php|html|proxy|forward|tools|default|ssl|nossl|sslstaging|accesslog|noaccesslog|cache|nocache|adminauth|noadminauth|debug|nodebug)$ ]]; then
+	if ! [[ ${list,,} =~ ^(true|disabled|main|parked|wordpress|php|html|proxy|forward|tools|default|ssl|nossl|sslstaging|accesslog|noaccesslog|cache|nocache|adminauth|noadminauth|debug|nodebug|wpenv)$ ]]; then
 		echo "${red}[ERROR] Invalid value for list filter! ${end}"
 		exit 1
 	fi
@@ -1440,7 +1440,7 @@ list_sites() {
 			[[ ${list,,} == "noaccesslog" && $(is_log $domi) == "true" ]] && continue
 			
 			# Only WordPress options
-			[[ ${list,,} =~ ^(cache|nocache|adminauth|noadminauth|debug|nodebug)$ && $(is_wp $domi) != "true" ]] && continue
+			[[ ${list,,} =~ ^(cache|nocache|adminauth|noadminauth|debug|nodebug|wpenv)$ && $(is_wp $domi) != "true" ]] && continue
 			
 			[[ ${list,,} == "cache" && $(is_wp_cache $domi) != "true" ]] && continue
 			[[ ${list,,} == "nocache" && $(is_wp_cache $domi) == "true" ]] && continue
@@ -1450,13 +1450,17 @@ list_sites() {
 			
 			[[ ${list,,} == "debug" && $(is_wp_debug $domi) != "true" ]] && continue
 			[[ ${list,,} == "nodebug" && $(is_wp_debug $domi) == "true" ]] && continue
+			
+			[[ ${list,,} == "wpenv" && -z $(wp_config_read $domi WP_ENVIRONMENT_TYPE) ]] && continue
 		fi
 		
 		if [[ -z $raw && $list != "raw" ]]; then
 			[[ -d /var/www/$domi ]] && local sign="${gre} +" || local sign="${blu} *${gre}"
 			[[ ! -L /etc/nginx/sites-enabled/$domi ]] && local sign="${red} -"
 			
-			[[ $(conf_read default-site) == $domi ]] && local check="${blu}${dim}($(site_type $domi))(Default)" || local check="${blu}${dim}($(site_type $domi))"
+			[[ $(is_wp $domi) == "true" && -n $(wp_config_read $domi WP_ENVIRONMENT_TYPE) ]] && local sype="$(site_type $domi):$(wp_config_read $domi WP_ENVIRONMENT_TYPE)" || local sype=$(site_type $domi)
+			
+			[[ $(conf_read default-site) == $domi ]] && local check="${blu}${dim}($sype)(Default)" || local check="${blu}${dim}($sype)"
 			[[ $(conf_read tools-site) == $domi ]] && local check="${check}(Tools)"
 			[[ $(is_ssl $domi) != "true" ]] && local check="${check}${red}(NoSSL)" || local check="${check}${red}"
 			[[ $(is_ssl $domi) == "true" && $(is_ssl_staging $domi) == "true" ]] && local check="${check}(SSL-Staging)"
@@ -1524,6 +1528,8 @@ site_info() {
 		echo "${blu}Multisite:${end} $(is_wp_multisite $domain)"
 		echo "${blu}WP Auth:${end} $(is_wp_auth $domain)"
 		echo "${blu}Debug:${end} $(is_wp_debug $domain)"
+	
+		[[ -n $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder) ]] && echo "${blu}Environment:${end} $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder)"
 		echo ""
 		
 		wp_conf_retrieve $domain
