@@ -172,7 +172,7 @@ webinoly_verify() {
 			echo "[ERROR] File: /etc/nginx/fastcgi_params not found!"
 			error="1"
 		fi
-		if ! [[ -f /etc/nginx/.htpasswd && $(conf_read php) == "true" || ( -n $(conf_read tools-site) && -f /etc/nginx/apps.d/.htpasswd-$(conf_read tools-site) && $(conf_read php) == "true" ) ]]; then
+		if [[ $(conf_read php) == "true" && ! ( -s /etc/nginx/.htpasswd || ( -n $(conf_read tools-site) && -s /etc/nginx/apps.d/.htpasswd-$(conf_read tools-site) )) ]]; then
 			echo "[INFO] HTTP Authentication Credentials not found!"
 			info="1"
 		fi
@@ -399,7 +399,6 @@ webinoly_verify() {
 		error="1"
 	fi
 	
-	[[ -z $ADMIN_PASS ]] && local ADMIN_PASS="dUmb"
 	if ! sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "quit" 2>/dev/null && [[ $(conf_read mysql) == "true" ]]; then
 		echo "[ERROR] MySQL Connection to localhost failed! (admin)"
 		error="1"
@@ -431,12 +430,10 @@ webinoly_verify() {
 	fi
 	
 	# Check OS support
-	distr=`echo $(lsb_release -i | cut -d':' -f 2)`
-	osver=`echo $(lsb_release -c | cut -d':' -f 2)`
-	if [[ $distr != "Ubuntu" ]]; then
+	if [[ $(lsb_release -i | cut -d':' -f 2 | xargs) != "Ubuntu" ]]; then
 		echo "[ERROR] This Operating System is not supported!"
 		error="1"
-	elif [[ $(check_ubuntu_release $osver) != "true" ]]; then
+	elif [[ $(check_ubuntu_release) != "true" ]]; then
 		echo "[ERROR] This Ubuntu version is not supported!"
 		error="1"
 	fi
@@ -617,7 +614,7 @@ smtp_setup() {
 	elif [[ ! -f /etc/nginx/sites-available/$mainhost ]]; then
 		echo "${red}[ERROR] Main Host site not found in your server!${end}"
 		exit 1
-	elif [[ $(is_ip $host) != "true" && $(is_url $host) != "true" ]]; then
+	elif [[ $(is_url $host) != "true" ]]; then
 		if [[ $(is_url $host) =~ ^(http|https)$ ]]; then
 			echo "${red}[ERROR] Invalid SMTP host! (HTTP/HTTPS can not be used in conjunction with SMTP protocol)${end}"
 		else
@@ -2097,7 +2094,7 @@ ext_db_save() {
 	
 	if [[ -n $host ]]; then
 		is_url $host -split
-		if [[ -z $url_path && ( $(is_url $host) =~ ^(http|https|true)$ || $(is_ip $url_host) == "true" ) ]]; then
+		if [[ -z $url_path && $(is_url $host) =~ ^(http|https|ip|true)$ ]]; then
 			conf_write external-dbh $url_host
 			[[ -n $url_port ]] && conf_write external-dbx $url_port || conf_delete external-dbx
 		else

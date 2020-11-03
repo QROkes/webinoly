@@ -73,7 +73,7 @@ check_ubuntu_release() {
 	local check="false"
 	for val in "${os_ubuntu_supported[@]}"
 	do 
-		[[ $val == $1 ]] && check="true"
+		[[ $val == $(lsb_release -c | cut -d':' -f 2 | xargs) ]] && check="true"
 	done
 	echo $check
 }
@@ -87,16 +87,15 @@ check_php_version() {
 }
 
 check_osname() {
-	local distr=`echo $(lsb_release -i | cut -d':' -f 2)`
-	local osver=`echo $(lsb_release -c | cut -d':' -f 2)`
-	if ! [[ $distr == "Ubuntu" && $(check_ubuntu_release $osver) == "true" ]]; then
+	if ! [[ $(lsb_release -i | cut -d':' -f 2 | xargs) == "Ubuntu" && $(check_ubuntu_release) == "true" ]]; then
 		echo "${red}" >&2
 		echo "****************************************************************************" >&2
 		echo "****  This OS is not supported by Webinoly and could not work properly  ****" >&2
 		echo "****************************************************************************" >&2
 		echo "${end}" >&2
+	else
+		echo $(lsb_release -c | cut -d':' -f 2 | xargs)
 	fi
-	echo $osver
 }
 
 
@@ -475,6 +474,10 @@ is_domain() {
 	elif [[ $1 == *..* || $(echo "${1}" | cut -c-1) == "." || $(echo "${1}" | rev | cut -c-1) == "." ]]; then
 		echo "false"
 	
+	# Check if IP address
+	elif [[ $(is_ip $1) == "true" ]]; then
+		echo "false"
+	
 	else
 		echo "true"
 	fi
@@ -492,7 +495,7 @@ is_url_path() {
 
 
 is_url() {
-	# Output: true,http,https,false  Example: $(is_url $domain)
+	# Output: http,https,ip,true,false  Example: $(is_url $domain)
 	# Global variables when -split is set: url_scheme, url_host, url_path, url_port    Example: is_url $domain -split
 	
 	local scheme=$(echo "${1,,}" | cut -d':' -f 1 -s)
@@ -507,7 +510,7 @@ is_url() {
 	[[ $(echo $hosted | cut -d':' -f 2 -s) =~ ^[0-9]+$ ]] && hosted=$(echo $hosted | cut -d':' -f 1)
 	
 	if [[ $scheme =~ ^(http|https)$ ]]; then	
-		if [[ $(is_domain $host) != "true" ]]; then
+		if [[ $(is_domain $host) != "true" && $(is_ip $host) != "true" ]]; then
 			out="false"
 		elif [[ -n $path && $(is_url_path /$path) != "true" ]]; then
 			out="false"
@@ -516,7 +519,7 @@ is_url() {
 		else
 			out=$scheme
 		fi
-	elif [[ $(is_domain $hosted) == "true" ]]; then
+	elif [[ $(is_domain $hosted) == "true" || $(is_ip $hosted) == "true" ]]; then
 		scheme=""
 		host=$hosted
 		path=$(echo "${1,,}" | cut -d'/' -f 2- -s)
@@ -526,6 +529,8 @@ is_url() {
 			out="false"
 		elif [[ -n $port ]] && ! [[ $port =~ ^[0-9]+$ && $port -ge 0 && $port -le 65535 ]]; then
 			out="false"
+		elif [[ $(is_ip $hosted) == "true" ]]; then
+			out="ip"		
 		else
 			out="true"
 		fi

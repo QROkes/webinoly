@@ -1130,7 +1130,7 @@ reverse_proxy() {
 		read -p "${blu}URL address: ${end}" proxydata
 	fi
 	
-	if ! [[ -n $proxydata && $(is_url $proxydata) =~ ^(http|https|true)$ ]]; then
+	if ! [[ -n $proxydata && $(is_url $proxydata) =~ ^(http|https|ip|true)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid host and port!${end}"
 		exit 1
 	elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" ]]; then
