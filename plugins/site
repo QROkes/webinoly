@@ -37,7 +37,7 @@ if [[ -n $wp || -n $mysql ]]; then
 		extp=$( echo $(conf_read external-dbp) | openssl enc -d -a -salt )
 		[[ $wp == "true" ]] && wp=[true,true,$exth,$dona,$dona,random,wp_,$(conf_read external-dbu),$extp]
 		[[ $mysql == "true" ]] && mysql=[$exth,$dona,$dona,random,$(conf_read external-dbu),$extp]
-		echo "${blu}External DB credentials found!${end}"
+		echo "${blu}${dim}External DB credentials found!${end}"
 	fi
 
 	if [[ ( -n $wp && $wp != true ) || ( -n $mysql && $mysql != true ) ]]; then
@@ -411,7 +411,7 @@ elif [[ -n $clone_from ]]; then
 	fi
 	
 	wp_conf_retrieve $clone_from $subfolder #We need to call this function in the parent shell to preserve variables and avoid asking two times for the same values in case of external db.
-	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) != "true" ) ]]; then
+	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
 		exit 1
 	fi
 	

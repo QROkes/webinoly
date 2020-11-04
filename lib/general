@@ -221,6 +221,61 @@ check_mysql_connection() {
 }
 
 
+check_external_db_saved() {
+	if [[ -n $(conf_read external-dbh) && -n $(conf_read external-dbu) && -n $(conf_read external-dbp) && -n $(conf_read external-dbx) ]]; then
+		external_db="[$(conf_read external-dbu),$( echo $(conf_read external-dbp) | openssl enc -d -a -salt ),$(conf_read external-dbh):$(conf_read external-dbx)]"
+		[[ $(conf_read quiet) != "true" ]] && echo "${blu}${dim}External DB credentials found!${end}" >&2
+	fi
+}
+
+
+external_db_parse() {
+	if [[ -n $external_db ]]; then
+		# Prevent errors
+		if [[ ${#external_db} -lt 2 ]]; then
+			echo "${red}[ERROR] Invalid data for External Database!${end}"
+			exit 1
+		fi
+		
+		local dbdata=${external_db:1:-1}
+		local user=$(echo "${dbdata}" | cut -d',' -f 1 -s)
+		local pass=$(echo "${dbdata}" | cut -d',' -f 2 -s)
+		local host=$(echo "${dbdata}" | cut -d',' -f 3 -s)
+		local url=$(echo "$host" | cut -f 1 -d ':')
+		local port=$(echo "$host" | cut -f 2 -d ':' -s)
+		
+		if [[ $(echo "${external_db}" | cut -c-1) != "[" || $(echo "${external_db}" | rev | cut -c-1) != "]" ]]; then
+			echo "${red}[ERROR] Invalid syntax for External Database!${end}"
+			exit 1
+		elif [[ $1 == "-nohost" && ( -z $user || -z $pass ) ]]; then
+			echo "${red}[ERROR] Invalid data for External Database!${end}"
+			exit 1
+		elif [[ $1 != "-nohost" && ( -z $user || -z $pass || -z $url || -z $port ) ]]; then
+			echo "${red}[ERROR] Invalid data for External Database!${end}"
+			exit 1
+		fi
+		
+		check_for_mysql_client
+		if [[ $(check_mysql_connection $url $port $user $pass) != "true" ]]; then
+			echo "${red}[ERROR] Cannot connect with your External Database!${end}"
+			exit 1
+		else
+			# Make it global only after verification
+			extdb_user=$user
+			extdb_pass=$pass
+			if [[ $1 != "-nohost" ]]; then
+				extdb_host=$host
+				extdb_url=$url
+				extdb_port=$port
+			fi
+		fi
+	else
+		echo "${red}[ERROR] External DB parameter not found!${end}"
+		exit 1
+	fi
+}
+
+
 wp_config_path() {
 	# If this file exist is because is WP parked
 	# We can not use is_parked here because it will cause an infinite loop (is_parked uses this function)
@@ -301,34 +356,28 @@ wp_conf_retrieve() {
 	wp_dbuser=$( wp_config_read $1 DB_USER $2 )
 	wp_dbhost=$( wp_config_read $1 DB_HOST $2 )
 	wp_dbpass=$( wp_config_read $1 DB_PASSWORD $2 )
-	wp_dburl=$(echo "$wp_dbhost" | cut -f 1 -d ':')
-	wp_dbport=$(echo "$wp_dbhost" | cut -f 2 -d ':' -s)
 	wp_dbpref=$( grep -F "table_prefix" $wp_config | cut -f 2 -d "'" -s)
+	extdb_url=$(echo "$wp_dbhost" | cut -f 1 -d ':')
+	extdb_port=$(echo "$wp_dbhost" | cut -f 2 -d ':' -s)
 	
 	[[ ${wp_dbhost,,} == "localhost" ]] && wp_dbhost=${wp_dbhost,,}
-	[[ -z $wp_dbport ]] && wp_dbport="3306"
+	[[ -z $extdb_port ]] && extdb_port="3306"
 	
 	if [[ $3 != "false" ]]; then
+		if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" && $wp_dbhost == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
+			check_external_db_saved
+		elif [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" && -n $(conf_read external-dbh) && $wp_dbhost != "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
+			echo "${dim}[INFO] External Database saved credentials found, but we cannot use it because not the same host!${end}"
+		fi
+		
 		if [[ -n $external_db ]]; then
-			local dbdata=${external_db:1:-1}
-			wp_uroot=$(echo "${dbdata}" | cut -d',' -f 1 -s)
-			wp_proot=$(echo "${dbdata}" | cut -d',' -f 2 -s)
-			if [[ $(echo "${external_db}" | cut -c-1) != "[" || $(echo "${external_db}" | rev | cut -c-1) != "]" || -z $wp_uroot || -z $wp_proot ]]; then
-				echo "${red}[ERROR] Invalid data for External Database!${end}" >&2
-				exit 1
-			fi
-		elif [[ -n $(conf_read external-dbu) && -n $(conf_read external-dbp) && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
-			wp_uroot=$(conf_read external-dbu)
-			wp_proot=$( echo $(conf_read external-dbp) | openssl enc -d -a -salt )
-			external_db="[$wp_uroot,$wp_proot]"
-			echo "${blu}External DB credentials found!${end}" >&2
+			external_db_parse -nohost
 		elif [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
 			echo "" >&2
-			echo "${gre}External DB${blu} '${wp_dburl}:${wp_dbport}' ${gre}found in${blu} $1 ${gre}(Press 'Enter' key twice to skip)" >&2
-			read -p "${blu}External DB username: " wp_uroot
-			read -p "External DB password: " wp_proot
-			
-			external_db="[$wp_uroot,$wp_proot]"
+			echo "${gre}External DB${blu} '${extdb_url}:${extdb_port}' ${gre}found in${blu} $1 ${gre}(Press 'Enter' key twice to skip)" >&2
+			read -p "${blu}External DB username: " extdb_user
+			read -p "External DB password: " extdb_pass
+			external_db="[$extdb_user,$extdb_pass,${wp_dbhost}:${wp_dbport}]"
 		fi
 	fi
 }
@@ -649,9 +698,9 @@ is_wp_multisite() {
 	if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
 		wpmu=$(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup")
 		[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetuc")
-	elif [[ $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) == "true" ]]; then
-		wpmu=$(sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup")
-		[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetuc")
+	elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
+		wpmu=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup")
+		[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetuc")
 	fi
 	
 	if [[ $(echo $mutype | cut -f 2 -d " " -s) == "1" ]]; then
@@ -673,8 +722,8 @@ is_wp_installed() {
 	
 	if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
 		[[ -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup") ]] && echo "true" || echo "false"
-	elif [[ $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) == "true" ]]; then
-		[[ -n $(sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup") ]] && echo "true" || echo "false"
+	elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
+		[[ -n $(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup") ]] && echo "true" || echo "false"
 	else
 		echo "false"
 	fi
@@ -833,8 +882,8 @@ UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
 FLUSH PRIVILEGES;
 _EOF_
 
-		elif [[ $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) == "true" ]]; then
-			sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" <<_EOF_
+		elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
+			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';

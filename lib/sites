@@ -491,7 +491,7 @@ db_delete() {
 	[[ -z $wp_config ]] && return
 	[[ $wp_dbhost != "localhost" ]] && check_for_mysql_client
 	
-	if [[ ( $wp_dbhost == "localhost" &&  ( $(conf_read mysql) != "true" || $(check_mysql_connection localhost) != "true" )) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) != "true" ) ]]; then
+	if [[ ( $wp_dbhost == "localhost" &&  ( $(conf_read mysql) != "true" || $(check_mysql_connection localhost) != "true" )) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
 		echo "${red}[ERROR] Database${blu} $domain ${red}cannot be deleted!${end}"
 		return
 	fi
@@ -501,10 +501,10 @@ db_delete() {
 		sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup"
 		echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
 	else
-		if [[ $wp_uroot == "root" && -z $wp_proot ]]; then
+		if [[ $extdb_user == "root" && -z $extdb_pass ]]; then
 			echo "${red}Action aborted, database not deleted!${end}"
 		else
-			sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$dbsetup"
+			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup"
 			echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
 		fi
 	fi
@@ -1000,6 +1000,7 @@ wp_multisite_convertion() {
 	echo "Write ${end}'quit'${blu} and press ${end}<Enter>${blu} to exit and abort this operation."
 	echo "${end}"
 	
+	conf_write quiet true
 	while [[ -z $passed || $passed == "false" ]]; do
 		if read -t0; then
 			read pas
@@ -1008,6 +1009,7 @@ wp_multisite_convertion() {
 		sleep 2
 		passed=$(is_wp_multisite $domain $subfolder)
 	done
+	conf_delete quiet
 	
 	if [[ $passed == "false" && $pas == "quit" ]]; then
 		wp_config_delete $domain WP_ALLOW_MULTISITE $subfolder
@@ -1124,6 +1126,13 @@ reverse_proxy() {
 	if [[ $proxy != true ]]; then
 		firstchar=$(echo "${proxy}" | cut -c-1)
 		lastchar=$(echo "${proxy}" | rev | cut -c-1)
+		
+		# Prevent errors
+		if [[ ${#proxy} -lt 2 ]]; then
+			echo "${red}[ERROR] Invalid data for proxy!${end}"
+			exit 1
+		fi
+		
 		proxydata=${proxy:1:-1}
 		[[ $firstchar != "[" || $lastchar != "]" ]] && proxydata=""
 	else
@@ -1353,8 +1362,8 @@ clone_wp_site() {
 		mysqldump -u admin -p$ADMIN_PASS $wp_dbname | mysql -u admin -p$ADMIN_PASS $dom
 		edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
 	else
-		site -mysql=[$wp_dbhost,$dom,$dom,$AUTOGENPASS_WPDB,$wp_uroot,$wp_proot] > /dev/null 2>&1
-		mysqldump -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" $wp_dbname | mysql -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" $dom
+		site -mysql=[$wp_dbhost,$dom,$dom,$AUTOGENPASS_WPDB,$extdb_user,$extdb_pass] > /dev/null 2>&1
+		mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $wp_dbname | mysql -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $dom
 		edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
 	fi
 	
@@ -1379,6 +1388,12 @@ wp_replace_content() {
 		read -p "${blu}Replace with: ${end}" replace
 		echo ""
 	elif [[ $(echo "${replace_content}" | cut -c-1) == "[" && $(echo "${replace_content}" | rev | cut -c-1) == "]" ]]; then
+		# Prevent errors
+		if [[ ${#replace_content} -lt 2 ]]; then
+			echo "${red}[ERROR] Invalid data for Replace-Content!${end}"
+			exit 1
+		fi
+		
 		userdata=${replace_content:1:-1}
 		search=$(echo "${userdata}" | cut -d',' -f 1 -s)
 		replace=$(echo "${userdata}" | cut -d',' -f 2 -s)
@@ -1390,7 +1405,7 @@ wp_replace_content() {
 	fi
 	
 	wp_conf_retrieve $domain $subfolder
-	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) != "true" ) ]]; then
+	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
 		exit 1
 	fi
 	
@@ -1399,7 +1414,7 @@ wp_replace_content() {
 	if [[ $wp_dbhost == "localhost" ]]; then
 		sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$query"
 	else
-		sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" -e "$query"
+		sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$query"
 	fi
 	echo "${gre}Content successfully replaced in your WP site!${end}"
 }
@@ -1597,8 +1612,8 @@ UPDATE ${wp_dbpref}options SET option_value='$index' WHERE option_name='blog_pub
 FLUSH PRIVILEGES;
 _EOF_
 		
-		elif [[ $(check_mysql_connection $wp_dburl $wp_dbport $wp_uroot $wp_proot) == "true" ]]; then
-			sudo mysql --connect-timeout=10 -h "$wp_dburl" -P "$wp_dbport" -u"$wp_uroot" -p"$wp_proot" <<_EOF_
+		elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
+			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$index' WHERE option_name='blog_public';
 FLUSH PRIVILEGES;
