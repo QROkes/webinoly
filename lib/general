@@ -893,3 +893,25 @@ _EOF_
 	fi
 }
 
+
+db_user_role() {
+	# Can't be used on not global users: FILE,REPLICATION CLIENT,REPLICATION SLAVE,PROCESS,SHOW DATABASES,CREATE USER,RELOAD,GRANT,SUPER,SHUTDOWN
+	# FILE Privilege not supported by external DB's: http://cloudofnines.blogspot.com/2014/09/in-rds-instances-file-privilege-for.html
+	# AWS RDS Reference: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.MasterAccounts.html
+	# ALL PRIVILEGES not supported for external DB's.
+	
+	if [[ $(conf_read dbrole) == "all" ]]; then
+		local priv="ALL PRIVILEGES"
+	elif [[ $(conf_read dbrole) == "basic" ]]; then
+		local priv="SELECT,INSERT,UPDATE,DELETE"
+	elif [[ $(conf_read dbrole) == "limited" ]]; then
+		local priv="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER"
+	elif [[ $(conf_read dbrole) == "complete" ]]; then
+		local priv="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER,CREATE TEMPORARY TABLES,EXECUTE,CREATE VIEW,SHOW VIEW,CREATE ROUTINE,ALTER ROUTINE,EVENT,TRIGGER"
+	else # full
+		local priv="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER,CREATE TEMPORARY TABLES,EXECUTE,CREATE VIEW,SHOW VIEW,CREATE ROUTINE,ALTER ROUTINE,EVENT,TRIGGER,REFERENCES,LOCK TABLES"
+	fi
+
+	echo $priv
+}
+

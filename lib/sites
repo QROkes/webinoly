@@ -363,7 +363,7 @@ wpinstall() {
 					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 CREATE DATABASE $dbname;
 CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
-GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to '${dbuser}'@'%';
+GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
 _EOF_
 				
@@ -372,7 +372,7 @@ _EOF_
 					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
 CREATE DATABASE ${dbname};
 CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
-GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to '${dbuser}'@'%';
+GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
 _EOF_
 
@@ -382,7 +382,7 @@ _EOF_
 					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
 					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
-GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to '${dbuser}'@'%';
+GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
 _EOF_
 				
@@ -390,7 +390,7 @@ _EOF_
 					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
 					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
 CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
-GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to '${dbuser}'@'%';
+GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
 _EOF_
 
@@ -400,7 +400,7 @@ _EOF_
 					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
 					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 CREATE DATABASE ${dbname};
-GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to '${dbuser}'@'%';
+GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
 _EOF_
 				
@@ -408,7 +408,7 @@ _EOF_
 					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
 					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
 CREATE DATABASE ${dbname};
-GRANT SELECT,ALTER,UPDATE,INSERT,CREATE,DELETE,DROP,INDEX,REFERENCES on ${dbname}.* to '${dbuser}'@'%';
+GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
 _EOF_
 

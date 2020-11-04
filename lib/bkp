@@ -568,7 +568,7 @@ import_site() {
 			wp_conf_retrieve $domain
 			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 CREATE USER '${wp_dbuser}'@'%' IDENTIFIED BY '${wp_dbpass}';
-GRANT ALL PRIVILEGES ON ${wp_dbname}.* TO ${wp_dbuser}@${wp_dbhost} IDENTIFIED BY '${wp_dbpass}';
+GRANT $(db_user_role) ON ${wp_dbname}.* TO ${wp_dbuser}@${wp_dbhost} IDENTIFIED BY '${wp_dbpass}';
 FLUSH PRIVILEGES;
 _EOF_
 
