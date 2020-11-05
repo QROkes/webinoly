@@ -1580,13 +1580,8 @@ dd_mysql_logs() {
 	if [[ $(is_dd_log mysql) == "true" ]]; then
 		echo "${gre}Datadog MySQL Log is already enabled!${end}"
 	elif [[ -f /etc/datadog-agent/conf.d/mysql.d/conf.yaml ]]; then
-		
-		# REMOVE: Check for stacks built before v1.11.0
-		if [[ -f /etc/mysql/conf.d/mysqld_safe_syslog.cnf ]]; then
-			sudo sed -i "/Logging and Replication/a \log_error = \/var\/log\/mysql\/error.log" /etc/mysql/my.cnf
-			sudo rm -rf /etc/mysql/conf.d/mysqld_safe_syslog.cnf
-			sudo service mysql restart
-		fi
+
+		mysql_default_cnf # REMOVE: In case the stack was built with an old configuration
 		
 		logrotate_perm mysql
 		[[ -f /var/log/mysql/error.log ]] && sudo chmod 644 /var/log/mysql/error.log

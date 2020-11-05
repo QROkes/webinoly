@@ -17,6 +17,22 @@ error() {
 waiting_for_log() {
 	echo "${blu}[Log File is Empty] ${dim}Waiting to receive some data, you will see it in real-time here...${end}"
 }
+cnf_delete() {
+	#Example: cnf_delete error_log
+	[[ -f /etc/mysql/mariadb.conf.d/90-webinoly.cnf ]] && sudo sed -i "/^$1 /d" /etc/mysql/mariadb.conf.d/90-webinoly.cnf
+}
+cnf_write() {
+	#Example: cnf_write error_log /var/log/mysql/error.log
+	mysql_default_cnf
+	cnf_delete $1
+	[[ -n $2 ]] && local value="= $2"
+	echo "$1 $value" >> /etc/mysql/mariadb.conf.d/90-webinoly.cnf
+}
+cnf_read() {
+	#Example: cnf_read error_log
+	echo $( grep -P "^$1 = " /etc/mysql/mariadb.conf.d/90-webinoly.cnf | cut -f 2 -d "=" -s | sed 's/ //g' )
+}
+
 
 # Check for custom "lines" value
 [[ -n $(conf_read log-lines) && $(conf_read log-lines) =~ ^[0-9]+$ && $(conf_read log-lines) -gt 0 ]] && clines=$(conf_read log-lines) || clines=10
@@ -106,25 +122,19 @@ elif [[ -n $mysql ]]; then
 	
 	# General Log
 	if [[ $mysql == "general" ]]; then
-		isgrl=$( grep -P "^general_log[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s | sed 's/[^0-9]*//g' )
-		if [[ -n $enable && $isgrl != 1 ]]; then
-			sudo sed -i -E "/^[#]?general_log[\[ \t=]/c general_log = 1" /etc/mysql/my.cnf
-			sudo sed -i -E "/^[#]?general_log_file[\[ \t=]/c general_log_file = /var/log/mysql/mysql.log" /etc/mysql/my.cnf
+		if [[ -n $enable ]]; then
+			cnf_write general_log 1
+			cnf_write general_log_file /var/log/mysql/mysql.log
 			sudo service mysql restart
 			echo "${gre}MariaDB General log was successfully enabled!${end}"
-		elif [[ -n $enable && $isgrl == 1 ]]; then
-			echo "${gre}MariaDB General log is already enabled!${end}"
-		elif [[ -n $disable && $isgrl != 0 ]]; then
-			sudo sed -i -E "/^[#]?general_log[\[ \t=]/c general_log = 0" /etc/mysql/my.cnf
-			sudo sed -i -E "/^[#]?general_log_file[\[ \t=]/c #general_log_file = /var/log/mysql/mysql.log" /etc/mysql/my.cnf
+		elif [[ -n $disable ]]; then
+			cnf_write general_log 0
 			sudo service mysql restart
 			echo "${gre}MariaDB General log was successfully disabled!${end}"
-		elif [[ -n $disable && $isgrl == 0 ]]; then
-			echo "${gre}MariaDB General log is already disabled!${end}"
-		elif [[ -s /var/log/mysql/mysql.log && $isgrl == 1 ]]; then
+		elif [[ -f /var/log/mysql/mysql.log && $(cnf_read general_log) == 1 ]]; then
 			[[ ! -s /var/log/mysql/mysql.log ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/mysql/mysql.log
-		elif [[ $isgrl != 1 ]]; then
+		elif [[ $(cnf_read general_log) != 1 ]]; then
 			echo "${red}[ERROR] MariaDB General log is not enabled!${end}"
 			exit 1
 		else
@@ -134,23 +144,18 @@ elif [[ -n $mysql ]]; then
 	
 	# Slow Query Log
 	elif [[ $mysql == "slow" ]]; then
-		islow=$( grep -P "^slow_query_log[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s | sed 's/[^0-9]*//g' )
-		if [[ -n $enable && $islow != 1 ]]; then
-			sudo sed -i -E "/^[#]?slow_query_log[\[ \t=]/c slow_query_log = 1" /etc/mysql/my.cnf
+		if [[ -n $enable ]]; then
+			cnf_write slow_query_log 1
 			sudo service mysql restart
 			echo "${gre}MariaDB Slow Query log was successfully enabled!${end}"
-		elif [[ -n $enable && $islow == 1 ]]; then
-			echo "${gre}MariaDB Slow Query log is already enabled!${end}"
-		elif [[ -n $disable && $islow != 0 ]]; then
-			sudo sed -i -E "/^[#]?slow_query_log[\[ \t=]/c slow_query_log = 0" /etc/mysql/my.cnf
+		elif [[ -n $disable ]]; then
+			cnf_write slow_query_log 0
 			sudo service mysql restart
 			echo "${gre}MariaDB Slow Query log was successfully disabled!${end}"
-		elif [[ -n $disable && $islow == 0 ]]; then
-			echo "${gre}MariaDB Slow Query log is already disabled!${end}"
-		elif [[ -s /var/log/mysql/mariadb-slow.log && $islow == 1 ]]; then
+		elif [[ -f /var/log/mysql/mariadb-slow.log && $(cnf_read slow_query_log) == 1 ]]; then
 			[[ ! -s /var/log/mysql/mariadb-slow.log ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/mysql/mariadb-slow.log
-		elif [[ $islow != 1 ]]; then
+		elif [[ $(cnf_read slow_query_log) != 1 ]]; then
 			echo "${red}[ERROR] MariaDB Slow Query log is not enabled!${end}"
 			exit 1
 		else
@@ -160,25 +165,22 @@ elif [[ -n $mysql ]]; then
 	
 	# Binary Log
 	elif [[ $mysql == "binary" ]]; then
-		isbin=$( grep -P "^log_bin[\t =]" /etc/mysql/my.cnf | cut -f 2 -d "=" -s )
-		if [[ -n $enable && -z $isbin ]]; then
-			sudo sed -i -E "/^[#]?log_bin[\[ \t=]/c log_bin = /var/log/mysql/mariadb-bin" /etc/mysql/my.cnf
-			sudo sed -i -E "/^[#]?log_bin_index[\[ \t=]/c log_bin_index = /var/log/mysql/mariadb-bin.index" /etc/mysql/my.cnf
+		if [[ -n $enable ]]; then
+			cnf_delete skip-log-bin
+			cnf_write log_bin /var/log/mysql/mariadb-bin
+			cnf_write log_bin_index /var/log/mysql/mariadb-bin.index
 			sudo service mysql restart
 			echo "${gre}MariaDB Binary log was successfully enabled!${end}"
-		elif [[ -n $enable && -n $isbin ]]; then
-			echo "${gre}MariaDB Binary log is already enabled!${end}"
-		elif [[ -n $disable && -n $isbin ]]; then
-			sudo sed -i -E "/^[#]?log_bin[\[ \t=]/c #log_bin = /var/log/mysql/mariadb-bin" /etc/mysql/my.cnf
-			sudo sed -i -E "/^[#]?log_bin_index[\[ \t=]/c #log_bin_index = /var/log/mysql/mariadb-bin.index" /etc/mysql/my.cnf
+		elif [[ -n $disable ]]; then
+			cnf_delete log_bin
+			cnf_delete log_bin_index
+			cnf_write skip-log-bin
 			sudo service mysql restart
 			echo "${gre}MariaDB Binary log was successfully disabled!${end}"
-		elif [[ -n $disable && -z $isbin ]]; then
-			echo "${gre}MariaDB Binary log is already disabled!${end}"
-		elif [[ -s /var/log/mysql/mariadb-bin && -n $isbin ]]; then
+		elif [[ -f /var/log/mysql/mariadb-bin && -n $(cnf_read log_bin) ]]; then
 			[[ ! -s /var/log/mysql/mariadb-bin ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/mysql/mariadb-bin
-		elif [[ -z $isbin ]]; then
+		elif [[ -z $(cnf_read log_bin) ]]; then
 			echo "${red}[ERROR] MariaDB Binary log is not enabled!${end}"
 			exit 1
 		else
@@ -188,15 +190,11 @@ elif [[ -n $mysql ]]; then
 		
 	# Error Log
 	elif [[ $mysql =~ ^(error|true)$ ]]; then
-		# REMOVE: Temporal check because we change log path in v1.11.0 - by default mysql send logs to syslog
-		if [[ ! -f /etc/mysql/conf.d/mysqld_safe_syslog.cnf && -s /var/log/mysql/error.log ]]; then
+		if [[ -f /var/log/mysql/error.log ]]; then
 			[[ ! -s /var/log/mysql/error.log ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/mysql/error.log
-		elif [[ -f /etc/mysql/conf.d/mysqld_safe_syslog.cnf && -s /var/log/syslog ]]; then
-			[[ ! -s /var/log/syslog ]] && waiting_for_log
-			sudo tail -f --lines=$clines /var/log/syslog
 		else
-			echo "${red}[ERROR] MariaDB Error log (syslog) file not found or still empty!${end}"
+			echo "${red}[ERROR] MariaDB Error log file not found or still empty! ${dim}(Older versions sent MySQL error log to syslog, check it!)${end}"
 			exit 1
 		fi
 		

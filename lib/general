@@ -915,3 +915,17 @@ db_user_role() {
 	echo $priv
 }
 
+
+mysql_default_cnf() {
+	# Creates the default Webinoly Configuration File (.cnf) for mysql if not exists.
+	if [[ ! -f /etc/mysql/mariadb.conf.d/90-webinoly.cnf ]]; then
+		sudo touch /etc/mysql/mariadb.conf.d/90-webinoly.cnf
+		sudo chmod 644 /etc/mysql/mariadb.conf.d/90-webinoly.cnf
+		sudo chown -R root:root /etc/mysql/mariadb.conf.d/90-webinoly.cnf
+		
+		echo "# Webinoly MySQL Configuration File
+[mysqld]
+log_error = /var/log/mysql/error.log" >> /etc/mysql/mariadb.conf.d/90-webinoly.cnf
+	fi
+}
+
