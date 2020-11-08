@@ -84,8 +84,10 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 				sudo sed -i '/certbot renew/d' /var/spool/cron/crontabs/root
 			fi
 			sudo apt -y autoremove
-			sudo rm $HOME/www
-			sudo rm $HOME/sites-available
+			
+			current_home=$(eval echo ~${SUDO_USER:-${USER}})
+			[ -L $current_home/www ] && sudo rm $current_home/www
+			[ -L $current_home/sites-available ] && sudo rm $current_home/sites-available
 			
 			# Remove sources
 			sudo rm -rf /opt/webinoly/templates/source/default
@@ -228,6 +230,7 @@ elif [[ -n $purge && -n $mysql ]]; then
 			sudo apt -y purge mariadb-server mariadb-common mysql-common
 			sudo apt -y purge debconf-utils
 			purge_mysql_client
+			sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
 			sudo apt -y autoremove
 			
 			if [[ $mysql != "keep-data" ]]; then

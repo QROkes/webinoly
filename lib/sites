@@ -11,7 +11,7 @@ warning_messages() {
 		if [[ $type == [123] && $(conf_read wp-admin-auth) != "purged" && ! -s /etc/nginx/.htpasswd && ! -s /etc/nginx/apps.d/.htpasswd-$domain ]]; then
 			echo "${dim}[WARNING] HTTP Authentication Credentials not found and you may need it to complete the WordPress installation process!!${end}"
 		fi
-		if [[ $(conf_read login-www-data) != "true" && -z $forward && -z $proxy && -z $parked ]]; then
+		if [[ $(conf_read login-www-data) != "true" && (( -z $forward && -z $proxy && -z $parked && -z $mysql ) || ( -n $mysql && -n $domain )) ]]; then
 			echo "${dim}[WARNING] Login for www-data is not enabled and you may need it to upload your site files!${end}"
 		fi
 		warning_mes="true"
@@ -1313,16 +1313,12 @@ clone_wp_site() {
 		sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 		sudo sed -i "s/$clone_from/$domain/g"  /etc/nginx/sites-available/$domain
 		
-		# Remove custom settings from cloned site
-		sudo site $domain -subdomain=false -force-redirect=off > /dev/null 2>&1
-		[[ $(is_ssl $clone_from) == "true" ]] && revoke="off" && site_ssl_off > /dev/null 2>&1
-		[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
-		
 		# Fix server_name according to new domain/site.
 		[[ $subdomain == "true" ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
 		sudo sed -i "/server_name /c \	$sername" /etc/nginx/sites-available/$domain
 		
 		# Clone Subfolder conf files from apps.d
+		conf_write nginx-reload false
 		for appfile in /etc/nginx/apps.d/$clone_from*.conf
 		do
 			if [[ -s $appfile ]]; then
@@ -1366,6 +1362,12 @@ clone_wp_site() {
 		mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $wp_dbname | mysql -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $dom
 		edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
 	fi
+	
+	# Remove custom settings from cloned site
+	sudo site $domain -subdomain=false -force-redirect=off > /dev/null 2>&1
+	[[ $(is_ssl $clone_from) == "true" ]] && revoke="off" && site_ssl_off > /dev/null 2>&1
+	[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
+	conf_delete nginx-reload
 	
 	if [[ $replace_content != "off" ]]; then
 		replace_content="[http://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1

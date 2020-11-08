@@ -279,9 +279,13 @@ fastcgi_param  HTTP_PROXY         "";
 fastcgi_param  HTTP_ACCEPT_ENCODING "";
 # WebinolyCustomEnd' >> /etc/nginx/fastcgi_params
 	
+	# Current original user HOME even with sudo (root) - This script always run with sudo, so $HOME is always /root
+	# https://askubuntu.com/questions/1186999/how-does-sudo-handle-home-differently-since-19-10
+	local current_home=$(eval echo ~${SUDO_USER:-${USER}}) 
+	
 	# Create Direct Access for easy navigation
-	[ -L $HOME/sites-available ] || ln -s /etc/nginx/sites-available $HOME
-	[ -L $HOME/www ] || ln -s /var/www $HOME
+	[ -L $current_home/sites-available ] || ln -s /etc/nginx/sites-available $current_home
+	[ -L $current_home/www ] || ln -s /var/www $current_home
 	
 	# www-data sftp default uploads permissions 755 and 644, instead of 775 and 664.
 	sudo sed -i '/USERGROUPS_ENAB/c \USERGROUPS_ENAB no' /etc/login.defs

@@ -469,5 +469,5 @@ else
 fi
 
 shopt -u extglob
-[[ $(conf_read nginx) == "true" && -z $nginx_not ]] && sudo service nginx reload
+[[ $(conf_read nginx) == "true" && -z $nginx_not && $(conf_read nginx-reload) != "false" ]] && sudo service nginx reload
 api-events_update sie
