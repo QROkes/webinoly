@@ -127,6 +127,28 @@ onefour_to_onefive() {
 }
 
 
+# v1.14.0
+onefive_to_onesix() {
+	sudo apt-key adv --fetch-keys 'https://nginx.org/keys/nginx_signing.key'
+	if [[ $(conf_read nginx-ppa) == "mainline" ]]; then
+		echo | sudo add-apt-repository --remove 'ppa:ondrej/nginx-mainline'
+		sudo add-apt-repository "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx"
+	else
+		echo | sudo add-apt-repository --remove 'ppa:ondrej/nginx'
+		sudo add-apt-repository "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
+	fi
+	sudo apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' nginx
+	sudo apt-key del E5267A6C
+	
+	sudo apt -y purge certbot
+	echo | sudo add-apt-repository --remove 'ppa:certbot/certbot'
+	sudo snap install core
+	sudo snap refresh core
+	sudo snap install --classic certbot
+	sudo ln -s /snap/bin/certbot /usr/bin/certbot
+}
+
+
 # Version numbers without point
 [[ ${oldver//.} -lt 11 ]] && onezero_to_oneone > /dev/null 2>&1 &
 wait $!
@@ -137,6 +159,8 @@ wait $!
 [[ ${oldver//.} -lt 14 ]] && onethree_to_onefour > /dev/null 2>&1 &
 wait $!
 [[ ${oldver//.} -lt 15 ]] && onefour_to_onefive > /dev/null 2>&1 &
+wait $!
+[[ ${oldver//.} -lt 16 ]] && onefive_to_onesix > /dev/null 2>&1 &
 wait $!
 
 

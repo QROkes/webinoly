@@ -135,22 +135,19 @@ messagend_install() {
 nginx_install() {
 	api-events_update in1
 	pre_install
+	
+	sudo apt-key adv --fetch-keys 'https://nginx.org/keys/nginx_signing.key'
 	if [[ ($(conf_read nginx-ppa) == "mainline" || $nginx == "mainline") && $nginx != "stable" ]]; then
-		echo | sudo add-apt-repository ppa:ondrej/nginx-mainline
+		sudo add-apt-repository "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx"
 		conf_write nginx-ppa mainline
 	else
-		echo | sudo add-apt-repository ppa:ondrej/nginx
+		sudo add-apt-repository "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
 		conf_write nginx-ppa stable
 	fi
 	pre_install
 	sudo apt -y install nginx
 
-	if [[ $(conf_read login-www-data) == "true" ]]; then
-		sudo chown -R www-data:www-data /var/www
-		sudo chown root:root /var/www
-	fi
-
-	sudo cp -p /etc/nginx/sites-available/default /opt/webinoly/templates/source/
+	sudo cp -p /etc/nginx/conf.d/default.conf /opt/webinoly/templates/source/default
 	sudo cp -p /etc/nginx/nginx.conf /opt/webinoly/templates/source/
 	sudo systemctl enable nginx
 	sudo nginx -t && sudo service nginx start
@@ -262,9 +259,22 @@ _EOF_
 #NGINX OPTIM
 nginx_optim() {
 	api-events_update in3
+	
+	[[ ! -d /var/www ]] && sudo mkdir /var/www
+	[[ ! -d /etc/nginx/sites-available ]] && sudo mkdir /etc/nginx/sites-available
+	[[ ! -d /etc/nginx/sites-enabled ]] && sudo mkdir /etc/nginx/sites-enabled
+	[[ ! -d /etc/nginx/apps.d ]] && sudo mkdir /etc/nginx/apps.d
+	
+	[[ -f /etc/nginx/conf.d/default.conf ]] && sudo mv /etc/nginx/conf.d/default.conf /etc/nginx/sites-available/default
+	[[ ! -L /etc/nginx/sites-enabled/default ]] && sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+	
+	if [[ $(conf_read login-www-data) == "true" ]]; then
+		sudo chown -R www-data:www-data /var/www
+		sudo chown root:root /var/www
+	fi
+	
 	sudo cp -R /opt/webinoly/templates/nginx/common /etc/nginx/common
 	sudo cp -R /opt/webinoly/templates/nginx/conf.d/* /etc/nginx/conf.d/
-
 	sudo cat /opt/webinoly/templates/nginx/nginx.conf > /etc/nginx/nginx.conf
 	
 	# Remove it, then add it again to prevent multiple # for each server-reset
@@ -293,11 +303,6 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	if [[ ! -f /etc/ssl/dhparam.pem ]]; then
 		sudo openssl dhparam -out /etc/ssl/dhparam.pem 2048
 		sudo chmod 600 /etc/ssl/dhparam.pem
-	fi
-
-	if [[ ! -d /etc/nginx/apps.d ]]; then
-		sudo mkdir -p /etc/nginx/apps.d
-		sudo chmod 755 /etc/nginx/apps.d
 	fi
 	
 	echo "${gre}Wait while Webinoly optimize your Ubuntu Operating System...${end}"
@@ -409,9 +414,11 @@ nginx_tool() {
 	[[ $(conf_read php-tool) == "true" && ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]] && php_tool_site
 
 	# Install LetsEncrypt
-	[[ $(check_osname) == "bionic" ]] && echo | sudo add-apt-repository ppa:certbot/certbot
 	pre_install
-	sudo apt -y install certbot
+	sudo snap install core
+	sudo snap refresh core
+	sudo snap install --classic certbot
+	sudo ln -s /snap/bin/certbot /usr/bin/certbot
 	
 	# Instalar Duply & Duplicity
 	[[ $(check_osname) == "bionic" ]] && sudo apt -y install python-boto duplicity duply || sudo apt -y install python3-boto3 duplicity duply

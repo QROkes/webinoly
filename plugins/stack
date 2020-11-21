@@ -68,15 +68,16 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			fi
 			
 			sudo service nginx stop
-			sudo apt -y purge nginx nginx-common
+			sudo apt -y purge nginx nginx-common # Common package is no longer installed, but we purge it in case of old stacks built before 1.14.0.
 			
-			[[ $(conf_read nginx-ppa) == "mainline" ]] && echo | sudo add-apt-repository --remove 'ppa:ondrej/nginx-mainline' || echo | sudo add-apt-repository --remove 'ppa:ondrej/nginx'
+			[[ $(conf_read nginx-ppa) == "mainline" ]] && sudo add-apt-repository --remove "deb https://nginx.org/packages/mainline/ubuntu/ focal nginx" || sudo add-apt-repository --remove "deb https://nginx.org/packages/ubuntu/ focal nginx"
+			sudo apt-key del 7BD9BF62
 			
 			api-events_update pn4
 			api-events_update pn5
 			
-			[[ $(check_osname) == "bionic" ]] && sudo apt -y purge certbot python-boto duplicity duply || sudo apt -y purge certbot python3-boto3 duplicity duply
-			[[ $(check_osname) == "bionic" ]] && echo | sudo add-apt-repository --remove 'ppa:certbot/certbot'
+			sudo snap remove certbot
+			[[ $(check_osname) == "bionic" ]] && sudo apt -y purge python-boto duplicity duply || sudo apt -y purge python3-boto3 duplicity duply
 			
 			# Remove SSL Cron
 			if [[ -f /var/spool/cron/crontabs/root ]]; then
