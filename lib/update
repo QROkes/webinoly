@@ -137,8 +137,12 @@ onefive_to_onesix() {
 		echo | sudo add-apt-repository --remove 'ppa:ondrej/nginx'
 		sudo add-apt-repository "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
 	fi
+	
+	#Fix new Nginx repo
 	sudo apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' nginx
 	sudo apt-key del E5267A6C
+	
+	[[ $(conf_read php) == "true" ]] && sudo apt -y install ghostscript
 	
 	sudo apt -y purge certbot
 	echo | sudo add-apt-repository --remove 'ppa:certbot/certbot'

@@ -42,11 +42,6 @@ linux_optim() {
 	else
 		local nginxfdratio="65"
 	fi
-	if [[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ ]]; then
-		local maxuploads=$(conf_read max-mb-uploads)
-	else
-		local maxuploads="50"
-	fi
 
 	local newfd=$(($ramb*$fdratio*10))
 	local nginxfd=$((($newfd*$nginxfdratio)/100))
@@ -59,11 +54,12 @@ linux_optim() {
 LimitNOFILE=$nginxfd" >> /etc/systemd/system/nginx.service.d/nofile_limit.conf
 	
 	sudo sed -i "/worker_rlimit_nofile/c \worker_rlimit_nofile $nginxfd;" /etc/nginx/nginx.conf
-	sudo sed -i "/client_max_body_size/c \	client_max_body_size ${maxuploads}m;" /etc/nginx/nginx.conf
+	sudo sed -i "/client_max_body_size/c \	client_max_body_size $(check_var max-uploads)m;" /etc/nginx/nginx.conf
 	sudo sed -i "/open_file_cache max/c \	open_file_cache max=$cachefd inactive=5m;" /etc/nginx/nginx.conf
 	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=${cacheram}m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
+	sudo sed -i "/fastcgi_read_timeout/c \fastcgi_read_timeout $(check_var max-time)s;" /etc/nginx/conf.d/fastcgi.conf
 	echo "tmpfs	/run	tmpfs	nodev,nosuid,size=25%,mode=755	0	0" >> /etc/fstab
-		
+	
 	# sudo cat /proc/$(cat /run/nginx.pid)/limits   -  ver los recursos actuales del proceso main de nginx
 	# sudo ps aux | grep nginx  ---  ver todos lo procesos corriendo con nginx user
 	[[ $newfd -gt $(ulimit -Hn) ]] && rootfd=$newfd || rootfd=$(ulimit -Hn)
@@ -84,12 +80,28 @@ LimitNOFILE=$nginxfd" >> /etc/systemd/system/nginx.service.d/nofile_limit.conf
 		sudo sed -i "/vm.min_free_kbytes =/c \ vm.min_free_kbytes = $(($ramb*30))" /etc/sysctl.conf
 	fi
 	
+	# Disable Transparent Huge Pages
+	if [[ ! -f /etc/systemd/system/webinoly-disable-thp.service ]]; then
+		sudo touch /etc/systemd/system/webinoly-disable-thp.service
+		echo "[Unit]
+Description=Disable Transparent Huge Pages (THP)
+
+[Service]
+Type=simple
+ExecStart=/bin/sh -c \"echo never > /sys/kernel/mm/transparent_hugepage/enabled && echo never > /sys/kernel/mm/transparent_hugepage/defrag\"
+
+[Install]
+WantedBy=multi-user.target" >> /etc/systemd/system/webinoly-disable-thp.service
+	fi
+	
 	swap_create
 	set_timezone &
 	
 	sudo sysctl -p -q
 	sudo mount -o remount tmpfs
 	sudo systemctl daemon-reload
+	sudo systemctl start webinoly-disable-thp
+	sudo systemctl enable webinoly-disable-thp
 	sudo kill $(cat /run/nginx.pid)
 	conf_write linux-optim true
 	sudo service nginx start
@@ -104,6 +116,10 @@ linux_purge() {
 		sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/sysctl.conf
 		sudo rm -rf /etc/systemd/system/nginx.service.d
 		sudo sed -i '\/run/d' /etc/fstab
+		
+		sudo systemctl stop webinoly-disable-thp
+		sudo systemctl disable webinoly-disable-thp
+		sudo rm -rf /etc/systemd/system/webinoly-disable-thp.service
 		
 		[[ -z $server_reset || $recalculate == "on" ]] && swap_delete
 		
@@ -186,7 +202,7 @@ php_install() {
 		sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 	fi
 	pre_install
-	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary graphviz php-pear
+	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary graphviz php-pear ghostscript
 	
 	# Removed/deprecated in 7.4
 	[[ $ver =~ ^(7.2|7.3)$ ]] && sudo apt -y install php${ver}-recode
@@ -330,13 +346,11 @@ php_optim() {
 	[[ -n $1 ]] && ver="$1" || ver=$(conf_read php-ver)
 	[[ -n $(conf_read php-max-child) && $(conf_read php-max-child) =~ ^[0-9]+$ && $(conf_read php-max-child) -gt 2 ]] && local maxchil=$(conf_read php-max-child)
 	[[ -n $(conf_read php-max-mem) && $(conf_read php-max-mem) =~ ^[0-9]+$ && $(conf_read php-max-mem) -gt 0 ]] && local maxmem=$(conf_read php-max-mem) || local maxmem=192
-	[[ -n $(conf_read php-max-time) && $(conf_read php-max-time) =~ ^[0-9]+$ && $(conf_read php-max-time) -gt 0 ]] && local maxtime=$(conf_read php-max-time) || local maxtime=300
-	[[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ && $(conf_read max-mb-uploads) -gt 0 ]] && local maxup=$(conf_read max-mb-uploads) || local maxup=50
 	
 	sudo sed -i "/memory_limit =/c\memory_limit = ${maxmem}M" /etc/php/$ver/fpm/php.ini
-	sudo sed -i "/max_execution_time =/c\max_execution_time = ${maxtime}" /etc/php/$ver/fpm/php.ini
-	sudo sed -i "/upload_max_filesize =/c\upload_max_filesize = ${maxup}M" /etc/php/$ver/fpm/php.ini
-	sudo sed -i "/post_max_size =/c\post_max_size = ${maxup}M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/max_execution_time =/c\max_execution_time = $(check_var max-time)" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/upload_max_filesize =/c\upload_max_filesize = $(check_var max-uploads)M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/post_max_size =/c\post_max_size = $(check_var max-uploads)M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i "/max_input_vars =/c\max_input_vars = 3000" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/max_file_uploads =/c\max_file_uploads = 20' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/session.cookie_httponly =/c\session.cookie_httponly = 1' /etc/php/$ver/fpm/php.ini
@@ -369,7 +383,7 @@ php_optim() {
 	sudo sed -i "/pm.start_servers =/c\pm.start_servers = $(($maxchil/3))" /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i "/pm.min_spare_servers =/c\pm.min_spare_servers = $(($maxchil/3))" /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i "/pm.max_spare_servers =/c\pm.max_spare_servers = $((2*($maxchil/3)))" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i "/request_terminate_timeout =/c\request_terminate_timeout = ${maxtime}" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/request_terminate_timeout =/c\request_terminate_timeout = $(check_var max-time)" /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.max_requests =/c\pm.max_requests = 1000' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.status_path =/c\pm.status_path = /status' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf

@@ -929,3 +929,18 @@ log_error = /var/log/mysql/error.log" >> /etc/mysql/mariadb.conf.d/90-webinoly.c
 	fi
 }
 
+
+check_var() {
+	# fastcgi_read_timeout,max_execution_time,request_terminate_timeout
+	if [[ $1 == "max-time" ]]; then
+		[[ -n $(conf_read php-max-time) && $(conf_read php-max-time) =~ ^[0-9]+$ && $(conf_read php-max-time) -gt 0 ]] && local out=$(conf_read php-max-time) || local out=300
+	
+	# client_max_body_size,upload_max_filesize,post_max_size
+	elif [[ $1 == "max-uploads" ]]; then
+		[[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ && $(conf_read max-mb-uploads) -gt 0 ]] && local out=$(conf_read max-mb-uploads) || local out=50
+	else
+		local out="false"
+	fi
+	echo $out
+}
+
