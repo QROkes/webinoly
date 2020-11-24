@@ -961,10 +961,12 @@ wp_subfolder() {
 	sudo cp /etc/nginx/common/wpcommon.conf /etc/nginx/apps.d/$domain$subname-wpcommon.conf
 	sed -ri "s/location(.*) \/(.*) \{$/location\1 subfolder\/\2 \{/" /etc/nginx/apps.d/$domain$subname-wpcommon.conf
 	sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon.conf
+	sudo sed -i '/WPRobotStart/,/WPRobotsEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-wpcommon.conf
 	
 	sudo cp /etc/nginx/common/wpcommon-noauth.conf /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 	sed -ri "s/location(.*) \/(.*) \{$/location\1 subfolder\/\2 \{/" /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 	sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
+	sudo sed -i '/WPRobotStart/,/WPRobotsEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 	
 	sudo cp /etc/nginx/common/yoast-sitemap.conf /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
 	sudo sed -i "s#/index.php#$subfolder/index.php#g" /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
@@ -1157,15 +1159,14 @@ reverse_proxy() {
 	[[ -n $url_scheme ]] && url_scheme="$url_scheme://" || url_scheme="http://"
 	[[ -n $url_port ]] && url_port=":$url_port"
 	rpurl="$url_host$url_port$url_path"
-	[[ $(echo $rpurl | rev | cut -c-1) != "/" ]] && rpurl="${rpurl}/"
 	
 	sudo cp /opt/webinoly/templates/template-site-proxy /etc/nginx/apps.d/$domain$subname-proxy.conf
 	sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-proxy.conf;" /etc/nginx/sites-available/$domain
-	[[ -n $subfolder ]] && sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-proxy.conf
-	sudo sed -i "s#http://localhost:8080/#${url_scheme}${rpurl}#g"  /etc/nginx/apps.d/$domain$subname-proxy.conf
-	
-	# Temporary FIX
-	sudo sed -i '/locations.conf;/s/^/#/' /etc/nginx/sites-available/$domain
+	if [[ -n $subfolder ]]; then
+		sudo sed -i '/BasicLocationRootFiles/,/BasicLocEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
+		sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-proxy.conf
+	fi
+	sudo sed -i "s#http://localhost:8080#${url_scheme}${rpurl}#g"  /etc/nginx/apps.d/$domain$subname-proxy.conf
 	
 	# Check host and port
 	local code=$(wget -t 1 --timeout=5 --server-response --spider $rpurl 2>&1 | awk '/^  HTTP/{print $2}')

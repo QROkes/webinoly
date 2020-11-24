@@ -128,12 +128,6 @@ if [[ -n $delete_all ]]; then
 # Create PHP or MySQL site
 elif [[ -n $mysql || ( -n $php && -n $domain ) ]]; then
 	if [[ -n $domain ]]; then
-		# Temporary FIX
-		if [[ $(is_proxy $domain) == "true" || ( -f /etc/nginx/sites-available/$domain && -n $(grep -F "proxy.conf;" /etc/nginx/sites-available/$domain)) ]]; then
-			echo "${red}[ERROR] Incompatible with your current Reverse-Proxy site! (We will fix this issue soon)${end}"
-			exit 1
-		fi
-		
 		if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" ]]; then
 			echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
 			exit 1
@@ -160,13 +154,6 @@ elif [[ -n $mysql || ( -n $php && -n $domain ) ]]; then
 
 # Create HTML site
 elif [[ -n $html && -n $domain ]]; then
-	
-	# Temporary FIX
-	if [[ $(is_proxy $domain) == "true" || ( -f /etc/nginx/sites-available/$domain && -n $(grep -F "proxy.conf;" /etc/nginx/sites-available/$domain)) ]]; then
-		echo "${red}[ERROR] Incompatible with your current Reverse-Proxy site! (We will fix this issue soon)${end}"
-		exit 1
-	fi
-	
 	if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" ]]; then
 		echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
 		exit 1
@@ -190,12 +177,6 @@ elif [[ -n $html && -n $domain ]]; then
 
 # Create WP site
 elif [[ -n $wp && -n $domain ]]; then
-	# Temporary FIX
-	if [[ $(is_proxy $domain) == "true" || ( -f /etc/nginx/sites-available/$domain && -n $(grep -F "proxy.conf;" /etc/nginx/sites-available/$domain)) ]]; then
-		echo "${red}[ERROR] Incompatible with your current Reverse-Proxy site! (We will fix this issue soon)${end}"
-		exit 1
-	fi
-	
 	if [[ -z $subfolder ]]; then
 		if [[ $(is_empty_root_site $domain) == "true" ]]; then		
 			wpinstall
@@ -254,17 +235,7 @@ elif [[ -n $parked && -n $domain ]]; then
 
 	
 # Reverse proxy
-elif [[ -n $proxy && -n $domain ]]; then
-	
-	# Temporary FIX
-	if [[ -n $subfolder && -f /etc/nginx/sites-available/$domain && $(is_proxy $domain) != "true" ]]; then
-		echo "${red}[ERROR] Reverse Proxy subfolders only can be installed when main site is reverse proxy! (We will fix this issue soon)${end}"
-		exit 1
-	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "true" && -z $(grep -F "proxy.conf;" /etc/nginx/sites-available/$domain) ]]; then
-		echo "${red}[ERROR] Reverse-Proxy site incompatible with your current subfolders! (We will fix this issue soon)${end}"
-		exit 1
-	fi
-	
+elif [[ -n $proxy && -n $domain ]]; then	
 	reverse_proxy
 	
 
