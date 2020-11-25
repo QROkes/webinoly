@@ -101,7 +101,7 @@ WantedBy=multi-user.target" >> /etc/systemd/system/webinoly-disable-thp.service
 	sudo mount -o remount tmpfs
 	sudo systemctl daemon-reload
 	sudo systemctl start webinoly-disable-thp
-	sudo systemctl enable webinoly-disable-thp
+	sudo systemctl enable webinoly-disable-thp > /dev/null 2>&1
 	sudo kill $(cat /run/nginx.pid)
 	conf_write linux-optim true
 	sudo service nginx start
@@ -118,7 +118,7 @@ linux_purge() {
 		sudo sed -i '\/run/d' /etc/fstab
 		
 		sudo systemctl stop webinoly-disable-thp
-		sudo systemctl disable webinoly-disable-thp
+		sudo systemctl disable webinoly-disable-thp > /dev/null 2>&1
 		sudo rm -rf /etc/systemd/system/webinoly-disable-thp.service
 		
 		[[ -z $server_reset || $recalculate == "on" ]] && swap_delete
@@ -330,6 +330,28 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	[[ -n $(conf_read header-referrer) ]] && sudo webinoly -header-referrer=$(conf_read header-referrer)
 	[[ -n $(conf_read header-hsts) ]] && sudo webinoly -header-hsts=$(conf_read header-hsts)
 	[[ -s /opt/webinoly/templates/source/csp_webinoly.data ]] && sudo webinoly -header-csp=reload
+	
+	if [[ $(conf_read xmlrpc) =~ ^(blocked|limited|open)$ ]]; then
+		if [[ $(conf_read xmlrpc) != "limited" ]]; then
+			sudo sed -i '/WPxmlrpcStart/,/WPxmlrpcEnd/{/.*/d}' /etc/nginx/common/wpcommon.conf
+			sudo sed -i '/WPxmlrpcStart/,/WPxmlrpcEnd/{/.*/d}' /etc/nginx/common/wpcommon-noauth.conf
+		fi
+		
+		if [[ $(conf_read xmlrpc) == "blocked" ]]; then
+			echo "# WPxmlrpcStart
+location = /xmlrpc.php {
+	return 403;
+}
+# WPxmlrpcEnd" >> /etc/nginx/common/wpcommon.conf
+			echo "# WPxmlrpcStart
+location = /xmlrpc.php {
+	return 403;
+}
+# WPxmlrpcEnd" >> /etc/nginx/common/wpcommon-noauth.conf
+		fi
+		
+		echo "${gre}WordPress XMLRPC successfully configured!${dim} ($(conf_read xmlrpc))${end}"
+	fi
 
 	conf_write server-version $svr_version
 	conf_write nginx-optim true
