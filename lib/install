@@ -117,9 +117,12 @@ linux_purge() {
 		sudo rm -rf /etc/systemd/system/nginx.service.d
 		sudo sed -i '\/run/d' /etc/fstab
 		
-		sudo systemctl stop webinoly-disable-thp
-		sudo systemctl disable webinoly-disable-thp > /dev/null 2>&1
-		sudo rm -rf /etc/systemd/system/webinoly-disable-thp.service
+		# Check in case of upgrading old stacks (before 1.14.0) when this service still not included
+		if [[ -f /etc/systemd/system/webinoly-disable-thp.service ]]; then
+			sudo systemctl stop webinoly-disable-thp
+			sudo systemctl disable webinoly-disable-thp > /dev/null 2>&1
+			sudo rm /etc/systemd/system/webinoly-disable-thp.service
+		fi
 		
 		[[ -z $server_reset || $recalculate == "on" ]] && swap_delete
 		
@@ -162,11 +165,22 @@ nginx_install() {
 	fi
 	pre_install
 	sudo apt -y install nginx
+	
+	[[ ! -d /var/www ]] && sudo mkdir /var/www
+	[[ ! -d /etc/nginx/sites-available ]] && sudo mkdir /etc/nginx/sites-available
+	[[ ! -d /etc/nginx/sites-enabled ]] && sudo mkdir /etc/nginx/sites-enabled
+	[[ ! -d /etc/nginx/apps.d ]] && sudo mkdir /etc/nginx/apps.d
 
-	sudo cp -p /etc/nginx/conf.d/default.conf /opt/webinoly/templates/source/default
+	sudo sed -i 's/listen.*80;/listen 80 default_server;/' /etc/nginx/conf.d/default.conf
+	sudo sed -i 's/listen.*\[::\]:80;/listen [::]:80 default_server;/' /etc/nginx/conf.d/default.conf
+	sudo mv /etc/nginx/conf.d/default.conf /etc/nginx/sites-available/default
+	sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+	
+	sudo cp -p /etc/nginx/sites-available/default /opt/webinoly/templates/source/default
 	sudo cp -p /etc/nginx/nginx.conf /opt/webinoly/templates/source/
-	sudo systemctl enable nginx
+	
 	sudo nginx -t && sudo service nginx start
+	sudo systemctl enable nginx
 	conf_write nginx true
 	echo "${gre}Nginx has been installed successfully! ${end}"
 	api-events_update in2
@@ -275,14 +289,6 @@ _EOF_
 #NGINX OPTIM
 nginx_optim() {
 	api-events_update in3
-	
-	[[ ! -d /var/www ]] && sudo mkdir /var/www
-	[[ ! -d /etc/nginx/sites-available ]] && sudo mkdir /etc/nginx/sites-available
-	[[ ! -d /etc/nginx/sites-enabled ]] && sudo mkdir /etc/nginx/sites-enabled
-	[[ ! -d /etc/nginx/apps.d ]] && sudo mkdir /etc/nginx/apps.d
-	
-	[[ -f /etc/nginx/conf.d/default.conf ]] && sudo mv /etc/nginx/conf.d/default.conf /etc/nginx/sites-available/default
-	[[ ! -L /etc/nginx/sites-enabled/default ]] && sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 	
 	if [[ $(conf_read login-www-data) == "true" ]]; then
 		sudo chown -R www-data:www-data /var/www

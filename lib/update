@@ -142,6 +142,12 @@ onefive_to_onesix() {
 	sudo apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' nginx
 	sudo apt-key del E5267A6C
 	
+	# Just to be sure in case of added with new nginx package
+	[[ -f /etc/nginx/conf.d/default.conf ]] && sudo rm /etc/nginx/conf.d/default.conf
+	
+	sudo nginx -t && sudo service nginx start
+	sudo systemctl enable nginx
+	
 	[[ $(conf_read php) == "true" ]] && sudo apt -y install ghostscript
 	
 	sudo apt -y purge certbot
