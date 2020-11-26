@@ -150,7 +150,7 @@ onefive_to_onesix() {
 	
 	[[ $(conf_read php) == "true" ]] && sudo apt -y install ghostscript
 	
-	sudo apt -y purge certbot
+	sudo apt -y remove certbot
 	echo | sudo add-apt-repository --remove 'ppa:certbot/certbot'
 	sudo snap install core
 	sudo snap refresh core
