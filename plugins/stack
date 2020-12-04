@@ -78,6 +78,7 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			
 			sudo snap remove certbot
 			[[ $(check_osname) == "bionic" ]] && sudo apt -y purge python-boto duplicity duply || sudo apt -y purge python3-boto3 duplicity duply
+			[[ -L /usr/bin/certbot ]] && sudo rm -rf /usr/bin/certbot
 			
 			# Remove SSL Cron
 			if [[ -f /var/spool/cron/crontabs/root ]]; then
@@ -148,6 +149,8 @@ elif [[ -n $purge && -n $php ]]; then
 			sudo apt -y autoremove
 			sudo rm -rf /etc/php
 			sudo rm /opt/webinoly/templates/source/*
+			sudo apt-key del E5267A6C #ondrej
+			sudo apt-key del C7917B12 #chrislea
 
 			# Remove sources
 			sudo rm -rf /opt/webinoly/templates/source/php.ini

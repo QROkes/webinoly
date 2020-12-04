@@ -460,7 +460,7 @@ nginx_tool() {
 	sudo snap install core
 	sudo snap refresh core
 	sudo snap install --classic certbot
-	sudo ln -s /snap/bin/certbot /usr/bin/certbot
+	[[ ! -L /usr/bin/certbot ]] && sudo ln -s /snap/bin/certbot /usr/bin/certbot
 	
 	# Instalar Duply & Duplicity
 	[[ $(check_osname) == "bionic" ]] && sudo apt -y install python-boto duplicity duply || sudo apt -y install python3-boto3 duplicity duply

@@ -10,7 +10,7 @@ Webinoly provides a set of tools and commands that facilitate the web server adm
 - Unique commands to create, delete, disable sites.
 - Free SSL certificates for your sites with Let’s Encrypt and automatic server configuration.
 - HTTP/2 dramatically increase the speed of serving your content.
-- PHP v7.4 and support for earlier versions if needed (7.2 and 7.3).
+- PHP v7.4 and support for earlier versions if needed 7.3 and the newest 8.0.
 - FastCgi Cache and Redis Object Cache for your WordPress sites.
 - Install WP in any subfolder, Clone a WP site and support for external databases.
 - Nginx redirection manager, Backups, SMTP and a lot more features.
