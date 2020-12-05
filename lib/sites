@@ -1078,7 +1078,7 @@ parked_domain() {
 	sudo cat /etc/nginx/sites-available/$parked > /etc/nginx/sites-available/$domain
 	
 	# Prevent if SSL is enabled in main site and ssl data is copied to parked site causing an error.
-	sudo site $domain -ssl=off -revoke=off > /dev/null 2>&1
+	[[ $(is_ssl $parked) == "true" ]] && revoke="off" && site_ssl_off > /dev/null 2>&1
 	
 	# Prevent if main site is default.
 	[[ $(conf_read default-site) == $parked ]] && remove_nginx_default_server $domain

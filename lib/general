@@ -869,10 +869,47 @@ email_update() {
 }
 
 
+wp_mu_blog_id() {
+	# If domain doesn't exist, check if it's a subsite of a subdomain Multisite network.
+	if [[ ! -f /etc/nginx/sites-available/$1 && -f /etc/nginx/sites-available/$(echo $1 | cut -d "." -f 2- -s) ]]; then
+		local maindom=$(echo $1 | cut -d "." -f 2- -s)
+	else
+		local maindom=$1
+	fi
+	
+	if [[ $(is_wp $maindom $2) == "true" && $(is_wp_multisite $maindom $2) =~ ^(subdomain|subdirectory)$ ]]; then
+		wp_conf_retrieve $maindom $2
+		local dbq="USE $wp_dbname; SELECT blog_id FROM ${wp_dbpref}blogs WHERE domain='$1';"
+		
+		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
+			local bid=$(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbq")
+			
+		elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
+			local bid=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbq")
+			
+		fi
+		
+		# Empty if blog_id not found or not exist
+		[[ $(echo $bid | cut -f 2 -d " " -s) =~ ^[0-9]+$ ]] && echo $(echo $bid | cut -f 2 -d " " -s)
+	fi
+}
+
+
 edit_wp_db_url() {
 	#Example: edit_wp_db_url example.com "http://${domain}${subfolder}"
 	#Example: edit_wp_db_url example.com "http://${domain}${subfolder}" /subfolder
 	wp_conf_retrieve $1 $3
+	
+	# In case of parked sites with WP domain mapping
+	if [[ $(is_parked $1) == "true" && $(wp_mu_blog_id $1 $3) -gt 1 ]]; then
+		wp_dbpref="${wp_dbpref}$(wp_mu_blog_id $1 $3)_"
+		echo "${blu}${dim}Site${end}${dim} ${1}${3} ${blu}is a subsite (${wp_dbpref}) in a WP Multisite Network!${end}"
+	elif [[ $(is_parked $1) == "true" ]]; then
+		# Not update WP db if parked without subsite assigned.
+		echo "${red}${dim}[WARNING] WP database failed to be updated, domain is not mapped in your Multisite Network or main WP is not Multisite!${end}"
+		return
+	fi
+	
 	if [[ -n $1 && -n $2 && $(is_wp $1 $3) == "true" && $(is_wp_installed $1 $3) == "true" ]]; then
 		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
 			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
