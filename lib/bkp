@@ -275,6 +275,8 @@ bkp_s3_profile() {
 		sudo sed -i -E "/^[#]?GPG_PW=/c #GPG_PW='_GPG_PASSWORD_'" $HOME/.duply/$profile/conf
 		sudo sed -i -E "/^[#]?SOURCE=/c SOURCE='$source'" $HOME/.duply/$profile/conf
 		sudo sed -i -E "/^[#]?MAX_AGE=/c MAX_AGE=$max_age" $HOME/.duply/$profile/conf
+		sudo sed -i '/^#MAX_FULLBKP_AGE=/s/#//' $HOME/.duply/$profile/conf
+		sudo sed -i '/^#DUPL_PARAMS="\$DUPL_PARAMS --full-if-older-than \$MAX_FULLBKP_AGE "/s/#//' $HOME/.duply/$profile/conf
 		
 		if [[ $(check_osname) == "focal" ]]; then
 			sudo sed -i -E "/^[#]?TARGET=/c TARGET='boto3+s3://${bucket}'" $HOME/.duply/$profile/conf

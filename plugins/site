@@ -2,7 +2,7 @@
 
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
-# Options: -html, -php, -mysql, -wp, -parked, -proxy, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -yoast-sitemap, -multisite-convert, -clone-from, -replace-content, -redirection, -forward, -info, -env
+# Options: -html, -php, -mysql, -wp, -parked, -proxy, -empty, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -yoast-sitemap, -multisite-convert, -clone-from, -replace-content, -redirection, -forward, -info, -env
 # Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp, -subfolder, -from, -to, -http-code, -regex, -manual, -overwrite, -wp-cache-plugins
 
 # shopt is necessary for this kind !(html|22222) of patterns
@@ -150,6 +150,12 @@ elif [[ -n $mysql || ( -n $php && -n $domain ) ]]; then
 	fi
 	
 	[[ -n $mysql ]] && wpinstall
+
+
+# Create EMPTY site
+elif [[ -n $empty && -n $domain ]]; then
+	echo "${blu}You've created an EMPTY site, which means that you need to add your own NGINX configuration. ${dim}(/var/www/example.com/*-nginx.conf)${end}"
+	create_empty_site
 
 
 # Create HTML site
