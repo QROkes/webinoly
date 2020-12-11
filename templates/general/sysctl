@@ -188,7 +188,7 @@ net.ipv4.tcp_mem=8388608 8388608 8388608
 net.ipv4.tcp_max_tw_buckets = 6000000
 
 # try to reuse time-wait connections, (recycle is deprecated)
-#net.ipv4.tcp_tw_recycle = 1
+#net.ipv4.tcp_tw_recycle = 0
 net.ipv4.tcp_tw_reuse = 1
 
 # Limit number of orphans, each orphan can eat up to 16M (max wmem) of unswappable memory
@@ -261,6 +261,7 @@ net.ipv6.conf.default.accept_ra_pinfo = 0
 net.ipv6.conf.default.accept_ra_defrtr = 0
 net.ipv6.conf.default.dad_transmits = 0
 net.ipv6.conf.default.max_addresses = 1
+vm.zone_reclaim_mode = 0
 
 # Sets the time before the kernel considers migrating a proccess to another core
 kernel.sched_migration_cost_ns = 5000000

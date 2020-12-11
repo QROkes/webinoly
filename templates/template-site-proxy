@@ -20,7 +20,7 @@ location / {
 	
 	proxy_pass http://localhost:8080;
 		
-	# Cache static files
+	# CacheStaticFiles
 	location ~* \.(ogg|ogv|svg|svgz|eot|otf|woff|mp4|ttf|css|rss|atom|js|jpg|jpeg|gif|png|ico|zip|tgz|gz|rar|bz2|doc|xls|exe|ppt|tar|mid|midi|wav|bmp|rtf|swf|woff2|m4a|cur|heic|tiff|webm|mp3|aac|webp)$ {
 		include common/headers-http.conf;
 		include common/headers-https.conf;

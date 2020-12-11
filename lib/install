@@ -81,6 +81,8 @@ LimitNOFILE=$nginxfd" >> /etc/systemd/system/nginx.service.d/nofile_limit.conf
 	fi
 	
 	# Disable Transparent Huge Pages
+	# Just to be sure is disabled, most cloud providers bring this settings disabled by default.
+	# "madvise" can be good in some cases.
 	if [[ ! -f /etc/systemd/system/webinoly-disable-thp.service ]]; then
 		sudo touch /etc/systemd/system/webinoly-disable-thp.service
 		echo "[Unit]
