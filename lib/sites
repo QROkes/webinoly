@@ -1527,14 +1527,16 @@ site_info() {
 		if [[ $(is_ssl $domain) == "true" && $(is_ssl_le $domain) == "true" && $(is_ssl_staging $domain) != "true" ]]; then
 			local ssl="Let's Encrypt"
 		elif [[ $(is_ssl $domain) == "true" && $(is_ssl_le $domain) == "true" && $(is_ssl_staging $domain) == "true" ]]; then
-			local ssl="Let's Encrypt (Staging)"
+			local ssl="Let's Encrypt ${dim}(Staging)"
 		elif [[ $(is_ssl $domain) == "true" && $(is_ssl_le $domain) != "true" ]]; then
 			local ssl="Custom"
 		else
 			local ssl="false"
 		fi
 		
-		echo "${blu}SSL:${end} $ssl"
+		[[ $(grep -E "^must_staple.?=.?*+" /etc/letsencrypt/renewal/${domain}.conf | cut -f 2 -d '=' -s | sed 's/ //') =~ ^(True|true)$ ]] && ssl="${ssl}(Must-Staple)"
+		
+		echo "${blu}SSL:${end} ${ssl}${end}"
 		echo "${blu}Access Logs:${end} $(is_log $domain)"
 		echo "${blu}Force Redirect:${end} $(is_force_redirect $domain)"
 	fi

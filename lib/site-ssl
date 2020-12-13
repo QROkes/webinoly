@@ -107,10 +107,14 @@ site_ssl_on() {
 	done
 	
 	# Create new certificate
-	local param="--email $cermail --no-eff-email --agree-tos --staple-ocsp --must-staple"
+	local param="--email $cermail --no-eff-email --agree-tos --staple-ocsp"
+	[[ $must_staple == "on" ]] && param="$param --must-staple"
 	[[ $(conf_read debug) == "true" ]] && param="$param --test-cert"
 	[[ $ssl == "force-renewal" ]] && param="$param --force-renewal"
 	[[ $subdomain == "true" ]] && local domset="-d $domain" || local domset="-d $domain -d www.$domain"
+	
+	# Must-Staple issue: https://trac.nginx.org/nginx/ticket/812
+	# Also: https://blog.apnic.net/2019/01/15/is-the-web-ready-for-ocsp-must-staple/
 	
 	if [[ -n $wildcard ]]; then
 		local domset="-d $domain -d *.$domain"
