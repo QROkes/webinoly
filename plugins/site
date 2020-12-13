@@ -101,7 +101,7 @@ fi
 if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; then
 	echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
 	exit 1
-elif [[ -n $subfolder && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from && -z $replace_content && -z $wp && -z $html && -z $php && -z $mysql && -z $proxy && -z $env ]]; then
+elif [[ -n $subfolder && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from && -z $replace_content && -z $wp && -z $html && -z $php && -z $mysql && -z $proxy && -z $env && -z $info ]]; then
 	echo "${red}[ERROR] Subfolder option not supported!${end}"
 	exit 1
 elif [[ -n $subfolder && ( -n $cache || -n $yoast_sitemap || -n $multisite_convert || -n $replace_content ) && $(is_subfolder $domain $subfolder) != "wp" ]]; then
@@ -432,7 +432,7 @@ elif [[ -n $list && -z $redirection ]]; then
 
 # Site Info
 elif [[ -n $info && -f /etc/nginx/sites-available/$domain ]]; then
-	site_info
+	[[ -n $subfolder ]] && site_info_subfolder || site_info
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 

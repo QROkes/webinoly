@@ -1510,6 +1510,40 @@ list_sites() {
 }
 
 
+site_info_subfolder() {
+	local typesite=$(is_subfolder $domain $subfolder)
+	if [[ $typesite == "false" ]]; then
+		echo "${red}[ERROR] Subfolder not found! ${end}"
+		exit 1
+	fi
+	
+	echo ""
+	echo "${blu}Subfolder Type:${end} ${typesite^^}"
+	
+	[[ $typesite == "proxy" ]] || echo "${blu}Size:${end} $(sudo du -sh /var/www/$domain/htdocs$subfolder | cut -d"/" -f 1 -s)"
+	
+	if [[ $typesite == "wp" ]]; then
+		echo ""
+		echo "${blu}Cache:${end} $(is_wp_cache $domain $subfolder)"
+		echo "${blu}Multisite:${end} $(is_wp_multisite $domain $subfolder)"
+		echo "${blu}WP Auth:${end} $(is_wp_auth $domain $subfolder)"
+		echo "${blu}Debug:${end} $(is_wp_debug $domain $subfolder)"
+	
+		[[ -n $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder) ]] && echo "${blu}Environment:${end} $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder)"
+		echo ""
+		
+		wp_conf_retrieve $domain $subfolder false
+		echo "${blu}Database:${end} $wp_dbhost"
+		echo "${blu}DB Name:${end} $wp_dbname"
+		echo "${blu}DB User:${end} $wp_dbuser"
+		echo "${blu}DB Prefix:${end} $wp_dbpref"
+	fi
+	
+	[[ $typesite == "proxy" ]] && echo "${blu}Source Server:${end} $(grep 'proxy_pass ' /etc/nginx/apps.d/$domain$subname-proxy.conf | head -1 | cut -d ' ' -f 2 -s | rev | cut -c 2- | rev)"
+	echo ""
+}
+
+
 site_info() {
 	local typesite=$(site_type $domain)
 	if [[ $typesite == "false" ]]; then
@@ -1553,7 +1587,7 @@ site_info() {
 		[[ -n $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder) ]] && echo "${blu}Environment:${end} $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder)"
 		echo ""
 		
-		wp_conf_retrieve $domain
+		wp_conf_retrieve $domain false false
 		echo "${blu}Database:${end} $wp_dbhost"
 		echo "${blu}DB Name:${end} $wp_dbname"
 		echo "${blu}DB User:${end} $wp_dbuser"
@@ -1561,11 +1595,11 @@ site_info() {
 	fi
 	
 	if [[ $typesite == "Reverse Proxy" ]]; then
-		echo "${blu}Source Server:${end} $(grep "proxy_pass " /etc/nginx/apps.d/$domain-proxy.conf | cut -d " " -f 2 -s | rev | cut -c 2- | rev)"
+		echo "${blu}Source Server:${end} $(grep 'proxy_pass ' /etc/nginx/apps.d/$domain-proxy.conf | head -1 | cut -d ' ' -f 2 -s | rev | cut -c 2- | rev)"
 	elif [[ $typesite == "Parked" ]]; then
-		echo "${blu}Main Site:${end} $(grep "root " /etc/nginx/sites-available/$domain | cut -d "/" -f 4 -s)"
+		echo "${blu}Main Site:${end} $(grep 'root ' /etc/nginx/sites-available/$domain | cut -d '/' -f 4 -s)"
 	elif [[ $typesite == "Forward" ]]; then
-		echo "${blu}Forwarded to:${end} $(grep "return 301 " /etc/nginx/sites-available/$domain | cut -d " " -f 3 -s | cut -d "$" -f 1 -s)"
+		echo "${blu}Forwarded to:${end} $(grep 'return 301 ' /etc/nginx/sites-available/$domain | cut -d ' ' -f 3 -s | cut -d '$' -f 1 -s)"
 	fi
 	echo ""
 }
