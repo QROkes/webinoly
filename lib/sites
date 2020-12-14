@@ -1278,39 +1278,61 @@ yoast_sitemap() {
 }
 
 
-clone_wp_site() {
-	if [[ $(is_wp_installed $clone_from $subfolder) != "true" ]]; then
-		echo "${dim}[INFO] WordPress is empty and still not configured in ${clone_from}${subfolder} site!${end}"
-	fi
+cloning_site() {
 	if [[ -f /etc/nginx/sites-available/$domain && $overwrite == "on" ]]; then
 		echo "${blu}Site already exists! ${dim} Overwriting...${end}"
 		[[ -z $subfolder ]] && sudo site $domain -delete=force > /dev/null 2>&1 || sudo site $domain -subfolder=$subfolder -delete=force > /dev/null 2>&1
 	fi
 	
 	if [[ -n $subfolder ]]; then
-		sudo cp /etc/nginx/apps.d/$clone_from$subname-php.conf /etc/nginx/apps.d/$domain$subname-php.conf
-		sudo cp /etc/nginx/apps.d/$clone_from$subname-wpfc.conf /etc/nginx/apps.d/$domain$subname-wpfc.conf
-		sudo cp /etc/nginx/apps.d/$clone_from$subname-wpcommon.conf /etc/nginx/apps.d/$domain$subname-wpcommon.conf
-		sudo cp /etc/nginx/apps.d/$clone_from$subname-wpcommon-noauth.conf /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
-		sudo cp /etc/nginx/apps.d/$clone_from$subname-yoast-sitemap.conf /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
-		
-		sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-php.conf
-		sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
-		
+		local subtype=$(is_subfolder $clone_from $subfolder)
 		[[ ! -f /etc/nginx/sites-available/$domain ]] && create_empty_site
 		
-		local dest=$( echo $subfolder | rev | cut -f 2- -d "/" -s | rev )
-		sudo mkdir -p /var/www/$domain/htdocs$dest
-		sudo cp -r /var/www/$clone_from/htdocs$subfolder /var/www/$domain/htdocs$dest
+		if [[ $subtype == "wp" ]]; then
+			echo "${blu}${dim}Cloning WP subfolder...${end}"
+			sudo cp /etc/nginx/apps.d/$clone_from$subname-php.conf /etc/nginx/apps.d/$domain$subname-php.conf
+			sudo cp /etc/nginx/apps.d/$clone_from$subname-wpfc.conf /etc/nginx/apps.d/$domain$subname-wpfc.conf
+			sudo cp /etc/nginx/apps.d/$clone_from$subname-wpcommon.conf /etc/nginx/apps.d/$domain$subname-wpcommon.conf
+			sudo cp /etc/nginx/apps.d/$clone_from$subname-wpcommon-noauth.conf /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
+			sudo cp /etc/nginx/apps.d/$clone_from$subname-yoast-sitemap.conf /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf			
+			sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-php.conf
+			sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+			sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
+		elif [[ $subtype == "php" ]]; then
+			echo "${blu}${dim}Cloning PHP subfolder...${end}"
+			if [[ -f /etc/nginx/apps.d/$clone_from$subname-php.conf ]]; then
+				sudo cp /etc/nginx/apps.d/$clone_from$subname-php.conf /etc/nginx/apps.d/$domain$subname-php.conf
+				sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-php.conf
+				sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
+			elif [[ -f /etc/nginx/apps.d/$clone_from$subname-phpx.conf ]]; then
+				sudo cp /etc/nginx/apps.d/$clone_from$subname-phpx.conf /etc/nginx/apps.d/$domain$subname-phpx.conf
+				sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-phpx.conf
+				sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-phpx.conf;" /etc/nginx/sites-available/$domain
+			fi
+		elif [[ $subtype == "html" ]]; then
+			echo "${blu}${dim}Cloning HTML subfolder...${end}"
+		elif [[ $subtype == "proxy" ]]; then
+			echo "${blu}${dim}Cloning PROXY subfolder...${end}"
+			sudo cp /etc/nginx/apps.d/$clone_from$subname-proxy.conf /etc/nginx/apps.d/$domain$subname-proxy.conf
+			sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-proxy.conf;" /etc/nginx/sites-available/$domain
+		elif [[ $subtype == "true" ]]; then
+			echo "${blu}${dim}Cloning subfolder data only...${end}"
+		else
+			echo "${red}${dim}[ERROR] Unexpected error, subfolder type is undetermined!${end}"
+		fi
+		
+		if [[ -d /var/www/$clone_from/htdocs$subfolder ]]; then
+			local dest=$( echo $subfolder | rev | cut -f 2- -d "/" -s | rev )
+			sudo mkdir -p /var/www/$domain/htdocs$dest
+			sudo cp -r /var/www/$clone_from/htdocs$subfolder /var/www/$domain/htdocs$dest
+		fi
 	else
-		sudo cp -r /var/www/$clone_from /var/www/$domain
+		[[ -d /var/www/$clone_from ]] && sudo cp -r /var/www/$clone_from /var/www/$domain
 	fi
 
-	sudo chown -R www-data:www-data /var/www/$domain
+	[[ -d /var/www/$domain ]] && sudo chown -R www-data:www-data /var/www/$domain
 
-	if [[ -n $subfolder ]]; then
-		sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
-	elif [[ -z $subfolder && ! -f /etc/nginx/sites-available/$domain ]]; then
+	if [[ -z $subfolder && ! -f /etc/nginx/sites-available/$domain ]]; then
 		sudo cp /etc/nginx/sites-available/$clone_from /etc/nginx/sites-available/$domain
 		sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
 		sudo sed -i "s/$clone_from/$domain/g"  /etc/nginx/sites-available/$domain
@@ -1341,28 +1363,38 @@ clone_wp_site() {
 				fi
 			fi
 		done
-		
-	else
-		echo "${red}[ERROR] Unexpected error, site you're trying to clone already exists!${end}"
-		exit 1
 	fi
 
-	local dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
-	local AUTOGENPASS_WPDB=`pwgen -s -1 16`
-	
-	wp_config_write $domain DB_NAME \'$dom\' $subfolder
-	wp_config_write $domain DB_USER \'$dom\' $subfolder
-	wp_config_write $domain DB_PASSWORD \'$AUTOGENPASS_WPDB\' $subfolder
-	wp_config_write $domain WP_CACHE_KEY_SALT \'wp_$domain$(echo $subfolder | sed "s/\//_/g")\' $subfolder
-	
-	if [[ $wp_dbhost == "localhost" ]]; then
-		site -mysql=[localhost,$dom,$dom,$AUTOGENPASS_WPDB] > /dev/null 2>&1
-		mysqldump -u admin -p$ADMIN_PASS $wp_dbname | mysql -u admin -p$ADMIN_PASS $dom
-		edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
-	else
-		site -mysql=[$wp_dbhost,$dom,$dom,$AUTOGENPASS_WPDB,$extdb_user,$extdb_pass] > /dev/null 2>&1
-		mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $wp_dbname | mysql -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $dom
-		edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
+	# Only for WP sites
+	if [[ $iswpclone == "true" ]]; then
+		local dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
+		local AUTOGENPASS_WPDB=`pwgen -s -1 16`
+		
+		wp_config_write $domain DB_NAME \'$dom\' $subfolder
+		wp_config_write $domain DB_USER \'$dom\' $subfolder
+		wp_config_write $domain DB_PASSWORD \'$AUTOGENPASS_WPDB\' $subfolder
+		wp_config_write $domain WP_CACHE_KEY_SALT \'wp_$domain$(echo $subfolder | sed "s/\//_/g")\' $subfolder
+		
+		if [[ $wp_dbhost == "localhost" ]]; then
+			site -mysql=[localhost,$dom,$dom,$AUTOGENPASS_WPDB] > /dev/null 2>&1
+			mysqldump -u admin -p$ADMIN_PASS $wp_dbname | mysql -u admin -p$ADMIN_PASS $dom
+			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
+		else
+			site -mysql=[$wp_dbhost,$dom,$dom,$AUTOGENPASS_WPDB,$extdb_user,$extdb_pass] > /dev/null 2>&1
+			mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $wp_dbname | mysql -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $dom
+			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
+		fi
+		
+		if [[ $replace_content != "off" ]]; then
+			replace_content="[http://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
+			replace_content="[https://$clone_from,https://$domain]" && wp_replace_content > /dev/null 2>&1
+			# In case www is forced
+			replace_content="[http://www.$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
+			replace_content="[https://www.$clone_from,https://$domain]" && wp_replace_content > /dev/null 2>&1
+		fi
+		
+		[[ -n $env && -z $subfolder ]] && sudo site $domain -env=$env
+		[[ -n $env && -n $subfolder ]] && sudo site $domain -env=$env -subfolder=$subfolder
 	fi
 	
 	# Remove custom settings from cloned site
@@ -1371,17 +1403,7 @@ clone_wp_site() {
 	[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
 	conf_delete nginx-reload
 	
-	if [[ $replace_content != "off" ]]; then
-		replace_content="[http://$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
-		replace_content="[https://$clone_from,https://$domain]" && wp_replace_content > /dev/null 2>&1
-		# In case www is forced
-		replace_content="[http://www.$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
-		replace_content="[https://www.$clone_from,https://$domain]" && wp_replace_content > /dev/null 2>&1
-	fi
-	
 	echo "${gre}Site${blu} $domain$subfolder ${gre}is now a successfull clone of${blu} $clone_from$subfolder ${end}"
-	[[ -n $env && -z $subfolder ]] && sudo site $domain -env=$env
-	[[ -n $env && -n $subfolder ]] && sudo site $domain -env=$env -subfolder=$subfolder
 }
 
 

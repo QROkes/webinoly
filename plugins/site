@@ -107,9 +107,6 @@ elif [[ -n $subfolder && -z $delete && -z $cache && -z $yoast_sitemap && -z $mul
 elif [[ -n $subfolder && ( -n $cache || -n $yoast_sitemap || -n $multisite_convert || -n $replace_content ) && $(is_subfolder $domain $subfolder) != "wp" ]]; then
 	echo "${red}[ERROR] Subfolder not found or is not a WP site!${end}"
 	exit 1
-elif [[ -n $subfolder && -n $clone_from && $(is_subfolder $clone_from $subfolder) != "wp" ]]; then
-	echo "${red}[ERROR] Subfolder not found or is not a WP site!${end}"
-	exit 1
 else
 	subname=$(echo $subfolder | sed "s/\//_/g")
 fi
@@ -379,25 +376,27 @@ elif [[ -n $clone_from ]]; then
 	elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" && $overwrite != "on" ]]; then
 		echo "${red}[ERROR] Subfolder ${blu}'$subfolder'${red} already exists!${end}"
 		exit 1
-	elif [[ $(is_wp $clone_from $subfolder) != "true" ]]; then
-		echo "${red}[ERROR] Site${blu} ${clone_from}${subfolder} ${red}is not a WordPress site!${end}"
-		exit 1
 	elif [[ $(is_parked $clone_from) == "true" ]]; then
 		echo "${red}[ERROR] Cloning a parked site is not allowed!${end}"
 		exit 1
 	fi
 	
-	wp_conf_retrieve $clone_from $subfolder #We need to call this function in the parent shell to preserve variables and avoid asking two times for the same values in case of external db.
-	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
-		exit 1
+	if [[ $(is_wp $clone_from $subfolder) == "true" ]]; then
+		#We need to call this function in the parent shell to preserve variables and avoid asking two times for the same values in case of external db.
+		wp_conf_retrieve $clone_from $subfolder 
+		iswpclone="true"
+		
+		if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
+			exit 1
+		elif [[ $(is_wp_multisite $clone_from $subfolder) != "false" ]]; then
+			echo "${red}[ERROR] WordPress Multisite can not be cloned!${end}"
+			exit 1
+		elif [[ $(is_wp_installed $clone_from $subfolder) != "true" ]]; then
+			echo "${dim}[INFO] WordPress is empty and still not configured in ${clone_from}${subfolder} site!${end}"
+		fi
 	fi
 	
-	if [[ $(is_wp_multisite $clone_from $subfolder) != "false" ]]; then
-		echo "${red}[ERROR] WordPress Multisite can not be cloned!${end}"
-		exit 1
-	else
-		clone_wp_site
-	fi
+	cloning_site
 
 
 # Replace Content
