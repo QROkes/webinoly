@@ -583,6 +583,12 @@ deletesite() {
 	sudo rm -rf /etc/nginx/sites-enabled/$domain
 	sudo rm -rf /var/www/$domain
 	
+	# In case of custom cache
+	if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
+		sudo sed -i "/^fastcgi_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g').*/d" /etc/nginx/conf.d/webinoly.conf
+		[[ ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
+	fi
+	
 	echo "${gre}Site${blu} $domain ${gre}has been successfully deleted!${end}"
 }
 
@@ -1180,25 +1186,53 @@ reverse_proxy() {
 
 
 wp_cache() {
-	if [[ $cache == "off" && -f /etc/nginx/sites-available/$domain ]]; then
+	if [[ $cache == "off" ]]; then
 		api-events_update si9
-		if [[ -n $subfolder && $(is_wp_cache $domain $subfolder) == "true" ]]; then
+		if [[ $(is_cache $domain $subfolder) == "custom" ]]; then			
+			if [[ $(conf_read php-info) != "false" && $(is_wp $domain $subfolder) != "true" ]]; then
+				if [[ -z $subfolder ]]; then
+					sudo sed -i "/apps.d\/$domain$subname-.*cache.conf;/c \	include common/phpx.conf;" /etc/nginx/sites-available/$domain
+				elif [[ -n $subfolder && -f /etc/nginx/apps.d/$domain$subname-phpx.conf ]]; then
+					sudo sed -i "/apps.d\/$domain$subname-.*cache.conf;/c \	include apps.d/$domain$subname-phpx.conf;" /etc/nginx/sites-available/$domain
+				elif [[ -n $subfolder && ! -f /etc/nginx/apps.d/$domain$subname-phpx.conf ]]; then
+					# Try with the other PHP option
+					if [[ -n $subfolder && -f /etc/nginx/apps.d/$domain$subname-php.conf ]]; then
+						sudo sed -i "/apps.d\/$domain$subname-.*cache.conf;/c \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
+					else
+						echo "${red}[ERROR] PHP Configuration file not found!${end}"
+						exit 1
+					fi
+				fi
+			else
+				# WP sites are forced to take this option
+				if [[ -z $subfolder ]]; then
+					sudo sed -i "/apps.d\/$domain$subname-.*cache.conf;/c \	include common/php.conf;" /etc/nginx/sites-available/$domain
+				elif [[ -n $subfolder && -f /etc/nginx/apps.d/$domain$subname-php.conf ]]; then
+					sudo sed -i "/apps.d\/$domain$subname-.*cache.conf;/c \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
+				elif [[ -n $subfolder && ! -f /etc/nginx/apps.d/$domain$subname-php.conf ]]; then
+					# Try with the other PHP option (except if site is WP)
+					if [[ -n $subfolder && -f /etc/nginx/apps.d/$domain$subname-phpx.conf && $(is_wp $domain $subfolder) != "true" ]]; then
+						sudo sed -i "/apps.d\/$domain$subname-.*cache.conf;/c \	include apps.d/$domain$subname-phpx.conf;" /etc/nginx/sites-available/$domain
+					else
+						echo "${red}[ERROR] PHP Configuration file not found!${end}"
+						exit 1
+					fi
+				fi
+			fi
+			
+			echo "${gre}Custom FastCGI Cache in${blu} $domain ${gre}has been disabled!${end}"
+		elif [[ -n $subfolder && $(is_cache $domain $subfolder) == "wp" ]]; then
 			sudo sed -i "/apps.d\/$domain$subname-wpfc.conf;/c \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
 			echo "${gre}FastCGI Cache in${blu} $domain$subfolder ${gre}has been disabled!${end}"
-		elif [[ $(is_wp_cache $domain) == "true" ]]; then
+		elif [[ $(is_cache $domain) == "wp" ]]; then
 			sudo sed -i '/common\/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
 			echo "${gre}FastCGI Cache in${blu} $domain ${gre}has been disabled!${end}"
 		else
-			if [[ $(is_wp $domain $subfolder) == "false" ]]; then
-				echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WP site!${end}"
-				exit 1
-			else
-				echo "${gre}FastCGI Cache is already disabled on your site${blu} $domain${end}"
-			fi
+			echo "${gre}FastCGI Cache is already disabled on your site${blu} $domain${end}"
 		fi	
-	elif [[ $cache == "on" && -f /etc/nginx/sites-available/$domain ]]; then
+	elif [[ $cache == "on" ]]; then
 		api-events_update si8
-		if [[ $(is_wp $domain $subfolder) == "true" && $(is_wp_cache $domain $subfolder) == "false" ]]; then
+		if [[ $(is_wp $domain $subfolder) == "true" && $(is_cache $domain $subfolder) == "false" ]]; then
 			[[ -z $subfolder ]] && sudo sed -i '/ common\/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
 			[[ -n $subfolder ]] && sudo sed -i "/ apps.d\/$domain$subname-php.conf;/c \	include apps.d/$domain$subname-wpfc.conf;" /etc/nginx/sites-available/$domain
 			if [[ $(is_parked $domain) == "false" && ( ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/nginx-helper || ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/redis-cache ) ]]; then
@@ -1229,6 +1263,91 @@ wp_cache() {
 			else
 				echo "${gre}FastCGI Cache is already enabled on your site${blu} $domain$subfolder${end}"
 			fi
+		fi
+	elif [[ $cache == "custom" ]]; then
+		if [[ $(is_wp $domain $subfolder) == "true" ]]; then
+			local fn="wpcache"
+		elif [[ $(is_php $domain $subfolder) == "true"  ]]; then
+			local fn="phpcache"
+		else
+			echo "${red}[ERROR] Custom Cache only supported for PHP and WordPress sites!${end}"
+			exit 1
+		fi
+		
+		[[ -z $reset ]] && api-events_update si8
+		
+		if [[ -n $reset ]]; then
+			if [[ $(is_cache $domain $subfolder) == "custom" ]]; then
+				echo "${red}[ERROR] Cannot remove the Custom Cache configuration file because is currently in use!${end}"
+				exit 1
+			elif [[ -f /etc/nginx/apps.d/$domain$subname-${fn}.conf ]]; then
+				sudo rm /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i "/^fastcgi_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')${subname} .*/d" /etc/nginx/conf.d/webinoly.conf
+				[[ -f /etc/nginx/conf.d/webinoly.conf && ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
+				echo "${gre}Custom FastCGI Cache configuration file has been successfully removed! ${end}"
+			else
+				echo "${gre}Custom FastCGI Cache configuration file not found! ${end}"
+			fi
+		elif [[ -n $query_string_never_cache || $query_string_cache || $skip_cache || -n $skip_cookie_cache ]]; then
+			custom_cache_global -site
+		elif [[ $(is_cache $domain $subfolder) == "false" ]]; then
+			[[ -z $subfolder ]] && sudo sed -i "/ common\/php.conf/c \	include apps.d/$domain$subname-${fn}.conf;" /etc/nginx/sites-available/$domain
+			[[ -z $subfolder ]] && sudo sed -i "/ common\/phpx.conf/c \	include apps.d/$domain$subname-${fn}.conf;" /etc/nginx/sites-available/$domain
+			[[ -n $subfolder ]] && sudo sed -i "/ apps.d\/$domain$subname-php.conf;/c \	include apps.d/$domain$subname-${fn}.conf;" /etc/nginx/sites-available/$domain
+			[[ -n $subfolder ]] && sudo sed -i "/ apps.d\/$domain$subname-phpx.conf;/c \	include apps.d/$domain$subname-${fn}.conf;" /etc/nginx/sites-available/$domain
+			
+			# Creates the custom Webinoly Cache File (.cnf) only if not exists.
+			if [[ ! -f /etc/nginx/apps.d/$domain$subname-${fn}.conf ]]; then
+				sudo touch /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo chmod 644 /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo chown -R root:root /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				
+				if [[ ! -f /etc/nginx/conf.d/webinoly.conf ]]; then
+					sudo touch /etc/nginx/conf.d/webinoly.conf
+					sudo chmod 644 /etc/nginx/conf.d/webinoly.conf
+					sudo chown -R root:root /etc/nginx/conf.d/webinoly.conf
+				fi
+				
+				# Cache Size for custom cache will be half of the global value by default
+				local cachesize=$(($(grep -F "fastcgi_cache_path " /etc/nginx/conf.d/fastcgi.conf | grep -Eo "max_size=.*m" | cut -d "=" -f 2 -s | grep -Eo "[0-9]+")/2))
+				[[ -n $cachesize && $cachesize =~ ^[0-9]+$ && $cachesize -gt 0 ]] || local cachesize=90
+				
+				local dom=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
+				echo "fastcgi_cache_path /run/nginx-cache/${dom}${subname} levels=1:2 keys_zone=${dom}${subname}:50m max_size=${cachesize}m inactive=7d;" >> /etc/nginx/conf.d/webinoly.conf
+				
+				echo -e "# Webinoly Custom FastCGI Cache File \n" >> /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo cat /etc/nginx/common/wpfc.conf >> /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i '/# WPFC NGINX CONFIGURATION/,/# Use cached or actual file if they exists/{/.*/d}' /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i '/fastcgi_cache WORDPRESS;/r /etc/nginx/conf.d/fastcgi.conf' /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i '/# FastCGI cache settings/,/fastcgi_cache_path /{/.*/d}' /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i "/fastcgi_cache WORDPRESS;/c \	fastcgi_cache ${dom}${subname};" /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i "s/ \$skip_cache/ \$skip_cache_${dom}${subname}/g" /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i '/^fastcgi_/s/^/	/' /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				
+				sudo sed -i "/^# Webinoly Custom FastCGI Cache File /a include apps.d/${domain}${subname}*site_custom_cache.conf;" /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i "/^# Webinoly Custom FastCGI Cache File /a set \$skip_cache_${dom}${subname} 0;" /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				
+				if [[ -n $subfolder ]]; then
+					sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-${fn}.conf
+					sudo sed -i "/^location ~\* /c location ~* $subfolder/\.*\\\.php\$ {" /etc/nginx/apps.d/$domain$subname-${fn}.conf
+					sudo sed -i "s#/index.php#$subfolder/index.php#" /etc/nginx/apps.d/$domain$subname-${fn}.conf
+					[[ $(is_wp $domain $subfolder) == "true" ]] && sudo sed -i "/^# Webinoly Custom FastCGI Cache File /a include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				fi
+				
+				echo "${gre}${dim}A new FastCGI Cache configuration file has been created!${end}"
+			else
+				echo "${gre}${dim}FastCGI Cache configuration file found!${end}"
+			fi
+			
+			[[ -n $times && $times != "true" ]] && config_fastcgi_cache -site $times
+			
+			echo "${gre}"
+			echo "Custom FastCGI Cache in${blu} $domain$subfolder ${gre}has been successfully enabled! "
+			echo "${end}"
+		elif [[ -n $times ]]; then	
+			config_fastcgi_cache -site $times
+		else
+			echo "${gre}FastCGI Cache is already enabled on your site${blu} $domain$subfolder${end}"
 		fi
 	else
 		echo "${red}[ERROR] Invalid value for cache! ${end}"

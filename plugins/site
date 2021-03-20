@@ -3,7 +3,7 @@
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
 # Options: -html, -php, -mysql, -wp, -parked, -proxy, -empty, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -yoast-sitemap, -multisite-convert, -clone-from, -replace-content, -redirection, -forward, -info, -env
-# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp, -subfolder, -from, -to, -http-code, -regex, -manual, -overwrite, -wp-cache-plugins, -transparent, -must-staple
+# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp, -subfolder, -from, -to, -http-code, -regex, -manual, -overwrite, -wp-cache-plugins, -transparent, -must-staple, -times, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -reset
 
 # shopt is necessary for this kind !(html|22222) of patterns
 shopt -s extglob
@@ -104,7 +104,7 @@ if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; the
 elif [[ -n $subfolder && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from && -z $replace_content && -z $wp && -z $html && -z $php && -z $mysql && -z $proxy && -z $env && -z $info ]]; then
 	echo "${red}[ERROR] Subfolder option not supported!${end}"
 	exit 1
-elif [[ -n $subfolder && ( -n $cache || -n $yoast_sitemap || -n $multisite_convert || -n $replace_content ) && $(is_subfolder $domain $subfolder) != "wp" ]]; then
+elif [[ -n $subfolder && ( $cache == "on" || -n $yoast_sitemap || -n $multisite_convert || -n $replace_content ) && $(is_subfolder $domain $subfolder) != "wp" ]]; then
 	echo "${red}[ERROR] Subfolder not found or is not a WP site!${end}"
 	exit 1
 else
@@ -270,6 +270,11 @@ elif [[ -n $redirection && -f /etc/nginx/sites-available/$domain ]]; then
 	check_for_nginx
 	redirection_manager
 
+
+# FastCGI Cache
+elif [[ -n $cache && -f /etc/nginx/sites-available/$domain ]]; then
+	wp_cache
+
 	
 # Delete site	
 elif [[ -n $delete && -f /etc/nginx/sites-available/$domain ]]; then
@@ -293,6 +298,12 @@ elif [[ -n $delete && -f /etc/nginx/sites-available/$domain ]]; then
 		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-proxy.conf/d}" /etc/nginx/sites-available/$domain
 		sudo sed -i "/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/{\|location $subfolder/ |d}" /etc/nginx/sites-available/$domain
 		echo "${gre}Subfolder${blu} $subfolder ${gre}from${blu} $domain ${gre}has been successfully deleted!${end}"
+		
+		# In case of custom cache
+		if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
+			sudo sed -i "/^fastcgi_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')${subname} .*/d" /etc/nginx/conf.d/webinoly.conf
+			[[ ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
+		fi
 	else
 		deletesite
 	fi
@@ -416,11 +427,6 @@ elif [[ -n $replace_content && -f /etc/nginx/sites-available/$domain ]]; then
 elif [[ -n $env && -f /etc/nginx/sites-available/$domain ]]; then
 	wp_env_type
 	nginx_not="true" # Nginx-Reload not-needed.
-	
-
-# FastCGI Cache
-elif [[ -n $cache ]]; then
-	wp_cache
 	
 
 # List Sites

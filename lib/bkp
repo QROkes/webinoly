@@ -489,6 +489,7 @@ export_server() {
 	[[ -f /opt/webinoly/webinoly.conf.exported ]] && local include="/opt/webinoly/webinoly.conf.exported" || local include=""
 	[[ -d /etc/nginx/apps.d ]] && local include="$include /etc/nginx/apps.d"
 	[[ -f /etc/nginx/conf.d/blockips.conf ]] && local include="$include /etc/nginx/conf.d/blockips.conf"
+	[[ -f /etc/nginx/conf.d/webinoly.conf ]] && local include="$include /etc/nginx/conf.d/webinoly.conf"
 	[[ -d /etc/nginx/sites-available ]] && local include="$include /etc/nginx/sites-available"
 	[[ -d /etc/nginx/sites-enabled ]] && local include="$include /etc/nginx/sites-enabled"
 	[[ -d /var/www ]] && local include="$include /var/www"
