@@ -650,6 +650,13 @@ is_proxy() {
 }
 
 
+is_dedicated_proxy() {
+	# $1 = domain, ($2 = subfolder)*
+	# Any site full-empty will be considered as "dedicated"
+	[[ -f /etc/nginx/sites-available/$1 && -z $(grep -F " common/locations.conf;" /etc/nginx/sites-available/$1) && -z $(grep -E "include common/headers-.*.conf;" /etc/nginx/sites-available/$1) ]] && echo "true" || echo "false"
+}
+
+
 is_forward() {
 	if [[ -f /etc/nginx/sites-available/$1 ]]; then
 		local index=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F "index ")
@@ -805,7 +812,11 @@ is_empty_root_site() {
 		if [[ $(is_wp $1) == "true" || $(is_php $1) == "true" || $(is_proxy $1) == "true" || $(is_html $1) == "true" || $(is_parked $1) == "true" || $(is_forward $1) == "true" ]]; then
 			echo "false"
 		elif [[ -f /etc/nginx/sites-available/$1 ]]; then
-			echo "true"
+			if [[ -z $(grep -F " common/locations.conf;" /etc/nginx/sites-available/$1) && -z $(grep -E "include common/headers-.*.conf;" /etc/nginx/sites-available/$1) ]]; then
+				echo "full"
+			else
+				echo "true"
+			fi
 		else
 			echo "false"
 		fi
@@ -856,6 +867,8 @@ site_type() {
 		echo "PHP"
 	elif [[ $(is_html $1) == "true" ]]; then
 		echo "HTML"
+	elif [[ $(is_dedicated_proxy $1) == "true" ]]; then
+		echo "Dedicated Reverse Proxy"
 	elif [[ $(is_proxy $1) == "true" ]]; then
 		echo "Reverse Proxy"
 	elif [[ $(is_forward $1) == "true" ]]; then

@@ -596,6 +596,11 @@ deletesite() {
 create_empty_site() {
 	createsite
 	sudo sed -i '/ common\/php.conf;/d' /etc/nginx/sites-available/$domain
+	
+	if [[ $1 == "-full" ]]; then
+		sudo sed -i "/locations.conf;/d" /etc/nginx/sites-available/$domain
+		sudo sed -i "/include .*headers-.*.conf;/d" /etc/nginx/sites-available/$domain
+	fi
 }
 
 
@@ -1153,12 +1158,17 @@ reverse_proxy() {
 	elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" ]]; then
 		echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
 		exit 1
+	elif [[ -n $dedicated_reverse_proxy && $(is_empty_root_site $domain) == "true" ]]; then
+		echo "${red}[ERROR] Main site is not a Dedicated Reverse Proxy site!${end}"
+		exit 1
 	fi
 	
 	if [[ ( -z $subfolder || ( -n $subfolder && ! -f /etc/nginx/sites-available/$domain )) && $(is_empty_root_site $domain) == "false" ]]; then
-		create_empty_site
+		[[ -n $dedicated_reverse_proxy ]] && create_empty_site -full || create_empty_site
+	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "full" ]]; then
+		echo "${gre}Site configuration found: Main site at${blu} $domain ${gre}root has been successfully set as Dedicated Reverse-Proxy!${end}"
 	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "true" ]]; then
-		echo "${gre}Subfolder configuration found: Main site at${blu} $domain ${gre}root has been successfully set as Reverse-Proxy!${end}"
+		echo "${gre}Site configuration found: Main site at${blu} $domain ${gre}root has been successfully set as Reverse-Proxy!${end}"
 	fi
 	
 	is_url $proxydata -split
@@ -1168,7 +1178,12 @@ reverse_proxy() {
 	
 	sudo cp /opt/webinoly/templates/template-site-proxy /etc/nginx/apps.d/$domain$subname-proxy.conf
 	sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-proxy.conf;" /etc/nginx/sites-available/$domain
-	[[ -n $transparent ]] && sudo sed -i '/CacheStaticFiles/,/BasicLocEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
+	
+	if [[ -n $dedicated_reverse_proxy || $(is_dedicated_proxy $domain) == "true" ]]; then
+		sudo sed -i '/CacheStaticFiles/,/BasicLocEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
+		echo "${blu}${bol}This site is set as Dedicated Reverse Proxy!${end}"
+	fi
+	
 	if [[ -n $subfolder ]]; then
 		sudo sed -i '/BasicLocationRootFiles/,/BasicLocEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
 		sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-proxy.conf
@@ -1182,6 +1197,15 @@ reverse_proxy() {
 	[[ $code =~ ^(2|3|4)[0-9][0-9]$ ]] || echo "${red}[WARNING] Seems like your Reverse Proxy host is not responding! ${mes}${end}"
 	
 	[[ -n $subfolder ]] && echo "${gre}Reverse proxy${blu} $subfolder ${gre}subfolder successfully created!${end}"
+}
+
+
+full_empty_not_allowed() {
+	# Full Empty sites are only for Dedicated Reverse Proxy sites
+	if [[ $(is_dedicated_proxy $domain) == "true" ]]; then
+		echo "${red}[ERROR] This domain is currently set as Dedicated Reverse Proxy!${end}"
+		exit 1
+	fi
 }
 
 
