@@ -1146,14 +1146,14 @@ clear_caches() {
 		fi
 	fi
 	if [[ -f /etc/nginx/sites-available/$clear_cache ]]; then
-		if [[ $(conf_read nginx) == "true" && $(is_cache $clear_cache $subfolder) == "custom" ]]; then
+		if [[ $(conf_read nginx) == "true" && $(is_cache $clear_cache $subfolder) =~ ^(custom|proxy)$ ]]; then
 			sudo rm -Rf /run/nginx-cache/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')$(echo $subfolder | sed "s/\//_/g")
-			echo "${gre}Custom FastCgi Cache for${blu} ${clear_cache}${subfolder} ${gre}has been successfully cleared!${end}"
-		elif [[ $(is_cache $clear_cache $subfolder) != "custom" ]]; then
+			echo "${gre}Custom Nginx Cache for${blu} ${clear_cache}${subfolder} ${gre}has been successfully cleared!${end}"
+		elif ! [[ $(is_cache $clear_cache $subfolder) =~ ^(custom|proxy)$ ]]; then
 			echo "${red}[ERROR] Custom Cache is not enabled for this site!${end}"
 			err_cont=true
 		elif [[ $(conf_read nginx) != "true" ]]; then
-			echo "${red}[ERROR] We can not clear FastCGI Cache because NGINX is not installed!${end}"
+			echo "${red}[ERROR] We can not clear Nginx Cache because NGINX is not installed!${end}"
 			err_cont=true
 		fi
 	fi

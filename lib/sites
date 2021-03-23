@@ -1212,7 +1212,7 @@ full_empty_not_allowed() {
 wp_cache() {
 	if [[ $cache == "off" ]]; then
 		api-events_update si9
-		if [[ $(is_cache $domain $subfolder) == "custom" ]]; then			
+		if [[ $(is_cache $domain $subfolder) == "custom" ]]; then
 			if [[ $(conf_read php-info) != "false" && $(is_wp $domain $subfolder) != "true" ]]; then
 				if [[ -z $subfolder ]]; then
 					sudo sed -i "/apps.d\/$domain$subname-.*cache.conf;/c \	include common/phpx.conf;" /etc/nginx/sites-available/$domain
@@ -1245,6 +1245,9 @@ wp_cache() {
 			fi
 			
 			echo "${gre}Custom FastCGI Cache in${blu} $domain ${gre}has been disabled!${end}"
+		elif [[ $(is_cache $domain $subfolder) == "proxy" ]]; then
+			sudo sed -i "/proxy_cache .*;/c \	proxy_cache off;" /etc/nginx/apps.d/$domain$subname-proxy.conf
+			echo "${gre}Proxy Cache in${blu} $domain$subfolder ${gre}has been disabled!${end}"
 		elif [[ -n $subfolder && $(is_cache $domain $subfolder) == "wp" ]]; then
 			sudo sed -i "/apps.d\/$domain$subname-wpfc.conf;/c \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
 			echo "${gre}FastCGI Cache in${blu} $domain$subfolder ${gre}has been disabled!${end}"
@@ -1252,7 +1255,7 @@ wp_cache() {
 			sudo sed -i '/common\/wpfc.conf/c \	include common/php.conf;' /etc/nginx/sites-available/$domain
 			echo "${gre}FastCGI Cache in${blu} $domain ${gre}has been disabled!${end}"
 		else
-			echo "${gre}FastCGI Cache is already disabled on your site${blu} $domain${end}"
+			echo "${gre}Nginx Cache is already disabled on your site${blu} $domain${end}"
 		fi	
 	elif [[ $cache == "on" ]]; then
 		api-events_update si8
@@ -1291,29 +1294,60 @@ wp_cache() {
 	elif [[ $cache == "custom" ]]; then
 		if [[ $(is_wp $domain $subfolder) == "true" ]]; then
 			local fn="wpcache"
-		elif [[ $(is_php $domain $subfolder) == "true"  ]]; then
+		elif [[ $(is_php $domain $subfolder) == "true" ]]; then
 			local fn="phpcache"
+		elif [[ $(is_proxy $domain $subfolder) == "true" ]]; then
+			local fn="proxycache" # Just to pass the verification, not really needed!
 		else
-			echo "${red}[ERROR] Custom Cache only supported for PHP and WordPress sites!${end}"
+			echo "${red}[ERROR] Custom Cache only supported for PHP, WordPress and Reverse Proxy sites!${end}"
 			exit 1
 		fi
 		
 		[[ -z $reset ]] && api-events_update si8
 		
 		if [[ -n $reset ]]; then
-			if [[ $(is_cache $domain $subfolder) == "custom" ]]; then
+			if [[ $(is_cache $domain $subfolder) =~ ^(custom|proxy)$ ]]; then
 				echo "${red}[ERROR] Cannot remove the Custom Cache configuration file because is currently in use!${end}"
 				exit 1
+			elif [[ $(is_proxy $domain $subfolder) == "true" && -n $(grep -F "# WebinolyProxyCacheStart" /etc/nginx/apps.d/$domain$subname-proxy.conf) ]]; then
+				sudo sed -i '/WebinolyProxyCacheStart/,/WebinolyProxyCacheEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
+				sudo sed -i "/^proxy_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')${subname} .*/d" /etc/nginx/conf.d/webinoly.conf
+				echo "${gre}Custom Proxy Cache configuration has been successfully removed! ${end}"
 			elif [[ -f /etc/nginx/apps.d/$domain$subname-${fn}.conf ]]; then
 				sudo rm /etc/nginx/apps.d/$domain$subname-${fn}.conf
 				sudo sed -i "/^fastcgi_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')${subname} .*/d" /etc/nginx/conf.d/webinoly.conf
-				[[ -f /etc/nginx/conf.d/webinoly.conf && ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
 				echo "${gre}Custom FastCGI Cache configuration file has been successfully removed! ${end}"
 			else
-				echo "${gre}Custom FastCGI Cache configuration file not found! ${end}"
+				echo "${gre}Custom Nginx Cache configuration not found! ${end}"
 			fi
+			[[ -f /etc/nginx/conf.d/webinoly.conf && ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
 		elif [[ -n $query_string_never_cache || $query_string_cache || $skip_cache || -n $skip_cookie_cache ]]; then
 			custom_cache_global -site
+		elif [[ -n $times ]]; then
+			config_fastcgi_cache -site $times
+		elif [[ $(is_cache $domain $subfolder) == "false" && $(is_proxy $domain $subfolder) == "true" && -n $(grep -F "# WebinolyProxyCacheStart" /etc/nginx/apps.d/$domain$subname-proxy.conf) ]]; then
+			sudo sed -i "/proxy_cache .*;/c \	proxy_cache $(echo $domain | sed "s/[^0-9A-Za-z]/_/g")${subname};" /etc/nginx/apps.d/$domain$subname-proxy.conf
+			echo "${gre}Custom Proxy Cache in${blu} $domain$subfolder ${gre}has been successfully enabled! ${end}"
+		elif [[ $(is_cache $domain $subfolder) == "false" && $(is_proxy $domain $subfolder) == "true" ]]; then
+			if [[ ! -f /etc/nginx/conf.d/webinoly.conf ]]; then
+				sudo touch /etc/nginx/conf.d/webinoly.conf
+				sudo chmod 644 /etc/nginx/conf.d/webinoly.conf
+				sudo chown -R root:root /etc/nginx/conf.d/webinoly.conf
+			fi
+				
+			# Cache Size for custom cache will be half of the global value by default
+			local cachesize=$(($(grep -F "fastcgi_cache_path " /etc/nginx/conf.d/fastcgi.conf | grep -Eo "max_size=.*m" | cut -d "=" -f 2 -s | grep -Eo "[0-9]+")/2))
+			[[ -n $cachesize && $cachesize =~ ^[0-9]+$ && $cachesize -gt 0 ]] || local cachesize=90
+				
+			local dom=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
+			echo "proxy_cache_path /run/nginx-cache/${dom}${subname} levels=1:2 keys_zone=${dom}${subname}:50m max_size=${cachesize}m inactive=7d;" >> /etc/nginx/conf.d/webinoly.conf
+			
+			sudo sed -i '/proxy_http_version /r /opt/webinoly/templates/template-site-proxycache' /etc/nginx/apps.d/$domain$subname-proxy.conf
+			sudo sed -i "/proxy_cache STATIC;/c \	proxy_cache ${dom}${subname};" /etc/nginx/apps.d/$domain$subname-proxy.conf
+			sudo sed -i "/example\*site_custom_cache.conf;/c \	include apps.d/${domain}${subname}*site_custom_cache.conf;" /etc/nginx/apps.d/$domain$subname-proxy.conf
+			sudo sed -i "s/ \$skip_cache/ \$skip_cache_${dom}${subname}/g" /etc/nginx/apps.d/$domain$subname-proxy.conf
+			
+			echo "${gre}Custom Proxy Cache in${blu} $domain$subfolder ${gre}has been successfully enabled! ${end}"
 		elif [[ $(is_cache $domain $subfolder) == "false" ]]; then
 			[[ -z $subfolder ]] && sudo sed -i "/ common\/php.conf/c \	include apps.d/$domain$subname-${fn}.conf;" /etc/nginx/sites-available/$domain
 			[[ -z $subfolder ]] && sudo sed -i "/ common\/phpx.conf/c \	include apps.d/$domain$subname-${fn}.conf;" /etc/nginx/sites-available/$domain
@@ -1366,10 +1400,8 @@ wp_cache() {
 			[[ -n $times && $times != "true" ]] && config_fastcgi_cache -site $times
 			
 			echo "${gre}"
-			echo "Custom FastCGI Cache in${blu} $domain$subfolder ${gre}has been successfully enabled! "
+			echo "Custom FastCGI Cache in${blu} $domain$subfolder ${gre}has been successfully enabled! ${end}"
 			echo "${end}"
-		elif [[ -n $times ]]; then	
-			config_fastcgi_cache -site $times
 		else
 			echo "${gre}FastCGI Cache is already enabled on your site${blu} $domain$subfolder${end}"
 		fi
@@ -1623,11 +1655,11 @@ list_sites() {
 			[[ ${list,,} == "accesslog" && $(is_log $domi) != "true" ]] && continue
 			[[ ${list,,} == "noaccesslog" && $(is_log $domi) == "true" ]] && continue
 			
-			# Only WordPress options
-			[[ ${list,,} =~ ^(cache|nocache|adminauth|noadminauth|debug|nodebug|wpenv)$ && $(is_wp $domi) != "true" ]] && continue
+			[[ ${list,,} == "cache" && $(is_cache $domi) == "false" ]] && continue
+			[[ ${list,,} == "nocache" && -n $(is_cache $domi) && $(is_cache $domi) != "false" ]] && continue
 			
-			[[ ${list,,} == "cache" && $(is_wp_cache $domi) != "true" ]] && continue
-			[[ ${list,,} == "nocache" && $(is_wp_cache $domi) == "true" ]] && continue
+			# Only WordPress options
+			[[ ${list,,} =~ ^(adminauth|noadminauth|debug|nodebug|wpenv)$ && $(is_wp $domi) != "true" ]] && continue
 			
 			[[ ${list,,} == "adminauth" && $(is_wp_auth $domi) != "true" ]] && continue
 			[[ ${list,,} == "noadminauth" && $(is_wp_auth $domi) == "true" ]] && continue
@@ -1687,9 +1719,18 @@ site_info_subfolder() {
 	
 	[[ $typesite == "proxy" ]] || echo "${blu}Size:${end} $(sudo du -sh /var/www/$domain/htdocs$subfolder | cut -d"/" -f 1 -s)"
 	
+	if [[ $(is_cache $domain $subfolder) =~ ^(custom|proxy)$ ]]; then
+		local cache="Custom"
+		[[ $typesite =~ ^(php|proxy) ]] && echo "${blu}Cache:${end} $cache"
+	elif [[ $(is_cache $domain $subfolder) == "wp" ]]; then
+		local cache="true"
+	else
+		local cache="false"
+	fi
+	
 	if [[ $typesite == "wp" ]]; then
 		echo ""
-		echo "${blu}Cache:${end} $(is_wp_cache $domain $subfolder)"
+		echo "${blu}Cache:${end} $cache"
 		echo "${blu}Multisite:${end} $(is_wp_multisite $domain $subfolder)"
 		echo "${blu}WP Auth:${end} $(is_wp_auth $domain $subfolder)"
 		echo "${blu}Debug:${end} $(is_wp_debug $domain $subfolder)"
@@ -1733,18 +1774,27 @@ site_info() {
 			local ssl="false"
 		fi
 		
-		[[ $(grep -E "^must_staple.?=.?*+" /etc/letsencrypt/renewal/${domain}.conf | cut -f 2 -d '=' -s | sed 's/ //') =~ ^(True|true)$ ]] && ssl="${ssl}(Must-Staple)"
+		[[ -f /etc/letsencrypt/renewal/${domain}.conf && $(grep -E "^must_staple.?=.?*+" /etc/letsencrypt/renewal/${domain}.conf | cut -f 2 -d '=' -s | sed 's/ //') =~ ^(True|true)$ ]] && ssl="${ssl}(Must-Staple)"
 		
 		echo "${blu}SSL:${end} ${ssl}${end}"
 		echo "${blu}Access Logs:${end} $(is_log $domain)"
 		echo "${blu}Force Redirect:${end} $(is_force_redirect $domain)"
 	fi
 	
-	[[ $typesite =~ ^(Forward|Parked|Reverse Proxy) ]] || echo "${blu}Size:${end} $(sudo du -sh /var/www/$domain | cut -d"/" -f 1 -s)"
+	[[ $typesite =~ ^(Forward|Parked|Reverse Proxy|Dedicated Reverse Proxy) ]] || echo "${blu}Size:${end} $(sudo du -sh /var/www/$domain | cut -d"/" -f 1 -s)"
+	
+	if [[ $(is_cache $domain) =~ ^(custom|proxy)$ ]]; then
+		local cache="Custom"
+		[[ $typesite =~ ^(PHP|Reverse Proxy|Dedicated Reverse Proxy) ]] && echo "${blu}Cache:${end} $cache"
+	elif [[ $(is_cache $domain) == "wp" ]]; then
+		local cache="true"
+	else
+		local cache="false"
+	fi
 	
 	if [[ $typesite == "WordPress" ]]; then
 		echo ""
-		echo "${blu}Cache:${end} $(is_wp_cache $domain)"
+		echo "${blu}Cache:${end} $cache"
 		echo "${blu}Multisite:${end} $(is_wp_multisite $domain)"
 		echo "${blu}WP Auth:${end} $(is_wp_auth $domain)"
 		echo "${blu}Debug:${end} $(is_wp_debug $domain)"

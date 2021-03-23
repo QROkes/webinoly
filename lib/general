@@ -711,6 +711,8 @@ is_cache() {
 		echo "custom"
 	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/# WebinolyCustom/,$p' /etc/nginx/sites-available/$1 | grep -E "$1$subn-(wp|php)cache.conf;") ]]; then
 		echo "custom"
+	elif [[ -f /etc/nginx/apps.d/$1$subn-proxy.conf && -n $(grep -F "# WebinolyProxyCacheStart" /etc/nginx/apps.d/$1$subn-proxy.conf) && -z $(grep -F "proxy_cache off;" /etc/nginx/apps.d/$1$subn-proxy.conf) ]]; then
+		echo "proxy"
 	else
 		echo "false"
 	fi
@@ -1021,11 +1023,20 @@ config_fastcgi_cache() {
 	#Example: config_fastcgi_cache -site
 	#Example: config_fastcgi_cache -site [1h,1d,1m]
 	
+	local pref="fastcgi"
 	if [[ $1 == "-site" && -f /etc/nginx/sites-available/$domain ]]; then
 		if [[ $(is_wp $domain $subfolder) == "true" && -f /etc/nginx/apps.d/$domain$subname-wpcache.conf ]]; then
 			local timefile="/etc/nginx/apps.d/$domain$subname-wpcache.conf"
 		elif [[ $(is_php $domain $subfolder) == "true" && -f /etc/nginx/apps.d/$domain$subname-phpcache.conf ]]; then
 			local timefile="/etc/nginx/apps.d/$domain$subname-phpcache.conf"
+		elif [[ $(is_proxy $domain $subfolder) == "true" && -f /etc/nginx/apps.d/$domain$subname-proxy.conf ]]; then
+			if [[ -n $(grep -F "# WebinolyProxyCacheStart" /etc/nginx/apps.d/$domain$subname-proxy.conf) ]]; then
+				local timefile="/etc/nginx/apps.d/$domain$subname-proxy.conf"
+				local pref="proxy"
+			else
+				echo "${red}[ERROR] Custom Proxy Cache not found! ${dim}(Must be enabled at least once before you can add these custom values)${end}"
+				exit 1
+			fi
 		else
 			echo "${red}[ERROR] Unexpected internal error! (Wrong sitetype for custom cache)${end}"
 			exit 1
@@ -1040,13 +1051,13 @@ config_fastcgi_cache() {
 	
 
 	if [[ $(conf_read nginx) == "true" ]]; then	
-		hitline=$( grep -F "fastcgi_cache_valid 200" $timefile )
+		hitline=$( grep -F "${pref}_cache_valid 200" $timefile )
 		hitval=$(echo "${hitline//;}" | rev | cut -d' ' -f 1 | rev)
-		inaline=$( grep -F "fastcgi_cache_path" $mainfile )
+		inaline=$( grep -F "${pref}_cache_path" $mainfile )
 		inactive=$(echo "${inaline//;}" | rev | cut -d' ' -f 1 | rev)
 		inaval=$(echo "${inactive}" | cut -d'=' -f 2)
 		maxsize=$(echo "${inaline}" | rev | cut -d' ' -f 2 | rev)
-		othline=$( grep -F "fastcgi_cache_valid 301 302 303 307 308 404 410 451" $timefile )
+		othline=$( grep -F "${pref}_cache_valid 301 302 303 307 308 404 410 451" $timefile )
 		othval=$(echo "${othline//;}" | rev | cut -d' ' -f 1 | rev)
 	elif [[ -n $(conf_read fastcgi-conf) ]]; then
 		hitval=$( echo $(conf_read fastcgi-conf) | cut -d',' -f 1 -s )
@@ -1062,11 +1073,11 @@ config_fastcgi_cache() {
 	if [[ $config_cache == true ]]; then
 		echo "${gre}"
 		echo "**********************************************************************"
-		echo "*************     Set FastCGI Cache new time values     **************"
+		echo "*************      Set Nginx Cache new time values      **************"
 		echo "*****  Example: 30d = 30days  |  3h = 3hours  |  5m = 5minutes  ******"
 		echo "**********************************************************************"
 		echo "${blu}"
-		echo "FastCGI Cache Valid for Pages (HttpCode: 200) actual value is: $hitval"
+		echo "Nginx Cache Valid for Pages (HttpCode: 200) actual value is: $hitval"
 		read -p "   Set new value: " hit
 		hit=${hit:-$hitval}
 		echo ""
@@ -1074,7 +1085,7 @@ config_fastcgi_cache() {
 		read -p "   Set new value: " ina
 		ina=${ina:-$inaval}
 		echo ""
-		echo "FastCGI Cache Valid for Errors and Redirections (301 302 303 307 308 404 410 451) actual value is: $othval"
+		echo "Nginx Cache Valid for Errors and Redirections (301 302 303 307 308 404 410 451) actual value is: $othval"
 		read -p "   Set new value: " oth
 		oth=${oth:-$othval}
 		echo ""
@@ -1096,7 +1107,7 @@ config_fastcgi_cache() {
 	if [[ "$hit" =~ ^[0-9]+[smhdwMy]$ && "$ina" =~ ^[0-9]+[smhdwMy]$ && "$oth" =~ ^[0-9]+[smhdwMy]$ ]]; then
 		if [[ $(conf_read nginx) == "true" ]]; then	
 			[[ $1 == "-site" ]] && local path="/run/nginx-cache/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')$subname" || local path="/run/nginx-cache"
-			local cachepath=$(grep -F "fastcgi_cache_path $path " $mainfile)
+			local cachepath=$(grep -F "${pref}_cache_path $path " $mainfile)
 			local newcachepath=$(echo $cachepath | sed "s/ inactive=.*[a-z]/ inactive=$ina/")
 			
 			if [[ -n $cachepath && -n $newcachepath ]]; then
@@ -1106,13 +1117,13 @@ config_fastcgi_cache() {
 				exit 1
 			fi
 			
-			sudo sed -i "/fastcgi_cache_valid 200/c \fastcgi_cache_valid 200 ${hit};" $timefile
-			sudo sed -i "/fastcgi_cache_valid 301 302 /c \fastcgi_cache_valid 301 302 303 307 308 404 410 451 ${oth};" $timefile
-			sudo sed -i '/^fastcgi_/s/^/	/' $timefile
+			sudo sed -i "/${pref}_cache_valid 200/c ${pref}_cache_valid 200 ${hit};" $timefile
+			sudo sed -i "/${pref}_cache_valid 301 302 /c ${pref}_cache_valid 301 302 303 307 308 404 410 451 ${oth};" $timefile
+			sudo sed -i "/^${pref}_/s/^/	/" $timefile
 		fi
 		
 		[[ $1 == "-site" ]] || conf_write fastcgi-conf ${hit},${ina},${oth}
-		echo "${gre}FastCGI Cache values has been successfully updated!${end}"
+		echo "${gre}Nginx Cache values has been successfully updated!${end}"
 	else
 		echo "${red}[ERROR] Invalid values!${end}"
 		exit 1
@@ -1126,18 +1137,16 @@ custom_cache_global() {
 	# Example: custom_cache_global -site
 	
 	if [[ $1 == "-site" && -f /etc/nginx/sites-available/$domain ]]; then
-		if [[ ( $(is_wp $domain $subfolder) == "true" && -f /etc/nginx/apps.d/$domain$subname-wpcache.conf ) || ( $(is_php $domain $subfolder) == "true" && -f /etc/nginx/apps.d/$domain$subname-phpcache.conf )]]; then
+		if [[ ( $(is_wp $domain $subfolder) == "true" && -f /etc/nginx/apps.d/$domain$subname-wpcache.conf ) || ( $(is_php $domain $subfolder) == "true" && -f /etc/nginx/apps.d/$domain$subname-phpcache.conf ) || ( $(is_proxy $domain $subfolder) == "true" && -f /etc/nginx/apps.d/$domain$subname-proxy.conf ) ]]; then
 			local confile="/etc/nginx/apps.d/${domain}${subname}-site_custom_cache.conf"
 			local mark="_$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")${subname}"
 		else
-			echo "${red}[ERROR] Custom cache not found! ${dim}(Must be enabled at least once before you can add these custom rules)${end}"
+			echo "${red}[ERROR] Custom Cache not found! ${dim}(Must be enabled at least once before you can add these custom rules)${end}"
 			exit 1
 		fi
 	else
 		local confile="/etc/nginx/apps.d/global_custom_cache.conf"
-	fi
-	
-	
+	fi	
 	
 	if [[ -n $list ]]; then
 		[[ -n $raw || $list == "raw" ]] && echo "" || echo "${gre}"
