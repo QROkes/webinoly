@@ -757,14 +757,16 @@ webinoly_update() {
 
 server_reset() {
 	# Regenerate NGINX conf files
-	if [[ $(conf_read nginx-optim) == "true" && $server_reset =~ ^(nginx|all)$ ]]; then
+	if [[ $(conf_read nginx-optim) == "true" && $server_reset =~ ^(nginx|all)$ ]]; then		
+		# Backup files will be restored in nginx_optim function
 		[[ -f /etc/nginx/conf.d/blockips.conf ]] && sudo cp -p /etc/nginx/conf.d/blockips.conf /tmp/webinoly_blockips_backup
+		[[ -f /etc/nginx/conf.d/webinoly.conf ]] && sudo cp -p /etc/nginx/conf.d/webinoly.conf /tmp/webinoly_backup
+		
 		sudo sed -i '/WebinolyCustom/,/WebinolyCustomEnd/{/.*/d}' /etc/nginx/fastcgi_params
 		sudo rm -rf /etc/nginx/common
 		sudo rm -rf /etc/nginx/conf.d/*
 		linux_purge
 		nginx_optim
-		[[ -f /tmp/webinoly_blockips_backup ]] && sudo mv /tmp/webinoly_blockips_backup /etc/nginx/conf.d/blockips.conf
 		
 		# Fix permissions
 		sudo find /var/www -type d -exec chmod 755 {} \;

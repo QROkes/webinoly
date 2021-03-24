@@ -301,6 +301,10 @@ nginx_optim() {
 	sudo cp -R /opt/webinoly/templates/nginx/conf.d/* /etc/nginx/conf.d/
 	sudo cat /opt/webinoly/templates/nginx/nginx.conf > /etc/nginx/nginx.conf
 	
+	# This files are backedup by server-reset (needs to be here to avoid nginx errors)
+	[[ -f /tmp/webinoly_blockips_backup ]] && sudo mv /tmp/webinoly_blockips_backup /etc/nginx/conf.d/blockips.conf
+	[[ -f /tmp/webinoly_backup ]] && sudo mv /tmp/webinoly_backup /etc/nginx/conf.d/webinoly.conf
+	
 	# Remove it, then add it again to prevent multiple # for each server-reset
 	sudo sed -i '/ SERVER_NAME /s/#//' /etc/nginx/fastcgi_params
 	sudo sed -i '/ SERVER_NAME /s/^/#/' /etc/nginx/fastcgi_params

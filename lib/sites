@@ -1076,7 +1076,7 @@ parked_domain() {
 	elif [[ $(is_parked $parked) == "true" ]]; then
 		echo "${red}[ERROR] Parking a site using a parked site as main site is not allowed! ${end}"
 		exit 1
-	elif [[ $(is_empty_root_site $parked) == "true" ]]; then
+	elif [[ $(is_empty_root_site $parked) =~ ^(true|full)$ ]]; then
 		echo "${red}[ERROR] Invalid main site!${end}"
 		exit 1
 	fi
@@ -1101,7 +1101,13 @@ parked_domain() {
 	sudo sed -i "/root/c \	root /var/www/$parked/htdocs;" /etc/nginx/sites-available/$domain
 	
 	# Remove any conf file, this means we will not have subfolder support for parked sites, Should it be supported?
-	sudo sed -i "/WebinolyCustom/,/WebinolyCustomEnd/ {/include apps.d\/${domain}.*conf;/d}" /etc/nginx/sites-enabled/$domain
+	sudo sed -i "/WebinolyCustom/,/WebinolyCustomEnd/ {/include apps.d\/${domain}.*conf;/d}" /etc/nginx/sites-available/$domain
+	
+	# In case of WP cache, should be disabled in the new parked conf
+	sudo sed -i "/include common\/wpfc.conf;/c \	include common\/php.conf;" /etc/nginx/sites-available/$domain
+	sudo sed -i "/include apps.d\/${domain}-wpcache.conf;/c \	include common\/php.conf;" /etc/nginx/sites-available/$domain
+	[[ $(conf_read php-info) != "false" ]] && sudo sed -i "/include apps.d\/${domain}-phpcache.conf;/c \	include common\/phpx.conf;" /etc/nginx/sites-available/$domain
+	[[ $(conf_read php-info) == "false" ]] && sudo sed -i "/include apps.d\/${domain}-phpcache.conf;/c \	include common\/php.conf;" /etc/nginx/sites-available/$domain
 	
 	cusconl=$( grep -o "include /var/www/$domain/.*" /etc/nginx/sites-available/$domain | sed "s/$domain/$parked/" )
 	sed -i "/include \/var\/www\/$domain/c \	${cusconl}" /etc/nginx/sites-available/$domain
@@ -1155,17 +1161,23 @@ reverse_proxy() {
 	if ! [[ -n $proxydata && $(is_url $proxydata) =~ ^(http|https|ip|true)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid host and port!${end}"
 		exit 1
+	elif [[ -f /etc/nginx/sites-available/$domain && -z $subfolder && (($(is_empty_root_site $domain) == "full" && $(is_proxy $domain) != "false") || $(is_empty_root_site $domain) == "false") ]]; then
+		echo "${red}[ERROR] Site${blu} $domain ${red}already exists!${end}"
+		exit 1
 	elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" ]]; then
 		echo "${red}[ERROR] Subfolder${blu} $subfolder ${red}already exists!${end}"
 		exit 1
-	elif [[ -n $dedicated_reverse_proxy && $(is_empty_root_site $domain) == "true" ]]; then
+	elif [[ -f /etc/nginx/sites-available/$domain && -n $dedicated_reverse_proxy && $(is_empty_root_site $domain) != "full" && $(is_dedicated_proxy_domain $domain) != "true" ]]; then
 		echo "${red}[ERROR] Main site is not a Dedicated Reverse Proxy site!${end}"
+		exit 1
+	elif [[ $(is_empty_root_site $domain) == "full" && $(is_dedicated_proxy_domain $domain) == "false" ]]; then
+		echo "${red}[ERROR] This domain is currently set as Empty (blank), to create a site you need to add your own NGINX configuration. ${dim}(/var/www/example.com/*-nginx.conf)!${end}"
 		exit 1
 	fi
 	
 	if [[ ( -z $subfolder || ( -n $subfolder && ! -f /etc/nginx/sites-available/$domain )) && $(is_empty_root_site $domain) == "false" ]]; then
 		[[ -n $dedicated_reverse_proxy ]] && create_empty_site -full || create_empty_site
-	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "full" ]]; then
+	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "full" && $(is_dedicated_proxy $domain) == "false" ]]; then
 		echo "${gre}Site configuration found: Main site at${blu} $domain ${gre}root has been successfully set as Dedicated Reverse-Proxy!${end}"
 	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "true" ]]; then
 		echo "${gre}Site configuration found: Main site at${blu} $domain ${gre}root has been successfully set as Reverse-Proxy!${end}"
@@ -1179,7 +1191,7 @@ reverse_proxy() {
 	sudo cp /opt/webinoly/templates/template-site-proxy /etc/nginx/apps.d/$domain$subname-proxy.conf
 	sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-proxy.conf;" /etc/nginx/sites-available/$domain
 	
-	if [[ -n $dedicated_reverse_proxy || $(is_dedicated_proxy $domain) == "true" ]]; then
+	if [[ -n $dedicated_reverse_proxy || $(is_dedicated_proxy_domain $domain) == "true" ]]; then
 		sudo sed -i '/CacheStaticFiles/,/BasicLocEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
 		echo "${blu}${bol}This site is set as Dedicated Reverse Proxy!${end}"
 	fi
@@ -1202,8 +1214,11 @@ reverse_proxy() {
 
 full_empty_not_allowed() {
 	# Full Empty sites are only for Dedicated Reverse Proxy sites
-	if [[ $(is_dedicated_proxy $domain) == "true" ]]; then
+	if [[ $(is_dedicated_proxy_domain $domain) == "true" ]]; then
 		echo "${red}[ERROR] This domain is currently set as Dedicated Reverse Proxy!${end}"
+		exit 1
+	elif [[ $(is_empty_root_site $domain) == "full" ]]; then
+		echo "${red}[ERROR] This domain is currently set as Empty (blank), to create a site you need to add your own NGINX configuration. ${dim}(/var/www/example.com/*-nginx.conf)!${end}"
 		exit 1
 	fi
 }

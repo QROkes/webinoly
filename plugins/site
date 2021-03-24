@@ -154,7 +154,7 @@ elif [[ -n $mysql || ( -n $php && -n $domain ) ]]; then
 elif [[ -n $empty && -n $domain ]]; then
 	full_empty_not_allowed
 	echo "${blu}You've created an EMPTY site, which means that you need to add your own NGINX configuration. ${dim}(/var/www/example.com/*-nginx.conf)${end}"
-	create_empty_site
+	[[ $empty == "blank" ]] && create_empty_site -full || create_empty_site
 
 
 # Create HTML site
