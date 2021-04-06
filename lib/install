@@ -319,7 +319,7 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	
 	# Current original user HOME even with sudo (root) - This script always run with sudo, so $HOME is always /root
 	# https://askubuntu.com/questions/1186999/how-does-sudo-handle-home-differently-since-19-10
-	local current_home=$(eval echo ~${SUDO_USER:-${USER}}) 
+	local current_home=$(eval echo ~${SUDO_USER:-${USER}})
 	
 	# Create Direct Access for easy navigation
 	[ -L $current_home/sites-available ] || ln -s /etc/nginx/sites-available $current_home
@@ -463,9 +463,22 @@ nginx_tool() {
 
 	# Install LetsEncrypt
 	pre_install
-	sudo snap install core
-	sudo snap refresh core
-	sudo snap install --classic certbot
+	local certb=0
+	while [[ $certb -le 3 ]]
+	do
+		sudo snap install core
+		sudo snap refresh core
+		sudo snap install --classic certbot
+		
+		# SNAP Repo fails a lot, so we need to be sure and retry!!!
+		if [[ ! -f /snap/bin/certbot ]]; then
+			local certb=$(($certb+1))
+			[[ $certb -le 3 ]] && echo "${red}[ERROR] Certbot installation failed!${dim} We will retry in a moment...($(($certb*30))s)${end}"
+			[[ $certb -gt 3 ]] && echo "${red}[ERROR] Fatal Error: Certbot cannot be installed after 3 retries!${end}" || sleep $(($certb*20))
+		else
+			break
+		fi
+	done
 	[[ ! -L /usr/bin/certbot ]] && sudo ln -s /snap/bin/certbot /usr/bin/certbot
 	
 	# Instalar Duply & Duplicity

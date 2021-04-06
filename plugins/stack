@@ -94,6 +94,12 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			# Remove sources
 			sudo rm -rf /opt/webinoly/templates/source/default
 			
+			# Remove duply profiles
+			if [[ -d $HOME/.duply ]]; then
+				sudo rm -rf $HOME/.duply
+				echo "${gre}${dim}Backup (duply) profiles deleted!${end}"
+			fi
+			
 			api-events_update pn6
 			linux_purge
 			

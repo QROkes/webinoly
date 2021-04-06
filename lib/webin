@@ -732,25 +732,27 @@ webinoly_update() {
 		exit 1
 	fi
 	
+	local currentver=$(conf_read app-version)
+	
 	if [[ -n $update && $update != true ]]; then
-		branch="-ver=${update}"
+		local branch="-ver=${update}"
 	else
-		checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
-		currentver=$(conf_read app-version)
+		local checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
 		if [[ -n $checkver && -n $currentver && ${currentver//.} -ge ${checkver//.} ]]; then
-			echo "${gre}You currently have the latest version!${end}"
+			echo "${gre}You currently have the latest version!${dim} (v${checkver})${end}"
 			exit 0
 		elif [[ -z $checkver || -z $currentver ]]; then
 			echo "${red}[ERROR] Version number unavailable!${end}"
 			exit 1
 		else
 			echo "${dim}Updating...${end}"
+			echo "${blu}${dim}Your current version 'v${currentver}' will be updated to the newest 'v${checkver}' ${end}"
 		fi
 	fi
 	
 	sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=${app_version}" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
 	
-	[[ $? == 0 ]] && echo "${gre}Webinoly App has been updated successfully!${end}"
+	[[ $? == 0 ]] && echo "${gre}Webinoly App has been updated successfully!${dim} (Updated to: v$(conf_read app-version))${end}"
 	api-events_update wy1s
 }
 
