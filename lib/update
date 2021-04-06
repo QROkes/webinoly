@@ -152,10 +152,23 @@ onefive_to_onesix() {
 	
 	sudo apt -y remove certbot
 	echo | sudo add-apt-repository --remove 'ppa:certbot/certbot'
-	sudo snap install core
-	sudo snap refresh core
-	sudo snap install --classic certbot
-	sudo ln -s /snap/bin/certbot /usr/bin/certbot
+	local certb=0
+	while [[ $certb -le 3 ]]
+	do
+		sudo snap install core
+		sudo snap refresh core
+		sudo snap install --classic certbot
+		
+		# SNAP Repo fails a lot, so we need to be sure and retry!!!
+		if [[ ! -f /snap/bin/certbot ]]; then
+			local certb=$(($certb+1))
+			[[ $certb -le 3 ]] && echo "${red}[ERROR] Certbot installation failed!${dim} We will retry in a moment...($(($certb*30))s)${end}"
+			[[ $certb -gt 3 ]] && echo "${red}[ERROR] Fatal Error: Certbot cannot be installed after 3 retries!${end}" || sleep $(($certb*20))
+		else
+			break
+		fi
+	done
+	[[ ! -L /usr/bin/certbot ]] && sudo ln -s /snap/bin/certbot /usr/bin/certbot
 }
 
 
