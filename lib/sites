@@ -1338,8 +1338,9 @@ wp_cache() {
 			[[ -f /etc/nginx/conf.d/webinoly.conf && ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
 		elif [[ -n $query_string_never_cache || $query_string_cache || $skip_cache || -n $skip_cookie_cache ]]; then
 			custom_cache_global -site
-		elif [[ -n $times ]]; then
-			config_fastcgi_cache -site $times
+		elif [[ -n $cache_valid || -n $times ]]; then
+			[[ -n $times && -z $cache_valid ]] && cache_valid=$times  # Will be removed!
+			config_fastcgi_cache -site $cache_valid
 		elif [[ $(is_cache $domain $subfolder) == "false" && $(is_proxy $domain $subfolder) == "true" && -n $(grep -F "# WebinolyProxyCacheStart" /etc/nginx/apps.d/$domain$subname-proxy.conf) ]]; then
 			sudo sed -i "/proxy_cache .*;/c \	proxy_cache $(echo $domain | sed "s/[^0-9A-Za-z]/_/g")${subname};" /etc/nginx/apps.d/$domain$subname-proxy.conf
 			echo "${gre}Custom Proxy Cache in${blu} $domain$subfolder ${gre}has been successfully enabled! ${end}"
@@ -1412,7 +1413,8 @@ wp_cache() {
 				echo "${gre}${dim}FastCGI Cache configuration file found!${end}"
 			fi
 			
-			[[ -n $times && $times != "true" ]] && config_fastcgi_cache -site $times
+			[[ -n $times && $times != "true" ]] && config_fastcgi_cache -site $times   # Will be removed!
+			[[ -n $cache_valid && $cache_valid != "true" && -z $times ]] && config_fastcgi_cache -site $cache_valid
 			
 			echo "${gre}"
 			echo "Custom FastCGI Cache in${blu} $domain$subfolder ${gre}has been successfully enabled! ${end}"

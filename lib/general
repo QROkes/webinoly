@@ -1045,10 +1045,11 @@ config_fastcgi_cache() {
 		fi
 		
 		local mainfile="/etc/nginx/conf.d/webinoly.conf"
-		local config_cache=$2
+		local cache_valid=$2
 	else
 		local timefile="/etc/nginx/conf.d/fastcgi.conf"
 		local mainfile="/etc/nginx/conf.d/fastcgi.conf"
+		[[ -n $config_cache && -z $cache_valid ]] && cache_valid=$config_cache  # Will be removed!
 	fi
 	
 
@@ -1072,7 +1073,7 @@ config_fastcgi_cache() {
 	fi
 
 	
-	if [[ $config_cache == true ]]; then
+	if [[ $cache_valid == true ]]; then
 		echo "${gre}"
 		echo "**********************************************************************"
 		echo "*************      Set Nginx Cache new time values      **************"
@@ -1091,12 +1092,12 @@ config_fastcgi_cache() {
 		read -p "   Set new value: " oth
 		oth=${oth:-$othval}
 		echo ""
-	elif [[ $(echo "${config_cache}" | cut -c-1) == "[" && $(echo "${config_cache}" | rev | cut -c-1) == "]" ]]; then
-		custombegin=$(echo "${config_cache}" | cut -c-1)
-		customlast=$(echo "${config_cache}" | rev | cut -c-1)
+	elif [[ $(echo "${cache_valid}" | cut -c-1) == "[" && $(echo "${cache_valid}" | rev | cut -c-1) == "]" ]]; then
+		custombegin=$(echo "${cache_valid}" | cut -c-1)
+		customlast=$(echo "${cache_valid}" | rev | cut -c-1)
 		
 		# No need for check var lenght to prevent errors, the previous condition is enough in this case.
-		cachedata=${config_cache:1:-1}
+		cachedata=${cache_valid:1:-1}
 			
 		hit=$(echo "${cachedata}" | cut -d',' -f 1 )
 		ina=$(echo "${cachedata}" | cut -d',' -f 2 )
