@@ -1303,3 +1303,26 @@ if (\$http_cookie $sign $value) {
 }
 
 
+smtp_backup() {
+	if [[ $(conf_read smtp) == "true" ]]; then
+		sudo touch /var/www/webinoly_backup_smtp
+		echo "$(sudo sed -n 1p /etc/mailname) $(sudo sed -n 1p /etc/postfix/sasl_passwd)" > /var/www/webinoly_backup_smtp
+	fi
+}
+smtp_backup_recovery() {
+	if [[ -s /var/www/webinoly_backup_smtp ]]; then
+		local smtpdata=$(sudo sed -n 1p /var/www/webinoly_backup_smtp)
+		local main=$(echo $smtpdata | cut -d' ' -f 1 -s)
+		local host=$(echo $smtpdata | cut -d' ' -f 2 -s | cut -d':' -f 1 -s)
+		local user=$(echo $smtpdata | cut -d' ' -f 3 -s | cut -d':' -f 1 -s)
+		local pass=$(echo $smtpdata | cut -d' ' -f 3 -s | cut -d':' -f 2 -s)
+		sudo rm -rf /var/www/webinoly_backup_smtp
+		
+		if [[ -n $host && -n $user && -n $pass && -n $main ]]; then
+			sudo webinoly -smtp=[$host,$user,$pass,$main]
+		else
+			echo "${red}[ERROR] SMTP Configuration recovery failed! ${end}"
+		fi
+	fi
+}
+

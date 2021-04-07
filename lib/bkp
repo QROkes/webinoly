@@ -472,11 +472,7 @@ export_server() {
 		sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick --all-databases > /var/www/webinoly_backup_dball
 	fi
 	
-	if [[ $(conf_read smtp) == "true" ]]; then
-		sudo touch /var/www/webinoly_backup_smtp
-		echo "$(sudo sed -n 1p /etc/mailname) $(sudo sed -n 1p /etc/postfix/sasl_passwd)" > /var/www/webinoly_backup_smtp
-	fi
-	
+	smtp_backup
 	
 	# Create TAR file
 	[[ -d /var/www/html ]] && local exclude="--exclude=/var/www/html" || local exclude=""
@@ -662,20 +658,7 @@ import_server() {
 	fi
 	
 	# SMTP Configuration - should be here after sites are extracted and only if sites are imported.
-	if [[ $import == "full" && $(conf_read_exported smtp) == "true" && -s /var/www/webinoly_backup_smtp ]]; then
-		local smtpdata=$(sudo sed -n 1p /var/www/webinoly_backup_smtp)
-		local main=$(echo $smtpdata | cut -d' ' -f 1 -s)
-		local host=$(echo $smtpdata | cut -d' ' -f 2 -s | cut -d':' -f 1 -s)
-		local user=$(echo $smtpdata | cut -d' ' -f 3 -s | cut -d':' -f 1 -s)
-		local pass=$(echo $smtpdata | cut -d' ' -f 3 -s | cut -d':' -f 2 -s)
-		sudo rm -rf /var/www/webinoly_backup_smtp
-		
-		if [[ -n $host && -n $user && -n $pass && -n $main ]]; then
-			sudo webinoly -smtp=[$host,$user,$pass,$main]
-		else
-			echo "${red}[ERROR] SMTP Configuration recovery failed! ${end}"
-		fi
-	fi
+	[[ $import == "full" && $(conf_read_exported smtp) == "true" && -s /var/www/webinoly_backup_smtp ]] && smtp_backup_recovery
 	
 	# Default-Site and Tools Site Settings! - should be here after sites are extracted and only if sites are imported.
 	if [[ $import =~ ^(stack|full)$ ]]; then

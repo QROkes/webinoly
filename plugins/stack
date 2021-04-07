@@ -139,6 +139,7 @@ elif [[ -n $purge && -n $php ]]; then
 
 		if [[ $answer == [Yy] || $(conf_read force-flag) == "true" ]]; then
 			[[ $(conf_read mysql-tool) == "true" ]] && stack -pma -purge=force
+			[[ $(conf_read smtp) == "true" ]] && webinoly -smtp -purge
 			sudo service php*-fpm stop
 			ver=$(conf_read php-ver)
 			
@@ -417,17 +418,14 @@ elif [[ -n $php_ver ]]; then
 		if [[ $(conf_read php) == "true" && $(conf_read php-ver) == $php_ver ]]; then
 			echo "${gre}PHP $php_ver is currently installed!${end}"
 		elif [[ $(conf_read php) == "true" && $(conf_read mysql-tool) == "true" ]]; then
+			[[ $(conf_read mysql-tool) == "true" ]] && pmaflag="true"
+			smtp_backup
 			sudo stack -php -purge=force
 			conf_write php-ver $php_ver
-			# force flag prevent to be questioned (Unattended) when nginx is not installed.
-			conf_write force-flag true
+			conf_write force-flag true  # force flag prevent to be questioned (Unattended) when nginx is not installed.
 			sudo stack -php
-			sudo stack -pma
-		elif [[ $(conf_read php) == "true" && $(conf_read mysql-tool) != "true" ]]; then
-			sudo stack -php -purge=force
-			conf_write php-ver $php_ver
-			conf_write force-flag true
-			sudo stack -php
+			smtp_backup_recovery
+			[[ $pmaflag == "true" ]] && sudo stack -pma
 		elif [[ $(conf_read php) != "true" && $(conf_read mysql-tool) != "true" ]]; then
 			conf_write php-ver $php_ver
 			echo "${gre}PHP is not already installed but new version will be installed next time! ${end}"
