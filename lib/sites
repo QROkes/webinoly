@@ -1260,6 +1260,8 @@ wp_cache() {
 			fi
 			
 			echo "${gre}Custom FastCGI Cache in${blu} $domain ${gre}has been disabled!${end}"
+			[[ -n $reset && -n $subfolder ]] && site $domain -cache=custom -reset -subfolder=$subfolder
+			[[ -n $reset && -z $subfolder ]] && site $domain -cache=custom -reset
 		elif [[ $(is_cache $domain $subfolder) == "proxy" ]]; then
 			sudo sed -i "/proxy_cache .*;/c \	proxy_cache off;" /etc/nginx/apps.d/$domain$subname-proxy.conf
 			echo "${gre}Proxy Cache in${blu} $domain$subfolder ${gre}has been disabled!${end}"
@@ -1390,8 +1392,17 @@ wp_cache() {
 				echo "fastcgi_cache_path /run/nginx-cache/${dom}${subname} levels=1:2 keys_zone=${dom}${subname}:50m max_size=${cachesize}m inactive=7d;" >> /etc/nginx/conf.d/webinoly.conf
 				
 				echo -e "# Webinoly Custom FastCGI Cache File \n" >> /etc/nginx/apps.d/$domain$subname-${fn}.conf
-				sudo cat /etc/nginx/common/wpfc.conf >> /etc/nginx/apps.d/$domain$subname-${fn}.conf
-				sudo sed -i '/# WPFC NGINX CONFIGURATION/,/# Use cached or actual file if they exists/{/.*/d}' /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				
+				if [[ $fn == "phpcache" && $(conf_read php-info) != "false" ]]; then
+					sudo cat /etc/nginx/common/phpx.conf >> /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				else
+					sudo cat /etc/nginx/common/php.conf >> /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				fi
+				
+				sudo sed -i '/# PHP NGINX CONFIGURATION/,/# DO NOT MODIFY, ALL/{/.*/d}' /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i "/fastcgi_pass php;/a	fastcgi_cache WORDPRESS;" /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i "/fastcgi_pass php;/a	fastcgi_no_cache \$skip_cache;" /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i "/fastcgi_pass php;/a	fastcgi_cache_bypass \$skip_cache;" /etc/nginx/apps.d/$domain$subname-${fn}.conf
 				sudo sed -i '/fastcgi_cache WORDPRESS;/r /etc/nginx/conf.d/fastcgi.conf' /etc/nginx/apps.d/$domain$subname-${fn}.conf
 				sudo sed -i '/# FastCGI cache settings/,/fastcgi_cache_path /{/.*/d}' /etc/nginx/apps.d/$domain$subname-${fn}.conf
 				sudo sed -i "/fastcgi_cache WORDPRESS;/c \	fastcgi_cache ${dom}${subname};" /etc/nginx/apps.d/$domain$subname-${fn}.conf
