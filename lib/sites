@@ -1224,6 +1224,36 @@ full_empty_not_allowed() {
 }
 
 
+query_string_cache_default() {
+	if [[ $(is_wp $domain $subfolder) == "true" && -f /etc/nginx/apps.d/$domain$subname-wpcache.conf ]]; then
+		local cachefile="/etc/nginx/apps.d/$domain$subname-wpcache.conf"
+	elif [[ $(is_php $domain $subfolder) == "true" && -f /etc/nginx/apps.d/$domain$subname-phpcache.conf ]]; then
+		local cachefile="/etc/nginx/apps.d/$domain$subname-phpcache.conf"
+	elif [[ $(is_proxy $domain $subfolder) == "true" && -f /etc/nginx/apps.d/$domain$subname-proxy.conf ]]; then
+		local cachefile="/etc/nginx/apps.d/$domain$subname-proxy.conf"
+	else
+		echo "${red}[ERROR] Custom Cache not found! ${dim}(Must be enabled at least once before you can add these custom rules)${end}"
+		exit 1
+	fi
+	
+	if ! [[ $query_string_cache_default =~ ^(all|never)$ ]]; then
+		echo "${red}[ERROR] Please, enter a valid value for Query-String Cache default!${dim} ('all' or 'never')${end}"
+		exit 1
+	elif [[ $query_string_cache_default == "all" ]]; then
+		sudo sed -i "/# CacheQueryStringDefault/,/# CacheRuleEnd/{/.*/d}" $cachefile
+		echo "${gre}Query-String Cache default successfully updated!${dim} (All will be cached by default, except for individual rules if added)${end}"
+	elif [[ $query_string_cache_default == "never" ]]; then
+		if [[ -z $(grep -F "# CacheQueryStringDefault" $cachefile) ]]; then
+			local mark="_$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")${subname}"
+			sudo sed -i "/set \$skip_cache${mark} 0;/a # CacheQueryStringDefault\nif (\$query_string) {\n	set \$skip_cache${mark} 1;\n}\n# CacheRuleEnd" $cachefile
+			echo "${gre}Query-String Cache default successfully updated!${dim} (Never will be cached, except for individual rules if added)${end}"
+		else
+			echo "${gre}Query-String (Never) Cache default is already enabled!${end}"
+		fi
+	fi
+}
+
+
 wp_cache() {
 	if [[ $cache == "off" ]]; then
 		api-events_update si9
@@ -1340,6 +1370,8 @@ wp_cache() {
 			[[ -f /etc/nginx/conf.d/webinoly.conf && ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
 		elif [[ -n $query_string_never_cache || $query_string_cache || $skip_cache || -n $skip_cookie_cache ]]; then
 			custom_cache_global -site
+		elif [[ -n $query_string_cache_default ]]; then
+			query_string_cache_default
 		elif [[ -n $cache_valid || -n $times ]]; then
 			[[ -n $times && -z $cache_valid ]] && cache_valid=$times  # Will be removed!
 			config_fastcgi_cache -site $cache_valid
