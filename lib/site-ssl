@@ -173,11 +173,36 @@ site_ssl_on() {
 
 
 ssl_revoke() {
-	[[ $(conf_read debug) == "true" ]] && local param="--test-cert" || local param=""
+	[[ $(is_ssl_staging $domain) == "true" ]] && local param="--test-cert" || local param=""
 	sudo certbot revoke --cert-path /etc/letsencrypt/live/$domain/cert.pem --delete-after-revoke --non-interactive $param
-	echo "${gre}"
-	echo "SSL Cert for your site${blu} $domain ${gre}has been completely removed and revoked!${end}"
+	
+	if [[ ! -f /etc/letsencrypt/live/$domain/cert.pem ]]; then
+		echo "${gre}"
+		echo "SSL Cert for your site${blu} $domain ${gre}has been completely removed and revoked!${end}"
+	else
+		echo "${red}[ERROR] Cert cannot be revoked!${dim} (A common cause is that expired certs cannot be revoked)${end}"
+		
+		if [[ $revoke == "force" ]]; then
+			ans="Y"
+		else
+			echo "${blu}Do you want to delete this cert [y/N]? ${end}"
+			while read -r -n 1 -s ans; do
+				answer=${ans:-n}
+				[[ $ans = [YyNn] ]] && break
+			done
+		fi
+		[[ $ans == [Yy] ]] && sudo certbot delete -n --cert-name $domain
+	
+		if [[ ! -f /etc/letsencrypt/live/$domain/cert.pem ]]; then
+			echo "${gre}"
+			echo "SSL Cert for your site${blu} $domain ${gre}has been successfully removed!${end}"
+		else
+			echo "${red}[ERROR] Cert cannot be removed!${end}"
+			exit 1
+		fi
+	fi
 }
+
 
 site_ssl_off() {
 	# Don't ask if SSL is Custom
@@ -203,19 +228,23 @@ site_ssl_off() {
 	
 	[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "http://${domain}"
 	
-	if [[ -n $revoke && $revoke =~ ^(on|off)$ ]]; then
-		[[ $revoke == "on" ]] && answer="Y" || answer="N"
-	else
-		echo "${blu}Select 'Y' to revoke and delete all the certificate files."
-		echo "Select 'N' if you only want to deactivate this certificate momentary and you will activate it later again."
-		echo "${gre}"
-		echo "Do you want to delete and revoke this certificate [y/N]? "
-		while read -r -n 1 -s answer; do
-		  answer=${answer:-n}
-		  [[ $answer = [YyNn] ]] && break
-		done
-		echo "${end}"
+	# Check if exist to not try to revoke a cert that don't exist, for example a site with a cert added to a wildcard! (-add-to-wildcard)
+	if [[ -f /etc/letsencrypt/renewal/${domain}.conf ]]; then
+		if [[ -n $revoke && $revoke =~ ^(on|off|force)$ ]]; then
+			[[ $revoke =~ ^(on|force)$ ]] && answer="Y" || answer="N"
+		else
+			echo "${blu}Select 'Y' to revoke and delete all the certificate files."
+			echo "Select 'N' if you only want to deactivate this certificate momentary and you will activate it later again."
+			echo "${gre}"
+			echo "Do you want to delete and revoke this certificate [y/N]? "
+			while read -r -n 1 -s answer; do
+			  answer=${answer:-n}
+			  [[ $answer = [YyNn] ]] && break
+			done
+			echo "${end}"
+		fi
 	fi
-	[[ $answer == [Yy] ]] && ssl_revoke
 	echo "${gre}SSL has been successfully disabled for your site${blu} $domain${end}"
+	[[ $answer == [Yy] ]] && ssl_revoke
+	echo "" # To exit successfully, other way the || in the main function is triggered!
 }

@@ -346,10 +346,13 @@ elif [[ -n $ssl ]]; then
 			elif [[ ! -d /etc/letsencrypt/live/$add_to_wildcard ]]; then
 				echo "${red}[ERROR] Wildcard Cert not found!${end}"
 				exit 1
+			elif [[ $(is_ssl_wildcard $add_to_wildcard) != "true" ]]; then
+				echo "${red}[ERROR] Seem like you are trying to use a cert that is not Wildcard!${end}"
+				exit 1
 			elif [[ $domain == *."$add_to_wildcard" ]]; then
 				ssl_nginx
 				[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "https://${domain}"
-				echo "${gre}Your site ${blu}- $domain -${gre} have been successfully added to the ${blu}- $add_to_wildcard -${gre} wildcard cert.${end}"
+				echo "${gre}Your site${blu} $domain ${gre}have been successfully added to the${blu} $add_to_wildcard ${gre}wildcard cert.${end}"
 			else
 				echo "${red}[ERROR] Seems like your site is not a valid subdomain!${end}"
 				exit 1

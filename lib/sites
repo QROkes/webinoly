@@ -1041,6 +1041,9 @@ wp_multisite_convertion() {
 		if [[ $passed == "subdomain" ]]; then
 			wp_config_write $domain SUBDOMAIN_INSTALL true $subfolder
 			sudo sed -i "/server_name /c \	server_name $domain *.$domain;" /etc/nginx/sites-available/$domain
+			
+			[[ -f /etc/letsencrypt/renewal/${domain}.conf && $(is_ssl_wildcard $domain) != "true" ]] && echo "${dim}[WARNING] A Wildcard SSL Cert is recommended, a cert was found but seems like it's not wildcard!${end}"
+			
 			echo "${gre}Subdomain Multisite configuration has been successfully completed!${end}"
 		elif [[ $passed == "subdirectory" ]]; then
 			wp_config_write $domain SUBDOMAIN_INSTALL false $subfolder
