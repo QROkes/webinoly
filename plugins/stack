@@ -483,6 +483,10 @@ elif [[ -n $purge_server_all ]]; then
 		echo " ${gre} Action aborted!!!  ${end}"
 		echo ""
 	fi
+
+
+elif [[ -n $help || -n $h || -n $H ]]; then
+	help_message
 else
 	echo "${red}[ERROR] Please, enter a valid option! ${end}"
 	exit 1

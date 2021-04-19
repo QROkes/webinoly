@@ -450,6 +450,8 @@ elif [[ -n $info && -f /etc/nginx/sites-available/$domain ]]; then
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 
+elif [[ -n $help || -n $h || -n $H ]]; then
+	help_message
 # Catch ERROR 
 elif [[ -n $domain && ! -f /etc/nginx/sites-available/$domain ]]; then
 	echo "${red}[ERROR] Site${blu} $domain ${red}doesn't exists, please enter a valid domain name!${end}"

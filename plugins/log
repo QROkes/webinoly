@@ -373,7 +373,10 @@ elif [[ -z $domain && ( -n $error || $empty_param == "true" ) ]]; then
 		echo "${red}[ERROR] Please, enter a valid option! ${end}"
 		exit 1
 	fi
-	
+
+
+elif [[ -n $help || -n $h || -n $H ]]; then
+	help_message	
 else
 	echo "${red}[ERROR] Please, enter a valid option! ${end}"
 	exit 1

@@ -291,8 +291,10 @@ elif [[ -n $external_db_save ]]; then
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 
+elif [[ -n $help || -n $h || -n $H ]]; then
+	help_message
 else
-	echo "${red}[ERROR] Please enter a valid option!${end}"
+	echo "${red}[ERROR] Please, enter a valid option!${end}"
 	exit 1
 fi
 
