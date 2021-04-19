@@ -2,7 +2,7 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
-# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -cache-valid, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -header-referrer, -header-hsts, -header-csp, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -email, -external-db-save, -export, -import
+# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -cache-valid, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -header-referrer, -header-hsts, -header-csp, -header-permission-policy, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -email, -external-db-save, -export, -import
 # Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre, -no-recovery, -recalculate, -dbname, -skip-db, -filename, -overwrite
 
 source /opt/webinoly/lib/webin
@@ -272,6 +272,8 @@ elif [[ -n $header_hsts ]]; then
 	http_header_hsts
 elif [[ -n $header_csp ]]; then
 	http_header_csp
+elif [[ -n $header_permission_policy ]]; then
+	http_header_permission_policy
 
 
 elif [[ -n $query_string_cache || -n $query_string_never_cache || -n $skip_cache || -n $skip_cookie_cache ]]; then

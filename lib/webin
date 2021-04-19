@@ -1860,6 +1860,25 @@ http_header_csp() {
 }
 
 
+http_header_permission_policy() {
+	if [[ $(conf_read nginx) == "true" ]]; then
+		if [[ $header_permission_policy == "off" ]]; then
+			sudo sed -i '/^add_header Permission-Policy/d' /etc/nginx/common/headers-html.conf
+			echo "${gre}Permission Policy Header successfully disabled!${end}"
+		elif [[ $header_permission_policy == "floc" ]]; then
+			echo "add_header Permission-Policy \"interest-cohort=()\";" >> /etc/nginx/common/headers-html.conf
+			echo "${gre}HTTP Header successfully configured!${end}"
+		else
+			echo "${red}[ERROR] Invalid value!${end}"
+			exit 1
+		fi
+	else
+		echo "${red}[ERROR] Nginx not found!${end}"
+		exit 1
+	fi
+}
+
+
 ext_db_save() {
 	if [[ $external_db_save == "purge" || -n $purge ]]; then
 		conf_delete external-dbu
