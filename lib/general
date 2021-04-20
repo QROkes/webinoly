@@ -1330,7 +1330,7 @@ smtp_backup_recovery() {
 help_message() {
 	echo ""
 	echo "${blu}${bol}Thanks for using Webinoly!${end}"
-	echo "${blu}We have put a lot of time and effort creating the most awesome, detailed and extensive documentation just for you."
+	echo "${blu}We have put a lot of time and effort into creating the most awesome, detailed and extensive documentation just for you."
 	echo "${dim}Link: https://webinoly.com/en/documentation/ ${end}"
 	echo ""
 }

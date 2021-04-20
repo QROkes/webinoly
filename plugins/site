@@ -12,7 +12,7 @@ source /opt/webinoly/lib/general
 source /opt/webinoly/lib/sites
 check_for_parameters $@
 api-events_update sis
-check_for_nginx -ask
+[[ -z $empty_param && -z $h && -z $H && -z $help ]] && check_for_nginx -ask
 
 
 # Evaluate if site to create is WP ( 0 = noWP, 1 = WP ask, 2 = WP default, 3 = WP unattended, 4 = MySQL default, 5 = MySQL unattended )
@@ -450,7 +450,7 @@ elif [[ -n $info && -f /etc/nginx/sites-available/$domain ]]; then
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 
-elif [[ -n $help || -n $h || -n $H ]]; then
+elif [[ -n $help || -n $h || -n $H || $empty_param == "true" ]]; then
 	help_message
 # Catch ERROR 
 elif [[ -n $domain && ! -f /etc/nginx/sites-available/$domain ]]; then

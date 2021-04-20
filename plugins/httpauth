@@ -9,7 +9,7 @@ source /opt/webinoly/lib/general
 check_for_parameters $@
 api-events_update has
 
-[[ -n $wp_admin && -z $domain ]] || check_for_nginx -ask
+[[ -z $empty_param && -z $h && -z $H && -z $help ]] && ! [[ -n $wp_admin && -z $domain ]] && check_for_nginx -ask
 
 # Check for domain.
 if [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
@@ -356,7 +356,7 @@ elif [[ -n $list ]]; then
 	nginx_not="true" # Nginx-Reload not-needed.
 
 
-elif [[ -n $help || -n $h || -n $H ]]; then
+elif [[ -n $help || -n $h || -n $H || $empty_param == "true" ]]; then
 	help_message
 else
 	echo "${red}[ERROR] Please, enter a valid option!${end}"
