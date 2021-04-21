@@ -180,8 +180,11 @@ check_for_mysql_client() {
 
 
 check_mysql_connection() {
-	if [[ -n $1 && -n $2 && -n $3 && -n $4 && $(conf_read mysql-client) == "true"  ]]; then
-		sudo mysql --connect-timeout=10 -h "$1" -P "$2" -u"$3" -p"$4" -e "quit"
+	local query="quit"
+
+	if [[ -n $1 && ${1,,} != "localhost" && -n $2 && -n $3 && -n $4 && $(conf_read mysql-client) == "true"  ]]; then
+		[[ -n $5 ]] && local query="use $5"
+		sudo mysql --connect-timeout=10 -h "$1" -P "$2" -u"$3" -p"$4" -e "$query"
 		if [[ $? != "0" ]]; then
 			echo "${red}============================================" >&2
 			echo "    [Error]  Database conection failed." >&2
@@ -196,12 +199,13 @@ check_mysql_connection() {
 		if [[ -n $2 && -n $3 ]]; then
 			local dbu=$2
 			local dbp=$3
+			[[ -n $4 ]] && local query="use $4"
 		else
 			local dbu="admin"
 			local dbp=$ADMIN_PASS
 		fi
 		
-		sudo mysql --connect-timeout=10 --user=$dbu -p$dbp -e "quit"
+		sudo mysql --connect-timeout=10 --user=$dbu -p$dbp -e "$query"
 		if [[ $? != "0" ]]; then
 			echo "${red}============================================" >&2
 			echo "    [Error]  Database conection failed." >&2

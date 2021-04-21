@@ -29,7 +29,7 @@ elif [[ -n $server_reset ]]; then
 	
 	
 elif [[ -n $verify ]]; then
-	webinoly_verify
+	source /opt/webinoly/lib/verify
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 	

@@ -1,0 +1,846 @@
+#!/bin/bash
+
+# Webinoly Verify command
+echo ""
+echo "${dim}Verifying integrity of the entire Webinoly system...${end}${red}"
+
+
+#####################################
+#####  Webinoly Integrity Test  #####
+#####################################
+
+ver_one_err="0"
+ver_one_war="0"
+
+if [[ ! -f /opt/webinoly/lib/bkp ]]; then
+	echo "- [ERROR] File: /opt/webinoly/lib/bkp not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/lib/ex-ssl-authentication ]]; then
+	echo "- [ERROR] File: /opt/webinoly/lib/ex-ssl-authentication not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/lib/ex-ssl-cleanup ]]; then
+	echo "- [ERROR] File: /opt/webinoly/lib/ex-ssl-cleanup not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/lib/general ]]; then
+	echo "- [ERROR] File: /opt/webinoly/lib/general not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/lib/install ]]; then
+	echo "- [ERROR] File: /opt/webinoly/lib/install not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/lib/public_suffix_list.dat ]]; then
+	echo "- [ERROR] File: /opt/webinoly/lib/public_suffix_list.dat not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/lib/sites ]]; then
+	echo "- [ERROR] File: /opt/webinoly/lib/sites not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/lib/site-ssl ]]; then
+	echo "- [ERROR] File: /opt/webinoly/lib/site-ssl not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/lib/timezone.dat ]]; then
+	echo "- [ERROR] File: /opt/webinoly/lib/timezone.dat not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/lib/update ]]; then
+	echo "- [ERROR] File: /opt/webinoly/lib/update not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/lib/verify ]]; then
+	echo "- [ERROR] File: /opt/webinoly/lib/verify not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/lib/webin ]]; then
+	echo "- [ERROR] File: /opt/webinoly/lib/webin not found!"
+	ver_one_err="1"
+fi
+
+if [[ ! -f /opt/webinoly/templates/template-site-php ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/template-site-php not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/template-site-proxy ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/template-site-proxy not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/template-site-proxycache ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/template-site-proxycache not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/template-site-ssl ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/template-site-ssl not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/template-site-sslredirect ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/template-site-sslredirect not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/template-site-wwwredirect ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/template-site-wwwredirect not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/nginx.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/nginx.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/22222 ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/22222 not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/conf.d/fastcgi.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/conf.d/fastcgi.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/conf.d/upstream.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/conf.d/upstream.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/common/acl.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/acl.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/common/auth.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/auth.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/common/headers-html.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/headers-html.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/common/headers-http.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/headers-http.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/common/headers-https.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/headers-https.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/common/locations.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/locations.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/common/php.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/php.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/common/phpx.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/phpx.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/common/wpcommon.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/wpcommon.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/common/wpcommon-noauth.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/wpcommon-noauth.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/common/wpfc.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/wpfc.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/nginx/common/wpsubdir.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/wpsubdir.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/general/nginx-blackhole ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/general/nginx-blackhole not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/general/sysctl ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/general/sysctl not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/general/tools-site-blackhole ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/general/tools-site-blackhole not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/general/tools-site-localhost ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/general/tools-site-localhost not found!"
+	ver_one_err="1"
+fi
+
+if [[ ! -f /opt/webinoly/webinoly.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/webinoly.conf not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /usr/bin/webinoly ]]; then
+	echo "- [ERROR] File: /usr/bin/webinoly not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /usr/bin/site ]]; then
+	echo "- [ERROR] File: /usr/bin/site not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /usr/bin/httpauth ]]; then
+	echo "- [ERROR] File: /usr/bin/httpauth not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /usr/bin/log ]]; then
+	echo "- [ERROR] File: /usr/bin/log not found!"
+	ver_one_err="1"
+fi
+if [[ ! -f /usr/bin/stack ]]; then
+	echo "- [ERROR] File: /usr/bin/stack not found!"
+	ver_one_err="1"
+fi
+
+# Check if Webinoly is updated
+ver_currentver=$(conf_read app-version)
+ver_checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
+if ! [[ -n $ver_checkver && -n $ver_currentver && ${ver_currentver//.} -ge ${ver_checkver//.} ]]; then
+	echo "${dim}- [WARNING] Webinoly App is not updated. A new version is available!${end}${red}"
+	ver_one_war="1"
+fi
+
+
+if [[ $ver_one_err == "1" ]]; then
+	echo "(1) Webinoly Integrity Test has failed!"
+elif [[ $ver_one_war == "1" ]]; then
+	echo "${dim}(1) Webinoly Integrity Test has some warning messages you should attend!${end}${red}"
+else
+	echo "${gre}${dim}(1) Webinoly Integrity Test successful!${end}${red}"
+fi
+
+
+
+
+
+################################
+#####  NGINX Verification  #####
+################################
+
+ver_two_err="0"
+ver_two_war="0"
+
+if [[ $(conf_read nginx) == "true" ]]; then
+	if [[ ! -f /etc/nginx/nginx.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/nginx.conf not found!"
+		ver_two_err="1"
+	fi
+fi
+if [[ $(conf_read nginx) != "true" ]]; then
+	if [[ -f /etc/nginx/nginx.conf ]]; then
+		echo "${dim}- [WARNING] Seems like NGINX is installed but Webinoly can not detect it!${end}${red}"
+		ver_two_war="1"
+	fi
+	if [[ -f /etc/nginx/fastcgi.conf ]]; then
+		echo "${dim}- [WARNING] Seems like NGINX is installed but Webinoly can not detect it!${end}${red}"
+		ver_two_war="1"
+	fi
+fi
+
+# NGINX Optim
+if [[ $(conf_read nginx-optim) == "true" ]]; then
+	if [[ ! -f /etc/nginx/fastcgi_params ]]; then
+		echo "- [ERROR] File: /etc/nginx/fastcgi_params not found!"
+		ver_two_err="1"
+	fi
+	if [[ $(conf_read php) == "true" && ! ( -s /etc/nginx/.htpasswd || ( -n $(conf_read tools-site) && -s /etc/nginx/apps.d/.htpasswd-$(conf_read tools-site) )) ]]; then
+		echo "${blu}${dim}- [INFO] HTTP Authentication Credentials not found to access the server tools on port $(conf_read tools-port).${end}${red}"
+	fi
+	if [[ ! -f /etc/nginx/conf.d/fastcgi.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/conf.d/fastcgi.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/conf.d/upstream.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/conf.d/upstream.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/common/acl.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/common/acl.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/common/auth.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/common/auth.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/common/headers-html.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/common/headers-html.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/common/headers-http.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/common/headers-http.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/common/headers-https.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/common/headers-https.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/common/locations.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/common/locations.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/common/php.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/common/php.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/common/phpx.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/common/phpx.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/common/wpcommon.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/common/wpcommon.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/common/wpcommon-noauth.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/common/wpcommon-noauth.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/common/wpfc.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/common/wpfc.conf not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/common/wpsubdir.conf ]]; then
+		echo "- [ERROR] File: /etc/nginx/common/wpsubdir.conf not found!"
+		ver_two_err="1"
+	fi
+	
+	
+	if [[ ! -f /opt/webinoly/templates/source/default ]]; then
+		echo "- [ERROR] File: /opt/webinoly/templates/source/default not found!"
+		ver_three_err="1"
+	fi
+	if [[ ! -f /opt/webinoly/templates/source/nginx.conf ]]; then
+		echo "- [ERROR] File: /opt/webinoly/templates/source/nginx.conf not found!"
+		ver_three_err="1"
+	fi
+fi
+
+# NGINX Tools
+if [[ $(conf_read nginx-tool) == "true" ]]; then
+	if [[ ! -f /etc/nginx/sites-available/$(conf_read tools-port) && $(conf_read php) == "true" ]]; then
+		echo "- [ERROR] File: /etc/nginx/sites-available/$(conf_read tools-port) not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -d /var/www/$(conf_read tools-port) && $(conf_read php) == "true" ]]; then
+		echo "- [ERROR] Folder: /var/www/$(conf_read tools-port) not found!"
+		ver_two_err="1"
+	fi
+	if [[ -z $(conf_read tools-port) ]]; then
+		echo "- [ERROR] Port Tools is not set or not found!"
+		ver_two_err="1"
+	fi
+	if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/nginx_status ]]; then
+		echo "- [ERROR] File: /var/www/$(conf_read tools-port)/htdocs/nginx_status not found!"
+		ver_two_err="1"
+	fi
+fi
+if [[ $(conf_read nginx-tool) != "true" && -n $(conf_read tools-port) ]]; then
+	if [[ -f /etc/nginx/sites-available/$(conf_read tools-port) || -d /var/www/$(conf_read tools-port) ]]; then
+		echo "${dim}- [WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!${end}${red}"
+		ver_two_war="1"
+	fi
+fi
+
+# Check for Tools and Default site.
+if [[ -n $(conf_read default-site) && ! ( $(conf_read default-site) =~ ^(default|blackhole)$ ) && ! -L /etc/nginx/sites-enabled/$(conf_read default-site) ]]; then
+	echo "${dim}- [WARNING] Default site not found or is not enabled!${end}${red}"
+	ver_six_war="1"
+fi
+if [[ -n $(conf_read tools-site) && ! -L /etc/nginx/sites-enabled/$(conf_read tools-site) ]]; then
+	echo "${dim}- [WARNING] Tools site not found or is not enabled!${end}${red}"
+	ver_six_war="1"
+fi
+
+# NGINX Conf check
+if [[ $(conf_read nginx) != "true" && ( $(conf_read nginx-optim) == "true" || $(conf_read nginx-tool) == "true" ) ]]; then
+	echo "${dim}- [WARNING] NGINX Configuration corrupted!${end}${red}"
+	ver_two_war="1"
+fi
+
+
+if [[ $ver_two_err == "1" ]]; then
+	echo "(2) NGINX Verification Test has failed!"
+elif [[ $ver_two_war == "1" ]]; then
+	echo "${dim}(2) NGINX Verification Test has some warning messages you should attend!${end}${red}"
+else
+	echo "${gre}${dim}(2) NGINX Verification Test successful!${end}${red}"
+fi
+
+
+
+
+
+##############################
+#####  PHP Verification  #####
+##############################
+
+ver_three_err="0"
+ver_three_war="0"
+
+if [[ ! -f /etc/php/$(conf_read php-ver)/fpm/php.ini && $(conf_read php) == "true" ]]; then
+	echo "- [ERROR] File: /etc/php/$(conf_read php-ver)/fpm/php.ini not found!"
+	ver_three_err="1"
+elif [[ -f /etc/php/$(conf_read php-ver)/fpm/php.ini && $(conf_read php) != "true" ]]; then
+	echo "${dim}- [WARNING] Seems like PHP is installed but Webinoly can not detect it!${end}${red}"
+	ver_three_war="1"
+fi
+
+# PHP Optim
+if [[ $(conf_read php-optim) == "true" ]]; then
+	if [[ ! -f /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf ]]; then
+		echo "- [ERROR] File: /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf not found!"
+		ver_three_err="1"
+	fi
+	if [[ ! -f /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf ]]; then
+		echo "- [ERROR] File: /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf not found!"
+		ver_three_err="1"
+	fi
+	if [[ ! -f /opt/webinoly/templates/source/www.conf ]]; then
+		echo "- [ERROR] File: /opt/webinoly/templates/source/www.conf not found!"
+		ver_three_err="1"
+	fi
+	if [[ ! -f /opt/webinoly/templates/source/php.ini ]]; then
+		echo "- [ERROR] File: /opt/webinoly/templates/source/php.ini not found!"
+		ver_three_err="1"
+	fi
+	if [[ ! -f /opt/webinoly/templates/source/php-fpm.conf ]]; then
+		echo "- [ERROR] File: /opt/webinoly/templates/source/php-fpm.conf not found!"
+		ver_three_err="1"
+	fi
+	if [[ ! -f /opt/webinoly/templates/source/main.cf ]]; then
+		echo "- [ERROR] File: /opt/webinoly/templates/source/main.cf not found!"
+		ver_three_err="1"
+	fi
+fi
+
+# PHP Tools
+if [[ $(conf_read php-tool) == "true" && $(conf_read nginx) == "true" ]]; then
+	if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/status ]]; then
+		echo "- [ERROR] File: /var/www/$(conf_read tools-port)/htdocs/ping not found!"
+		ver_three_err="1"
+	fi
+	if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/status ]]; then
+		echo "- [ERROR] File: /var/www/$(conf_read tools-port)/htdocs/ping not found!"
+		ver_three_err="1"
+	fi
+	if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
+		echo "- [ERROR] File: /var/www/$(conf_read tools-port)/htdocs/php/index.php not found!"
+		ver_three_err="1"
+	fi
+fi
+if [[ $(conf_read php-tool) != "true" && $(conf_read nginx) == "true" ]]; then
+	if [[ -f /var/www/$(conf_read tools-port)/htdocs/status ]]; then
+		echo "${dim}- [WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!${end}${red}"
+		ver_three_war="1"
+	fi
+	if [[ -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
+		echo "${dim}- [WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!${end}${red}"
+		ver_three_war="1"
+	fi
+fi
+
+# PHP Conf check
+if [[ $(conf_read php) != "true" && ( $(conf_read php-optim) == "true" || $(conf_read php-tool) == "true" ) ]]; then
+	echo "${dim}- [WARNING] PHP Configuration corrupted!${end}${red}"
+	ver_three_war="1"
+fi
+
+# Check for PHP version
+if [[ $(conf_read php) == "true" && $(php -v | grep -m1 "" | sed 's/PHP \([^\-]*\).*/\1/' | cut -f 1-2 -d'.') != "7.4" ]]; then
+	echo "${blu}${dim}- [INFO] PHP v7.4 is recommended to get an optimal perfomance!${end}${red}"
+fi
+
+
+if [[ $ver_three_err == "1" ]]; then
+	echo "(3) PHP Verification Test has failed!"
+elif [[ $ver_three_war == "1" ]]; then
+	echo "${dim}(3) PHP Verification Test has some warning messages you should attend!${end}${red}"
+else
+	echo "${gre}${dim}(3) PHP Verification Test successful!${end}${red}"
+fi
+
+
+
+
+
+################################
+#####  MySQL Verification  #####
+################################
+
+ver_four_err="0"
+ver_four_war="0"
+
+# MySQL
+if [[ ! -d /etc/mysql && $(conf_read mysql) == "true" ]]; then
+	echo "- [ERROR] Folder: /etc/mysql not found!"
+	ver_four_err="1"
+elif [[ -d /etc/mysql && $(conf_read mysql) != "true" ]]; then
+	echo "${dim}- [WARNING] Seems like MySQL is installed but Webinoly can not detect it!${end}${red}"
+	ver_four_war="1"
+fi
+
+# Check for MySQL version
+if [[ $(conf_read mysql) == "true" && $(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.') != "10.5" ]]; then
+	echo "${blu}${dim}- [INFO] MariaDB (MySQL) v10.5 is recommended to get an optimal perfomance!${end}${red}"
+fi
+
+if [[ $(conf_read mysql) != "true" && $(conf_read mysql-tool) == "true" ]]; then
+	echo "${dim}- [WARNING] MySQL Configuration corrupted!${end}${red}"
+	ver_four_war="1"
+fi
+
+# MySQL Tools
+if [[ ! -d /var/www/$(conf_read tools-port)/htdocs/pma && $(conf_read mysql-tool) == "true" ]]; then
+	echo "- [ERROR] Folder: /var/www/$(conf_read tools-port)/htdocs/pma not found!"
+	ver_four_err="1"
+elif [[ ( -d /var/www/$(conf_read tools-port)/htdocs/pma || -d /usr/share/phpmyadmin ) && $(conf_read mysql-tool) != "true" ]]; then
+	echo "${dim}- [WARNING] Seems like MySQL Tools (PhpMyAdmin) are enabled but Webinoly can not detect it!${end}${red}"
+	ver_four_war="1"
+fi
+
+# MySQL Connection
+ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+[[ -z $ROOT_PASS ]] && ROOT_PASS="dUmb"
+if ! sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit" 2>/dev/null && [[ $(conf_read mysql) == "true" ]]; then
+	echo "- [ERROR] MySQL Connection to localhost failed! (root)"
+	ver_four_err="1"
+fi
+
+if ! sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "quit" 2>/dev/null && [[ $(conf_read mysql) == "true" ]]; then
+	echo "- [ERROR] MySQL Connection to localhost failed! (admin)"
+	ver_four_err="1"
+fi
+
+
+if [[ $ver_four_err == "1" ]]; then
+	echo "(4) MySQL Verification Test has failed!"
+elif [[ $ver_four_war == "1" ]]; then
+	echo "${dim}(4) MySQL Verification Test has some warning messages you should attend!${end}${red}"
+else
+	echo "${gre}${dim}(4) MySQL Verification Test successful!${end}${red}"
+fi
+
+
+
+
+
+#########################################
+#####  Service Status Verification  #####
+#########################################
+
+ver_five_err="0"
+ver_five_war="0"
+
+if ! systemctl is-active --quiet nginx && [[ $(conf_read nginx) == "true" ]]; then
+	echo "- [ERROR] Nginx service not running!"
+	ver_five_err="1"
+fi
+if ! systemctl is-active --quiet php$(conf_read php-ver)-fpm && [[ $(conf_read php) == "true" ]]; then
+	echo "- [ERROR] PHP service not running!"
+	ver_five_err="1"
+fi
+if ! systemctl is-active --quiet mysql && [[ $(conf_read mysql) == "true" ]]; then
+	echo "- [ERROR] MySQL (MariaDB) service not running!"
+	ver_five_err="1"
+fi
+if ! systemctl is-active --quiet redis-server && [[ $(conf_read php-tool) == "true" ]]; then
+	echo "- [ERROR] Redis service not running!"
+	ver_five_err="1"
+fi
+if ! systemctl is-active --quiet memcached && [[ $(conf_read php-tool) == "true" ]]; then
+	echo "- [ERROR] Memcached service not running!"
+	ver_five_err="1"
+fi
+if ! systemctl is-active --quiet postfix && [[ $(conf_read php-tool) == "true" ]]; then
+	echo "- [ERROR] Postfix service not running!"
+	ver_five_err="1"
+fi
+
+if ! sudo nginx -t 2>/dev/null && [[ $(conf_read nginx) == "true" ]]; then
+	echo "- [ERROR] Nginx Configuration check failed!"
+	ver_five_err="1"
+fi
+
+
+if [[ $ver_five_err == "1" ]]; then
+	echo "(5) Service Status Verification Test has failed!"
+else
+	echo "${gre}${dim}(5) Service Status Verification Test successful!${end}${red}"
+fi
+
+
+
+
+
+###########################################
+#####  Operating System Verification  #####
+###########################################
+
+ver_six_err="0"
+ver_six_war="0"
+
+if [[ $(conf_read linux-optim) == "true" && ( -z $swapm || $swapm == "0" ) && $(conf_read swap-mem) != 0 ]]; then
+	echo "- [ERROR] SWAP Memory File not found!"
+	ver_six_err="1"
+fi
+
+# Check OS support
+if [[ $(lsb_release -i | cut -d':' -f 2 | xargs) != "Ubuntu" ]]; then
+	echo "- [ERROR] This Operating System is not supported!"
+	ver_six_err="1"
+elif [[ $(check_ubuntu_release) != "true" ]]; then
+	echo "- [ERROR] This Ubuntu version is not supported!"
+	ver_six_err="1"
+fi
+# Check for sudo/root privileges
+if ! $(groups $USERNAME | grep &>/dev/null '\bsudo\b' || groups $USERNAME | grep &>/dev/null '\broot\b'); then
+	echo "${dim}- [WARNING] This user has no Sudo/Root privileges!${end}${red}"
+	ver_six_war="1"
+fi
+
+# Check disk usage
+ver_disk=$(df -h --output=pcent / | grep -Eo "[0-9]+")
+if [[ $ver_disk =~ ^[0-9]+$ && $ver_disk -gt 75 ]]; then
+	echo "${dim}- [WARNING] You are running out of disk space! (Usage: ${ver_disk}%) (Logs: $(sudo du -sh /var/log | cut -d"/" -f 1 -s))${end}${red}"
+	ver_six_war="1"
+fi
+
+ver_os_updates=$(/usr/lib/update-notifier/apt-check --human-readable | grep -E "[1-9]+ updates can be installed immediately." | grep -Eo "[1-9]+")
+if [[ $ver_os_updates =~ ^[0-9]+$ && $ver_os_updates -gt 0 ]]; then
+	echo "${dim}- [WARNING] Operating System is not updated, $ver_os_updates updates can be installed immediately.${end}${red}"
+	ver_six_war="1"
+fi
+
+
+if [[ $ver_six_err == "1" ]]; then
+	echo "(6) Operating System Verification Test has failed!"
+elif [[ $ver_six_war == "1" ]]; then
+	echo "${dim}(6) Operating System Verification Test has some warning messages you should attend!${end}${red}"
+else
+	echo "${gre}${dim}(6) Operating System Verification Test successful!${end}${red}"
+fi
+
+
+
+
+
+###########################################
+#####  Additional Tools Verification  #####
+###########################################
+
+ver_seven_err="0"
+ver_seven_war="0"
+
+# Web Tools
+if [[ $(conf_read php-tool) == "true" ]]; then
+	if [[ ! -d /etc/redis ]]; then
+		echo "- [ERROR] Folder: /etc/redis not found!"
+		ver_seven_err="1"
+	fi
+	if [[ ! -d /etc/postfix ]]; then
+		echo "- [ERROR] Folder: /etc/postfix not found!"
+		ver_seven_err="1"
+	fi
+fi
+if [[ $(conf_read nginx-tool) == "true" ]]; then
+	if [[ ! -f /usr/bin/duplicity ]]; then
+		echo "- [ERROR] File: /usr/bin/duplicity not found!"
+		ver_seven_err="1"
+	fi
+	if [[ ! -f /usr/bin/duply ]]; then
+		echo "- [ERROR] File: /usr/bin/duply not found!"
+		ver_seven_err="1"
+	fi
+	if [[ ! -L /usr/bin/certbot ]]; then
+		echo "- [ERROR] File: /usr/bin/certbot not found!"
+		ver_seven_err="1"
+	fi
+fi
+
+# Check for SSL Orphan-Certs
+for cert in "/etc/letsencrypt/live"/*
+do
+	domain=$(echo $cert | cut -f 5 -d "/")
+	if [[ -d $cert && ! -f /etc/nginx/sites-available/$domain ]]; then
+		echo "${blu}${dim}- [INFO] SSL Orphan-Cert found ($domain)!${end}${red}"
+	fi
+done
+
+
+if [[ $ver_seven_err == "1" ]]; then
+	echo "(7) Additional Tools Verification Test has failed!"
+else
+	echo "${gre}${dim}(7) Additional Tools Verification Test successful!${end}${red}"
+fi
+
+
+
+
+##################################
+#####  Checking Permissions  #####
+##################################
+
+ver_eight_err="0"
+ver_eight_war="0"
+
+# /var/www
+ver_perm_user=$(find /var/www ! -user www-data | head -10)
+ver_perm_dire=$(find /var/www -type d ! -perm 755 | head -10)
+ver_perm_file=$(find /var/www -type f ! -perm 644 | head -10)
+
+if [[ -n $ver_perm_user ]]; then
+	echo "$ver_perm_user" | sed "s/^/${dim}- \[WARNING\] File owner is not 'www-data' /" | sed "s/$/${end}${red}/"
+	ver_eight_war="1"
+fi
+if [[ -n $ver_perm_dire ]]; then
+	echo "$ver_perm_dire" | sed "s/^/${dim}- \[WARNING\] Directory permission is not 755 /" | sed "s/$/${end}${red}/"
+	ver_eight_war="1"
+fi
+if [[ -n $ver_perm_file ]]; then
+	echo "$ver_perm_file" | sed "s/^/${dim}- \[WARNING\] File permission is not 644 /" | sed "s/$/${end}${red}/"
+	ver_eight_war="1"
+fi
+
+
+# /user/.ssh
+ver_current_home=$(eval echo ~${SUDO_USER:-${USER}})
+ver_ssh_owner=$(find $ver_current_home/.ssh ! -user ${SUDO_USER:-${USER}} | head -10)
+
+if [[ -n $ver_ssh_owner ]]; then
+	echo "$ver_ssh_owner" | sed "s/^/${dim}- \[WARNING\] File owner is not '${SUDO_USER:-${USER}}' /" | sed "s/$/${end}${red}/"
+	ver_eight_war="1"
+fi
+
+if [[ -d $ver_current_home/.ssh && $(stat -c '%a' $ver_current_home/.ssh) != 700 ]]; then
+	echo "${dim}- [WARNING] Directory permission is not 700 $ver_current_home/.ssh ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/authorized_keys && $(stat -c '%a' $ver_current_home/.ssh/authorized_keys) != 600 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/authorized_keys ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/config && $(stat -c '%a' $ver_current_home/.ssh/config) != 600 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/config ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/known_hosts && $(stat -c '%a' $ver_current_home/.ssh/known_hosts) != 600 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/known_hosts ${end}${red}"
+	ver_eight_war="1"
+fi
+
+if [[ -f $ver_current_home/.ssh/id_dsa && $(stat -c '%a' $ver_current_home/.ssh/id_dsa) != 600 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_dsa ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/id_rsa && $(stat -c '%a' $ver_current_home/.ssh/id_rsa) != 600 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_rsa ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/id_ecdsa && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa) != 600 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ecdsa ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/id_ecdsa_sk && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa_sk) != 600 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ecdsa_sk ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/id_ed25519 && $(stat -c '%a' $ver_current_home/.ssh/id_ed25519) != 600 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ed25519 ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/id_ed25519_sk && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa_sk) != 600 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ed25519_sk ${end}${red}"
+	ver_eight_war="1"
+fi
+
+if [[ -f $ver_current_home/.ssh/id_dsa.pub && $(stat -c '%a' $ver_current_home/.ssh/id_dsa.pub) != 644 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_dsa.pub ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/id_rsa.pub && $(stat -c '%a' $ver_current_home/.ssh/id_rsa.pub) != 644 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_rsa.pub ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/id_ecdsa.pub && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa.pub) != 644 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ecdsa.pub ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/id_ecdsa_sk.pub && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa_sk.pub) != 644 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ecdsa_sk.pub ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/id_ed25519.pub && $(stat -c '%a' $ver_current_home/.ssh/id_ed25519.pub) != 644 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ed25519.pub ${end}${red}"
+	ver_eight_war="1"
+fi
+if [[ -f $ver_current_home/.ssh/id_ed25519_sk.pub && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa_sk.pub) != 644 ]]; then
+	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ed25519_sk.pub ${end}${red}"
+	ver_eight_war="1"
+fi
+
+
+if [[ $ver_eight_err == "1" ]]; then
+	echo "(8) Permissions Verification Test has failed!"
+elif [[ $ver_eight_war == "1" ]]; then
+	echo "${dim}(8) Permissions Verification Test has some warning messages you should attend!${end}${red}"
+else
+	echo "${gre}${dim}(8) Permissions Verification Test successful!${end}${red}"
+fi
+
+
+
+
+
+
+################################
+#####  Sites Verification  #####
+################################
+
+ver_nine_err="0"
+ver_nine_war="0"
+
+for ver_site in "/etc/nginx/sites-available"/*
+do
+	ver_domi=$(echo $ver_site | cut -f 5 -d "/")
+	if [[ $ver_domi != "html" && $ver_domi != $(conf_read tools-port) ]]; then
+		if [[ $(is_wp $ver_domi) == "true" ]]; then
+			if [[ ! -s /etc/nginx/.htpasswd && ! -s /etc/nginx/apps.d/.htpasswd-$ver_domi && $(is_wp_auth $ver_domi) == "true" ]]; then
+				echo "${blu}${dim}- [INFO] HTTP Authentication Credentials not found for $ver_domi${end}${red}"
+			fi
+			
+			wp_conf_retrieve $ver_domi false false
+			if [[ $wp_dbhost == "localhost" && -n $wp_dbuser && -n $wp_dbpass && -n $wp_dbname && $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname 2>/dev/null) != "true" ]]; then
+				echo "${dim}- [WARNING] Database connection failed for your WP site $ver_domi ${end}${red}"
+				ver_nine_war="1"
+			fi
+		fi
+	fi
+done
+
+
+if [[ $ver_nine_err == "1" ]]; then
+	echo "(9) Sites Verification Test has failed!"
+elif [[ $ver_nine_war == "1" ]]; then
+	echo "${dim}(9) Sites Verification Test has some warning messages you should attend!${end}${red}"
+else
+	echo "${gre}${dim}(9) Sites Verification Test successful!${end}${red}"
+fi
+
+
+
+
+
+echo ""
+if [[ $ver_one_err != 0 || $ver_two_err != 0 || $ver_three_err != 0 || $ver_four_err != 0 || $ver_five_err != 0 || $ver_six_err != 0 || $ver_seven_err != 0 || $ver_eight_err != 0 || $ver_nine_err != 0 ]]; then
+	echo "*******************************************************"
+	echo "********      ${bol}> > >  E R R O R < < <${end}${red}        ***********"
+	echo "********   ${bol}System could not work properly${end}${red}   ***********"
+	echo "******************************************************* ${end}"
+	exit 1
+elif [[ $ver_one_war != 0 || $ver_two_war != 0 || $ver_three_war != 0 || $ver_four_war != 0 || $ver_five_war != 0 || $ver_six_war != 0 || $ver_seven_war != 0 || $ver_eight_war != 0 || $ver_nine_war != 0 ]]; then
+	echo "***************************************************************************************************"
+	echo "********      ${bol}[ W A R N I N G ] There are some messages that should be attended!${end}${red}        ***********"
+	echo "*************************************************************************************************** ${end}"
+	exit 2
+else
+	echo "${bol}${gre}Integrity test passed!! ${end}"
+	exit 0
+fi
