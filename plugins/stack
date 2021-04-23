@@ -67,10 +67,12 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 				api-events_update pn3
 			fi
 			
+			[[ $(conf_read login-www-data) == "true" ]] && webinoly -login-www-data=off
+			
 			sudo service nginx stop
 			sudo apt -y purge nginx nginx-common # Common package is no longer installed, but we purge it in case of old stacks built before 1.14.0.
 			
-			[[ $(conf_read nginx-ppa) == "mainline" ]] && sudo add-apt-repository --remove "deb https://nginx.org/packages/mainline/ubuntu/ focal nginx" || sudo add-apt-repository --remove "deb https://nginx.org/packages/ubuntu/ focal nginx"
+			[[ $(conf_read nginx-ppa) == "mainline" ]] && sudo add-apt-repository --remove "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx" || sudo add-apt-repository --remove "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
 			sudo apt-key del 7BD9BF62
 			
 			api-events_update pn4
@@ -93,6 +95,7 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			
 			# Remove sources
 			sudo rm -rf /opt/webinoly/templates/source/default
+			sudo rm -rf /opt/webinoly/templates/source/nginx.conf
 			
 			# Remove duply profiles
 			if [[ -d $HOME/.duply ]]; then
@@ -155,13 +158,13 @@ elif [[ -n $purge && -n $php ]]; then
 			echo | sudo add-apt-repository --remove 'ppa:chris-lea/redis-server'
 			sudo apt -y autoremove
 			sudo rm -rf /etc/php
-			sudo rm /opt/webinoly/templates/source/*
 			sudo apt-key del E5267A6C #ondrej
 			sudo apt-key del C7917B12 #chrislea
 
 			# Remove sources
 			sudo rm -rf /opt/webinoly/templates/source/php.ini
 			sudo rm -rf /opt/webinoly/templates/source/www.conf
+			sudo rm -rf /opt/webinoly/templates/source/php-fpm.conf
 			sudo rm -rf /opt/webinoly/templates/source/main.cf
 			
 			# Remove tools-site

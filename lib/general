@@ -59,8 +59,8 @@ conf_write() {
 # ***********************************************
 # Useful variables   ****************************
 # ***********************************************
-readonly ADMIN_PASS=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
-
+ADMIN_PASS=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+[[ -z $ADMIN_PASS ]] && readonly ADMIN_PASS="dUmb" || readonly ADMIN_PASS=$ADMIN_PASS # Never empty, prevent asking password!
 
 
 

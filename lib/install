@@ -178,9 +178,6 @@ nginx_install() {
 	sudo mv /etc/nginx/conf.d/default.conf /etc/nginx/sites-available/default
 	sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 	
-	sudo cp -p /etc/nginx/sites-available/default /opt/webinoly/templates/source/default
-	sudo cp -p /etc/nginx/nginx.conf /opt/webinoly/templates/source/
-	
 	sudo nginx -t && sudo service nginx start
 	sudo systemctl enable nginx
 	conf_write nginx true
@@ -222,13 +219,6 @@ php_install() {
 	
 	# Removed/deprecated in 7.4
 	[[ $ver =~ ^(7.2|7.3)$ ]] && sudo apt -y install php${ver}-recode
-	
-	def=$(conf_read php-ver)
-	if [[ $(conf_read php-v${def}) != "true" ]]; then
-		sudo cp -p /etc/php/$ver/fpm/php.ini /opt/webinoly/templates/source/
-		sudo cp -p /etc/php/$ver/fpm/pool.d/www.conf /opt/webinoly/templates/source/
-		sudo cp -p /etc/php/$ver/fpm/php-fpm.conf /opt/webinoly/templates/source/
-	fi
 	
 	conf_write php true
 	conf_write php-v$ver true
@@ -292,10 +282,12 @@ _EOF_
 nginx_optim() {
 	api-events_update in3
 	
-	if [[ $(conf_read login-www-data) == "true" ]]; then
-		sudo chown -R www-data:www-data /var/www
-		sudo chown root:root /var/www
-	fi
+	# Check if exists in case of server-reset
+	[[ ! -f /opt/webinoly/templates/source/default ]] && sudo cp -p /etc/nginx/sites-available/default /opt/webinoly/templates/source/
+	[[ ! -f /opt/webinoly/templates/source/nginx.conf ]] && sudo cp -p /etc/nginx/nginx.conf /opt/webinoly/templates/source/
+	
+	sudo chown -R www-data:www-data /var/www
+	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
 	
 	sudo cp -R /opt/webinoly/templates/nginx/common /etc/nginx/common
 	sudo cp -R /opt/webinoly/templates/nginx/conf.d/* /etc/nginx/conf.d/
@@ -376,6 +368,12 @@ location = /xmlrpc.php {
 php_optim() {
 	api-events_update ip3
 	
+	# Check if exist in case of server-reset
+	[[ ! -f /opt/webinoly/templates/source/php.ini ]] && sudo cp -p /etc/php/$(conf_read php-ver)/fpm/php.ini /opt/webinoly/templates/source/
+	[[ ! -f /opt/webinoly/templates/source/www.conf ]] && sudo cp -p /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf /opt/webinoly/templates/source/
+	[[ ! -f /opt/webinoly/templates/source/php-fpm.conf ]] && sudo cp -p /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf /opt/webinoly/templates/source/
+	
+	
 	# Check for dynamic variables
 	[[ -n $1 ]] && ver="$1" || ver=$(conf_read php-ver)
 	[[ -n $(conf_read php-max-child) && $(conf_read php-max-child) =~ ^[0-9]+$ && $(conf_read php-max-child) -gt 2 ]] && local maxchil=$(conf_read php-max-child)
@@ -449,8 +447,8 @@ nginx_tool_site() {
 	sudo touch /var/www/$(conf_read tools-port)/htdocs/robots.txt
 	echo '# Just in case someone remove HTTP Auth protection.
 Disallow: /' > /var/www/$(conf_read tools-port)/htdocs/robots.txt
-	sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs/robots.txt
 	sudo chmod 644 /var/www/$(conf_read tools-port)/htdocs/robots.txt
+	sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs
 }
 
 
@@ -500,6 +498,7 @@ php_tool_site() {
 	sudo mkdir -p /var/www/$(conf_read tools-port)/htdocs/php
 	sudo touch /var/www/$(conf_read tools-port)/htdocs/php/index.php
 	sudo echo '<?php phpinfo(); ?>' >> /var/www/$(conf_read tools-port)/htdocs/php/index.php
+	sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs
 	api-events_update ip7
 }
 
@@ -563,6 +562,7 @@ mysql_tool() {
 		sudo cp /var/www/$(conf_read tools-port)/htdocs/pma/config.sample.inc.php /var/www/$(conf_read tools-port)/htdocs/pma/config.inc.php
 		sudo sed -i "/blowfish_secret/c \$cfg['blowfish_secret'] = '$(pwgen -s -1 32)';" /var/www/$(conf_read tools-port)/htdocs/pma/config.inc.php
 		sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs/pma
+		sudo find /var/www/$(conf_read tools-port)/htdocs/pma -type f -exec chmod 644 {} \;
 		
 		conf_write mysql-tool true
 		echo "${gre}phpMyAdmin has been installed successfully! ${end}"

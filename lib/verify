@@ -327,7 +327,7 @@ if [[ $(conf_read nginx-tool) == "true" ]]; then
 		echo "- [ERROR] Port Tools is not set or not found!"
 		ver_two_err="1"
 	fi
-	if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/nginx_status ]]; then
+	if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/nginx_status && $(conf_read php) == "true" ]]; then
 		echo "- [ERROR] File: /var/www/$(conf_read tools-port)/htdocs/nginx_status not found!"
 		ver_two_err="1"
 	fi
@@ -444,8 +444,11 @@ if [[ $(conf_read php) != "true" && ( $(conf_read php-optim) == "true" || $(conf
 fi
 
 # Check for PHP version
-if [[ $(conf_read php) == "true" && $(php -v | grep -m1 "" | sed 's/PHP \([^\-]*\).*/\1/' | cut -f 1-2 -d'.') != "7.4" ]]; then
-	echo "${blu}${dim}- [INFO] PHP v7.4 is recommended to get an optimal perfomance!${end}${red}"
+if [[ $(conf_read php) == "true" ]]; then
+	ver_php_ver=$(php -v | grep -m1 "" | sed 's/PHP \([^\-]*\).*/\1/' | cut -f 1-2 -d'.')
+	if [[ $ver_php_ver != "7.4" && $ver_php_ver != "8.0" ]]; then
+		echo "${blu}${dim}- [INFO] PHP v7.4 is recommended to get an optimal perfomance!${end}${red}"
+	fi
 fi
 
 
@@ -497,18 +500,19 @@ elif [[ ( -d /var/www/$(conf_read tools-port)/htdocs/pma || -d /usr/share/phpmya
 fi
 
 # MySQL Connection
-ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-[[ -z $ROOT_PASS ]] && ROOT_PASS="dUmb"
-if ! sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit" 2>/dev/null && [[ $(conf_read mysql) == "true" ]]; then
-	echo "- [ERROR] MySQL Connection to localhost failed! (root)"
-	ver_four_err="1"
-fi
+if [[ $(conf_read mysql) == "true" ]]; then
+	ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+	[[ -z $ROOT_PASS ]] && ROOT_PASS="dUmb"
+	if ! sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit" 2>/dev/null; then
+		echo "- [ERROR] MySQL Connection to localhost failed! (root)"
+		ver_four_err="1"
+	fi
 
-if ! sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "quit" 2>/dev/null && [[ $(conf_read mysql) == "true" ]]; then
-	echo "- [ERROR] MySQL Connection to localhost failed! (admin)"
-	ver_four_err="1"
+	if ! sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "quit" 2>/dev/null; then
+		echo "- [ERROR] MySQL Connection to localhost failed! (admin)"
+		ver_four_err="1"
+	fi
 fi
-
 
 if [[ $ver_four_err == "1" ]]; then
 	echo "(4) MySQL Verification Test has failed!"
@@ -603,10 +607,16 @@ if [[ $ver_disk =~ ^[0-9]+$ && $ver_disk -gt 75 ]]; then
 	ver_six_war="1"
 fi
 
-ver_os_updates=$(/usr/lib/update-notifier/apt-check --human-readable | grep -E "[1-9]+ updates can be installed immediately." | grep -Eo "[1-9]+")
-if [[ $ver_os_updates =~ ^[0-9]+$ && $ver_os_updates -gt 0 ]]; then
-	echo "${dim}- [WARNING] Operating System is not updated, $ver_os_updates updates can be installed immediately.${end}${red}"
-	ver_six_war="1"
+# Check for updates
+if [[ -a /usr/lib/update-notifier/apt-check ]]; then
+	ver_os_update=$(/usr/lib/update-notifier/apt-check --human-readable)
+	ver_os_updates=$(echo "$ver_os_update" | grep -E "[1-9]+ updates can be installed immediately." | grep -Eo "[1-9]+")
+	[[ -z $ver_os_updates ]] && ver_os_updates=$(echo "$ver_os_update" | grep -E "[1-9]+ packages can be updated." | grep -Eo "[1-9]+") # 18.04 support
+	
+	if [[ $ver_os_updates =~ ^[0-9]+$ && $ver_os_updates -gt 0 ]]; then
+		echo "${dim}- [WARNING] Operating System is not updated, $ver_os_updates updates can be installed immediately.${end}${red}"
+		ver_six_war="1"
+	fi
 fi
 
 
@@ -682,98 +692,109 @@ ver_eight_err="0"
 ver_eight_war="0"
 
 # /var/www
-ver_perm_user=$(find /var/www ! -user www-data | head -10)
-ver_perm_dire=$(find /var/www -type d ! -perm 755 | head -10)
-ver_perm_file=$(find /var/www -type f ! -perm 644 | head -10)
+if [[ -d /var/www ]]; then
+	ver_perm_user=$(find /var/www -path "/var/www/*" ! -user www-data | head -10)
+	ver_perm_dire=$(find /var/www ! -path "/var/www/.ssh" -type d ! -perm 755 | head -10)
+	ver_perm_file=$(find /var/www ! -path "/var/www/.ssh/*" -type f ! -perm 644 | head -10)
 
-if [[ -n $ver_perm_user ]]; then
-	echo "$ver_perm_user" | sed "s/^/${dim}- \[WARNING\] File owner is not 'www-data' /" | sed "s/$/${end}${red}/"
-	ver_eight_war="1"
+	if [[ $(conf_read login-www-data) != "true" && -d /var/www && $(stat -c '%U' /var/www) != "www-data" ]]; then
+		echo "${dim}- [WARNING] Directory owner is not 'www-data' /var/www ${end}${red}"
+		ver_eight_war="1"
+	elif [[ $(conf_read login-www-data) == "true" && -d /var/www && $(stat -c '%U' /var/www) != "root" ]]; then
+		echo "${dim}- [WARNING] Directory owner is not 'root' /var/www ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -n $ver_perm_user ]]; then
+		echo "$ver_perm_user" | sed "s/^/${dim}- \[WARNING\] File or directory owner is not 'www-data' /" | sed "s/$/${end}${red}/"
+		ver_eight_war="1"
+	fi
+	if [[ -n $ver_perm_dire ]]; then
+		echo "$ver_perm_dire" | sed "s/^/${dim}- \[WARNING\] Directory permission is not 755 /" | sed "s/$/${end}${red}/"
+		ver_eight_war="1"
+	fi
+	if [[ -n $ver_perm_file ]]; then
+		echo "$ver_perm_file" | sed "s/^/${dim}- \[WARNING\] File permission is not 644 /" | sed "s/$/${end}${red}/"
+		ver_eight_war="1"
+	fi
 fi
-if [[ -n $ver_perm_dire ]]; then
-	echo "$ver_perm_dire" | sed "s/^/${dim}- \[WARNING\] Directory permission is not 755 /" | sed "s/$/${end}${red}/"
-	ver_eight_war="1"
-fi
-if [[ -n $ver_perm_file ]]; then
-	echo "$ver_perm_file" | sed "s/^/${dim}- \[WARNING\] File permission is not 644 /" | sed "s/$/${end}${red}/"
-	ver_eight_war="1"
-fi
-
 
 # /user/.ssh
 ver_current_home=$(eval echo ~${SUDO_USER:-${USER}})
-ver_ssh_owner=$(find $ver_current_home/.ssh ! -user ${SUDO_USER:-${USER}} | head -10)
 
-if [[ -n $ver_ssh_owner ]]; then
-	echo "$ver_ssh_owner" | sed "s/^/${dim}- \[WARNING\] File owner is not '${SUDO_USER:-${USER}}' /" | sed "s/$/${end}${red}/"
-	ver_eight_war="1"
-fi
+if [[ -d $ver_current_home/.ssh ]]; then
+	ver_ssh_owner=$(find $ver_current_home/.ssh ! -user ${SUDO_USER:-${USER}} | head -10)
+	
+	if [[ -n $ver_ssh_owner ]]; then
+		echo "$ver_ssh_owner" | sed "s/^/${dim}- \[WARNING\] File owner is not '${SUDO_USER:-${USER}}' /" | sed "s/$/${end}${red}/"
+		ver_eight_war="1"
+	fi
 
-if [[ -d $ver_current_home/.ssh && $(stat -c '%a' $ver_current_home/.ssh) != 700 ]]; then
-	echo "${dim}- [WARNING] Directory permission is not 700 $ver_current_home/.ssh ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/authorized_keys && $(stat -c '%a' $ver_current_home/.ssh/authorized_keys) != 600 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/authorized_keys ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/config && $(stat -c '%a' $ver_current_home/.ssh/config) != 600 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/config ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/known_hosts && $(stat -c '%a' $ver_current_home/.ssh/known_hosts) != 600 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/known_hosts ${end}${red}"
-	ver_eight_war="1"
-fi
+	if [[ -d $ver_current_home/.ssh && $(stat -c '%a' $ver_current_home/.ssh) != 700 ]]; then
+		echo "${dim}- [WARNING] Directory permission is not 700 $ver_current_home/.ssh ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/authorized_keys && $(stat -c '%a' $ver_current_home/.ssh/authorized_keys) != 600 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/authorized_keys ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/config && $(stat -c '%a' $ver_current_home/.ssh/config) != 600 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/config ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/known_hosts && $(stat -c '%a' $ver_current_home/.ssh/known_hosts) != 600 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/known_hosts ${end}${red}"
+		ver_eight_war="1"
+	fi
 
-if [[ -f $ver_current_home/.ssh/id_dsa && $(stat -c '%a' $ver_current_home/.ssh/id_dsa) != 600 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_dsa ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/id_rsa && $(stat -c '%a' $ver_current_home/.ssh/id_rsa) != 600 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_rsa ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/id_ecdsa && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa) != 600 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ecdsa ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/id_ecdsa_sk && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa_sk) != 600 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ecdsa_sk ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/id_ed25519 && $(stat -c '%a' $ver_current_home/.ssh/id_ed25519) != 600 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ed25519 ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/id_ed25519_sk && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa_sk) != 600 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ed25519_sk ${end}${red}"
-	ver_eight_war="1"
-fi
+	if [[ -f $ver_current_home/.ssh/id_dsa && $(stat -c '%a' $ver_current_home/.ssh/id_dsa) != 600 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_dsa ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/id_rsa && $(stat -c '%a' $ver_current_home/.ssh/id_rsa) != 600 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_rsa ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/id_ecdsa && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa) != 600 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ecdsa ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/id_ecdsa_sk && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa_sk) != 600 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ecdsa_sk ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/id_ed25519 && $(stat -c '%a' $ver_current_home/.ssh/id_ed25519) != 600 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ed25519 ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/id_ed25519_sk && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa_sk) != 600 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ed25519_sk ${end}${red}"
+		ver_eight_war="1"
+	fi
 
-if [[ -f $ver_current_home/.ssh/id_dsa.pub && $(stat -c '%a' $ver_current_home/.ssh/id_dsa.pub) != 644 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_dsa.pub ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/id_rsa.pub && $(stat -c '%a' $ver_current_home/.ssh/id_rsa.pub) != 644 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_rsa.pub ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/id_ecdsa.pub && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa.pub) != 644 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ecdsa.pub ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/id_ecdsa_sk.pub && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa_sk.pub) != 644 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ecdsa_sk.pub ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/id_ed25519.pub && $(stat -c '%a' $ver_current_home/.ssh/id_ed25519.pub) != 644 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ed25519.pub ${end}${red}"
-	ver_eight_war="1"
-fi
-if [[ -f $ver_current_home/.ssh/id_ed25519_sk.pub && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa_sk.pub) != 644 ]]; then
-	echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ed25519_sk.pub ${end}${red}"
-	ver_eight_war="1"
+	if [[ -f $ver_current_home/.ssh/id_dsa.pub && $(stat -c '%a' $ver_current_home/.ssh/id_dsa.pub) != 644 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_dsa.pub ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/id_rsa.pub && $(stat -c '%a' $ver_current_home/.ssh/id_rsa.pub) != 644 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_rsa.pub ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/id_ecdsa.pub && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa.pub) != 644 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ecdsa.pub ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/id_ecdsa_sk.pub && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa_sk.pub) != 644 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ecdsa_sk.pub ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/id_ed25519.pub && $(stat -c '%a' $ver_current_home/.ssh/id_ed25519.pub) != 644 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ed25519.pub ${end}${red}"
+		ver_eight_war="1"
+	fi
+	if [[ -f $ver_current_home/.ssh/id_ed25519_sk.pub && $(stat -c '%a' $ver_current_home/.ssh/id_ecdsa_sk.pub) != 644 ]]; then
+		echo "${dim}- [WARNING] File permission is not 600 $ver_current_home/.ssh/id_ed25519_sk.pub ${end}${red}"
+		ver_eight_war="1"
+	fi
 fi
 
 
