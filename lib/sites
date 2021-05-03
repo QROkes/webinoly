@@ -183,15 +183,17 @@ wpinstall() {
 				# DB host validation
 				is_url $dbhost -split
 				if [[ -n $url_path ]]; then
-					echo "${red}[ERROR] Invalid database host/port! (Folders in DB host are not supported)${blu}"
+					echo "${red}[ERROR] Invalid database host/port!${dim} (Folders in DB host are not supported: ${dbhost}) ${end}${blu}"
 					url_path=""
+					type="1"
 					done="0"
 					continue 1
-				elif [[ $(is_url $dbhost) =~ ^(http|https|true)$ ]]; then	
+				elif [[ $(is_url $dbhost) =~ ^(http|https|ip|true)$ ]]; then	
 					local dburl=$url_host
 					local dbport=$url_port
 				else
-					echo "${red}[ERROR] Invalid database host/port!${blu}"
+					echo "${red}[ERROR] Invalid database host/port!${dim} ($dbhost) ${end}${blu}"
+					type="1"
 					done="0"
 					continue 1
 				fi
