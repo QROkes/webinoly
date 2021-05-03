@@ -760,6 +760,8 @@ set_default_nginx_response() {
 		default_site=${default_site:-NeverMatchDotCom}
 	fi
 	
+	[[ $default_site == $(conf_read default-site) ]] && echo "${blu}${dim}Default site is already set as '${default_site}' but we will try to reassing it!${end}"
+	
 	if [[ $default_site == "default" ]]; then
 		if [[ -f /opt/webinoly/templates/source/default ]]; then
 			sudo cat /opt/webinoly/templates/source/default >| /etc/nginx/sites-available/default
