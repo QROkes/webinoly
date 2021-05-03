@@ -62,6 +62,10 @@ conf_write() {
 ADMIN_PASS=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 [[ -z $ADMIN_PASS ]] && readonly ADMIN_PASS="dUmb" || readonly ADMIN_PASS=$ADMIN_PASS # Never empty, prevent asking password!
 
+# Current original user HOME even with sudo (root) - This script always run with sudo, so $HOME is always /root
+# https://askubuntu.com/questions/1186999/how-does-sudo-handle-home-differently-since-19-10
+readonly CURRENT_HOME=$(eval echo ~${SUDO_USER:-${USER}})
+readonly CURRENT_USER=${SUDO_USER:-${USER}}
 
 
 # ***********************************************

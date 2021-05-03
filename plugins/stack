@@ -89,9 +89,8 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			fi
 			sudo apt -y autoremove
 			
-			current_home=$(eval echo ~${SUDO_USER:-${USER}})
-			[ -L $current_home/www ] && sudo rm $current_home/www
-			[ -L $current_home/sites-available ] && sudo rm $current_home/sites-available
+			[ -L $CURRENT_HOME/www ] && sudo rm $CURRENT_HOME/www
+			[ -L $CURRENT_HOME/sites-available ] && sudo rm $CURRENT_HOME/sites-available
 			
 			# Remove sources
 			sudo rm -rf /opt/webinoly/templates/source/default

@@ -524,10 +524,11 @@ www_data_sftp_access() {
 		echo "${gre}SFTP access for www-data user is already disabled! ${end}"
 	elif [[ $login_www_data == "on" ]]; then
 		# Allow access for www-data user
-		if [[ -f $HOME/.ssh/authorized_keys ]]; then
+		if [[ -f $CURRENT_HOME/.ssh/authorized_keys ]]; then
+			echo "${blu}${dim}Copying your SSH keys from '${CURRENT_USER}' to www-data access!${end}"
 			sudo mkdir -p /var/www/.ssh
 			sudo chmod 700 /var/www/.ssh
-			sudo cat $HOME/.ssh/authorized_keys > /var/www/.ssh/authorized_keys
+			sudo cat $CURRENT_HOME/.ssh/authorized_keys > /var/www/.ssh/authorized_keys
 			sudo chmod 600 /var/www/.ssh/*
 		fi
 		sudo chown -R www-data:www-data /var/www
