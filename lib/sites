@@ -173,7 +173,7 @@ wpinstall() {
 		do
 			done="1"
 			# Ask DB data or suggest default values
-			echo ""
+			echo "${blu}"
 			[[ $type == [2345] ]] || read -p "Database Host [localhost]: " dbhost
 			dbhost=${dbhost:-localhost}
 			[[ ${dbhost,,} == "localhost" && $setupmysql == [yY] ]] && check_for_mysql
@@ -183,19 +183,17 @@ wpinstall() {
 				# DB host validation
 				is_url $dbhost -split
 				if [[ -n $url_path ]]; then
-					echo "${red}[ERROR] Invalid database host/port!${dim} (Folders in DB host are not supported: ${dbhost}) ${end}${blu}"
+					echo "${red}[ERROR] Invalid database host/port!${dim} (Folders in DB host are not supported: ${dbhost}) ${end}"
 					url_path=""
-					type="1"
 					done="0"
-					continue 1
+					[[ $type == [2345] ]] && exit 1 || continue 1
 				elif [[ $(is_url $dbhost) =~ ^(http|https|ip|true)$ ]]; then	
 					local dburl=$url_host
 					local dbport=$url_port
 				else
-					echo "${red}[ERROR] Invalid database host/port!${dim} ($dbhost) ${end}${blu}"
-					type="1"
+					echo "${red}[ERROR] Invalid database host/port!${dim} ($dbhost) ${end}"
 					done="0"
-					continue 1
+					[[ $type == [2345] ]] && exit 1 || continue 1
 				fi
 				
 				# Default external DB port
@@ -349,6 +347,9 @@ wpinstall() {
 			# If DBuser will be reused, we need to check if data is valid to establish connection
 			if [[ $dbureuse == [yY] && (( $dbhost == "localhost" && $(check_mysql_connection localhost $dbuser $dbpass) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dbuser $dbpass) != "true" )) ]]; then
 				done="0"
+				dbreuse=""
+				dbureuse=""
+				setupmysql="Y"
 				continue 1
 			elif [[ $dbureuse == [yY] ]]; then
 				echo "${gre}${dim}DB name and user successfully validated!${end}"
