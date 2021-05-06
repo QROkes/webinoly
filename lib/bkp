@@ -49,7 +49,7 @@ bkp_local_db() {
 			echo "${red}[ERROR] Please, enter a valid WP site!${end}"
 			exit 1
 		else
-			wp_conf_retrieve $wp $subfolder
+			wp_conf_retrieve $wp true true $subfolder
 		fi
 		
 		if [[ $wp_dbhost != "localhost" && ( -z $extdb_user || -z $extdb_pass || -z $extdb_url || -z $extdb_port ) ]]; then
@@ -238,7 +238,7 @@ bkp_s3_profile() {
 		fi
 		
 		[[ -z $subfolder ]] && local sbf="false" || sbf=$subfolder
-		wp_conf_retrieve $add_db_pre $sbf false
+		wp_conf_retrieve $add_db_pre false true $sbf
 		if [[ $wp_dbhost != "localhost" && -z $(conf_read external-dbu) && -z $(conf_read external-dbp) ]]; then
 			echo "${red}[ERROR] Database host is not localhost!${dim} (External databases are supported with -external-db-save)${end}"
 			exit 1

@@ -490,7 +490,7 @@ _EOF_
 
 
 db_delete() {	
-	wp_conf_retrieve $1 $subfolder
+	wp_conf_retrieve $1 true false $subfolder
 	[[ -z $wp_config ]] && return
 	[[ $wp_dbhost != "localhost" ]] && check_for_mysql_client
 	
@@ -1671,7 +1671,7 @@ wp_replace_content() {
 		exit 1
 	fi
 	
-	wp_conf_retrieve $domain $subfolder
+	wp_conf_retrieve $domain true true $subfolder
 	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
 		exit 1
 	fi
@@ -1804,7 +1804,7 @@ site_info_subfolder() {
 		[[ -n $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder) ]] && echo "${blu}Environment:${end} $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder)"
 		echo ""
 		
-		wp_conf_retrieve $domain $subfolder false
+		wp_conf_retrieve $domain false true $subfolder
 		echo "${blu}Database:${end} $wp_dbhost"
 		echo "${blu}DB Name:${end} $wp_dbname"
 		echo "${blu}DB User:${end} $wp_dbuser"
@@ -1858,7 +1858,7 @@ site_info() {
 		local cache="false"
 	fi
 	
-	if [[ $typesite == "WordPress" ]]; then
+	if [[ $typesite == "WordPress" || ( $typesite == "Parked" && $(is_wp $domain) == "true" ) ]]; then
 		echo ""
 		echo "${blu}Cache:${end} $cache"
 		echo "${blu}Multisite:${end} $(is_wp_multisite $domain)"
@@ -1868,7 +1868,7 @@ site_info() {
 		[[ -n $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder) ]] && echo "${blu}Environment:${end} $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder)"
 		echo ""
 		
-		wp_conf_retrieve $domain false false
+		wp_conf_retrieve $domain false
 		echo "${blu}Database:${end} $wp_dbhost"
 		echo "${blu}DB Name:${end} $wp_dbname"
 		echo "${blu}DB User:${end} $wp_dbuser"
@@ -1923,7 +1923,7 @@ wp_env_type() {
 	fi
 	
 	# WordPress Reading Settings: Discourage Search Engines
-	wp_conf_retrieve $domain $subfolder
+	wp_conf_retrieve $domain true false $subfolder
 	
 	if [[ $(is_wp_installed $domain $subfolder) == "true" ]]; then
 		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
