@@ -305,6 +305,27 @@ webinoly_update() {
 }
 
 
+fix_permissions() {
+	sudo find /var/www ! -path "/var/www/\.*" -type d -exec chmod 755 {} \;
+	sudo find /var/www ! -path "/var/www/\.*" -type f -exec chmod 644 {} \;
+	
+	if [[ -d /var/www/.ssh ]]; then
+		sudo chmod 700 /var/www/.ssh
+		sudo find /var/www/.ssh ! -path "/var/www/.ssh/*.pub" -type f -exec chmod 600 {} \;
+		sudo find /var/www/.ssh -path "/var/www/.ssh/*.pub" -type f -exec chmod 644 {} \;
+	fi
+	if [[ -d $CURRENT_HOME/.ssh ]]; then
+		sudo chmod 700 $CURRENT_HOME/.ssh
+		sudo find $CURRENT_HOME/.ssh ! -path "$CURRENT_HOME/.ssh/*.pub" -type f -exec chmod 600 {} \;
+		sudo find $CURRENT_HOME/.ssh -path "$CURRENT_HOME/.ssh/*.pub" -type f -exec chmod 644 {} \;
+		sudo chown -R ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/.ssh
+	fi
+	
+	sudo chown -R www-data:www-data /var/www
+	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
+}
+
+
 server_reset() {
 	# Regenerate NGINX conf files
 	if [[ $(conf_read nginx-optim) == "true" && $server_reset =~ ^(nginx|all)$ ]]; then		
@@ -317,15 +338,11 @@ server_reset() {
 		sudo rm -rf /etc/nginx/conf.d/*
 		linux_purge
 		nginx_optim
-		
-		# Fix permissions
-		sudo find /var/www -type d -exec chmod 755 {} \;
-		sudo find /var/www -type f -exec chmod 644 {} \;
-		sudo chown -R www-data:www-data /var/www
-		[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
-		
 		echo "${gre}Nginx settings has been updated successfully!${end}"
 		nginx_not="true" # Nginx-Reload not-needed.
+		
+		fix_permissions
+		echo "${gre}Permissions fixed successfully!${end}"
 	elif [[ $(conf_read nginx-optim) != "true" && $server_reset == "nginx" ]]; then
 		echo "${red}[ERROR] Nginx settings couldn't been updated, seems like is not installed in your server!${end}"
 		err_cont=true
@@ -348,6 +365,15 @@ server_reset() {
 	elif [[ $(conf_read php-optim) != "true" && $server_reset == "php" ]]; then
 		echo "${red}[ERROR] PHP settings couldn't been updated, seems like is not installed in your server!${end}"
 		exit 1
+	fi
+	
+	if [[ $(conf_read nginx) == "true" && $server_reset == "permissions" ]]; then
+		fix_permissions
+		echo "${gre}Permissions fixed successfully!${end}"
+		nginx_not="true" # Nginx-Reload not-needed.
+	elif [[ $(conf_read nginx) != "true" && $server_reset == "permissions" ]]; then
+		echo "${red}[ERROR] Nginx not found, seems like is not installed in your server!${end}"
+		err_cont=true
 	fi
 	
 	# Display message just to show we are alive.
