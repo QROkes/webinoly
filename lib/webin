@@ -310,12 +310,12 @@ fix_permissions() {
 	sudo find /var/www ! -path "/var/www/\.*" -type f -exec chmod 644 {} \;
 	
 	if [[ -d /var/www/.ssh ]]; then
-		sudo chmod 700 /var/www/.ssh
+		sudo find /var/www/.ssh -type d -exec chmod 700 {} \;
 		sudo find /var/www/.ssh ! -path "/var/www/.ssh/*.pub" -type f -exec chmod 600 {} \;
 		sudo find /var/www/.ssh -path "/var/www/.ssh/*.pub" -type f -exec chmod 644 {} \;
 	fi
 	if [[ -d $CURRENT_HOME/.ssh ]]; then
-		sudo chmod 700 $CURRENT_HOME/.ssh
+		sudo find $CURRENT_HOME/.ssh -type d -exec chmod 700 {} \;
 		sudo find $CURRENT_HOME/.ssh ! -path "$CURRENT_HOME/.ssh/*.pub" -type f -exec chmod 600 {} \;
 		sudo find $CURRENT_HOME/.ssh -path "$CURRENT_HOME/.ssh/*.pub" -type f -exec chmod 644 {} \;
 		sudo chown -R ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/.ssh

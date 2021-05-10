@@ -733,80 +733,27 @@ do
 	else
 		break
 	fi
-		
 	
 	if [[ -d $ver_check_dir/.ssh ]]; then
 		ver_ssh_owner=$(find $ver_check_dir/.ssh ! -user $ver_check_user | head -10)
+		ver_ssh_dire=$(sudo find $ver_check_dir/.ssh -type d ! -perm 700 | head -10)
+		ver_ssh_file=$(sudo find $ver_check_dir/.ssh ! -path "$ver_check_dir/.ssh/*.pub" -type f ! -perm 600 | head -10)
+		ver_ssh_fpub=$(sudo find $ver_check_dir/.ssh -path "$ver_check_dir/.ssh/*.pub" -type f ! -perm 644 | head -10)
 		
 		if [[ -n $ver_ssh_owner ]]; then
-			echo "$ver_ssh_owner" | sed "s/^/${dim}- \[WARNING\] File owner is not '${CURRENT_USER}' /" | sed "s/$/${end}${red}/"
+			echo "$ver_ssh_owner" | sed "s/^/${dim}- \[WARNING\] File owner is not '${ver_check_user}' /" | sed "s/$/${end}${red}/"
 			ver_eight_war="1"
 		fi
-
-		if [[ -d $ver_check_dir/.ssh && $(stat -c '%a' $ver_check_dir/.ssh) != 700 ]]; then
-			echo "${dim}- [WARNING] Directory permission is not 700 $ver_check_dir/.ssh ${end}${red}"
+		if [[ -n $ver_ssh_dire ]]; then
+			echo "$ver_ssh_dire" | sed "s/^/${dim}- \[WARNING\] Directory permission is not 700 /" | sed "s/$/${end}${red}/"
 			ver_eight_war="1"
 		fi
-		if [[ -f $ver_check_dir/.ssh/authorized_keys && $(stat -c '%a' $ver_check_dir/.ssh/authorized_keys) != 600 ]]; then
-			echo "${dim}- [WARNING] File permission is not 600 $ver_check_dir/.ssh/authorized_keys ${end}${red}"
+		if [[ -n $ver_ssh_file ]]; then
+			echo "$ver_ssh_file" | sed "s/^/${dim}- \[WARNING\] File permission is not 600 /" | sed "s/$/${end}${red}/"
 			ver_eight_war="1"
 		fi
-		if [[ -f $ver_check_dir/.ssh/config && $(stat -c '%a' $ver_check_dir/.ssh/config) != 600 ]]; then
-			echo "${dim}- [WARNING] File permission is not 600 $ver_check_dir/.ssh/config ${end}${red}"
-			ver_eight_war="1"
-		fi
-		if [[ -f $ver_check_dir/.ssh/known_hosts && $(stat -c '%a' $ver_check_dir/.ssh/known_hosts) != 600 ]]; then
-			echo "${dim}- [WARNING] File permission is not 600 $ver_check_dir/.ssh/known_hosts ${end}${red}"
-			ver_eight_war="1"
-		fi
-
-		if [[ -f $ver_check_dir/.ssh/id_dsa && $(stat -c '%a' $ver_check_dir/.ssh/id_dsa) != 600 ]]; then
-			echo "${dim}- [WARNING] File permission is not 600 $ver_check_dir/.ssh/id_dsa ${end}${red}"
-			ver_eight_war="1"
-		fi
-		if [[ -f $ver_check_dir/.ssh/id_rsa && $(stat -c '%a' $ver_check_dir/.ssh/id_rsa) != 600 ]]; then
-			echo "${dim}- [WARNING] File permission is not 600 $ver_check_dir/.ssh/id_rsa ${end}${red}"
-			ver_eight_war="1"
-		fi
-		if [[ -f $ver_check_dir/.ssh/id_ecdsa && $(stat -c '%a' $ver_check_dir/.ssh/id_ecdsa) != 600 ]]; then
-			echo "${dim}- [WARNING] File permission is not 600 $ver_check_dir/.ssh/id_ecdsa ${end}${red}"
-			ver_eight_war="1"
-		fi
-		if [[ -f $ver_check_dir/.ssh/id_ecdsa_sk && $(stat -c '%a' $ver_check_dir/.ssh/id_ecdsa_sk) != 600 ]]; then
-			echo "${dim}- [WARNING] File permission is not 600 $ver_check_dir/.ssh/id_ecdsa_sk ${end}${red}"
-			ver_eight_war="1"
-		fi
-		if [[ -f $ver_check_dir/.ssh/id_ed25519 && $(stat -c '%a' $ver_check_dir/.ssh/id_ed25519) != 600 ]]; then
-			echo "${dim}- [WARNING] File permission is not 600 $ver_check_dir/.ssh/id_ed25519 ${end}${red}"
-			ver_eight_war="1"
-		fi
-		if [[ -f $ver_check_dir/.ssh/id_ed25519_sk && $(stat -c '%a' $ver_check_dir/.ssh/id_ecdsa_sk) != 600 ]]; then
-			echo "${dim}- [WARNING] File permission is not 600 $ver_check_dir/.ssh/id_ed25519_sk ${end}${red}"
-			ver_eight_war="1"
-		fi
-
-		if [[ -f $ver_check_dir/.ssh/id_dsa.pub && $(stat -c '%a' $ver_check_dir/.ssh/id_dsa.pub) != 644 ]]; then
-			echo "${dim}- [WARNING] File permission is not 644 $ver_check_dir/.ssh/id_dsa.pub ${end}${red}"
-			ver_eight_war="1"
-		fi
-		if [[ -f $ver_check_dir/.ssh/id_rsa.pub && $(stat -c '%a' $ver_check_dir/.ssh/id_rsa.pub) != 644 ]]; then
-			echo "${dim}- [WARNING] File permission is not 644 $ver_check_dir/.ssh/id_rsa.pub ${end}${red}"
-			ver_eight_war="1"
-		fi
-		if [[ -f $ver_check_dir/.ssh/id_ecdsa.pub && $(stat -c '%a' $ver_check_dir/.ssh/id_ecdsa.pub) != 644 ]]; then
-			echo "${dim}- [WARNING] File permission is not 644 $ver_check_dir/.ssh/id_ecdsa.pub ${end}${red}"
-			ver_eight_war="1"
-		fi
-		if [[ -f $ver_check_dir/.ssh/id_ecdsa_sk.pub && $(stat -c '%a' $ver_check_dir/.ssh/id_ecdsa_sk.pub) != 644 ]]; then
-			echo "${dim}- [WARNING] File permission is not 644 $ver_check_dir/.ssh/id_ecdsa_sk.pub ${end}${red}"
-			ver_eight_war="1"
-		fi
-		if [[ -f $ver_check_dir/.ssh/id_ed25519.pub && $(stat -c '%a' $ver_check_dir/.ssh/id_ed25519.pub) != 644 ]]; then
-			echo "${dim}- [WARNING] File permission is not 644 $ver_check_dir/.ssh/id_ed25519.pub ${end}${red}"
-			ver_eight_war="1"
-		fi
-		if [[ -f $ver_check_dir/.ssh/id_ed25519_sk.pub && $(stat -c '%a' $ver_check_dir/.ssh/id_ecdsa_sk.pub) != 644 ]]; then
-			echo "${dim}- [WARNING] File permission is not 644 $ver_check_dir/.ssh/id_ed25519_sk.pub ${end}${red}"
+		if [[ -n $ver_ssh_fpub ]]; then
+			echo "$ver_ssh_fpub" | sed "s/^/${dim}- \[WARNING\] File permission is not 644 /" | sed "s/$/${end}${red}/"
 			ver_eight_war="1"
 		fi
 	fi
