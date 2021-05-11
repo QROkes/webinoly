@@ -789,7 +789,7 @@ do
 				echo "${blu}${dim}- [INFO] HTTP Authentication Credentials not found for $ver_domi${end}${red}"
 			fi
 			
-			wp_conf_retrieve $ver_domi false
+			wp_conf_retrieve $ver_domi false > /dev/null
 			if [[ $wp_dbhost == "localhost" && -n $wp_dbuser && -n $wp_dbpass && -n $wp_dbname && $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname 2>/dev/null) != "true" ]]; then
 				echo "${dim}- [WARNING] Database connection failed for your WP site $ver_domi ${end}${red}"
 				ver_nine_war="1"

@@ -758,7 +758,7 @@ is_cache() {
 
 
 is_wp_multisite() {
-	wp_conf_retrieve $1 true false $2 # 3th parameter should be never set to 'true' to prevent an infinite loop!
+	wp_conf_retrieve $1 true false $2 # 3th parameter should always be 'false' to prevent an infinite loop!
 	local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}sitemeta' LIMIT 1;"
 	local dbsetuc="USE $wp_dbname; SELECT meta_value FROM ${wp_dbpref}sitemeta where meta_key='subdomain_install';"
 	
@@ -785,6 +785,12 @@ is_wp_installed() {
 	# When you create a WP site, DB is created only after the initial WP installation wizard is completed.
 	
 	wp_conf_retrieve $1 true false $2
+	# It makes no sense checking for mapped domains, that's why is set to false.
+	# is_wp_installed will return true even if domain is not mapped, only a domain parked pointing to a WP site.
+	# if we want to check for mapped domains: wp_conf_retrieve $1 true false $2 > /dev/null (silenced echoed messages because affects this function)
+	# but that makes no-sense because even if it's not mapped, it will return the main site data
+	# Until now, we don't need a "is_domain_mapped" function, maybe we can change "is_wp_installed" to only be true for main domain sites, not parked (if it's not mapped). This can change in the future!!!
+	
 	local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
 	
 	if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
