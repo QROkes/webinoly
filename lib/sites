@@ -522,6 +522,9 @@ deletesite() {
 		echo "${red}[ERROR] Can not delete a site that is set as default site!${end}"
 		exit 1
 	fi
+	if [[ $(conf_read smtp) == "true" && -s /etc/mailname && $domain == $(sudo cat /etc/mailname | head -n 1) ]]; then
+		echo "${red}[WARNING] This site is set to be used as main site in your SMTP configuration."
+	fi
 	if [[ $domain == $(conf_read tools-site) && ( -n $delete_all || $delete == "force" ) ]]; then
 		echo "${red}[WARNING] This site is set to be used to access your server tools. Deleting this site can cause unexpected behaviour in your server."
 		sudo webinoly -tools-site=default

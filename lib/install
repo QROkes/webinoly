@@ -310,8 +310,14 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 # WebinolyCustomEnd' >> /etc/nginx/fastcgi_params
 	
 	# Create Direct Access for easy navigation
-	[ -L $CURRENT_HOME/sites-available ] || ln -s /etc/nginx/sites-available $CURRENT_HOME
-	[ -L $CURRENT_HOME/www ] || ln -s /var/www $CURRENT_HOME
+	if [[ ! -L $CURRENT_HOME/sites-available ]]; then
+		ln -s /etc/nginx/sites-available $CURRENT_HOME
+		sudo chown ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/sites-available
+	fi
+	if [[ ! -L $CURRENT_HOME/www ]]; then
+		ln -s /var/www $CURRENT_HOME
+		sudo chown ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/www
+	fi
 	
 	# www-data sftp default uploads permissions 755 and 644, instead of 775 and 664.
 	sudo sed -i '/USERGROUPS_ENAB/c \USERGROUPS_ENAB no' /etc/login.defs
