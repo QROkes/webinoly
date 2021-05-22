@@ -4,7 +4,7 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.14.2"
+readonly app_version="1.14.3"
 readonly svr_version="1.6"
 readonly os_ubuntu_supported=(bionic focal)
 readonly php_supported=(7.3 7.4 8.0)
@@ -986,9 +986,11 @@ db_user_role() {
 		local priv="SELECT,INSERT,UPDATE,DELETE"
 	elif [[ $(conf_read dbrole) == "limited" ]]; then
 		local priv="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER"
+	elif [[ $(conf_read dbrole) == "extra" ]]; then
+		local priv="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER,LOCK TABLES"
 	elif [[ $(conf_read dbrole) == "complete" ]]; then
 		local priv="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER,CREATE TEMPORARY TABLES,EXECUTE,CREATE VIEW,SHOW VIEW,CREATE ROUTINE,ALTER ROUTINE,EVENT,TRIGGER"
-	else # full
+	else # full (DEFAULT)
 		local priv="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER,CREATE TEMPORARY TABLES,EXECUTE,CREATE VIEW,SHOW VIEW,CREATE ROUTINE,ALTER ROUTINE,EVENT,TRIGGER,REFERENCES,LOCK TABLES"
 	fi
 
