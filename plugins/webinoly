@@ -96,10 +96,10 @@ elif [[ -n $timezone ]]; then
 elif [[ -n $version || -n $v || -n $V ]]; then
 	[[ -z $(conf_read server-version) ]] && sver="Not installed!" || sver=$(conf_read server-version)
 	
-	echo "${blu}"
-	echo "Webinoly version: $app_version"
-	echo "Current stack version: $sver"
-	[[ $sver != $svr_version ]] && echo "Available stack version: $svr_version"
+	echo ""
+	echo "${blu}Webinoly version:${end} $app_version"
+	echo "${blu}Current stack version:${end} $sver"
+	[[ $sver != $svr_version ]] && echo "${blu}Available stack version:${end} $svr_version"
 	echo "${end}"
 	nginx_not="true" # Nginx-Reload not-needed.
 

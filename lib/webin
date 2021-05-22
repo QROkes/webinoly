@@ -68,7 +68,11 @@ system_info() {
 	echo "${blu}${bol}[MYSQL]${end}"
 	if [[ $(conf_read mysql) == "true" ]]; then
 		
-		[[ $(conf_read mysql-tool) == "true" ]] && local pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'") || local pmaver="Not installed!"
+		[[ $(conf_read mysql-tool) == "true" ]] && local pmaver=$(grep -E "public const VERSION = '[0-9\.]+'.*;" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Version.php | cut -f 2 -d "'") || local pmaver="Not installed!"
+		
+		# Legacy support: before v5.1.0 (Feb 23, 2021) version is found here:
+		[[ $(conf_read mysql-tool) == "true" && -z $pmaver ]] && local pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'")
+
 		
 		echo "${blu}Info:${end}${dim} $(sudo mysql --version) ${end}"
 		echo "${blu}phpMyAdmin:${end}${dim} $pmaver ${end}"
@@ -88,8 +92,8 @@ system_info() {
 	echo "${blu}Tools port:${end}${dim} $(conf_read tools-port) ${end}"
 	echo "${blu}Timezone:${end}${dim} $tz ${end}"
 	if [[ $(conf_read smtp) == "true" ]]; then
-		echo "${blu}SMTP Host:${end}${dim} $(sudo cat /etc/mailname | head -n 1) ${end}"
-		echo "${blu}SMTP Mainsite:${end}${dim} $(grep -E "^relayhost.?=.?*+" /etc/postfix/main.cf | cut -f 2 -d '=' -s) ${end}"
+		echo "${blu}SMTP Host:${end}${dim} $(grep -E "^relayhost.?=.?*+" /etc/postfix/main.cf | cut -f 2 -d '=' -s) ${end}"
+		echo "${blu}SMTP Mainsite:${end}${dim} $(sudo cat /etc/mailname | head -n 1) ${end}"
 	else
 		echo "${blu}SMTP:${end}${dim} None ${end}"
 	fi
