@@ -937,10 +937,21 @@ email_update() {
 	
 	if [[ $mail =~ ^[a-z0-9_\+-]+(\.[a-z0-9_\+-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.([a-z]{2,4})$ ]]; then
 		conf_write mail $mail
+		
 		[[ ! -f /root/.forward ]] && sudo touch /root/.forward || sudo truncate -s 0 /root/.forward
 		sudo echo "$mail" >> /root/.forward
-		[[ -d /etc/letsencrypt/renewal ]] && sudo certbot update_account --email $mail --no-eff-email
-		echo "${gre}Email address has been successfuly validated and saved!"
+		
+		if [[ -s /var/spool/cron/crontabs/root && -n $( sudo grep -F "MAILTO=" /var/spool/cron/crontabs/root ) ]]; then
+			sudo sed -i "/MAILTO=/c \MAILTO=${mail}" /var/spool/cron/crontabs/root
+			echo "${gre}${dim}Cronjob (root) MAILTO has been updated!${end}"
+		fi
+		
+		if [[ -d /etc/letsencrypt/renewal ]]; then
+			sudo certbot update_account --email $mail --no-eff-email
+			echo "${gre}${dim}Let's Encrypt account email address has been updated!${end}"
+		fi
+		
+		echo "${gre}Email address has been successfuly validated, updated and saved!"
 	else
 		echo "${red}Please enter a valid email address!"
 	fi
