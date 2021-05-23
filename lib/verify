@@ -305,11 +305,11 @@ if [[ $(conf_read nginx-optim) == "true" ]]; then
 	
 	if [[ ! -f /opt/webinoly/templates/source/default ]]; then
 		echo "- [ERROR] File: /opt/webinoly/templates/source/default not found!"
-		ver_three_err="1"
+		ver_two_err="1"
 	fi
 	if [[ ! -f /opt/webinoly/templates/source/nginx.conf ]]; then
 		echo "- [ERROR] File: /opt/webinoly/templates/source/nginx.conf not found!"
-		ver_three_err="1"
+		ver_two_err="1"
 	fi
 fi
 
@@ -342,11 +342,11 @@ fi
 # Check for Tools and Default site.
 if [[ -n $(conf_read default-site) && ! ( $(conf_read default-site) =~ ^(default|blackhole)$ ) && ! -L /etc/nginx/sites-enabled/$(conf_read default-site) ]]; then
 	echo "${dim}- [WARNING] Default site not found or is not enabled!${end}${red}"
-	ver_six_war="1"
+	ver_two_war="1"
 fi
 if [[ -n $(conf_read tools-site) && ! -L /etc/nginx/sites-enabled/$(conf_read tools-site) ]]; then
 	echo "${dim}- [WARNING] Tools site not found or is not enabled!${end}${red}"
-	ver_six_war="1"
+	ver_two_war="1"
 fi
 
 # NGINX Conf check
@@ -446,8 +446,14 @@ fi
 # Check for PHP version
 if [[ $(conf_read php) == "true" ]]; then
 	ver_php_ver=$(php -v | grep -m1 "" | sed 's/PHP \([^\-]*\).*/\1/' | cut -f 1-2 -d'.')
-	if [[ $ver_php_ver != "7.4" && $ver_php_ver != "8.0" ]]; then
-		echo "${blu}${dim}- [INFO] PHP v7.4 is recommended to get an optimal perfomance!${end}${red}"
+	if ! [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0)$ ]]; then
+		echo "${dim}- [WARNING] Unknown PHP version!${end}${red}"
+		ver_three_war="1"
+	elif [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2)$ ]]; then
+		echo "${dim}- [WARNING] You have an obsolete PHP version (${ver_php_ver}) installed that not even receive security updates!${end}${red}"
+		ver_three_war="1"
+	elif [[ $ver_php_ver == "7.3" ]]; then
+		echo "${blu}${dim}- [INFO] PHP v7.4 or later is recommended to get an optimal perfomance! (Current: ${ver_php_ver}) ${end}${red}"
 	fi
 fi
 
@@ -481,8 +487,18 @@ elif [[ -d /etc/mysql && $(conf_read mysql) != "true" ]]; then
 fi
 
 # Check for MySQL version
-if [[ $(conf_read mysql) == "true" && $(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.') != "10.5" ]]; then
-	echo "${blu}${dim}- [INFO] MariaDB (MySQL) v10.5 is recommended to get an optimal perfomance!${end}${red}"
+if [[ $(conf_read mysql) == "true" ]]; then
+	# To check supported versions: https://mariadb.com/kb/en/mariadb-server/
+	ver_mysql_ver=$(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.')
+	if ! [[ $ver_mysql_ver =~ ^(10.0|10.1|10.2|10.3|10.4|10.5)$ ]]; then
+		echo "${dim}- [WARNING] Unknown MariaDB (MySQL) version!${end}${red}"
+		ver_four_war="1"
+	elif [[ $ver_mysql_ver =~ ^(10.0|10.1)$ ]]; then
+		echo "${dim}- [WARNING] You have an obsolete MariaDB version (${ver_mysql_ver}) installed that not even receive security updates!${end}${red}"
+		ver_four_war="1"
+	elif [[ $ver_mysql_ver =~ ^(10.2|10.3)$ ]]; then
+		echo "${blu}${dim}- [INFO] MariaDB v10.4 or later is recommended to get an optimal perfomance! (Current: ${ver_mysql_ver}) ${end}${red}"
+	fi
 fi
 
 if [[ $(conf_read mysql) != "true" && $(conf_read mysql-tool) == "true" ]]; then
@@ -593,6 +609,8 @@ if [[ $(lsb_release -i | cut -d':' -f 2 | xargs) != "Ubuntu" ]]; then
 elif [[ $(check_ubuntu_release) != "true" ]]; then
 	echo "- [ERROR] This Ubuntu version is not supported!"
 	ver_six_err="1"
+elif [[ $(lsb_release -c | cut -d':' -f 2 | xargs) == "bionic" ]]; then
+	echo "${blu}${dim}- [INFO] You should start considering moving to Ubuntu 20.04 ${end}${red}"
 fi
 # Check for sudo/root privileges
 if ! $(groups $USERNAME | grep &>/dev/null '\bsudo\b' || groups $USERNAME | grep &>/dev/null '\broot\b'); then

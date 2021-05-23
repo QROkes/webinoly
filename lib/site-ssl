@@ -157,7 +157,7 @@ site_ssl_on() {
 		local cronmail=$( sudo grep -F "MAILTO=" /var/spool/cron/crontabs/root )
 		local cronrene=$( sudo grep -F "certbot renew" /var/spool/cron/crontabs/root )
 		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
-		[[ -z $cronrene ]] && echo '15 3 * * 6 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
+		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
 
 		[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "https://${domain}"
 		
