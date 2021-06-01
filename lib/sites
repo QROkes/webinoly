@@ -178,8 +178,8 @@ wpinstall() {
 			dbhost=${dbhost:-localhost}
 			[[ ${dbhost,,} == "localhost" && $setupmysql == [yY] ]] && check_for_mysql
 			
-			# Check if localhost or external DB
-			if [[ $dbhost != "localhost" && $setupmysql == [yY] ]]; then
+			# In case of external db
+			if [[ $dbhost != "localhost" ]]; then
 				# DB host validation
 				is_url $dbhost -split
 				if [[ -n $url_path ]]; then
@@ -197,40 +197,43 @@ wpinstall() {
 				fi
 				
 				# Default external DB port
-				if [[ -z $dbport && -n $dburl ]]; then
-					dbport="3306"
+				if [[ -z $dbport ]]; then
+					read -p "Database Host Port [3306]: " dbport
+					dbport=${dbport:-3306}
 					dbhost="${dbhost}:${dbport}"
-				fi
-				
-				check_for_mysql_client
-				echo "${blu}"
-				
-				if [[ $type == 1 || ($type == [35] && ( -z $dburoot || -z $dbproot )) ]]; then
-					read -p "External DB username: " dburoot
-					read -p "External DB password: " dbproot
-					echo ""
 				fi
 			fi
 			
 			# Check for MySQL Connection
-			if [[ -n $retry && $retry -ge 3 ]]; then
-				setupmysql="N"
-				echo "${red}[ERROR] Database creation failed after 3 retries! ${blu}"
-			elif [[ ( $dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dburoot $dbproot) != "true" ) ]]; then
-				# Reset variables
-				local dburl=""
-				local dbport=""
-				local dburoot=""
-				local dbproot=""
-				
-				# Prevent infinite loops, just 3 intents!
-				[[ -z $retry ]] && local retry=0
-				local retry=$(($retry+1))
-				
-				# While loop
-				done="0"
+			if [[ $setupmysql == [yY] ]]; then
+				check_for_mysql_client
 				echo "${blu}"
-				continue 1
+				
+				if [[ $dbhost != "localhost" && $type == 1 || ($type == [35] && ( -z $dburoot || -z $dbproot )) ]]; then
+					read -p "External DB username: " dburoot
+					read -p "External DB password: " dbproot
+					echo ""
+				fi
+				
+				if [[ -n $retry && $retry -ge 3 ]]; then
+					setupmysql="N"
+					echo "${red}[ERROR] Database creation failed after 3 retries! ${blu}"
+				elif [[ ( $dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dburoot $dbproot) != "true" ) ]]; then
+					# Reset variables
+					local dburl=""
+					local dbport=""
+					local dburoot=""
+					local dbproot=""
+					
+					# Prevent infinite loops, just 3 intents!
+					[[ -z $retry ]] && local retry=0
+					local retry=$(($retry+1))
+					
+					# While loop
+					done="0"
+					echo "${blu}"
+					continue 1
+				fi
 			fi
 			
 			# ************* Ask for DB Name and validate data *************** #
