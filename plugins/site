@@ -26,7 +26,7 @@ if [[ -n $wp || -n $mysql ]]; then
 
 	# Check for saved DB external data
 	if [[ ( $wp == "true" || $mysql == "true" ) && -n $(conf_read external-dbh) && -n $(conf_read external-dbu) && -n $(conf_read external-dbp) ]]; then
-		dona=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")
+		[[ -n $domain ]] && dona=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g") || dona="Webinoly_$(pwgen -s -1)"
 		
 		if [[ -n $(conf_read external-dbh) && -n $(conf_read external-dbx) ]]; then
 			exth="$(conf_read external-dbh):$(conf_read external-dbx)"
@@ -35,8 +35,8 @@ if [[ -n $wp || -n $mysql ]]; then
 		fi
 		
 		extp=$( echo $(conf_read external-dbp) | openssl enc -d -a -salt )
-		[[ $wp == "true" ]] && wp=[true,true,$exth,$dona,$dona,random,wp_,$(conf_read external-dbu),$extp]
-		[[ $mysql == "true" ]] && mysql=[$exth,$dona,$dona,random,$(conf_read external-dbu),$extp]
+		[[ $wp == "true" ]] && wp="[true,true,${exth},${dona},${dona},random,wp_,$(conf_read external-dbu),${extp}]"
+		[[ $mysql == "true" ]] && mysql="[${exth},${dona},${dona},random,$(conf_read external-dbu),${extp}]"
 		echo "${blu}${dim}External DB credentials found!${end}"
 	fi
 

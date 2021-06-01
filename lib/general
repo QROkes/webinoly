@@ -242,7 +242,7 @@ external_db_parse() {
 		# Prevent errors
 		if [[ ${#external_db} -lt 2 ]]; then
 			echo "${red}[ERROR] Invalid data for External Database!${end}"
-			exit 1
+			return
 		fi
 		
 		local dbdata=${external_db:1:-1}
@@ -254,19 +254,19 @@ external_db_parse() {
 		
 		if [[ $(echo "${external_db}" | cut -c-1) != "[" || $(echo "${external_db}" | rev | cut -c-1) != "]" ]]; then
 			echo "${red}[ERROR] Invalid syntax for External Database!${end}"
-			exit 1
+			return
 		elif [[ $1 == "-nohost" && ( -z $user || -z $pass ) ]]; then
 			echo "${red}[ERROR] Invalid data for External Database!${end}"
-			exit 1
+			return
 		elif [[ $1 != "-nohost" && ( -z $user || -z $pass || -z $url || -z $port ) ]]; then
 			echo "${red}[ERROR] Invalid data for External Database!${end}"
-			exit 1
+			return
 		fi
 		
 		check_for_mysql_client
 		if [[ $(check_mysql_connection $url $port $user $pass) != "true" ]]; then
 			echo "${red}[ERROR] Cannot connect with your External Database!${end}"
-			exit 1
+			return
 		else
 			# Make it global only after verification
 			extdb_user=$user
@@ -279,7 +279,7 @@ external_db_parse() {
 		fi
 	else
 		echo "${red}[ERROR] External DB parameter not found!${end}"
-		exit 1
+		return
 	fi
 }
 

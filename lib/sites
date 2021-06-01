@@ -213,12 +213,19 @@ wpinstall() {
 			fi
 			
 			# Check for MySQL Connection
-			if [[ ( $dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dburoot $dbproot) != "true" ) ]]; then
+			if [[ -n $retry && $retry -ge 3 ]]; then
+				setupmysql="N"
+				echo "${red}[ERROR] Database creation failed after 3 retries! ${blu}"
+			elif [[ ( $dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dburoot $dbproot) != "true" ) ]]; then
 				# Reset variables
 				local dburl=""
 				local dbport=""
 				local dburoot=""
 				local dbproot=""
+				
+				# Prevent infinite loops, just 3 intents!
+				[[ -z $retry ]] && local retry=0
+				local retry=$(($retry+1))
 				
 				# While loop
 				done="0"
