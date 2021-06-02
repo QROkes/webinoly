@@ -209,7 +209,7 @@ wpinstall() {
 				check_for_mysql_client
 				echo "${blu}"
 				
-				if [[ $dbhost != "localhost" && $type == 1 || ($type == [35] && ( -z $dburoot || -z $dbproot )) ]]; then
+				if [[ $dbhost != "localhost" && ( $type == 1 || ( $type == [35] && ( -z $dburoot || -z $dbproot ))) ]]; then
 					read -p "External DB username: " dburoot
 					read -p "External DB password: " dbproot
 					echo ""
@@ -217,6 +217,7 @@ wpinstall() {
 				
 				if [[ -n $retry && $retry -ge 3 ]]; then
 					setupmysql="N"
+					local db_error_flag="true"
 					echo "${red}[ERROR] Database creation failed after 3 retries! ${blu}"
 				elif [[ ( $dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dburoot $dbproot) != "true" ) ]]; then
 					# Reset variables
@@ -457,7 +458,7 @@ _EOF_
 	fi
 	
 	# Display data just to confirm the DB creation.
-	if [[ $type == [45] ]]; then
+	if [[ $type == [45] && $db_error_flag != "true" ]]; then
 		echo "${blu}"
 		echo "Database Host: $dbhost"
 		echo "Database Name: $dbname"

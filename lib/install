@@ -312,11 +312,11 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	# Create Direct Access for easy navigation
 	if [[ ! -L $CURRENT_HOME/sites-available ]]; then
 		ln -s /etc/nginx/sites-available $CURRENT_HOME
-		sudo chown ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/sites-available
+		sudo chown -h ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/sites-available
 	fi
 	if [[ ! -L $CURRENT_HOME/www ]]; then
 		ln -s /var/www $CURRENT_HOME
-		sudo chown ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/www
+		sudo chown -h ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/www
 	fi
 	
 	# www-data sftp default uploads permissions 755 and 644, instead of 775 and 664.

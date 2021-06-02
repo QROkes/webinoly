@@ -612,10 +612,10 @@ elif [[ $(check_ubuntu_release) != "true" ]]; then
 elif [[ $(lsb_release -c | cut -d':' -f 2 | xargs) == "bionic" ]]; then
 	echo "${blu}${dim}- [INFO] You should start considering moving to Ubuntu 20.04 ${end}${red}"
 fi
-# Check for sudo/root privileges
-if ! $(groups $USERNAME | grep &>/dev/null '\bsudo\b' || groups $USERNAME | grep &>/dev/null '\broot\b'); then
-	echo "${dim}- [WARNING] This user has no Sudo/Root privileges!${end}${red}"
-	ver_six_war="1"
+# Double-Check for sudo/root privileges
+if [[ $(whoami) != "root" ]]; then
+	echo "- [ERROR] This user has no sudo/root privileges!"
+	ver_six_err="1"
 fi
 
 # Check disk usage

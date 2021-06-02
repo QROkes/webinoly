@@ -6,14 +6,19 @@ A powerful set of commands for doing just about anything you could wish.
 
 Linux Ubuntu + Nginx + MariaDB (MySQL) + PHP is one of the most reliable and powerful configurations to host your websites. **With Webinoly you can set up your web server in just one step.**
 
-Webinoly provides a set of tools and commands that facilitate the web server administration.
+Webinoly provides a set of tools and commands that facilitate web server administration.
 - Unique commands to create, delete, disable sites.
 - Free SSL certificates for your sites with Let’s Encrypt and automatic server configuration.
-- HTTP/2 dramatically increase the speed of serving your content.
+- HTTP/2 dramatically increases the speed of serving your content.
 - PHP v7.4 and support for earlier versions if needed 7.3 and the newest 8.0.
-- FastCgi Cache and Redis Object Cache for your WordPress sites.
-- Install WP in any subfolder, Clone a WP site and support for external databases.
-- Nginx redirection manager, Backups, SMTP and a lot more features.
+- FastCGI Cache and Redis Object Cache for your WordPress sites.
+- Install WP in any subfolder and support for external databases, multisite and domain mapping.
+- Reverse Proxy for any app (Java, React, Node, Angular, Vue, etc) or to use your own domain with any external file repo like S3.
+- A complete suite of tools for backups. Moving a site or the whole server has never been so easy.
+- Protect your site, folder or file with HTTP Authentication.
+- Advanced support for cloning your sites for testing.
+- Custom FastCGI Cache support for any dynamic site.
+- Nginx redirection manager, native SMTP for emails and a lot more features.
 - Datadog native integration for monitoring and analytics.
 - Get an A+ grade on [Qualys (SSL Labs) Test](https://www.ssllabs.com/ssltest/).
 - Log viewer in real time.
@@ -52,7 +57,7 @@ You don't need developer skills to help, visit our site to know [How to Contribu
 
 If you like Webinoly, buy me a coffee or a beer to show support.
 
-**_Your regular donations keeps this project moving forward._**
+**_Your regular donations keep this project moving forward._**
 
 ## License
 [GNU GPLv3](https://choosealicense.com/licenses/gpl-3.0/)
