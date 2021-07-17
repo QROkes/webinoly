@@ -192,7 +192,7 @@ php_install() {
 		echo "${gre}PHP version '$(conf_read php-ver)' is set as default.${end}"
 	else
 		# Default PHP version
-		conf_write php-ver 7.4
+		conf_write php-ver $php_default
 	fi
 	local ver=$(conf_read php-ver)
 	
@@ -423,8 +423,8 @@ php_optim() {
 	sudo sed -i '/ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
 
 	if [[ $(conf_read multi-php) == "true" ]]; then
-		[[ $ver == 8.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.4 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 8.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
+		[[ $ver == 7.4 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/www.conf
 		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
 		[[ $ver == 7.2 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/www.conf
 	else

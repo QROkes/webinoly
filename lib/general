@@ -4,10 +4,11 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.14.3"
+readonly app_version="1.15.0"
 readonly svr_version="1.6"
 readonly os_ubuntu_supported=(bionic focal)
 readonly php_supported=(7.3 7.4 8.0)
+readonly php_default="8.0"
 readonly datadog_agent_ver="7"
 
 # echo colors
