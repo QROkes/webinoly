@@ -490,7 +490,7 @@ fi
 if [[ $(conf_read mysql) == "true" ]]; then
 	# To check supported versions: https://mariadb.com/kb/en/mariadb-server/
 	ver_mysql_ver=$(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.')
-	if ! [[ $ver_mysql_ver =~ ^(10.0|10.1|10.2|10.3|10.4|10.5)$ ]]; then
+	if ! [[ $ver_mysql_ver =~ ^(10.0|10.1|10.2|10.3|10.4|10.5|10.6)$ ]]; then
 		echo "${dim}- [WARNING] Unknown MariaDB (MySQL) version!${end}${red}"
 		ver_four_war="1"
 	elif [[ $ver_mysql_ver =~ ^(10.0|10.1)$ ]]; then

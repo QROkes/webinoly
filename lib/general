@@ -9,6 +9,8 @@ readonly svr_version="1.6"
 readonly os_ubuntu_supported=(bionic focal)
 readonly php_supported=(7.3 7.4 8.0)
 readonly php_default="8.0"
+readonly mysql_supported=(10.4 10.5 10.6)
+readonly mysql_default="10.6"
 readonly datadog_agent_ver="7"
 
 # echo colors
@@ -85,6 +87,14 @@ check_ubuntu_release() {
 check_php_version() {
 	local check="false"
 	for val in "${php_supported[@]}"
+	do 
+		[[ $val == $1 ]] && check="true"
+	done
+	echo $check
+}
+check_mysql_version() {
+	local check="false"
+	for val in "${mysql_supported[@]}"
 	do 
 		[[ $val == $1 ]] && check="true"
 	done
@@ -446,10 +456,17 @@ app_purge() {
 
 mysql_client_install() {
 	api-events_update im2
+	if [[ -n $(conf_read mysql-ver) && $(check_mysql_version $(conf_read mysql-ver)) == "true" ]]; then
+		echo "${gre}MySQL version '$(conf_read mysql-ver)' is set as default.${end}"
+	else
+		# Default MySQL version
+		conf_write mysql-ver $mysql_default
+	fi
+	local ver=$(conf_read mysql-ver)
 	
 	# https://downloads.mariadb.org/mariadb/repositories/
 	sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
-	sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/10.5/ubuntu $(check_osname) main"
+	sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/${ver}/ubuntu $(check_osname) main"
 	
 	pre_install
 	sudo apt -y install mariadb-client

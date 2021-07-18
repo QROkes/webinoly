@@ -250,9 +250,14 @@ mysql_install() {
 		local AUTOGENPASS_ADMIN=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 	fi
 	
+	# REMOVE IT in the future!
+	# Just in the rare case mysql-client was intalled before v1.15.0 and now you try to install MySQL
+	[[ -z $(conf_read mysql-ver) ]] && conf_write mysql-ver $(sudo mysql -V | cut -f 6 -d " " -s | cut -f -2 -d "." -s)
+	
 	# MariaDB Installation
-	echo "mariadb-server-10.5 mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections
-	echo "mariadb-server-10.5 mysql-server/root_password_again password $AUTOGENPASS_ROOT" | debconf-set-selections
+	local ver=$(conf_read mysql-ver)
+	echo "mariadb-server-${ver} mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections
+	echo "mariadb-server-${ver} mysql-server/root_password_again password $AUTOGENPASS_ROOT" | debconf-set-selections
 	sudo apt -y install mariadb-server
 	
 	conf_write mysql true
