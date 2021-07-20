@@ -248,6 +248,7 @@ mysql_install() {
 		# In case of re-installation after purge with keep-data option.
 		local AUTOGENPASS_ROOT=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 		local AUTOGENPASS_ADMIN=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+		local reinstall="true"
 	fi
 	
 	# REMOVE IT in the future!
@@ -261,6 +262,12 @@ mysql_install() {
 	sudo apt -y install mariadb-server
 	
 	conf_write mysql true
+	
+	# https://mariadb.com/kb/en/mysql_upgrade/
+	if [[ $reinstall == "true" ]]; then
+		echo "${blu}${dim}Seems like you are reinstalling MySQL... Upgrading your old tables!${end}"
+		sudo mysql_upgrade --user=root --password=${AUTOGENPASS_ROOT} --force --silent
+	fi
 	
 	# Binaly logs disabled by default and Error logging not in syslog (syslog is default).
 	mysql_default_cnf

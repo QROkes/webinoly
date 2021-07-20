@@ -497,6 +497,7 @@ export_server() {
 	[[ -f /etc/nginx/.htpasswd ]] && local include="$include /etc/nginx/.htpasswd"
 	[[ -f $HOME/.aws/credentials ]] && local include="$include $HOME/.aws/credentials"
 	[[ -f /opt/webinoly/templates/source/csp_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/csp_webinoly.data"
+	[[ -f /etc/mysql/mariadb.conf.d/90-webinoly.cnf ]] && local include="$include /etc/mysql/mariadb.conf.d/90-webinoly.cnf"
 	
 	sudo tar $exclude -Pcf $destination/$filename $include
 
