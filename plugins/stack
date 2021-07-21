@@ -2,7 +2,7 @@
 
 # Server Stack Manager
 # Syntax: stack <option> <arguments>
-# Options: -html, -nginx, -php, -lemp, -mysql, -pma, -info, -purge-server-all, -php-ver
+# Options: -html, -nginx, -php, -lemp, -mysql, -pma, -info, -purge-server-all, -php-ver, -mysql-ver
 # Arguments: -purge, -notools
 
 source /opt/webinoly/lib/install
@@ -434,7 +434,7 @@ elif [[ -n $php_ver ]]; then
 			[[ $pmaflag == "true" ]] && sudo stack -pma
 		elif [[ $(conf_read php) != "true" && $(conf_read mysql-tool) != "true" ]]; then
 			conf_write php-ver $php_ver
-			echo "${gre}PHP is not already installed but new version will be installed next time! ${end}"
+			echo "${gre}PHP is not already installed but this version will be installed next time! ${end}"
 		fi
 		clear_force_flag
 	else
@@ -442,7 +442,39 @@ elif [[ -n $php_ver ]]; then
 		exit 1
 	fi
 
+
+elif [[ -n $mysql_ver ]]; then
+	api-events_update st4
 	
+	# REMOVE IT in the future! This dynvar was introduced in v1.15.0
+	[[ $(conf_read mysql) == "true" && -z $(conf_read mysql-ver) ]] && conf_write mysql-ver $(sudo mysql -V | cut -f 6 -d " " -s | cut -f -2 -d "." -s)
+	
+	if [[ $mysql_ver != true && $(check_mysql_version $mysql_ver) == "true" ]]; then
+		echo "${blu}New MySQL (MariaDB) version: '$mysql_ver' ${end}"
+		if [[ $(conf_read mysql) == "true" && $(conf_read mysql-ver) == $mysql_ver ]]; then
+			echo "${gre}MySQL (MariaDB) $mysql_ver is currently installed!${end}"
+		elif [[ $(conf_read mysql) == "true" ]]; then
+			# Downgrades are not allowed - https://mariadb.com/kb/en/downgrading-between-major-versions-of-mariadb/
+			current_mysql_ver="$(conf_read mysql-ver)"
+			if [[ -n $current_mysql_ver && ${current_mysql_ver//.} -gt ${mysql_ver//.} ]]; then
+				echo "${red}[ERROR] Downgrading MariaDB is not supported!${end}"
+				exit 1
+			fi
+			
+			[[ $(conf_read mysql-tool) == "true" ]] && pmaflag="true"
+			sudo stack -mysql=keep-data -purge=force
+			conf_write mysql-ver $mysql_ver
+			[[ $pmaflag == "true" ]] && sudo stack -mysql || sudo stack -mysql -notools
+		elif [[ $(conf_read mysql) != "true" ]]; then
+			conf_write mysql-ver $mysql_ver
+			echo "${gre}MySQL (MariaDB) is not already installed but this version will be installed next time! ${end}"
+		fi
+	else
+		echo "${red}[ERROR] Please, enter a valid MySQL (MariaDB) version!${end}"
+		exit 1
+	fi
+
+		
 # Purge-Server-All
 elif [[ -n $purge_server_all ]]; then
 	api-events_update st2
