@@ -42,11 +42,10 @@ linux_optim() {
 	else
 		local nginxfdratio="65"
 	fi
-
+	
 	local newfd=$(($ramb*$fdratio*10))
 	local nginxfd=$((($newfd*$nginxfdratio)/100))
 	local cachefd=$(($nginxfd/3))
-	local cacheram=$(($nginxfd/1000))
 	
 	[ -d /etc/systemd/system/nginx.service.d ] || sudo mkdir /etc/systemd/system/nginx.service.d
 	[ -f /etc/systemd/system/nginx.service.d/nofile_limit.conf ] || sudo touch /etc/systemd/system/nginx.service.d/nofile_limit.conf
@@ -56,12 +55,18 @@ LimitNOFILE=$nginxfd" >> /etc/systemd/system/nginx.service.d/nofile_limit.conf
 	sudo sed -i "/worker_rlimit_nofile/c \worker_rlimit_nofile $nginxfd;" /etc/nginx/nginx.conf
 	sudo sed -i "/client_max_body_size/c \	client_max_body_size $(check_var max-uploads)m;" /etc/nginx/nginx.conf
 	sudo sed -i "/open_file_cache max/c \	open_file_cache max=$cachefd inactive=5m;" /etc/nginx/nginx.conf
-	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=${cacheram}m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
 	sudo sed -i "/fastcgi_read_timeout/c \fastcgi_read_timeout $(check_var max-time)s;" /etc/nginx/conf.d/fastcgi.conf
-	echo "tmpfs	/run	tmpfs	nodev,nosuid,size=25%,mode=755	0	0" >> /etc/fstab
 	
-	# sudo cat /proc/$(cat /run/nginx.pid)/limits   -  ver los recursos actuales del proceso main de nginx
-	# sudo ps aux | grep nginx  ---  ver todos lo procesos corriendo con nginx user
+	# RAM: By default linux takes 10% for /run, we increase this value to 25%, so cache max_size should never be greater than that! https://github.com/QROkes/webinoly/issues/19
+	if [[ -n $(conf_read cache-size) && $(conf_read cache-size) =~ ^[0-9]+$ && $(conf_read cache-size) -le "100" ]]; then
+		local cachesize=$(conf_read cache-size)
+	else
+		local cachesize="20"
+	fi
+	local cacheram=$((($ramb*$cachesize)/100))
+	echo "tmpfs	/run	tmpfs	nodev,nosuid,size=25%,mode=755	0	0" >> /etc/fstab
+	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=${cacheram}m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
+	
 	[[ $newfd -gt $(ulimit -Hn) ]] && rootfd=$newfd || rootfd=$(ulimit -Hn)
 	sudo sed -i "/End of file/i \# WebinolyStart - Don't delete" /etc/security/limits.conf
 	sudo sed -i "/End of file/i \root	-	nofile	${rootfd}" /etc/security/limits.conf
