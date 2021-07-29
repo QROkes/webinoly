@@ -369,6 +369,11 @@ wpinstall() {
 			[[ $setupmysql != [yY] && $dbreuse == [yY] && $dbureuse != [yY] ]] && local dbreassign="db"
 			[[ $setupmysql != [yY] && $dbreuse != [yY] && $dbureuse == [yY] ]] && local dbreassign="dbuser"
 			
+			# In case of custom db role
+			echo "${end}"
+			[[ -n $db_role ]] && db_role_check $db_role unattended
+			[[ -z $db_role && -n $(conf_read dbrole) ]] && db_role_check $(conf_read dbrole) unattended # Just to display the warning message!
+			echo "${blu}"
 		
 			# Database Configuration!
 			if [[ $setupmysql == [yY] || -n $dbreassign ]] ; then
