@@ -1137,6 +1137,36 @@ parked_domain() {
 	cusconl=$( grep -o "include /var/www/$domain/.*" /etc/nginx/sites-available/$domain | sed "s/$domain/$parked/" )
 	sed -i "/include \/var\/www\/$domain/c \	${cusconl}" /etc/nginx/sites-available/$domain
 	
+	# WordPress Domain Mapping
+	if [[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ && $(is_wp_multisite $parked) =~ ^(subdomain|subdirectory)$ ]]; then
+		[[ $(is_ssl $parked) == "true" ]] && local scheme="https" || local scheme="http"
+		force_wp_blog_id=$domain_mapping_wp_id
+		edit_wp_db_url $parked "${scheme}://${domain}"
+		
+		wp_conf_retrieve $parked true true
+		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
+			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+USE $wp_dbname;
+UPDATE ${wp_dbpref}blogs SET domain='${domain}' WHERE blog_id='${domain_mapping_wp_id}';
+UPDATE ${wp_dbpref}blogs SET path='/' WHERE blog_id='${domain_mapping_wp_id}';
+FLUSH PRIVILEGES;
+_EOF_
+		elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
+			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" <<_EOF_
+USE $wp_dbname;
+UPDATE ${wp_dbpref}blogs SET domain='${domain}' WHERE blog_id='${domain_mapping_wp_id}';
+UPDATE ${wp_dbpref}blogs SET path='/' WHERE blog_id='${domain_mapping_wp_id}';
+FLUSH PRIVILEGES;
+_EOF_
+		fi
+		
+		echo "${gre}${dim}Domain Mapping successfully configured! ${end}"
+	elif [[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ ]]; then
+		echo "${red}${dim}[ERROR] Domain Mapping failed because main site is not a Multisite Network! ${end}"
+	elif [[ -n $domain_mapping_wp_id ]]; then
+		echo "${red}${dim}[ERROR] Domain Mapping failed because WP blog ID is not a valid value! ${end}"
+	fi
+	
 	echo "${gre}"
 	echo "Parked domain was successfully configured! "
 	echo "${end}"
@@ -1909,12 +1939,12 @@ wp_env_type() {
 	if [[ $(is_wp $domain $subfolder) != "true" ]]; then
 		echo "${red}[ERROR] Site${blu} $domain ${red}is not a WordPress site!${end}"
 		exit 1
-	elif [[ $(is_parked $domain) == "true" ]]; then
-		echo "${red}[ERROR] Parked sites not allowed! ${dim}(Env type should be changed in main site)${end}"
-		exit 1
 	elif ! [[ $env =~ ^(production|staging|development|local)$ ]]; then
 		echo "${red}[ERROR] Invalid value for WP environment type!${end}"
 		exit 1
+	elif [[ $(is_parked $domain) == "true" ]]; then
+		echo "${dim}[WARNING] WP Environment type in a parked site will have effect over all your multisite network!"
+		echo "[WARNING] Cache and Discourage Search Engine settings will have effect over this especific site only.${end}"
 	fi
 	
 	if [[ $env == "production" ]]; then
@@ -1942,7 +1972,7 @@ wp_env_type() {
 	fi
 	
 	# WordPress Reading Settings: Discourage Search Engines
-	wp_conf_retrieve $domain true false $subfolder
+	wp_conf_retrieve $domain true true $subfolder
 	
 	if [[ $(is_wp_installed $domain $subfolder) == "true" ]]; then
 		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then

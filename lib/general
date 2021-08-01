@@ -411,6 +411,21 @@ wp_conf_retrieve() {
 		fi		
 	fi
 	
+	# Force WP blogID
+	if [[ -n $force_wp_blog_id ]]; then
+		wp_dbpref="${wp_dbpref}${force_wp_blog_id}_"
+		local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
+		force_wp_blog_id="" # Cleared to prevent interference when this function is called multiple times
+		
+		if [[ -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup") ]]; then
+			echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}"
+		else
+			wp_dbpref=""
+			echo "${red}${dim}[ERROR] WordPress blog ID (${wp_dbpref}) not found!${end}"
+		fi
+	fi
+	
+	
 	if [[ $2 != "false" ]]; then
 		if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" && $wp_dbhost == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
 			check_external_db_saved
