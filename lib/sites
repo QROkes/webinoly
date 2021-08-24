@@ -729,7 +729,8 @@ force_redirect() {
 	case $force_redirect in
 		"www")
 			[[ -n $rediron ]] && sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
-			[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "${scheme}://www.${domain}"
+			edit_wp_db_url $domain "${scheme}://www.${domain}"
+			edit_wp_db_url_multisite $domain "www.${domain}"
 			
 			sudo sed -i "/#server_name;/c \	server_name $domain;" /tmp/template-site-wwwredirect
 			sudo sed -i "/#return 301;/c \	return 301 \$scheme://www.${domain}\$request_uri;" /tmp/template-site-wwwredirect
@@ -739,7 +740,8 @@ force_redirect() {
 		;;
 		"root")
 			[[ -n $rediron ]] && sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
-			[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "${scheme}://${domain}"
+			edit_wp_db_url $domain "${scheme}://${domain}"
+			edit_wp_db_url_multisite $domain $domain
 			
 			sudo sed -i "/#server_name;/c \	server_name www.$domain;" /tmp/template-site-wwwredirect
 			sudo sed -i "/#return 301;/c \	return 301 \$scheme://${domain}\$request_uri;" /tmp/template-site-wwwredirect
@@ -748,7 +750,8 @@ force_redirect() {
 		;;
 		"off")
 			if [[ -n $rediron ]]; then
-				[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "${scheme}://${domain}"
+				edit_wp_db_url $domain "${scheme}://${domain}"
+				edit_wp_db_url_multisite $domain $domain
 			
 				sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
 				sudo sed -i "/server_name /c \	$sername" /etc/nginx/sites-available/$domain
@@ -1142,24 +1145,7 @@ parked_domain() {
 		[[ $(is_ssl $parked) == "true" ]] && local scheme="https" || local scheme="http"
 		force_wp_blog_id=$domain_mapping_wp_id
 		edit_wp_db_url $parked "${scheme}://${domain}"
-		
-		wp_conf_retrieve $parked true true
-		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
-USE $wp_dbname;
-UPDATE ${wp_dbpref}blogs SET domain='${domain}' WHERE blog_id='${domain_mapping_wp_id}';
-UPDATE ${wp_dbpref}blogs SET path='/' WHERE blog_id='${domain_mapping_wp_id}';
-FLUSH PRIVILEGES;
-_EOF_
-		elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
-			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" <<_EOF_
-USE $wp_dbname;
-UPDATE ${wp_dbpref}blogs SET domain='${domain}' WHERE blog_id='${domain_mapping_wp_id}';
-UPDATE ${wp_dbpref}blogs SET path='/' WHERE blog_id='${domain_mapping_wp_id}';
-FLUSH PRIVILEGES;
-_EOF_
-		fi
-		
+		edit_wp_db_url_multisite $parked $domain		
 		echo "${gre}${dim}Domain Mapping successfully configured! ${end}"
 	elif [[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ ]]; then
 		echo "${red}${dim}[ERROR] Domain Mapping failed because main site is not a Multisite Network! ${end}"

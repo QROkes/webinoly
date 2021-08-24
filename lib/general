@@ -367,7 +367,7 @@ wp_conf_retrieve() {
 	# Just in case: We should always check is_wp before calling this function
 	# The best error message is the one that never shows up! :)
 	if [[ -z $wp_config || ! -f $wp_config ]]; then
-		echo "${red}[ERROR] WordPress configuration file not found!${end}"
+		echo "${red}[ERROR] WordPress configuration file not found!${end}" >&2
 		return
 	fi
 	
@@ -378,6 +378,8 @@ wp_conf_retrieve() {
 	wp_dbpref=$( grep -F "table_prefix" $wp_config | cut -f 2 -d "'" -s)
 	extdb_url=$(echo "$wp_dbhost" | cut -f 1 -d ':')
 	extdb_port=$(echo "$wp_dbhost" | cut -f 2 -d ':' -s)
+	
+	wp_dbpref_main=${wp_dbpref} # In case of domain mapping this variable always remains with the main site info
 	
 	[[ ${wp_dbhost,,} == "localhost" ]] && wp_dbhost=${wp_dbhost,,}
 	[[ -z $extdb_port ]] && extdb_port="3306"
@@ -392,7 +394,7 @@ wp_conf_retrieve() {
 		fi
 		
 		if [[ $(is_wp $maindom $4) == "true" && $(is_wp_multisite $maindom $4) =~ ^(subdomain|subdirectory)$ ]]; then
-			local dbq="USE $wp_dbname; SELECT blog_id FROM ${wp_dbpref}blogs WHERE domain='$1';"
+			local dbq="USE $wp_dbname; SELECT blog_id FROM ${wp_dbpref}blogs WHERE domain='$1' OR domain='www.$1';"
 			
 			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
 				local bid=$(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbq")
@@ -404,7 +406,7 @@ wp_conf_retrieve() {
 			# Number 1 is main site, so we don't need to change the WP prefix.
 			if [[ $wp_blogid =~ ^[0-9]+$  && $wp_blogid -gt 1 ]]; then
 				wp_dbpref="${wp_dbpref}${wp_blogid}_"
-				echo "${blu}${dim}Site${end}${dim} ${1}${4} ${blu}is a subsite (${wp_dbpref}) in a WP Multisite Network!${end}"
+				echo "${blu}${dim}Site${end}${dim} ${1}${4} ${blu}is a subsite (${wp_dbpref}) in a WP Multisite Network!${end}" >&2
 			else
 				[[ $wp_blogid != 1 ]] && wp_blogid=""
 			fi
@@ -412,16 +414,18 @@ wp_conf_retrieve() {
 	fi
 	
 	# Force WP blogID
-	if [[ -n $force_wp_blog_id ]]; then
+	if [[ -n $force_wp_blog_id && $3 != "false" && $force_wp_blog_id =~ ^[0-9]+$ ]]; then
 		wp_dbpref="${wp_dbpref}${force_wp_blog_id}_"
+		wp_blogid=${force_wp_blog_id}
 		local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
 		force_wp_blog_id="" # Cleared to prevent interference when this function is called multiple times
 		
 		if [[ -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup") ]]; then
-			echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}"
+			echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
 		else
+			echo "${red}${dim}[ERROR] WordPress blog ID (${wp_dbpref}) not found!${end}" >&2
 			wp_dbpref=""
-			echo "${red}${dim}[ERROR] WordPress blog ID (${wp_dbpref}) not found!${end}"
+			wp_blogid=""
 		fi
 	fi
 	
@@ -430,7 +434,7 @@ wp_conf_retrieve() {
 		if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" && $wp_dbhost == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
 			check_external_db_saved
 		elif [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" && -n $(conf_read external-dbh) && $wp_dbhost != "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
-			echo "${dim}[INFO] External Database saved credentials found, but we cannot use it because not the same host!${end}"
+			echo "${dim}[INFO] External Database saved credentials found, but we cannot use it because not the same host!${end}" >&2
 		fi
 		
 		if [[ -n $external_db ]]; then
@@ -992,27 +996,64 @@ email_update() {
 }
 
 
+edit_wp_db_url_multisite() {
+	#Subfolder is not allowed here because is not needed, parked and force-www are not allowed in subfolders.
+	#Example: edit_wp_db_url_multisite olddomain.com newdomain.com
+	
+	if [[ -n $1 && -n $2 && $(is_wp $1) == "true" && $(is_wp_multisite $1) =~ ^(subdomain|subdirectory)$ ]]; then
+		wp_conf_retrieve $1 true true
+		if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref_main && -n $wp_blogid ]]; then
+			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
+				sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+USE $wp_dbname;
+UPDATE ${wp_dbpref_main}blogs SET domain='$2' WHERE blog_id='${wp_blogid}';
+UPDATE ${wp_dbpref_main}blogs SET path='/' WHERE blog_id='${wp_blogid}';
+FLUSH PRIVILEGES;
+_EOF_
+			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
+				sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" <<_EOF_
+USE $wp_dbname;
+UPDATE ${wp_dbpref_main}blogs SET domain='$2' WHERE blog_id='${wp_blogid}';
+UPDATE ${wp_dbpref_main}blogs SET path='/' WHERE blog_id='${wp_blogid}';
+FLUSH PRIVILEGES;
+_EOF_
+			else
+				echo "${red}${dim}[ERROR] WordPress Multisite database cannot be updated!${end}" >&2
+			fi
+		else
+			echo "${red}${dim}[ERROR] WordPress Multisite database cannot be updated!${end}" >&2
+		fi
+	fi
+}
+
+
 edit_wp_db_url() {
 	#Example: edit_wp_db_url example.com "http://${domain}${subfolder}"
 	#Example: edit_wp_db_url example.com "http://${domain}${subfolder}" /subfolder
-	wp_conf_retrieve $1 true true $3
 	
 	if [[ -n $1 && -n $2 && $(is_wp $1 $3) == "true" && $(is_wp_installed $1 $3) == "true" ]]; then
-		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+		wp_conf_retrieve $1 true true $3
+		if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
+			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
+				sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
 FLUSH PRIVILEGES;
 _EOF_
 
-		elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
-			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" <<_EOF_
+			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
+				sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
 FLUSH PRIVILEGES;
 _EOF_
+			else
+				echo "${red}${dim}[ERROR] WordPress database cannot be updated!${end}" >&2
+			fi
+		else
+			echo "${red}${dim}[ERROR] WordPress database cannot be updated!${end}" >&2
 		fi
 	fi
 }
