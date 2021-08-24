@@ -28,83 +28,123 @@ bucket_validation() {
 bkp_local_db() {
 	check_for_mysql_client
 	
-	if [[ ( -z $wp || $wp == "true") && ( -z $dbname || $dbname == "true" ) ]]; then
-		read -p "${gre}WordPress site (domain) or Database name: ${end}" dbq
-		if [[ -n $dbq && -f /etc/nginx/sites-available/$dbq ]]; then
-			wp=$dbq
-		elif [[ -n $dbq ]]; then
-			dbname=$dbq
-			wp=""
-		else
-			echo "${red}[ERROR] Invalid value!${end}"
-			exit 1
-		fi
-	fi
-	
-	if [[ -n $wp ]]; then
-		if [[ ! -f /etc/nginx/sites-available/$wp ]]; then
-			echo "${red}[ERROR] Site not found!${end}"
-			exit 1
-		elif [[ $(is_wp $wp $subfolder) != "true"  ]]; then
-			echo "${red}[ERROR] Please, enter a valid WP site!${end}"
-			exit 1
-		else
-			wp_conf_retrieve $wp true true $subfolder
-		fi
+	# Check for Multiple sites or DB's
+	if [[ -z $child_multi_bkp_db && (( $(echo "${wp}" | cut -c-1) == "[" && $(echo "${wp}" | rev | cut -c-1) == "]" ) || ( $(echo "${dbname}" | cut -c-1) == "[" && $(echo "${dbname}" | rev | cut -c-1) == "]" )) ]]; then
+		[[ -n $dbname ]] && local multi=$dbname
+		[[ -n $wp ]] && local multi=$wp
+		local master_multi_bkp_db="true"
+		local c=1
 		
-		if [[ $wp_dbhost != "localhost" && ( -z $extdb_user || -z $extdb_pass || -z $extdb_url || -z $extdb_port ) ]]; then
-			echo "${red}[ERROR] Invalid data for External Database!${end}"
-			exit 1
+		echo "${blu}Processing multiple databases for backup...${end}"
 		
-		# Duplicate check: we need this only to prevent error in the next is_wp_installed
-		elif [[ $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ]]; then
-			echo "${red}[ERROR] External DB Connection failed!${end}"
-			exit 1
-		elif [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ]]; then
-			echo "${red}[ERROR] Localhost DB Connection failed!${end}"
-			exit 1
+		while [[ -n $(echo ${multi:1:-1} | cut -d',' -f $c -s) ]]
+		do
+			if [[ -f /etc/nginx/sites-available/$(echo ${multi:1:-1} | cut -d',' -f $c -s) ]]; then
+				webinoly -backup=local -wp=$(echo ${multi:1:-1} | cut -d',' -f $c -s) -child-multi-bkp-db
+			else
+				webinoly -backup=local -dbname=$(echo ${multi:1:-1} | cut -d',' -f $c -s) -child-multi-bkp-db
+			fi
 			
-		elif [[ $(is_wp_installed $wp $subfolder) != "true"  ]]; then
-			echo "${red}[ERROR] Your WP site database is still empty!${end}"
-			exit 1
-		else
-			local dbname=$wp_dbname
-			local extdb_url=$extdb_url
-			local extdb_port=$extdb_port
-			local extdb_user=$extdb_user
-			local extdb_pass=$extdb_pass
-		fi
-	else
-		check_external_db_saved
-		
-		if [[ -z $external_db ]]; then
-			if [[ $(check_mysql_connection localhost) != "true" ]]; then
-				echo "${red}[ERROR] Cannot connect with your database (localhost)!${end}"
-				exit 1
-			fi
-			local checkdbname=$(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $dbname)
-		else
-			external_db_parse
-			if [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ]]; then
-				echo "${red}[ERROR] Cannot connect with your External Database!${end}"
-				exit 1
-			fi
-			local checkdbname=$(sudo mysqlshow -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" | grep -ow $dbname)
-		fi
-		
-		if [[ $checkdbname != $dbname  ]]; then
-			echo "${red}[ERROR] Database not found!${end}"
-			exit 1
-		fi
-		
+			local c=$(($c+1))
+		done
 	fi
 	
-	[[ -n $wp ]] && local fn=$wp || local fn=$dbname
+	# Not run if this is the master process in multiple DB backup
+	if [[ -z $master_multi_bkp_db ]]; then
+		if [[ ( -z $wp || $wp == "true") && ( -z $dbname || $dbname == "true" ) ]]; then
+			read -p "${gre}WordPress site (domain) or Database name: ${end}" dbq
+			if [[ -n $dbq && -f /etc/nginx/sites-available/$dbq ]]; then
+				wp=$dbq
+			elif [[ -n $dbq ]]; then
+				dbname=$dbq
+				wp=""
+			else
+				echo "${red}[ERROR] Invalid value!${end}"
+				exit 1
+			fi
+		fi
+		
+		if [[ -n $wp ]]; then
+			if [[ ! -f /etc/nginx/sites-available/$wp ]]; then
+				echo "${red}[ERROR] Site not found!$ ${dim}($wp){end}"
+				exit 1
+			elif [[ $(is_wp $wp $subfolder) != "true"  ]]; then
+				echo "${red}[ERROR] Please, enter a valid WP site! ${dim}($wp)${end}"
+				exit 1
+			else
+				wp_conf_retrieve $wp true true $subfolder
+			fi
+			
+			if [[ $wp_dbhost != "localhost" && ( -z $extdb_user || -z $extdb_pass || -z $extdb_url || -z $extdb_port ) ]]; then
+				echo "${red}[ERROR] Invalid data for External Database!${end}"
+				exit 1
+			
+			# Duplicate check: we need this only to prevent error in the next is_wp_installed
+			elif [[ $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ]]; then
+				echo "${red}[ERROR] External DB Connection failed!${end}"
+				exit 1
+			elif [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ]]; then
+				echo "${red}[ERROR] Localhost DB Connection failed!${end}"
+				exit 1
+				
+			elif [[ $(is_wp_installed $wp $subfolder) != "true"  ]]; then
+				echo "${red}[ERROR] Your WP site database is still empty!${end}"
+				exit 1
+			else
+				local dbname=$wp_dbname
+				local extdb_url=$extdb_url
+				local extdb_port=$extdb_port
+				local extdb_user=$extdb_user
+				local extdb_pass=$extdb_pass
+			fi
+		else
+			check_external_db_saved
+			
+			if [[ -z $external_db ]]; then
+				if [[ $(check_mysql_connection localhost) != "true" ]]; then
+					echo "${red}[ERROR] Cannot connect with your database (localhost)!${end}"
+					exit 1
+				fi
+				local checkdbname=$(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $dbname)
+			else
+				external_db_parse
+				if [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ]]; then
+					echo "${red}[ERROR] Cannot connect with your External Database!${end}"
+					exit 1
+				fi
+				local checkdbname=$(sudo mysqlshow -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" | grep -ow $dbname)
+			fi
+			
+			if [[ $checkdbname != $dbname  ]]; then
+				echo "${red}[ERROR] Database not found! ${dim}($dbname)${end}"
+				exit 1
+			fi
+			
+		fi
+	fi
+
 	
+	# Multiple DB's
+	if [[ -n $master_multi_bkp_db ]]; then
+		local fn="multiple"
+		local db_name_list=$(conf_read multi-bkp-db)
+		conf_delete multi-bkp-db
+	elif [[ -n $child_multi_bkp_db ]]; then
+		[[ -n $(conf_read multi-bkp-db) ]] && conf_write multi-bkp-db "$(conf_read multi-bkp-db) $dbname" || conf_write multi-bkp-db $dbname
+		echo "${blu}${dim}Added: $dbname ${end}"
+		# When is a child process we need to exit here, backup is made by master process, not child.
+		return
+	else
+		local db_name_list=$dbname
+		[[ -n $wp ]] && local fn=$wp || local fn=$dbname
+		echo "${blu}${dim}Backup is in process, wait...${end}"
+	fi
+	
+	
+	# Set destination folder and filename
 	if [[ -z $destination || $destination =~ ^(default|true)$ ]]; then
 		destination="$HOME/webinoly-backups/$fn"
 		sudo mkdir -p $destination
-	
 	# Must start with / and can not end with /
 	elif [[ ! -d $destination && $(echo "${destination}" | cut -c-1) == "/" && $(echo "${destination}" | rev | cut -c-1) != "/" ]]; then
 		sudo mkdir -p $destination
@@ -113,11 +153,11 @@ bkp_local_db() {
 		echo "${red}[ERROR] Please, enter a valid destination path!${end}"
 		exit 1
 	fi
-	
-	echo "${blu}${dim}Backup is in process, wait...${end}"
 	[[ -z $filename ]] && local filename="webinoly-backup-db_${fn}_$(date +%F)-$(date +%T).sql"
+
+	
 	if [[ ( $wp_dbhost == "localhost" || -z $external_db ) && $(check_mysql_connection localhost) == "true" ]]; then
-		sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick --databases $dbname > $destination/$filename
+		sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick --databases $db_name_list > $destination/$filename
 	elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
 		sudo mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" --single-transaction --lock-tables --quick --databases $dbname > $destination/$filename
 	else
