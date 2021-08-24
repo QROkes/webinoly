@@ -47,10 +47,14 @@ bkp_local_db() {
 			
 			local c=$(($c+1))
 		done
+	elif [[ -n $child_multi_bkp_db && $dbname == "all" ]]; then
+		echo "${red}[ERROR] ALL option cannot be used when backing up multiple databases! ${dim}(skip)${end}"
+		return
 	fi
 	
 	# Not run if this is the master process in multiple DB backup
-	if [[ -z $master_multi_bkp_db ]]; then
+	# Not run if ALL
+	if [[ -z $master_multi_bkp_db && $dbname != "all" ]]; then
 		if [[ ( -z $wp || $wp == "true") && ( -z $dbname || $dbname == "true" ) ]]; then
 			read -p "${gre}WordPress site (domain) or Database name: ${end}" dbq
 			if [[ -n $dbq && -f /etc/nginx/sites-available/$dbq ]]; then
@@ -66,7 +70,7 @@ bkp_local_db() {
 		
 		if [[ -n $wp ]]; then
 			if [[ ! -f /etc/nginx/sites-available/$wp ]]; then
-				echo "${red}[ERROR] Site not found!$ ${dim}($wp){end}"
+				echo "${red}[ERROR] Site not found!$ ${dim}($wp)${end}"
 				exit 1
 			elif [[ $(is_wp $wp $subfolder) != "true"  ]]; then
 				echo "${red}[ERROR] Please, enter a valid WP site! ${dim}($wp)${end}"
@@ -141,6 +145,10 @@ bkp_local_db() {
 	fi
 	
 	
+	# ALL Databases
+	[[ $dbname == "all" ]] && local db_name_list="--all-databases" || local db_name_list="--databases $db_name_list"
+	
+	
 	# Set destination folder and filename
 	if [[ -z $destination || $destination =~ ^(default|true)$ ]]; then
 		destination="$HOME/webinoly-backups/$fn"
@@ -157,7 +165,7 @@ bkp_local_db() {
 
 	
 	if [[ ( $wp_dbhost == "localhost" || -z $external_db ) && $(check_mysql_connection localhost) == "true" ]]; then
-		sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick --databases $db_name_list > $destination/$filename
+		sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
 	elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
 		sudo mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" --single-transaction --lock-tables --quick --databases $dbname > $destination/$filename
 	else
