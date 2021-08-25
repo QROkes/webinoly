@@ -177,14 +177,7 @@ elif [[ -n $backup ]]; then
 		bkp_s3_list
 	elif [[ $backup == "local" ]]; then
 		if [[ -n $export ]]; then
-			if [[ $export == "true" ]]; then
-				export_server
-			elif [[ -f /etc/nginx/sites-available/$export ]]; then
-				export_site
-			else
-				echo "${red}[ERROR] Please, enter a valid value for export site/server parameter!${end}"
-				exit 1
-			fi
+			[[ $export == "true" ]] && export_server || export_site
 		elif [[ -n $import ]]; then
 			import_server
 		else

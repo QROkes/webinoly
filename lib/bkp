@@ -30,19 +30,22 @@ bkp_local_db() {
 	
 	# Check for Multiple sites or DB's
 	if [[ -z $child_multi_bkp_db && (( $(echo "${wp}" | cut -c-1) == "[" && $(echo "${wp}" | rev | cut -c-1) == "]" ) || ( $(echo "${dbname}" | cut -c-1) == "[" && $(echo "${dbname}" | rev | cut -c-1) == "]" )) ]]; then
-		[[ -n $dbname ]] && local multi=$dbname
-		[[ -n $wp ]] && local multi=$wp
+		[[ -n $dbname ]] && local multi=${dbname:1:-1}
+		[[ -n $wp ]] && local multi=${wp:1:-1}
 		local master_multi_bkp_db="true"
 		local c=1
 		
 		echo "${blu}Processing multiple databases for backup...${end}"
 		
-		while [[ -n $(echo ${multi:1:-1} | cut -d',' -f $c -s) ]]
+		# Prevent error when enteres just one value in multi-mode: [one]
+		[[ -z $(echo $multi | cut -d',' -f 1 -s) ]] && local multi="${multi},"
+		
+		while [[ -n $(echo $multi | cut -d',' -f $c -s) ]]
 		do
-			if [[ -f /etc/nginx/sites-available/$(echo ${multi:1:-1} | cut -d',' -f $c -s) ]]; then
-				webinoly -backup=local -wp=$(echo ${multi:1:-1} | cut -d',' -f $c -s) -child-multi-bkp-db
+			if [[ -f /etc/nginx/sites-available/$(echo $multi | cut -d',' -f $c -s) ]]; then
+				webinoly -backup=local -wp=$(echo $multi | cut -d',' -f $c -s) -child-multi-bkp-db
 			else
-				webinoly -backup=local -dbname=$(echo ${multi:1:-1} | cut -d',' -f $c -s) -child-multi-bkp-db
+				webinoly -backup=local -dbname=$(echo $multi | cut -d',' -f $c -s) -child-multi-bkp-db
 			fi
 			
 			local c=$(($c+1))
@@ -167,7 +170,7 @@ bkp_local_db() {
 	if [[ ( $wp_dbhost == "localhost" || -z $external_db ) && $(check_mysql_connection localhost) == "true" ]]; then
 		sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
 	elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
-		sudo mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" --single-transaction --lock-tables --quick --databases $dbname > $destination/$filename
+		sudo mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
 	else
 		echo "${red}[ERROR] DB Connection failed!${end}"
 		exit 1
@@ -521,7 +524,7 @@ export_server() {
 	sudo cp /opt/webinoly/webinoly.conf /opt/webinoly/webinoly.conf.exported
 	
 	if [[ $(conf_read mysql) == "true" && -z $skip_db && $(check_mysql_connection localhost) == "true" ]]; then
-		sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick --all-databases > /var/www/webinoly_backup_dball
+		sudo webinoly -backup=local -dbname=all -destination=/var/www -filename=webinoly_backup_dball > /dev/null
 	fi
 	
 	smtp_backup
@@ -566,7 +569,17 @@ export_server() {
 
 
 export_site() {
-	[[ -z $filename ]] && local filename="webinoly_${export}_$(date +%F)-$(date +%T)"
+	# Check for Multiple sites or DB's
+	if [[ $(echo "${export}" | cut -c-1) == "[" && $(echo "${export}" | rev | cut -c-1) == "]" ]]; then
+		local multi_export="true"
+		echo "${blu}Processing multiple sites...${end}"
+	elif [[ ! -f /etc/nginx/sites-available/$export ]]; then
+		echo "${red}[ERROR] Please, enter a valid value for export site/server parameter!${end}"
+		exit 1
+	fi
+	
+	[[ -z $filename && -z $multi_export ]] && local filename="webinoly_${export}_$(date +%F)-$(date +%T)"
+	[[ -z $filename && -n $multi_export ]] && local filename="webinoly_multiple_$(date +%F)-$(date +%T)"
 	
 	if [[ -z $destination || $destination =~ ^(default|true)$ ]]; then
 		destination="$HOME"
@@ -581,27 +594,51 @@ export_site() {
 		exit 1
 	fi
 	
-	if [[ $(conf_read mysql) == "true" && $(is_wp $export) == "true" && $(is_wp_installed $export) == "true" && -z $skip_db ]]; then
-		sudo webinoly -backup=local -wp=$export -destination=/var/www/$export -filename=webinoly_backup_db > /dev/null
-	fi
-	
-	[[ -d /var/www/$export ]] && local include="/var/www/$export" || local include=""
-	[[ -s /etc/nginx/sites-available/$export ]] && local include="$include /etc/nginx/sites-available/$export"
-	[[ -L /etc/nginx/sites-enabled/$export ]] && local include="$include /etc/nginx/sites-enabled/$export"
-	[[ -s /etc/nginx/apps.d/.htpasswd-$export ]] && local include="$include /etc/nginx/apps.d/.htpasswd-$export"
-	
-	for app in /etc/nginx/apps.d/$export*.conf
+	# Processing sites to export!
+	local c=1
+	while [[ -n $(echo ${export:1:-1} | cut -d',' -f $c -s) || -z $multi_export ]]
 	do
-		[[ -s $app ]] && local include="$include $app"
+		[[ -z $multi_export ]] && local siteto=$export || local siteto=$(echo ${export:1:-1} | cut -d',' -f $c -s)
+		local c=$(($c+1))
+		
+		if [[ -n $multi_export && ! -f /etc/nginx/sites-available/$siteto ]]; then
+			echo "${red}[ERROR] Site not found! $siteto ${end}"
+			continue
+		elif [[ -n $multi_export ]]; then
+			echo "${blu}${dim}Added: $siteto ${end}"
+		fi
+		
+		[[ -s /etc/nginx/sites-available/$siteto ]] && local include="$include /etc/nginx/sites-available/$siteto"
+		[[ -L /etc/nginx/sites-enabled/$siteto ]] && local include="$include /etc/nginx/sites-enabled/$siteto"
+		[[ -s /etc/nginx/apps.d/.htpasswd-$siteto ]] && local include="$include /etc/nginx/apps.d/.htpasswd-$siteto"
+		[[ -d /var/www/$siteto ]] && local include="$include /var/www/$siteto"
+		
+		for app in /etc/nginx/apps.d/$siteto*.conf
+		do
+			[[ -s $app ]] && local include="$include $app"
+		done
+		
+		if [[ $(is_wp $siteto) == "true" && $(is_wp_installed $siteto) == "true" ]]; then
+			[[ -z $export_db_list ]] && local export_db_list="$siteto" || local export_db_list="$export_db_list,$siteto"
+		fi
+		
+		[[ -z $multi_export ]] && break
 	done
 	
-	sudo tar -Pcf $destination/$filename $include
+	# Create backup file!
+	if [[ $(conf_read mysql) == "true" && -z $skip_db && -n $include && -n $export_db_list ]]; then
+		[[ -n $multi_export ]] && local export_db_list="[${export_db_list}]"
+		sudo webinoly -backup=local -wp=$export_db_list -destination=/var/www -filename=webinoly_backup_db > /dev/null
+		[[ -f /var/www/webinoly_backup_db ]] && local include="$include /var/www/webinoly_backup_db"
+	fi
+	[[ -n $include ]] && sudo tar -Pcf $destination/$filename $include
 	
 	# Remove temporary files
-	sudo rm -rf /var/www/$export/webinoly_backup_db
+	sudo rm -rf /var/www/webinoly_backup_db
 	
 	if [[ -s $destination/$filename ]]; then
-		echo "${gre}Webinoly Site Backup${blu} $export ${gre}exported successfully!${end}${dim} ($destination/$filename) ${end}"
+		[[ -z $multi_export ]] && echo "${gre}Webinoly Site Backup${blu} $siteto ${gre}exported successfully!${end}${dim} ($destination/$filename) ${end}"
+		[[ -n $multi_export ]] && echo "${gre}Webinoly Site Backup for multiple sites exported successfully!${end}${dim} ($destination/$filename) ${end}"
 	else
 		[[ -f $destination/$filename ]] && sudo rm -rf $destination/$filename
 		echo "${red}[ERROR] Unexpected error occurred while trying to export your site!${end}"
@@ -619,45 +656,75 @@ import_site() {
 		exit 1
 	fi
 	
-	domain=$(tar -tvf $file --absolute-names | grep -Go --max-count=1 "/etc/nginx/sites-available/.*" | cut -d'/' -f 5 -s)
-	if [[ -f /etc/nginx/sites-available/$domain && $overwrite != "on" ]]; then
-		echo "${red}[ERROR] Site you are trying to import already exists!${end}"
+	# List sites found!
+	local list_sites=$(tar -tvf $file --absolute-names | grep -Go "/etc/nginx/sites-available/.*" | sort -u)
+	if [[ -n $list_sites ]]; then
+		echo "${blu}Sites found:${dim}"
+		echo "$list_sites" | cut -d'/' -f 5 -s
+		echo "${end}"
+	else
+		echo "${red}[ERROR] No sites were found!${end}"
 		exit 1
-	elif [[ -f /etc/nginx/sites-available/$domain && $overwrite == "on" ]]; then
-		echo "${blu}Site already exists! ${dim} Overwriting...${end}"
 	fi
+	
+	local c=1
+	while [[ -n $(echo "$list_sites" | sed -n "${c}p" | cut -d'/' -f 5 -s) ]]
+	do
+		local domain=$(echo "$list_sites" | sed -n "${c}p" | cut -d'/' -f 5 -s)
+		local c=$(($c+1))
+		
+		if [[ -f /etc/nginx/sites-available/$domain && $overwrite != "on" ]]; then
+			echo "${red}[ERROR] Site you are trying to import already exists! ${dim}(${domain})${end}"
+			exit 1
+		elif [[ -f /etc/nginx/sites-available/$domain && $overwrite == "on" ]]; then
+			echo "${blu}Site${end} $domain ${blu}already exists... ${dim} Overwriting...${end}"
+		fi
+	done
 	
 	sudo tar -Pxf $file
+	if [[ -s /var/www/webinoly_backup_db && $(conf_read mysql) == "true" && $(check_mysql_connection localhost) == "true" && -z $skip_db ]]; then
+		sudo webinoly -db-import -file=/var/www/webinoly_backup_db
+		sudo rm -rf /var/www/webinoly_backup_db
+		local db_create_users="true"
+	elif [[ -f /var/www/webinoly_backup_db && ( $(conf_read mysql) != "true" || $(check_mysql_connection localhost) != "true" ) && -z $skip_db ]]; then
+		echo "${red}[ERROR] Database backup found but can not be restored because MySQL is not installed!${end}"
 	
-	# Remove old configurations
-	remove_nginx_default_server $domain
-	source /opt/webinoly/lib/site-ssl
-	[[ $(is_ssl $domain) == "true" ]] && revoke="off" && site_ssl_off > /dev/null 2>&1
-	
-	
-	if [[ $(conf_read php) != "true" && ( $(is_wp $domain) == "true" || $(is_php $domain) == "true" ) ]]; then
-		echo "${red}[WARNING] Your site may not work because PHP is not installed!${end}"
+	# REMOVE: Just for legacy support, folder with domain is not used anymore!
+	elif [[ -f /var/www/$domain/webinoly_backup_db && -z $skip_db ]]; then
+		echo "${red}[ERROR] Database backup found but can not be restored because is using an old and incompatible format, you need to create a new exported file!${end}"
 	fi
 	
-	if [[ -s /var/www/$domain/webinoly_backup_db && $(conf_read mysql) == "true" && $(check_mysql_connection localhost) == "true" && -z $skip_db ]]; then
-		sudo webinoly -db-import -file=/var/www/$domain/webinoly_backup_db
-		sudo rm -rf /var/www/$domain/webinoly_backup_db
 	
-		if [[ $overwrite != "on" ]]; then
+	local c=1
+	while [[ -f /etc/nginx/sites-available/$(echo "$list_sites" | sed -n "${c}p" | cut -d'/' -f 5 -s) ]]
+	do
+		local domain=$(echo "$list_sites" | sed -n "${c}p" | cut -d'/' -f 5 -s)
+		local c=$(($c+1))
+	
+		# Remove old configurations
+		remove_nginx_default_server $domain
+		source /opt/webinoly/lib/site-ssl
+		[[ $(is_ssl $domain) == "true" ]] && revoke="off" && site_ssl_off > /dev/null 2>&1
+		
+		
+		if [[ $(conf_read php) != "true" && ( $(is_wp $domain) == "true" || $(is_php $domain) == "true" ) ]]; then
+			echo "${red}[WARNING] Your site${bol} $domain ${end}${red}may not work because PHP is not installed!${end}"
+		fi
+		
+		if [[ -n $db_create_users && $overwrite != "on" && $(is_wp $domain) == "true" ]]; then
 			wp_conf_retrieve $domain true false
-			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
-CREATE USER '${wp_dbuser}'@'%' IDENTIFIED BY '${wp_dbpass}';
-GRANT $(db_user_role) ON ${wp_dbname}.* TO ${wp_dbuser}@${wp_dbhost} IDENTIFIED BY '${wp_dbpass}';
+				
+			if [[ -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $wp_dbname) ]]; then
+				echo "${blu}${dim}Restoring database for${end}${dim} $domain ${blu}${dim}site!${end}"
+				sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+CREATE USER '${wp_dbuser}'@'localhost' IDENTIFIED BY '${wp_dbpass}';
+GRANT $(db_user_role) on ${wp_dbname}.* to '${wp_dbuser}'@'localhost';
 FLUSH PRIVILEGES;
 _EOF_
-
+			fi
 		fi
-
-	elif [[ -f /var/www/$domain/webinoly_backup_db && ( $(conf_read mysql) != "true" || $(check_mysql_connection localhost) != "true" ) && -z $skip_db ]]; then
-		echo "${red}[ERROR] Database backup found but can not be restored because MySQL is not installed!${end}"
-	fi
-		
-	echo "${gre}Webinoly Site Backup${blu} $domain ${gre}imported successfully!${end}"
+		echo "${gre}Webinoly Site Backup${blu} $domain ${gre}imported successfully!${end}"
+	done
 }
 
 
