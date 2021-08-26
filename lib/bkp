@@ -30,6 +30,11 @@ bkp_local_db() {
 	
 	# Check for Multiple sites or DB's
 	if [[ -z $child_multi_bkp_db && (( $(echo "${wp}" | cut -c-1) == "[" && $(echo "${wp}" | rev | cut -c-1) == "]" ) || ( $(echo "${dbname}" | cut -c-1) == "[" && $(echo "${dbname}" | rev | cut -c-1) == "]" )) ]]; then
+		if [[ -n $subfolder ]]; then
+			echo "${red}[ERROR] Subfolder option not allowed for multiple sites!${end}"
+			exit 1
+		fi
+		
 		[[ -n $dbname ]] && local multi=${dbname:1:-1}
 		[[ -n $wp ]] && local multi=${wp:1:-1}
 		local master_multi_bkp_db="true"
@@ -80,6 +85,7 @@ bkp_local_db() {
 				exit 1
 			else
 				wp_conf_retrieve $wp true true $subfolder
+				[[ -n $subfolder ]] && local subname=$(echo $subfolder | sed "s/\//_/g")
 			fi
 			
 			if [[ $wp_dbhost != "localhost" && ( -z $extdb_user || -z $extdb_pass || -z $extdb_url || -z $extdb_port ) ]]; then
@@ -126,7 +132,6 @@ bkp_local_db() {
 				echo "${red}[ERROR] Database not found! ${dim}($dbname)${end}"
 				exit 1
 			fi
-			
 		fi
 	fi
 
@@ -143,7 +148,7 @@ bkp_local_db() {
 		return
 	else
 		local db_name_list=$dbname
-		[[ -n $wp ]] && local fn=$wp || local fn=$dbname
+		[[ -n $wp ]] && local fn="${wp}${subname}" || local fn=$dbname
 		echo "${blu}${dim}Backup is in process, wait...${end}"
 	fi
 	
