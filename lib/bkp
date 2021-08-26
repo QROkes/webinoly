@@ -576,14 +576,23 @@ export_server() {
 export_site() {
 	# Check for Multiple sites or DB's
 	if [[ $(echo "${export}" | cut -c-1) == "[" && $(echo "${export}" | rev | cut -c-1) == "]" ]]; then
-		local multi_export="true"
-		echo "${blu}Processing multiple sites...${end}"
+		if [[ -n $subfolder ]]; then
+			echo "${red}[ERROR] Subfolder option not allowed for multiple sites!${end}"
+			exit 1
+		else
+			local multi_export="true"
+			echo "${blu}Processing multiple sites...${end}"
+		fi
 	elif [[ ! -f /etc/nginx/sites-available/$export ]]; then
 		echo "${red}[ERROR] Please, enter a valid value for export site/server parameter!${end}"
 		exit 1
+	elif [[ -f /etc/nginx/sites-available/$export && -n $subfolder && ! -d /var/www/$export/htdocs$subfolder  ]]; then
+		echo "${red}[ERROR] Subfolder not found!${end}"
+		exit 1
 	fi
 	
-	[[ -z $filename && -z $multi_export ]] && local filename="webinoly_${export}_$(date +%F)-$(date +%T)"
+	[[ -n $subfolder ]] && local subn=$(echo $subfolder | sed "s/\//_/g")
+	[[ -z $filename && -z $multi_export ]] && local filename="webinoly_${export}${subn}_$(date +%F)-$(date +%T)"
 	[[ -z $filename && -n $multi_export ]] && local filename="webinoly_multiple_$(date +%F)-$(date +%T)"
 	
 	if [[ -z $destination || $destination =~ ^(default|true)$ ]]; then
@@ -616,30 +625,68 @@ export_site() {
 		[[ -s /etc/nginx/sites-available/$siteto ]] && local include="$include /etc/nginx/sites-available/$siteto"
 		[[ -L /etc/nginx/sites-enabled/$siteto ]] && local include="$include /etc/nginx/sites-enabled/$siteto"
 		[[ -s /etc/nginx/apps.d/.htpasswd-$siteto ]] && local include="$include /etc/nginx/apps.d/.htpasswd-$siteto"
-		[[ -d /var/www/$siteto ]] && local include="$include /var/www/$siteto"
+		[[ -d /etc/nginx/certs ]] && local include="$include /etc/nginx/certs"
+		[[ -d /var/www/$siteto && -z $subfolder ]] && local include="$include /var/www/$siteto"
+		[[ -d /var/www/$siteto/htdocs$subfolder && -n $subfolder ]] && local include="$include /var/www/$siteto/htdocs$subfolder"
 		
-		for app in /etc/nginx/apps.d/$siteto*.conf
+		for app in /etc/nginx/apps.d/${siteto}${subn}*.conf
 		do
 			[[ -s $app ]] && local include="$include $app"
 		done
-		
-		if [[ $(is_wp $siteto) == "true" && $(is_wp_installed $siteto) == "true" ]]; then
-			[[ -z $export_db_list ]] && local export_db_list="$siteto" || local export_db_list="$export_db_list,$siteto"
+
+		# Check if Custom Cache
+		if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
+			if [[ -f /etc/nginx/apps.d/$siteto$subn-wpcache.conf || -f /etc/nginx/apps.d/$siteto$subn-phpcache.conf ]]; then
+				local custom_cache=$(grep -E "^fastcgi_cache_path \/run\/nginx-cache\/${siteto}[ _].*;$" /etc/nginx/conf.d/webinoly.conf)
+			elif [[ -n $(grep -F "# WebinolyProxyCacheStart" /etc/nginx/apps.d/$siteto$subn-proxy.conf) ]]; then
+				local custom_cache=$(grep -E "^proxy_cache_path \/run\/nginx-cache\/${siteto}[ _].*;$" /etc/nginx/conf.d/webinoly.conf)
+			fi
+			if [[ -n $custom_cache ]]; then
+				[[ ! -f /var/www/webinoly.conf_temp ]] && sudo touch /var/www/webinoly.conf_temp
+				echo $custom_cache >> /var/www/webinoly.conf_temp
+			fi
+		fi
+
+		# Include database backup for this site!
+		if [[ $(is_wp $siteto $subfolder) == "true" && $(is_wp_installed $siteto $subfolder) == "true" ]]; then
+			# We use dbnames instead of domains because is easier to include subfolders
+			if [[ -z $export_db_list ]]; then
+				local export_db_list="$( wp_config_read $siteto DB_NAME $subfolder )"
+			else
+				local export_db_list="$export_db_list,$( wp_config_read $siteto DB_NAME $subfolder )"
+			fi
 		fi
 		
+		# Check if site contains WP in subfolders and include these db's.
+		for sit in "/etc/nginx/apps.d/$siteto_"*-wpcommon.conf
+		do 
+			local suby="/$(echo $sit | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+			if [[ -n $suby && -f /var/www/$siteto/htdocs$suby/wp-config.php ]]; then
+				if [[ -z $export_db_list ]]; then
+					local export_db_list="$( wp_config_read $siteto DB_NAME $suby )"
+				else
+					local export_db_list="$export_db_list,$( wp_config_read $siteto DB_NAME $suby )"
+				fi
+			fi
+			local suby=""
+		done
+	
 		[[ -z $multi_export ]] && break
 	done
 	
 	# Create backup file!
 	if [[ $(conf_read mysql) == "true" && -z $skip_db && -n $include && -n $export_db_list ]]; then
-		[[ -n $multi_export ]] && local export_db_list="[${export_db_list}]"
-		sudo webinoly -backup=local -wp=$export_db_list -destination=/var/www -filename=webinoly_backup_db > /dev/null
+		local export_db_list="[${export_db_list}]"
+		sudo webinoly -backup=local -dbname=$export_db_list -destination=/var/www -filename=webinoly_backup_db > /dev/null
 		[[ -f /var/www/webinoly_backup_db ]] && local include="$include /var/www/webinoly_backup_db"
 	fi
+	[[ -f /var/www/webinoly.conf_temp ]] && local include="$include /var/www/webinoly.conf_temp"
+	
 	[[ -n $include ]] && sudo tar -Pcf $destination/$filename $include
 	
 	# Remove temporary files
 	sudo rm -rf /var/www/webinoly_backup_db
+	sudo rm -rf /var/www/webinoly.conf_temp
 	
 	if [[ -s $destination/$filename ]]; then
 		[[ -z $multi_export ]] && echo "${gre}Webinoly Site Backup${blu} $siteto ${gre}exported successfully!${end}${dim} ($destination/$filename) ${end}"
@@ -687,6 +734,8 @@ import_site() {
 	done
 	
 	sudo tar -Pxf $file
+
+	# Database
 	if [[ -s /var/www/webinoly_backup_db && $(conf_read mysql) == "true" && $(check_mysql_connection localhost) == "true" && -z $skip_db ]]; then
 		sudo webinoly -db-import -file=/var/www/webinoly_backup_db
 		sudo rm -rf /var/www/webinoly_backup_db
@@ -697,8 +746,18 @@ import_site() {
 	# REMOVE: Just for legacy support, folder with domain is not used anymore!
 	elif [[ -f /var/www/$domain/webinoly_backup_db && -z $skip_db ]]; then
 		echo "${red}[ERROR] Database backup found but can not be restored because is using an old and incompatible format, you need to create a new exported file!${end}"
-	fi
+	fi	
 	
+	# Custom Cache settings
+	if [[ -f /var/www/webinoly.conf_temp ]]; then
+		if [[ ! -f /etc/nginx/conf.d/webinoly.conf ]]; then
+			sudo touch /etc/nginx/conf.d/webinoly.conf
+			sudo chmod 644 /etc/nginx/conf.d/webinoly.conf
+			sudo chown -R root:root /etc/nginx/conf.d/webinoly.conf
+		fi
+		sudo cat /var/www/webinoly.conf_temp >> /etc/nginx/conf.d/webinoly.conf
+		sudo rm -rf /var/www/webinoly.conf_temp
+	fi
 	
 	local c=1
 	while [[ -f /etc/nginx/sites-available/$(echo "$list_sites" | sed -n "${c}p" | cut -d'/' -f 5 -s) ]]
@@ -716,6 +775,7 @@ import_site() {
 			echo "${red}[WARNING] Your site${bol} $domain ${end}${red}may not work because PHP is not installed!${end}"
 		fi
 		
+		# Database recovery - create users because they are not imported
 		if [[ -n $db_create_users && $overwrite != "on" && $(is_wp $domain) == "true" ]]; then
 			wp_conf_retrieve $domain true false
 				
@@ -728,6 +788,28 @@ FLUSH PRIVILEGES;
 _EOF_
 			fi
 		fi
+		
+		# Check if site contains WP in subfolders and include these db's.
+		if [[ -n $db_create_users && $overwrite != "on" ]]; then
+			for sit in "/etc/nginx/apps.d/$domain_"*-wpcommon.conf
+			do 
+				local suby="/$(echo $sit | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+				if [[ -n $suby && -f /var/www/$domain/htdocs$suby/wp-config.php ]]; then
+					wp_conf_retrieve $domain true false $suby
+				
+					if [[ -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $wp_dbname) ]]; then
+						echo "${blu}${dim}Restoring database for${end}${dim} ${domain}${suby} ${blu}${dim}site!${end}"
+						sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+CREATE USER '${wp_dbuser}'@'localhost' IDENTIFIED BY '${wp_dbpass}';
+GRANT $(db_user_role) on ${wp_dbname}.* to '${wp_dbuser}'@'localhost';
+FLUSH PRIVILEGES;
+_EOF_
+					fi
+				fi
+				local suby=""
+			done
+		fi
+		
 		echo "${gre}Webinoly Site Backup${blu} $domain ${gre}imported successfully!${end}"
 	done
 }
