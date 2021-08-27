@@ -1412,36 +1412,49 @@ http_header_hsts() {
 
 
 http_header_csp() {
-	[[ $header_csp != "off" && $header_csp != "reload" ]] && read -p "${blu}CSP header value: ${end}" header_csp
-	[[ $header_csp == "reload" && -s /opt/webinoly/templates/source/csp_webinoly.data ]] && header_csp=$(sed -n '1p' /opt/webinoly/templates/source/csp_webinoly.data)
-	if [[ -z $header_csp ]]; then
-		echo "${red}[ERROR] Invalid CSP header value!${end}"
+	if ! [[ $header_csp =~ ^(true|on|off|reset)$ ]]; then
+		echo "${red}[ERROR] Please, enter a valid option for CSP header!${end}"
 		exit 1
-	fi
-	
-	if [[ $(conf_read nginx) == "true" ]]; then
-		if [[ $header_csp == "off" ]]; then
-			sudo sed -i '/^add_header Content-Security-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
-			sudo rm -rf /opt/webinoly/templates/source/csp_webinoly.data
-		else
-			[[ $csp_report_only == "on" ]] && local cspro="-Report-Only"
-			sudo sed -Ei "/^#?add_header Content-Security-Policy/c\add_header Content-Security-Policy${cspro} \"${header_csp}\";" /etc/nginx/common/headers-html.conf			
-		fi
-	fi
-	
-	if [[ $header_csp == "off" ]]; then
-		echo "${gre}CSP Header successfully disabled!${end}"
-	elif [[ $header_csp != "reload" ]]; then
-		if [[ ! -f /opt/webinoly/templates/source/csp_webinoly.data ]]; then
+	elif [[ $header_csp =~ ^(on|true)$ && ! -s /opt/webinoly/templates/source/csp_webinoly.data ]]; then
+		read -p "${blu}CSP header value: ${end}" csp_data
+		
+		if [[ -n $csp_data ]]; then
 			sudo touch /opt/webinoly/templates/source/csp_webinoly.data
 			sudo chmod 644 /opt/webinoly/templates/source/csp_webinoly.data
 			sudo chown -R root:root /opt/webinoly/templates/source/csp_webinoly.data
-		else
-			sudo truncate -s 0 /opt/webinoly/templates/source/csp_webinoly.data
+			
+			echo "$csp_data" >> /opt/webinoly/templates/source/csp_webinoly.data
+			echo "${blu}${dim}CSP Header... saving data!${end}"
 		fi
-		
-		echo "$header_csp" >> /opt/webinoly/templates/source/csp_webinoly.data
-		echo "${gre}HTTP Header successfully configured!${end}"
+	elif [[ $header_csp =~ ^(true|on)$ && -s /opt/webinoly/templates/source/csp_webinoly.data ]]; then
+		echo "${blu}${dim}Recovering existing saved data for CSP!${end}"
+		csp_data=$(sed -n '1p' /opt/webinoly/templates/source/csp_webinoly.data)
+	fi
+	
+	if [[ $header_csp =~ ^(true|on)$ && -z $csp_data ]]; then
+		echo "${red}[ERROR] Invalid CSP header value!${end}"
+		exit 1
+	elif [[ $header_csp == "reset" ]]; then
+		sudo sed -i '/^add_header Content-Security-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
+		sudo rm -rf /opt/webinoly/templates/source/csp_webinoly.data
+		echo "${gre}CSP Header disabled and saved data successfully removed!${end}"
+	elif [[ $(conf_read nginx) == "true" ]]; then
+		if [[ $header_csp == "off" ]]; then
+			sudo sed -i '/^add_header Content-Security-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
+			echo "${gre}CSP Header successfully disabled!${end}"
+		elif [[ $header_csp =~ ^(true|on)$ ]]; then
+			[[ $csp_report_only == "on" ]] && local cspro="-Report-Only"
+			sudo sed -Ei "/^#?add_header Content-Security-Policy/d" /etc/nginx/common/headers-html.conf			
+			sudo echo "add_header Content-Security-Policy${cspro} \"${csp_data}\";" >> /etc/nginx/common/headers-html.conf
+			echo "${gre}CSP Header successfully configured!${end}"
+		fi
+	elif [[ $(conf_read nginx) != "true" ]]; then	
+		if [[ $header_csp == "off" ]]; then
+			echo "${red}[ERROR] NGINX is not installed!${end}"
+			exit 1
+		elif [[ $header_csp =~ ^(true|on)$ ]]; then
+			echo "${gre}CSP Header successfully configured and it will be used next time NGINX is installed!${end}"
+		fi
 	fi
 }
 
