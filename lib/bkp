@@ -495,7 +495,7 @@ check_exported_conf() {
 	
 	if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/csp_webinoly.data"; then
 		tar -C / -xf $file /opt/webinoly/templates/source/csp_webinoly.data --absolute-names
-		sudo webinoly -header-csp=reload
+		sudo webinoly -header-csp=on
 	fi
 	
 	[[ -n $(conf_read_exported log-lines) ]] && conf_write log-lines $(conf_read_exported log-lines)
