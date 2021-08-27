@@ -1558,6 +1558,53 @@ http_header_cache_control() {
 }
 
 
+http_header_robots() {
+	if ! [[ $header_robots =~ ^(true|on|off|reset)$ ]]; then
+		echo "${red}[ERROR] Please, enter a valid option for X-Robots-Tag header!${end}"
+		exit 1
+	elif [[ $header_robots =~ ^(on|true)$ && ! -s /opt/webinoly/templates/source/rob_webinoly.data ]]; then
+		read -p "${blu}X-Robots-Tag header value: ${end}" rob_data
+		
+		if [[ -n $rob_data ]]; then
+			sudo touch /opt/webinoly/templates/source/rob_webinoly.data
+			sudo chmod 644 /opt/webinoly/templates/source/rob_webinoly.data
+			sudo chown -R root:root /opt/webinoly/templates/source/rob_webinoly.data
+			
+			echo "$rob_data" >> /opt/webinoly/templates/source/rob_webinoly.data
+			echo "${blu}${dim}X-Robots-Tag Header... saving data!${end}"
+		fi
+	elif [[ $header_robots =~ ^(true|on)$ && -s /opt/webinoly/templates/source/rob_webinoly.data ]]; then
+		echo "${blu}${dim}Recovering existing saved data for X-Robots-Tag!${end}"
+		rob_data=$(sed -n '1p' /opt/webinoly/templates/source/rob_webinoly.data)
+	fi
+	
+	if [[ $header_robots =~ ^(true|on)$ && -z $rob_data ]]; then
+		echo "${red}[ERROR] Invalid X-Robots-Tag header value!${end}"
+		exit 1
+	elif [[ $header_robots == "reset" ]]; then
+		sudo sed -i '/^add_header X-Robots-Tag/s/^/#/' /etc/nginx/common/headers-html.conf
+		sudo rm -rf /opt/webinoly/templates/source/rob_webinoly.data
+		echo "${gre}X-Robots-Tag Header disabled and saved data successfully removed!${end}"
+	elif [[ $(conf_read nginx) == "true" ]]; then
+		if [[ $header_robots == "off" ]]; then
+			sudo sed -i '/^add_header X-Robots-Tag/s/^/#/' /etc/nginx/common/headers-html.conf
+			echo "${gre}X-Robots-Tag Header successfully disabled!${end}"
+		elif [[ $header_robots =~ ^(true|on)$ ]]; then
+			sudo sed -Ei "/^#?add_header X-Robots-Tag/d" /etc/nginx/common/headers-html.conf			
+			sudo echo "add_header X-Robots-Tag \"${rob_data}\";" >> /etc/nginx/common/headers-html.conf
+			echo "${gre}X-Robots-Tag Header successfully configured!${end}"
+		fi
+	elif [[ $(conf_read nginx) != "true" ]]; then	
+		if [[ $header_robots == "off" ]]; then
+			echo "${red}[ERROR] NGINX is not installed!${end}"
+			exit 1
+		elif [[ $header_robots =~ ^(true|on)$ ]]; then
+			echo "${gre}X-Robots-Tag Header successfully configured and it will be used next time NGINX is installed!${end}"
+		fi
+	fi
+}
+
+
 ext_db_save() {
 	if [[ $external_db_save == "purge" || -n $purge ]]; then
 		conf_delete external-dbu
