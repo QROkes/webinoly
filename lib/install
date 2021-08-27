@@ -354,6 +354,7 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	[[ -n $(conf_read header-hsts) ]] && sudo webinoly -header-hsts=$(conf_read header-hsts)
 	[[ -s /opt/webinoly/templates/source/csp_webinoly.data ]] && sudo webinoly -header-csp=on
 	[[ -s /opt/webinoly/templates/source/pph_webinoly.data ]] && sudo webinoly -header-permission-policy=on
+	[[ -s /opt/webinoly/templates/source/cch_webinoly.data ]] && sudo webinoly -header-cache-control=on
 	
 	if [[ $(conf_read xmlrpc) =~ ^(blocked|limited|open)$ ]]; then
 		if [[ $(conf_read xmlrpc) != "limited" ]]; then
