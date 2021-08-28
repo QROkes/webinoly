@@ -356,6 +356,10 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	[[ -s /opt/webinoly/templates/source/pph_webinoly.data ]] && sudo webinoly -header-permission-policy=on
 	[[ -s /opt/webinoly/templates/source/cch_webinoly.data ]] && sudo webinoly -header-cache-control=on
 	[[ -s /opt/webinoly/templates/source/rob_webinoly.data ]] && sudo webinoly -header-robots=on
+	[[ $(conf_read header-xssp) == "false" ]] && sudo webinoly -header-xssp=off
+	[[ $(conf_read header-xcto) == "false" ]] && sudo webinoly -header-xcto=off
+	[[ $(conf_read header-xfo) == "allow-from" && -n $(conf_read header-xfo-url) ]] && sudo webinoly -header-xfo=allow-from -url=$(conf_read header-xfo-url)
+	[[ $(conf_read header-xfo) =~ ^(off|deny|sameorigin)$ ]] && sudo webinoly -header-xfo=$(conf_read header-xfo)
 	
 	if [[ $(conf_read xmlrpc) =~ ^(blocked|limited|open)$ ]]; then
 		if [[ $(conf_read xmlrpc) != "limited" ]]; then
