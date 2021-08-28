@@ -492,11 +492,29 @@ check_exported_conf() {
 	[[ -n $(conf_read_exported mail) ]] && sudo webinoly -email=$(conf_read_exported mail)
 	[[ -n $(conf_read_exported header-hsts) ]] && sudo webinoly -header-hsts=$(conf_read_exported header-hsts)
 	[[ -n $(conf_read_exported header-referrer) ]] && sudo webinoly -header-referrer=$(conf_read_exported header-referrer)
+	[[ $(conf_read_exported header-xssp) == "false" ]] && sudo webinoly -header-xssp=off
+	[[ $(conf_read_exported header-xcto) == "false" ]] && sudo webinoly -header-xcto=off
+	[[ $(conf_read_exported header-xfo) =~ ^(off|deny|sameorigin)$ ]] && sudo webinoly -header-xfo=$(conf_read_exported header-xfo)
+	[[ $(conf_read_exported header-custom) == "true" ]] && sudo webinoly -custom-headers=reload
+	[[ $(conf_read_exported header-xfo) == "allow-from" && -n $(conf_read_exported header-xfo-url) ]] && sudo webinoly -header-xfo=allow-from -url=$(conf_read_exported header-xfo-url)
 	
 	if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/csp_webinoly.data"; then
 		tar -C / -xf $file /opt/webinoly/templates/source/csp_webinoly.data --absolute-names
 		sudo webinoly -header-csp=on
 	fi
+	if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/pph_webinoly.data"; then
+		tar -C / -xf $file /opt/webinoly/templates/source/pph_webinoly.data --absolute-names
+		sudo webinoly -header-permission-policy=on
+	fi
+	if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/cch_webinoly.data"; then
+		tar -C / -xf $file /opt/webinoly/templates/source/cch_webinoly.data --absolute-names
+		sudo webinoly -header-cache-control=on
+	fi
+	if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/rob_webinoly.data"; then
+		tar -C / -xf $file /opt/webinoly/templates/source/rob_webinoly.data --absolute-names
+		[[ -s /opt/webinoly/templates/source/rob_webinoly.data ]] && sudo webinoly -header-robots=on
+	fi
+	
 	
 	[[ -n $(conf_read_exported log-lines) ]] && conf_write log-lines $(conf_read_exported log-lines)
 	[[ -n $(conf_read_exported awsiamrole) ]] && conf_write awsiamrole $(conf_read_exported awsiamrole)
@@ -637,13 +655,13 @@ export_site() {
 		# Check if Custom Cache
 		if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
 			if [[ -f /etc/nginx/apps.d/$siteto$subn-wpcache.conf || -f /etc/nginx/apps.d/$siteto$subn-phpcache.conf ]]; then
-				local custom_cache=$(grep -E "^fastcgi_cache_path \/run\/nginx-cache\/${siteto}[ _].*;$" /etc/nginx/conf.d/webinoly.conf)
+				local custom_cache="$(grep -E "^fastcgi_cache_path \/run\/nginx-cache\/${siteto}[ _].*;$" /etc/nginx/conf.d/webinoly.conf)"
 			elif [[ -n $(grep -F "# WebinolyProxyCacheStart" /etc/nginx/apps.d/$siteto$subn-proxy.conf) ]]; then
-				local custom_cache=$(grep -E "^proxy_cache_path \/run\/nginx-cache\/${siteto}[ _].*;$" /etc/nginx/conf.d/webinoly.conf)
+				local custom_cache="$(grep -E "^proxy_cache_path \/run\/nginx-cache\/${siteto}[ _].*;$" /etc/nginx/conf.d/webinoly.conf)"
 			fi
 			if [[ -n $custom_cache ]]; then
 				[[ ! -f /var/www/webinoly.conf_temp ]] && sudo touch /var/www/webinoly.conf_temp
-				echo $custom_cache >> /var/www/webinoly.conf_temp
+				echo "$custom_cache" >> /var/www/webinoly.conf_temp
 			fi
 		fi
 
