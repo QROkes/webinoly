@@ -360,6 +360,7 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	[[ $(conf_read header-xcto) == "false" ]] && sudo webinoly -header-xcto=off
 	[[ $(conf_read header-xfo) == "allow-from" && -n $(conf_read header-xfo-url) ]] && sudo webinoly -header-xfo=allow-from -url=$(conf_read header-xfo-url)
 	[[ $(conf_read header-xfo) =~ ^(off|deny|sameorigin)$ ]] && sudo webinoly -header-xfo=$(conf_read header-xfo)
+	[[ $(conf_read header-custom) == "true" ]] && sudo webinoly -custom-headers=reload
 	
 	if [[ $(conf_read xmlrpc) =~ ^(blocked|limited|open)$ ]]; then
 		if [[ $(conf_read xmlrpc) != "limited" ]]; then
