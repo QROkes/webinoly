@@ -482,7 +482,7 @@ if [[ ! -d /etc/mysql && $(conf_read mysql) == "true" ]]; then
 	echo "- [ERROR] Folder: /etc/mysql not found!"
 	ver_four_err="1"
 elif [[ -d /etc/mysql && $(conf_read mysql) != "true" ]]; then
-	echo "${dim}- [WARNING] Seems like MySQL is installed but Webinoly can not detect it!${end}${red}"
+	echo "${dim}- [WARNING] Seems like some MySQL data remains but MySQL is not installed or Webinoly can not detect it!${end}${red}"
 	ver_four_war="1"
 fi
 

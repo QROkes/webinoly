@@ -453,6 +453,7 @@ check_exported_conf() {
 	[[ -n $(conf_read_exported nginx-fd-ratio) ]] && conf_write nginx-fd-ratio $(conf_read_exported nginx-fd-ratio)
 	[[ -n $(conf_read_exported swap-mem) ]] && conf_write swap-mem $(conf_read_exported swap-mem)
 	[[ -n $(conf_read_exported nginx-ppa) ]] && conf_write nginx-ppa $(conf_read_exported nginx-ppa)
+	[[ -n $(conf_read_exported cache-size) ]] && conf_write nginx-ppa $(conf_read_exported cache-size)
 	[[ -n $(conf_read_exported timezone) ]] && conf_write timezone $(conf_read_exported timezone)
 	
 	[[ -n $(conf_read_exported php-ver) ]] && conf_write php-ver $(conf_read_exported php-ver)
@@ -463,7 +464,7 @@ check_exported_conf() {
 	[[ -n $(conf_read_exported php-pm) ]] && conf_write php-pm $(conf_read_exported php-pm)
 	[[ -n $(conf_read_exported php-max-child) ]] && conf_write php-max-child $(conf_read_exported php-max-child)
 	[[ -n $(conf_read_exported php-max-time) ]] && conf_write php-max-time $(conf_read_exported php-max-time)
-
+	[[ -n $(conf_read_exported mysql-ver) ]] && conf_write mysql-ver $(conf_read_exported mysql-ver)
 	
 	# Built stack based on exported conf
 	if [[ $(conf_read_exported nginx) == "true" && $(conf_read_exported nginx-tool) == "true" ]]; then
@@ -495,7 +496,6 @@ check_exported_conf() {
 	[[ $(conf_read_exported header-xssp) == "false" ]] && sudo webinoly -header-xssp=off
 	[[ $(conf_read_exported header-xcto) == "false" ]] && sudo webinoly -header-xcto=off
 	[[ $(conf_read_exported header-xfo) =~ ^(off|deny|sameorigin)$ ]] && sudo webinoly -header-xfo=$(conf_read_exported header-xfo)
-	[[ $(conf_read_exported header-custom) == "true" ]] && sudo webinoly -custom-headers=reload
 	[[ $(conf_read_exported header-xfo) == "allow-from" && -n $(conf_read_exported header-xfo-url) ]] && sudo webinoly -header-xfo=allow-from -url=$(conf_read_exported header-xfo-url)
 	
 	if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/csp_webinoly.data"; then
@@ -514,7 +514,19 @@ check_exported_conf() {
 		tar -C / -xf $file /opt/webinoly/templates/source/rob_webinoly.data --absolute-names
 		[[ -s /opt/webinoly/templates/source/rob_webinoly.data ]] && sudo webinoly -header-robots=on
 	fi
-	
+
+	if [[ $(conf_read_exported header-custom) == "true" ]]; then
+		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/custom_header_http_webinoly.data"; then
+			tar -C / -xf $file /opt/webinoly/templates/source/custom_header_http_webinoly.data --absolute-names
+		fi
+		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/custom_header_https_webinoly.data"; then
+			tar -C / -xf $file /opt/webinoly/templates/source/custom_header_https_webinoly.data --absolute-names
+		fi
+		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/custom_header_html_webinoly.data"; then
+			tar -C / -xf $file /opt/webinoly/templates/source/custom_header_html_webinoly.data --absolute-names
+		fi
+		sudo webinoly -custom-headers=reload
+	fi
 	
 	[[ -n $(conf_read_exported log-lines) ]] && conf_write log-lines $(conf_read_exported log-lines)
 	[[ -n $(conf_read_exported awsiamrole) ]] && conf_write awsiamrole $(conf_read_exported awsiamrole)
@@ -571,7 +583,14 @@ export_server() {
 	[[ -f /etc/nginx/.htpasswd ]] && local include="$include /etc/nginx/.htpasswd"
 	[[ -f $HOME/.aws/credentials ]] && local include="$include $HOME/.aws/credentials"
 	[[ -f /opt/webinoly/templates/source/csp_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/csp_webinoly.data"
+	[[ -f /opt/webinoly/templates/source/pph_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/pph_webinoly.data"
+	[[ -f /opt/webinoly/templates/source/cch_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/cch_webinoly.data"
+	[[ -f /opt/webinoly/templates/source/rob_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/rob_webinoly.data"
+	[[ -f /opt/webinoly/templates/source/custom_header_http_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_http_webinoly.data"
+	[[ -f /opt/webinoly/templates/source/custom_header_https_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_https_webinoly.data"
+	[[ -f /opt/webinoly/templates/source/custom_header_html_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_html_webinoly.data"
 	[[ -f /etc/mysql/mariadb.conf.d/90-webinoly.cnf ]] && local include="$include /etc/mysql/mariadb.conf.d/90-webinoly.cnf"
+	[[ -d /etc/nginx/certs ]] && local include="$include /etc/nginx/certs"
 	
 	sudo tar $exclude -Pcf $destination/$filename $include
 
@@ -643,9 +662,8 @@ export_site() {
 		[[ -s /etc/nginx/sites-available/$siteto ]] && local include="$include /etc/nginx/sites-available/$siteto"
 		[[ -L /etc/nginx/sites-enabled/$siteto ]] && local include="$include /etc/nginx/sites-enabled/$siteto"
 		[[ -s /etc/nginx/apps.d/.htpasswd-$siteto ]] && local include="$include /etc/nginx/apps.d/.htpasswd-$siteto"
-		[[ -d /etc/nginx/certs ]] && local include="$include /etc/nginx/certs"
-		[[ -d /var/www/$siteto && -z $subfolder ]] && local include="$include /var/www/$siteto"
-		[[ -d /var/www/$siteto/htdocs$subfolder && -n $subfolder ]] && local include="$include /var/www/$siteto/htdocs$subfolder"
+		[[ -z $subfolder && -d /var/www/$siteto ]] && local include="$include /var/www/$siteto"
+		[[ -n $subfolder && -d /var/www/$siteto/htdocs$subfolder ]] && local include="$include /var/www/$siteto/htdocs$subfolder"
 		
 		for app in /etc/nginx/apps.d/${siteto}${subn}*.conf
 		do
@@ -656,7 +674,7 @@ export_site() {
 		if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
 			if [[ -f /etc/nginx/apps.d/$siteto$subn-wpcache.conf || -f /etc/nginx/apps.d/$siteto$subn-phpcache.conf ]]; then
 				local custom_cache="$(grep -E "^fastcgi_cache_path \/run\/nginx-cache\/${siteto}[ _].*;$" /etc/nginx/conf.d/webinoly.conf)"
-			elif [[ -n $(grep -F "# WebinolyProxyCacheStart" /etc/nginx/apps.d/$siteto$subn-proxy.conf) ]]; then
+			elif [[ -f /etc/nginx/apps.d/$siteto$subn-proxy.conf && -n $(grep -F "# WebinolyProxyCacheStart" /etc/nginx/apps.d/$siteto$subn-proxy.conf) ]]; then
 				local custom_cache="$(grep -E "^proxy_cache_path \/run\/nginx-cache\/${siteto}[ _].*;$" /etc/nginx/conf.d/webinoly.conf)"
 			fi
 			if [[ -n $custom_cache ]]; then

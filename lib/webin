@@ -1708,11 +1708,13 @@ http_header_custom() {
 		exit 1
 	fi
 	
-	sudo sed -i '/WebinolyCustomHeaders/,/WebinolyCustomHeadersEnd/{/.*/d}' /etc/nginx/common/headers-http.conf
-	sudo sed -i '/WebinolyCustomHeaders/,/WebinolyCustomHeadersEnd/{/.*/d}' /etc/nginx/common/headers-https.conf
-	sudo sed -i '/WebinolyCustomHeaders/,/WebinolyCustomHeadersEnd/{/.*/d}' /etc/nginx/common/headers-html.conf
+	if [[ $(conf_read nginx) == "true" ]]; then
+		sudo sed -i '/WebinolyCustomHeaders/,/WebinolyCustomHeadersEnd/{/.*/d}' /etc/nginx/common/headers-http.conf
+		sudo sed -i '/WebinolyCustomHeaders/,/WebinolyCustomHeadersEnd/{/.*/d}' /etc/nginx/common/headers-https.conf
+		sudo sed -i '/WebinolyCustomHeaders/,/WebinolyCustomHeadersEnd/{/.*/d}' /etc/nginx/common/headers-html.conf
+	fi
 	
-	if [[ $custom_headers == "reload" ]]; then
+	if [[ $custom_headers == "reload" && $(conf_read nginx) == "true" ]]; then
 		if [[ -s /opt/webinoly/templates/source/custom_header_http_webinoly.data ]]; then
 			local http="$(sudo grep -E "^add_header .*;$" /opt/webinoly/templates/source/custom_header_http_webinoly.data)"
 			if [[ -n $http ]]; then
@@ -1742,6 +1744,9 @@ $html
 		
 		conf_write header-custom true
 		echo "${gre}Custom Headers successfully configured!${end}"
+	elif [[ $custom_headers == "reload" ]]; then
+		conf_write header-custom true
+		echo "${gre}Custom Headers successfully configured and it will be used next time NGINX is installed!${end}"
 	else
 		conf_delete header-custom
 		echo "${gre}Custom Headers successfully removed!${end}"
