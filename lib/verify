@@ -446,7 +446,7 @@ fi
 # Check for PHP version
 if [[ $(conf_read php) == "true" ]]; then
 	ver_php_ver=$(php -v | grep -m1 "" | sed 's/PHP \([^\-]*\).*/\1/' | cut -f 1-2 -d'.')
-	if ! [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0)$ ]]; then
+	if ! [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0|8.1)$ ]]; then
 		echo "${dim}- [WARNING] Unknown PHP version!${end}${red}"
 		ver_three_war="1"
 	elif [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2)$ ]]; then
