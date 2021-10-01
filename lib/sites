@@ -1004,11 +1004,7 @@ wp_subfolder() {
 	sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 	sudo sed -i '/WPRobotStart/,/WPRobotsEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 	
-	sudo cp /etc/nginx/common/yoast-sitemap.conf /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
-	sudo sed -i "s#/index.php#$subfolder/index.php#g" /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf
-	
 	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domain -wp-admin=off -subfolder=$subfolder > /dev/null 2>&1
-	[[ $(conf_read yoast-sitemap) == "true" ]] && sudo site $domain -yoast-sitemap=on -subfolder=$subfolder > /dev/null 2>&1
 	
 	# Activate FastCgi cache
 	if [[ $cache == "on" ]]; then
@@ -1513,47 +1509,6 @@ wp_cache() {
 }
 
 
-yoast_sitemap() {
-	if [[ ( -z $subfolder && $(is_wp $domain) == "false" ) || ( -n $subfolder && $(is_wp $domain $subfolder) == "false" ) ]]; then
-		echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WP site!${end}"
-		exit 1
-	elif [[ -n $subfolder && $(is_wp $domain $subfolder) == "true" ]]; then
-		ystmap=$( grep -F "yoast-sitemap.conf;" /etc/nginx/apps.d/$domain$subname-php.conf )
-	else
-		ystmap=$( grep -F "yoast-sitemap.conf;" /etc/nginx/sites-available/$domain )
-	fi
-
-	if [[ $yoast_sitemap == "on" ]]; then
-		if [[ -z $ystmap ]]; then
-			if [[ -z $subfolder ]]; then
-				sudo sed -i "/# WebinolyCustom$/a \	include common/yoast-sitemap.conf;" /etc/nginx/sites-available/$domain
-			else
-				sudo sed -i "/\/index.php?q/a \	include apps.d\/$domain$subname-yoast-sitemap.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
-				sudo sed -i "/\/index.php?q/a \	include apps.d\/$domain$subname-yoast-sitemap.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
-			fi
-			echo "${gre}Yoast Sitemap Support was successfully enabled!${end}"
-		else
-			echo "${gre}Yoast Sitemap Support is already enabled!${end}"
-		fi
-	elif [[ $yoast_sitemap == "off" ]]; then
-		if [[ -n $ystmap ]]; then
-			if [[ -z $subfolder ]]; then
-				sudo sed -i "/yoast-sitemap.conf;/d" /etc/nginx/sites-available/$domain
-			else
-				sudo sed -i "/yoast-sitemap.conf;/d" /etc/nginx/apps.d/$domain$subname-php.conf
-				sudo sed -i "/yoast-sitemap.conf;/d" /etc/nginx/apps.d/$domain$subname-wpfc.conf
-			fi
-			echo "${gre}Yoast Sitemap Support was successfully disabled!${end}"
-		else
-			echo "${gre}Yoast Sitemap Support is already disabled!${end}"
-		fi
-	else
-		echo "${red}[ERROR] Please, enter a valid option to enable/disable Yoast Sitemap Support!${end}"
-		exit 1
-	fi
-}
-
-
 cloning_site() {
 	if [[ -f /etc/nginx/sites-available/$domain && $overwrite == "on" ]]; then
 		echo "${blu}Site already exists! ${dim} Overwriting...${end}"
@@ -1570,7 +1525,6 @@ cloning_site() {
 			sudo cp /etc/nginx/apps.d/$clone_from$subname-wpfc.conf /etc/nginx/apps.d/$domain$subname-wpfc.conf
 			sudo cp /etc/nginx/apps.d/$clone_from$subname-wpcommon.conf /etc/nginx/apps.d/$domain$subname-wpcommon.conf
 			sudo cp /etc/nginx/apps.d/$clone_from$subname-wpcommon-noauth.conf /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
-			sudo cp /etc/nginx/apps.d/$clone_from$subname-yoast-sitemap.conf /etc/nginx/apps.d/$domain$subname-yoast-sitemap.conf			
 			sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-php.conf
 			sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 			sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain

@@ -2,7 +2,7 @@
 
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
-# Options: -html, -php, -mysql, -wp, -parked, -proxy, -empty, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -yoast-sitemap, -multisite-convert, -clone-from, -replace-content, -redirection, -forward, -info, -env
+# Options: -html, -php, -mysql, -wp, -parked, -proxy, -empty, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -multisite-convert, -clone-from, -replace-content, -redirection, -forward, -info, -env
 # Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -raw, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp, -subfolder, -from, -to, -http-code, -regex, -manual, -overwrite, -wp-cache-plugins, -dedicated-reverse-proxy, -must-staple, -cache-valid, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -query-string-cache-default, -reset, -test-cert, -db-role, -domain-mapping-wp-id
 
 # shopt is necessary for this kind !(html|22222) of patterns
@@ -101,10 +101,10 @@ fi
 if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; then
 	echo "${red}[ERROR] Please, enter a valid value for subfolder!${end}"
 	exit 1
-elif [[ -n $subfolder && -z $delete && -z $cache && -z $yoast_sitemap && -z $multisite_convert && -z $clone_from && -z $replace_content && -z $wp && -z $html && -z $php && -z $mysql && -z $proxy && -z $env && -z $info ]]; then
+elif [[ -n $subfolder && -z $delete && -z $cache && -z $multisite_convert && -z $clone_from && -z $replace_content && -z $wp && -z $html && -z $php && -z $mysql && -z $proxy && -z $env && -z $info ]]; then
 	echo "${red}[ERROR] Subfolder option not supported!${end}"
 	exit 1
-elif [[ -n $subfolder && ( $cache == "on" || -n $yoast_sitemap || -n $multisite_convert || -n $replace_content ) && $(is_subfolder $domain $subfolder) != "wp" ]]; then
+elif [[ -n $subfolder && ( $cache == "on" || -n $multisite_convert || -n $replace_content ) && $(is_subfolder $domain $subfolder) != "wp" ]]; then
 	echo "${red}[ERROR] Subfolder not found or is not a WP site!${end}"
 	exit 1
 else
@@ -194,7 +194,6 @@ elif [[ -n $wp && -n $domain ]]; then
 		fi
 		sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
 		[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domain -wp-admin=off > /dev/null 2>&1
-		[[ $(conf_read yoast-sitemap) == "true" ]] && sudo site $domain -yoast-sitemap=on > /dev/null 2>&1
 		[[ -n $env ]] && sudo site $domain -env=$env
 	else
 		if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && $(is_subfolder $domain $subfolder) != "false" ]]; then
@@ -383,11 +382,6 @@ elif [[ -n $ssl ]]; then
 # Force www or non-www redirect (www, root, off)
 elif [[ -n $force_redirect && -f /etc/nginx/sites-available/$domain ]]; then
 	force_redirect
-
-
-# Yoast Sitemap support, per site.
-elif [[ -n $yoast_sitemap && -f /etc/nginx/sites-available/$domain ]]; then
-	yoast_sitemap
 
 
 # Staging and Clone sites

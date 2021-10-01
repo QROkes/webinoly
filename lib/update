@@ -97,7 +97,6 @@ onethree_to_onefour() {
 				
 				if [[ $(is_wp $domi) == "true" ]]; then
 					[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domi -wp-admin=off
-					[[ $(conf_read yoast-sitemap) == "true" ]] && sudo site $domi -yoast-sitemap=on
 				fi
 			fi
 		done
