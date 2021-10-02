@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 http_header_referrer() {
 	[[ -z $header_referrer || $header_referrer == "true" ]] && read -p "${blu}Referrer header value: ${end}" header_referrer
 	if ! [[ $header_referrer =~ ^(no-referrer|no-referrer-when-downgrade|origin|origin-when-cross-origin|same-origin|strict-origin|strict-origin-when-cross-origin|unsafe-url)$ ]]; then

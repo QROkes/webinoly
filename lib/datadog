@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 dd_nginx_purge() {
 	if [[ -f /etc/datadog-agent/conf.d/nginx.d/conf.yaml ]]; then
 		if [[ ! -f /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml ]]; then
