@@ -306,10 +306,10 @@ wp_config_path() {
 			echo "/var/www/$1/htdocs$2/wp-config.php"
 			
 		# WP take this file first (if exist) and then look one folder below.
-		elif [[ ( -z $2 || $2 == "false" ) && -f /var/www/$1/htdocs/wp-config.php ]]; then
-			echo "/var/www/$1/htdocs/wp-config.php"
 		elif [[ ( -z $2 || $2 == "false" ) && -f /var/www/$1/wp-config.php ]]; then
 			echo "/var/www/$1/wp-config.php"
+		elif [[ ( -z $2 || $2 == "false" ) && -f /var/www/$1/htdocs/wp-config.php ]]; then
+			echo "/var/www/$1/htdocs/wp-config.php"
 		elif [[ ( -z $2 || $2 == "false" ) && -f $parpath ]]; then
 			echo "$parpath"
 		else
