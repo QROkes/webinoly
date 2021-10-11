@@ -405,7 +405,7 @@ elif [[ -n $clone_from ]]; then
 		wp_conf_retrieve $clone_from true false $subfolder 
 		iswpclone="true"
 		
-		if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
+		if [[ -z $wp_dbhost || -z $wp_dbname || -z $wp_dbpref ]]; then
 			echo "${red}[ERROR] Can not retrieve WP data ${dim}(WP Configuration corrupted)!${end}"
 			exit 1
 		elif [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
