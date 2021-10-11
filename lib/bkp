@@ -684,7 +684,7 @@ export_site() {
 		fi
 
 		# Include database backup for this site!
-		if [[ $(is_wp $siteto $subfolder) == "true" && $(is_wp_installed $siteto $subfolder) == "true" ]]; then
+		if [[ $(is_wp_installed $siteto $subfolder) == "true" ]]; then
 			# We use dbnames instead of domains because is easier to include subfolders
 			if [[ -z $export_db_list ]]; then
 				local export_db_list="$( wp_config_read $siteto DB_NAME $subfolder )"
