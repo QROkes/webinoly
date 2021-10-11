@@ -510,8 +510,11 @@ db_delete() {
 	[[ -z $wp_config ]] && return
 	[[ $wp_dbhost != "localhost" ]] && check_for_mysql_client
 	
-	if [[ ( $wp_dbhost == "localhost" &&  ( $(conf_read mysql) != "true" || $(check_mysql_connection localhost) != "true" )) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
-		echo "${red}[ERROR] Database${blu} $domain ${red}cannot be deleted!${end}"
+	if [[ -z $wp_dbhost || -z $wp_dbname || -z $wp_dbuser ]]; then
+		echo "${red}[ERROR] Database${blu} $domain ${red}cannot be deleted! ${dim}(WP configuration corrupted)${end}"
+		return
+	elif [[ ( $wp_dbhost == "localhost" &&  ( $(conf_read mysql) != "true" || $(check_mysql_connection localhost) != "true" )) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
+		echo "${red}[ERROR] Database${blu} $domain ${red}cannot be deleted! ${dim}(DB Connection failed)${end}"
 		return
 	fi
 	
@@ -1661,18 +1664,23 @@ wp_replace_content() {
 	fi
 	
 	wp_conf_retrieve $domain true true $subfolder
-	if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
+	if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
+		if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
+			exit 1
+		fi
+		
+		query="USE $wp_dbname; UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'$search','$replace'); FLUSH PRIVILEGES;"
+		
+		if [[ $wp_dbhost == "localhost" ]]; then
+			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$query"
+		else
+			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$query"
+		fi
+		echo "${gre}Content successfully replaced in your WP site!${end}"
+	else
+		echo "${red}[ERROR] Can not retrieve WP data! ${dim}(WP Configuration corrupted)${end}"
 		exit 1
 	fi
-	
-	query="USE $wp_dbname; UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'$search','$replace'); FLUSH PRIVILEGES;"
-	
-	if [[ $wp_dbhost == "localhost" ]]; then
-		sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$query"
-	else
-		sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$query"
-	fi
-	echo "${gre}Content successfully replaced in your WP site!${end}"
 }
 
 
@@ -1914,27 +1922,32 @@ wp_env_type() {
 	# WordPress Reading Settings: Discourage Search Engines
 	wp_conf_retrieve $domain true true $subfolder
 	
-	if [[ $(is_wp_installed $domain $subfolder) == "true" ]]; then
-		if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+	if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
+		if [[ $(is_wp_installed $domain $subfolder) == "true" ]]; then
+			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
+				sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$index' WHERE option_name='blog_public';
 FLUSH PRIVILEGES;
 _EOF_
 		
-		elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
-			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" <<_EOF_
+			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
+				sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$index' WHERE option_name='blog_public';
 FLUSH PRIVILEGES;
 _EOF_
 		
-		else
-			local index=""
+			else
+				local index=""
+			fi
+		
+			[[ $index == "0" ]] && echo "${gre}Discourage Search Engines WP option has been enabled for${blu} $domain$subfolder ${gre}site!${end}"
+			[[ $index == "1" ]] && echo "${gre}Discourage Search Engines WP option has been disabled for${blu} $domain$subfolder ${gre}site!${end}"
 		fi
-		
-		[[ $index == "0" ]] && echo "${gre}Discourage Search Engines WP option has been enabled for${blu} $domain$subfolder ${gre}site!${end}"
-		[[ $index == "1" ]] && echo "${gre}Discourage Search Engines WP option has been disabled for${blu} $domain$subfolder ${gre}site!${end}"
+	else
+		echo "${red}${dim}[ERROR] Discourage Search Engines WP option not updated! (WP Configuration corrupted)${end}"
+		exit 1
 	fi
 	
 	echo "${gre}WordPress Environment Type has been set successfully!${end}"

@@ -405,7 +405,10 @@ elif [[ -n $clone_from ]]; then
 		wp_conf_retrieve $clone_from true false $subfolder 
 		iswpclone="true"
 		
-		if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
+		if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
+			echo "${red}[ERROR] Can not retrieve WP data ${dim}(WP Configuration corrupted)!${end}"
+			exit 1
+		elif [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
 			exit 1
 		elif [[ $(is_wp_multisite $clone_from $subfolder) != "false" ]]; then
 			echo "${red}[ERROR] WordPress Multisite can not be cloned!${end}"
