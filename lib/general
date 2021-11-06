@@ -764,19 +764,7 @@ is_wp() {
 	fi
 }
 
-is_wp_cache() {
-	# $1 = domain, $2 = WP subfolder
-	[[ -n $2 ]] && local subn=$(echo $2 | sed "s/\//_/g")
-	if [[ -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -E " apps.d/$1$subn-wpcache.conf;") ]]; then
-		echo "true"
-	elif [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/wpfc.conf;") ]]; then
-		echo "true"
-	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/# WebinolyCustom/,$p' /etc/nginx/sites-available/$1 | grep -F "$1$subn-wpfc.conf;") ]]; then
-		echo "true"
-	else
-		echo "false"
-	fi
-}
+
 is_cache() {
 	# $1 = domain, $2 = WP subfolder
 	[[ -n $2 ]] && local subn=$(echo $2 | sed "s/\//_/g")

@@ -1746,7 +1746,7 @@ list_sites() {
 			[[ $(is_log $domi) == "true" ]] && local check="${check}(AccessLog)"
 			
 			if [[ $(is_wp $domi) == "true" ]]; then
-				[[ $(is_wp_cache $domi) != "true" ]] && local check="${check}(NoCache)"
+				[[ $(is_cache $domi) =~ ^(wp|custom)$ ]] || local check="${check}(NoCache)"
 				[[ $(is_wp_auth $domi) != "true" ]] && local check="${check}(NoAdminAuth)"
 				[[ $(is_wp_debug $domi) == "true" ]] && local check="${check}(Debug)"
 			fi
@@ -1904,7 +1904,7 @@ wp_env_type() {
 		wp_config_write $domain WP_ENVIRONMENT_TYPE \'$env\' $subfolder
 		if [[ -n $cache ]]; then
 			wp_cache
-		elif [[ $(is_wp_cache $domain $subfolder) == "true" ]]; then
+		elif [[ $(is_cache $domain $subfolder) =~ ^(wp|custom)$ ]]; then
 			cache="off"
 			wp_cache
 		fi
