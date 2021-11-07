@@ -109,7 +109,7 @@ site_ssl_on() {
 	# Create new certificate
 	local param="--email $cermail --no-eff-email --agree-tos --staple-ocsp"
 	[[ $must_staple == "on" ]] && param="$param --must-staple"
-	[[ $(conf_read debug) == "true" || -n $test_cert ]] && param="$param --test-cert"
+	[[ -n $test_cert ]] && param="$param --test-cert"
 	[[ $ssl == "force-renewal" ]] && param="$param --force-renewal"
 	[[ $subdomain == "true" ]] && local domset="-d $domain" || local domset="-d $domain -d www.$domain"
 	
@@ -170,7 +170,7 @@ site_ssl_on() {
 		echo "${end}"
 		exit 1
 	fi
-	[[ $(conf_read debug) == "true" || -n $test_cert || $(is_ssl_staging $domain) == "true" ]] && echo "${red}[WARNING] Let's Encrypt Staging Environment is enabled, this SSL Cert is just for testing purpose and should not be used in production enviroments.${end}"
+	[[ -n $test_cert || $(is_ssl_staging $domain) == "true" ]] && echo "${red}[WARNING] Let's Encrypt Staging Environment is enabled, this SSL Cert is just for testing purpose and should not be used in production enviroments.${end}"
 }
 
 

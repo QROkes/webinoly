@@ -1188,7 +1188,9 @@ parked_domain() {
 	sed -i "/include \/var\/www\/$domain/c \	${cusconl}" /etc/nginx/sites-available/$domain
 	
 	# WordPress Domain Mapping
-	if [[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ && $(is_wp_multisite $parked) =~ ^(subdomain|subdirectory)$ ]]; then
+	if [[ $domain_mapping_wp_id == 1  ]]; then
+		echo "${red}${dim}[ERROR] Domain Mapping failed because WP blog ID cannot be 1 (main site)! ${end}"
+	elif [[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ && $(is_wp_multisite $parked) =~ ^(subdomain|subdirectory)$ ]]; then
 		[[ $(is_ssl $parked) == "true" ]] && local scheme="https" || local scheme="http"
 		force_wp_blog_id=$domain_mapping_wp_id
 		edit_wp_db_url $parked "${scheme}://${domain}"
@@ -1460,8 +1462,7 @@ wp_cache() {
 			custom_cache_global -site
 		elif [[ -n $query_string_cache_default ]]; then
 			query_string_cache_default
-		elif [[ -n $cache_valid || -n $times ]]; then
-			[[ -n $times && -z $cache_valid ]] && cache_valid=$times  # Will be removed!
+		elif [[ -n $cache_valid ]]; then
 			config_fastcgi_cache -site $cache_valid
 		elif [[ $(is_cache $domain $subfolder) == "false" && $(is_proxy $domain $subfolder) == "true" && -n $(grep -F "# WebinolyProxyCacheStart" /etc/nginx/apps.d/$domain$subname-proxy.conf) ]]; then
 			sudo sed -i "/proxy_cache .*;/c \	proxy_cache $(echo $domain | sed "s/[^0-9A-Za-z]/_/g")${subname};" /etc/nginx/apps.d/$domain$subname-proxy.conf
@@ -1544,8 +1545,7 @@ wp_cache() {
 				echo "${gre}${dim}FastCGI Cache configuration file found!${end}"
 			fi
 			
-			[[ -n $times && $times != "true" ]] && config_fastcgi_cache -site $times   # Will be removed!
-			[[ -n $cache_valid && $cache_valid != "true" && -z $times ]] && config_fastcgi_cache -site $cache_valid
+			[[ -n $cache_valid && $cache_valid != "true" ]] && config_fastcgi_cache -site $cache_valid
 			
 			echo "${gre}"
 			echo "Custom FastCGI Cache in${blu} $domain$subfolder ${gre}has been successfully enabled! ${end}"
@@ -1830,6 +1830,10 @@ site_info_subfolder() {
 	
 	[[ $typesite == "proxy" ]] || echo "${blu}Size:${end} $(sudo du -sh /var/www/$domain/htdocs$subfolder | cut -d"/" -f 1 -s)"
 	
+	if compgen -G "/var/www/${domain}/*-nginx.conf" > /dev/null; then
+		echo "${blu}Nginx Custom:${end} true${end}"
+	fi
+	
 	if [[ $(is_cache $domain $subfolder) =~ ^(custom|proxy)$ ]]; then
 		local cache="Custom"
 		[[ $typesite =~ ^(php|proxy) ]] && echo "${blu}Cache:${end} $cache"
@@ -1893,6 +1897,10 @@ site_info() {
 	fi
 	
 	[[ $typesite =~ ^(Forward|Parked|Reverse Proxy|Dedicated Reverse Proxy) ]] || echo "${blu}Size:${end} $(sudo du -sh /var/www/$domain | cut -d"/" -f 1 -s)"
+	
+	if compgen -G "/var/www/${domain}/*-nginx.conf" > /dev/null; then
+		echo "${blu}Nginx Custom:${end} true${end}"
+	fi
 	
 	if [[ $(is_cache $domain) =~ ^(custom|proxy)$ ]]; then
 		local cache="Custom"
