@@ -521,13 +521,13 @@ db_delete() {
 	dbsetup="DELETE FROM mysql.user WHERE User='$wp_dbuser';DROP DATABASE IF EXISTS $wp_dbname;DELETE FROM mysql.db WHERE Db='$wp_dbname' OR Db='$wp_dbname\\_%';FLUSH PRIVILEGES;"
 	if [[ $wp_dbhost == "localhost" ]]; then
 		sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup"
-		echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
+		echo "${gre}${dim}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
 	else
 		if [[ $extdb_user == "root" && -z $extdb_pass ]]; then
 			echo "${red}Action aborted, database not deleted!${end}"
 		else
 			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup"
-			echo "${gre}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
+			echo "${gre}${dim}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
 		fi
 	fi
 }
@@ -569,10 +569,7 @@ deletesite() {
 					  [[ $dbsubdel = [YyNn] ]] && break
 					done
 				fi
-				if [[ $dbsubdel == [yY] || $dbdel == [yY] ]]; then
-					db_delete $domain
-					sudo rm -rf /var/www/$domain/htdocs$subfolder
-				fi
+				[[ $dbsubdel == [yY] || $dbdel == [yY] ]] && db_delete $domain
 			fi
 			subfolder=""
 		done
@@ -615,6 +612,95 @@ deletesite() {
 	fi
 	
 	echo "${gre}Site${blu} $domain ${gre}has been successfully deleted!${end}"
+}
+
+
+deletesite_subfolder() {
+	if [[ $(is_subfolder $domain $subfolder) == "false" ]]; then
+		echo "${red}[ERROR] Subfolder site not found!${end}"
+		exit 1
+	fi
+	
+	[[ $delete == "force" ]] && local dbdel="Y"
+	[[ $delete == "keep-db" ]] && local dbdel="N"
+	
+	# Check if site contains WP in subfolders.
+	if [[ -z $dbdel || $dbdel = [Yy] ]]; then
+		local subfolder_original=$subfolder
+		
+		for site in "/etc/nginx/apps.d/${domain}${subname}"*-wpcommon.conf
+		do 
+			subfolder="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+			local subname=$(echo $subfolder | sed "s/\//_/g")
+			if [[ -n $subfolder && -f /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
+				if ! [[ $delete =~ ^(force|keep-db)$ ]]; then
+					echo "${blu}Delete Database [Y/n]?${end}"
+					while read -r -n 1 -s dbsubdel; do
+					  local dbsubdel=${dbsubdel:-y}
+					  [[ $dbsubdel = [YyNn] ]] && break
+					done
+				fi
+				[[ $dbsubdel == [yY] || $dbdel == [yY] ]] && db_delete $domain
+			fi
+			
+			sudo rm -rf /etc/nginx/apps.d/$domain$subnames-*.conf
+			sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-php.conf/d}" /etc/nginx/sites-available/$domain
+			sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-phpx.conf/d}" /etc/nginx/sites-available/$domain
+			sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-wpfc.conf/d}" /etc/nginx/sites-available/$domain
+			sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-proxy.conf/d}" /etc/nginx/sites-available/$domain
+			sudo sed -i "/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/{\|location $subfolder/ |d}" /etc/nginx/sites-available/$domain
+			
+			# In case of custom cache
+			if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
+				sudo sed -i "/^fastcgi_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')${subname} .*/d" /etc/nginx/conf.d/webinoly.conf
+				[[ ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
+			fi
+			
+			echo "${gre}${dim}Subfolder${blu} $subfolder ${gre}from${blu} $domain ${gre}has been successfully deleted!${end}"
+		done
+		
+		subfolder=$subfolder_original
+	fi
+	
+	sudo rm -rf /var/www/$domain/htdocs$subfolder
+	echo "${gre}Subfolder${blu} $subfolder ${gre}from${blu} $domain ${gre}has been successfully deleted!${end}"
+}
+
+
+delete_all_sites() {
+	echo "${red}"
+	echo "All your sites files will be removed."
+	echo "This action will only delete Databases attached to a WordPress site, any other Database will not be deleted. ${end}"
+	
+	if ! [[ $delete_all =~ ^(force|keep-db)$ ]]; then
+		echo "${blu}"
+		echo "Are you sure [y/N]? ${end}"
+		while read -r -n 1 -s answer; do
+			answer=${answer:-n}
+			echo ""
+			[[ $answer = [YyNn] ]] && break
+		done
+		
+		if [[ $answer == [Nn] ]]; then
+			echo "${red}Action aborted!${end}"
+			exit 1
+		fi
+	fi
+	
+	for site in "/etc/nginx/sites-available"/*
+	do
+		[[ $delete_all == "keep-db" ]] && delete="keep-db" || delete="force"
+		domain=$(echo $site | cut -f 5 -d "/")
+		[[ $domain != "default" && $domain != $(conf_read tools-port) && $domi != *".dpkg-"* ]] && deletesite
+	done
+	
+	# Delete all files - double check!
+	# -rf is necessary to not generate an error when is empty.
+	sudo rm -rf /etc/nginx/sites-available/!(default|$(conf_read tools-port)|*".dpkg-"*)
+	sudo rm -rf /etc/nginx/sites-enabled/!(default|$(conf_read tools-port))
+	sudo rm -rf /var/www/!(html|$(conf_read tools-port))
+	echo ""
+	echo "${gre}All sites and data has been deleted successfully!${end}"
 }
 
 
@@ -933,44 +1019,6 @@ location $sign$from {
 		
 	fi
 
-}
-
-
-delete_all_sites() {
-	echo "${red}"
-	echo "All your sites files will be removed."
-	echo "This action will only delete Databases attached to a WordPress site, any other Database will not be deleted."
-	
-	if ! [[ $delete_all =~ ^(force|keep-db)$ ]]; then
-		echo "${blu}"
-		echo "Are you sure [y/N]? ${end}"
-		while read -r -n 1 -s answer; do
-			answer=${answer:-n}
-			echo ""
-			[[ $answer = [YyNn] ]] && break
-		done
-		
-		if [[ $answer == [Nn] ]]; then
-			echo "${red}Action aborted!${end}"
-			exit 1
-		fi
-	fi
-	
-	# List all remaining sites (parked and proxy)
-	for site in "/etc/nginx/sites-available"/*
-	do
-		[[ $delete_all == "keep-db" ]] && delete="keep-db" || delete="force"
-		domain=$(echo $site | cut -f 5 -d "/")
-		[[ $domain != "default" && $domain != $(conf_read tools-port) && $domi != *".dpkg-"* ]] && deletesite
-	done
-	
-	# Delete all files - double check!
-	# -rf is necessary to not generate an error when is empty.
-	sudo rm -rf /etc/nginx/sites-available/!(default|$(conf_read tools-port)|*".dpkg-"*)
-	sudo rm -rf /etc/nginx/sites-enabled/!(default|$(conf_read tools-port))
-	sudo rm -rf /var/www/!(html|$(conf_read tools-port))
-	echo ""
-	echo "${gre}All sites and data has been deleted successfully!${end}"
 }
 
 

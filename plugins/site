@@ -288,27 +288,7 @@ elif [[ -n $delete && -f /etc/nginx/sites-available/$domain ]]; then
 		echo "${red}[ERROR] System sites can not be removed!${end}"
 		exit 1
 	elif [[ -n $subfolder ]]; then
-		if [[ $(is_subfolder $domain $subfolder) == "false" ]]; then
-			echo "${red}[ERROR] Subfolder site not found!${end}"
-			exit 1
-		elif [[ -f /var/www/$domain/htdocs$subfolder/wp-config.php && $delete != "keep-db" ]]; then
-			db_delete $domain
-		fi
-		
-		sudo rm -rf /var/www/$domain/htdocs$subfolder
-		sudo rm -rf /etc/nginx/apps.d/$domain$subname-*.conf
-		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-php.conf/d}" /etc/nginx/sites-available/$domain
-		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-phpx.conf/d}" /etc/nginx/sites-available/$domain
-		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-wpfc.conf/d}" /etc/nginx/sites-available/$domain
-		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-proxy.conf/d}" /etc/nginx/sites-available/$domain
-		sudo sed -i "/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/{\|location $subfolder/ |d}" /etc/nginx/sites-available/$domain
-		echo "${gre}Subfolder${blu} $subfolder ${gre}from${blu} $domain ${gre}has been successfully deleted!${end}"
-		
-		# In case of custom cache
-		if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
-			sudo sed -i "/^fastcgi_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')${subname} .*/d" /etc/nginx/conf.d/webinoly.conf
-			[[ ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
-		fi
+		deletesite_subfolder
 	else
 		deletesite
 	fi
