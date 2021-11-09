@@ -480,9 +480,10 @@ check_exported_conf() {
 	fi
 	
 	if [[ $(conf_read_exported mysql) == "true" && $(conf_read_exported mysql-tool) == "true" ]]; then
-		sudo stack -mysql
+		# Passwords are imported too, so we don't need to display passwords created during the installation process, because they are replaced.
+		sudo stack -mysql -block-password-display
 	elif [[ $(conf_read_exported mysql) == "true" ]]; then
-		sudo stack -mysql -notools
+		sudo stack -mysql -notools -block-password-display
 	elif [[ $(conf_read_exported mysql-client) == "true" ]]; then
 		mysql_client_install
 	fi
@@ -536,6 +537,23 @@ check_exported_conf() {
 	[[ -n $(conf_read_exported external-dbx) ]] && conf_write external-dbx $(conf_read_exported external-dbx)
 	[[ -n $(conf_read_exported external-dbu) ]] && conf_write external-dbu $(conf_read_exported external-dbu)
 	[[ -n $(conf_read_exported external-dbp) ]] && conf_write external-dbp $(conf_read_exported external-dbp)
+
+	# Conf stack files
+	if tar -tvf $file --absolute-names | grep -oq "/etc/nginx/conf.d/blockips.conf"; then
+		tar -C / -xf $file /etc/nginx/conf.d/blockips.conf --absolute-names
+	fi
+	if tar -tvf $file --absolute-names | grep -oq "/etc/nginx/.htpasswd"; then
+		tar -C / -xf $file /etc/nginx/.htpasswd --absolute-names
+	fi
+	if tar -tvf $file --absolute-names | grep -oq "$HOME/.aws/credentials"; then
+		tar -C / -xf $file $HOME/.aws/credentials --absolute-names
+	fi
+	if [[ $(conf_read mysql) == "true" ]]; then
+		if tar -tvf $file --absolute-names | grep -oq "/etc/mysql/mariadb.conf.d/90-webinoly.cnf"; then
+			tar -C / -xf $file /etc/mysql/mariadb.conf.d/90-webinoly.cnf --absolute-names
+			sudo service mysql restart
+		fi
+	fi
 }
 
 
@@ -766,6 +784,9 @@ import_site() {
 			exit 1
 		elif [[ -f /etc/nginx/sites-available/$domain && $overwrite == "on" ]]; then
 			echo "${blu}Site${end} $domain ${blu}already exists... ${dim} Overwriting...${end}"
+		elif [[ ! -f /etc/nginx/sites-available/$domain && $overwrite == "on" ]]; then
+			# If site don't exist, it's not really overwriting, so it can break things that should be there in an existing site.
+			overwrite=""
 		fi
 	done
 	
@@ -815,31 +836,47 @@ import_site() {
 		if [[ -n $db_create_users && $overwrite != "on" && $(is_wp $domain) == "true" ]]; then
 			wp_conf_retrieve $domain true false
 				
-			if [[ -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $wp_dbname) ]]; then
+			if [[ $wp_dbhost == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $wp_dbname) ]]; then
 				echo "${blu}${dim}Restoring database for${end}${dim} $domain ${blu}${dim}site!${end}"
-				sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+				
+				# Check if user exists
+				if [[ -z $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "SELECT User FROM mysql.user;" | grep -ow $wp_dbuser) ]]; then
+					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 CREATE USER '${wp_dbuser}'@'localhost' IDENTIFIED BY '${wp_dbpass}';
 GRANT $(db_user_role) on ${wp_dbname}.* to '${wp_dbuser}'@'localhost';
 FLUSH PRIVILEGES;
 _EOF_
+				elif [[ $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname 2>/dev/null) != "true" ]]; then
+					echo "${red}${dim}[ERROR] Database cannot be restored, seems like a user with the same name already exists.${end}"
+				else
+					echo "${blu}${dim}DB user already exists and a successful connection can be established, so we will use it.${end}"
+				fi
 			fi
 		fi
 		
 		# Check if site contains WP in subfolders and include these db's.
 		if [[ -n $db_create_users && $overwrite != "on" ]]; then
-			for sit in "/etc/nginx/apps.d/$domain_"*-wpcommon.conf
+			for sit in "/etc/nginx/apps.d/${domain}_"*-wpcommon.conf
 			do 
 				local suby="/$(echo $sit | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 				if [[ -n $suby && -f /var/www/$domain/htdocs$suby/wp-config.php ]]; then
 					wp_conf_retrieve $domain true false $suby
 				
-					if [[ -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $wp_dbname) ]]; then
+					if [[ $wp_dbhost == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $wp_dbname) ]]; then
 						echo "${blu}${dim}Restoring database for${end}${dim} ${domain}${suby} ${blu}${dim}site!${end}"
-						sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+						
+						# Check if user exists
+						if [[ -z $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "SELECT User FROM mysql.user;" | grep -ow $wp_dbuser) ]]; then
+							sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 CREATE USER '${wp_dbuser}'@'localhost' IDENTIFIED BY '${wp_dbpass}';
 GRANT $(db_user_role) on ${wp_dbname}.* to '${wp_dbuser}'@'localhost';
 FLUSH PRIVILEGES;
 _EOF_
+						elif [[ $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname 2>/dev/null) != "true" ]]; then
+							echo "${red}${dim}[ERROR] Database cannot be restored, seems like a user with the same name already exists.${end}"
+						else
+							echo "${blu}${dim}DB user already exists and a successful connection can be established, so we will use it.${end}"
+						fi
 					fi
 				fi
 				local suby=""

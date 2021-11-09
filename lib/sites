@@ -558,8 +558,8 @@ deletesite() {
 
 	# Check if site contains WP in subfolders.
 	if [[ -z $dbdel || $dbdel = [Yy] ]]; then
-		for site in "/etc/nginx/apps.d/$domain_"*-wpcommon.conf
-		do 
+		for site in "/etc/nginx/apps.d/${domain}_"*-wpcommon.conf
+		do
 			subfolder="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 			if [[ -n $subfolder && -f /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
 				if ! [[ $delete =~ ^(force|keep-db)$ ]]; then
@@ -1631,7 +1631,7 @@ cloning_site() {
 				sudo cp $appfile $newfile
 				
 				# Check if site contains WP in subfolders.
-				if [[ $appfile == "/etc/nginx/apps.d/$domain_"*-wpcommon.conf ]]; then
+				if [[ $appfile == "/etc/nginx/apps.d/${domain}_"*-wpcommon.conf ]]; then
 					local wpsub="/$(echo $appfile | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 					if [[ -n $wpsub && -f /var/www/$domain/htdocs$wpsub/wp-config.php ]]; then
 						echo "${gre}${dim}WordPress installed in a subfolder${blu} '${wpsub}' ${gre}was found, we will clone it too...${end}"

@@ -386,7 +386,7 @@ elif [[ -n $mysql ]]; then
 	if [[ $(conf_read mysql) != "true" ]]; then
 		mysql_install
 		[[ -z $notools && $(conf_read mysql) == "true" && $(conf_read php) == "true" && $(conf_read nginx) == "true" && $(conf_read nginx-tool) == "true" ]] && stack -pma || echo "${gre}phpMyAdmin was NOT installed!${end}"
-		messagend_install
+		[[ -z $block_password_display ]] && messagend_install
 	else
 		echo "${dim}MySQL is already installed!${end}"
 		if [[ $(conf_read mysql-tool) != "true" && -z $notools ]]; then
@@ -504,6 +504,7 @@ elif [[ -n $purge_server_all ]]; then
 		[[ -f /etc/ssl/certs/webinoly-blackhole.crt.pem ]] && sudo rm -rf /etc/ssl/certs/webinoly-blackhole.crt.pem
 		[[ -f /etc/ssl/private/webinoly-blackhole.key.pem ]] && sudo rm -rf /etc/ssl/private/webinoly-blackhole.key.pem
 		[[ -f /etc/ssl/dhparam.pem ]] && sudo rm -rf /etc/ssl/dhparam.pem
+		[[ -f $HOME/.aws/credentials ]] && sudo rm -rf $HOME/.aws/credentials
 		if [[ $(conf_read pre-packs) == true ]]; then
 			sudo apt-get -y -qq purge pwgen unzip zip > /dev/null
 			sudo apt-get -y -qq autoremove > /dev/null
