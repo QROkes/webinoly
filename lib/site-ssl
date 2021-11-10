@@ -228,7 +228,7 @@ site_ssl_off() {
 		echo "${gre}${dim}Tools Site updated with SSL!${end}"
 	fi
 	
-	[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "http://${domain}"
+	[[ -z $no_db_update && $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "http://${domain}"
 	
 	# Check if exist to not try to revoke a cert that don't exist, for example a site with a cert added to a wildcard! (-add-to-wildcard)
 	if [[ -f /etc/letsencrypt/renewal/${domain}.conf ]]; then

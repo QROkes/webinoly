@@ -1164,7 +1164,7 @@ parked_domain() {
 	sudo cat /etc/nginx/sites-available/$parked > /etc/nginx/sites-available/$domain
 	
 	# Prevent if SSL is enabled in main site and ssl data is copied to parked site causing an error.
-	[[ $(is_ssl $parked) == "true" ]] && revoke="off" && site_ssl_off > /dev/null 2>&1
+	[[ $(is_ssl $parked) == "true" ]] && sudo site $domain -ssl=off -revoke=off -no-db-update > /dev/null 2>&1
 	
 	# Prevent if main site is default.
 	[[ $(conf_read default-site) == $parked ]] && remove_nginx_default_server $domain
@@ -1191,10 +1191,8 @@ parked_domain() {
 	if [[ $domain_mapping_wp_id == 1  ]]; then
 		echo "${red}${dim}[ERROR] Domain Mapping failed because WP blog ID cannot be 1 (main site)! ${end}"
 	elif [[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ && $(is_wp_multisite $parked) =~ ^(subdomain|subdirectory)$ ]]; then
-		[[ $(is_ssl $parked) == "true" ]] && local scheme="https" || local scheme="http"
-		force_wp_blog_id=$domain_mapping_wp_id
-		edit_wp_db_url $parked "${scheme}://${domain}"
-		edit_wp_db_url_multisite $parked $domain		
+		edit_wp_db_url_multisite $parked $domain $domain_mapping_wp_id
+		edit_wp_db_url $domain "http://${domain}"
 		echo "${gre}${dim}Domain Mapping successfully configured! ${end}"
 	elif [[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ ]]; then
 		echo "${red}${dim}[ERROR] Domain Mapping failed because main site is not a Multisite Network! ${end}"
