@@ -1023,9 +1023,11 @@ FLUSH PRIVILEGES;
 _EOF_
 			else
 				echo "${red}${dim}[ERROR] WordPress Multisite database cannot be updated!${end}" >&2
+				return 1
 			fi
 		else
 			echo "${red}${dim}[ERROR] WordPress Multisite database cannot be updated!${end}" >&2
+			return 1
 		fi
 	fi
 }

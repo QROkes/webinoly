@@ -663,7 +663,7 @@ deletesite_subfolder() {
 	fi
 	
 	sudo rm -rf /var/www/$domain/htdocs$subfolder
-	echo "${gre}Subfolder${blu} $subfolder ${gre}from${blu} $domain ${gre}has been successfully deleted!${end}"
+	echo "${gre}Subfolder successfully removed!${end}"
 }
 
 
@@ -1192,8 +1192,12 @@ parked_domain() {
 		echo "${red}${dim}[ERROR] Domain Mapping failed because WP blog ID cannot be 1 (main site)! ${end}"
 	elif [[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ && $(is_wp_multisite $parked) =~ ^(subdomain|subdirectory)$ ]]; then
 		edit_wp_db_url_multisite $parked $domain $domain_mapping_wp_id
-		edit_wp_db_url $domain "http://${domain}"
-		echo "${gre}${dim}Domain Mapping successfully configured! ${end}"
+		if [[ $? != 1 ]]; then
+			edit_wp_db_url $domain "http://${domain}"
+			echo "${gre}${dim}Domain Mapping successfully configured! ${end}"
+		else
+			echo "${red}Domain Mapping configuration failed! ${end}"
+		fi
 	elif [[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ ]]; then
 		echo "${red}${dim}[ERROR] Domain Mapping failed because main site is not a Multisite Network! ${end}"
 	elif [[ -n $domain_mapping_wp_id ]]; then
@@ -1622,7 +1626,7 @@ cloning_site() {
 		
 		# Clone Subfolder conf files from apps.d
 		conf_write nginx-reload false
-		for appfile in /etc/nginx/apps.d/$clone_from*.conf
+		for appfile in /etc/nginx/apps.d/${clone_from}*.conf
 		do
 			if [[ -s $appfile ]]; then
 				local newfile=$(echo $appfile | sed "s/$clone_from/$domain/")
@@ -1678,7 +1682,7 @@ cloning_site() {
 	
 	# Remove custom settings from cloned site
 	sudo site $domain -subdomain=false -force-redirect=off > /dev/null 2>&1
-	[[ $(is_ssl $clone_from) == "true" ]] && revoke="off" && site_ssl_off > /dev/null 2>&1
+	[[ $(is_ssl $clone_from) == "true" ]] && sudo site $domain -ssl=off -revoke=off -no-db-update > /dev/null 2>&1
 	[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
 	conf_delete nginx-reload
 	

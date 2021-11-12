@@ -505,7 +505,7 @@ check_exported_conf() {
 	fi
 	if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/pph_webinoly.data"; then
 		tar -C / -xf $file /opt/webinoly/templates/source/pph_webinoly.data --absolute-names
-		sudo webinoly -header-permission-policy=on
+		sudo webinoly -header-permissions-policy=on
 	fi
 	if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/cch_webinoly.data"; then
 		tar -C / -xf $file /opt/webinoly/templates/source/cch_webinoly.data --absolute-names
@@ -712,7 +712,7 @@ export_site() {
 		fi
 		
 		# Check if site contains WP in subfolders and include these db's.
-		for sit in "/etc/nginx/apps.d/$siteto_"*-wpcommon.conf
+		for sit in "/etc/nginx/apps.d/${siteto}_"*-wpcommon.conf
 		do 
 			local suby="/$(echo $sit | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 			if [[ -n $suby && -f /var/www/$siteto/htdocs$suby/wp-config.php ]]; then
@@ -824,8 +824,7 @@ import_site() {
 	
 		# Remove old configurations
 		remove_nginx_default_server $domain
-		source /opt/webinoly/lib/site-ssl
-		[[ $(is_ssl $domain) == "true" ]] && revoke="off" && site_ssl_off > /dev/null 2>&1
+		[[ $(is_ssl $domain) == "true" ]] && sudo site $domain -ssl=off -revoke=off > /dev/null 2>&1
 		
 		
 		if [[ $(conf_read php) != "true" && ( $(is_wp $domain) == "true" || $(is_php $domain) == "true" ) ]]; then
