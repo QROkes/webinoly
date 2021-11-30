@@ -13,6 +13,13 @@ if ! [[ $distr == "Ubuntu" && $osver =~ ^(bionic|focal)$ ]]; then
 	read -p "Press [Enter] key to Continue or [Ctrl+C] to Cancel..."
 fi
 
+# Check for BASH Shell
+if [[ -z $(grep -E "^${SUDO_USER:-${USER}}\:.*\/bash.*$" /etc/passwd) ]]; then
+	echo "$(tput setaf 1)BASH Shell is required!$(tput sgr0)"
+	sudo rm weby
+	exit 1
+fi
+
 # Check for sudo/root privileges
 if [[ $(whoami) != "root" ]]; then
 	echo "$(tput setaf 1)Please run this script as root or using sudo.$(tput sgr0)"
@@ -36,12 +43,22 @@ fi
 if [[ $1 == "upd" ]]; then
 	setup=0
 	update="&update=true"
+elif [[ $1 == "-clean" ]]; then
+	setup=0
+elif [[ $1 == "-nginx" ]]; then
+	setup=1
+elif [[ $1 == "-php" ]]; then
+	setup=2
+elif [[ $1 == "-lemp" ]]; then
+	setup=3
+elif [[ -z $1 ]]; then
+	setup=3
 elif ! [[ $1 -ge 0 && $1 -le 3 && $1 =~ ^[0-9]+$ ]]; then
 	echo "$(tput setaf 6)"
 	echo "  1 - HTML Server"
 	echo "  2 - PHP Server"
 	echo "  3 - LEMP Server (Default)"
-	echo "  0 - Maybe later..."
+	echo "  0 - Clean (Only app)"
 	echo ""
 	read -p "$(tput setaf 2)Select the desired option to configure your server: $(tput sgr0)" setup
 	echo ""
@@ -92,8 +109,8 @@ sudo find /opt/webinoly -type d -exec chmod 755 {} \;
 sudo find /opt/webinoly -type f -exec chmod 644 {} \;
 sudo chmod -f 744 /opt/webinoly/lib/ex-*
 
-sudo chmod 755 /opt/webinoly/plugins/*
-sudo mv /opt/webinoly/plugins/* /usr/bin/
+sudo chmod 755 /opt/webinoly/usr/*
+sudo mv /opt/webinoly/usr/* /usr/bin/
 
 source /opt/webinoly/lib/general
 
@@ -150,7 +167,7 @@ if [[ $statskip != "true" ]]; then
 		opt=$oldapp
 	else
 		type="Error"
-		echo "${red}[WARNING] Installation method not recognized!${end}"
+		echo "${red}[ERROR] Installation method not recognized!${end}"
 	fi
 
 	wget https://api.webinoly.com/stats/?install=${branch}:${webyversion}:${type}:${opt} --referer="Webinoly-Internal-Verified-Stats" --spider --timeout=15 -t 1 -q

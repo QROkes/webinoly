@@ -22,6 +22,11 @@ readonly bol=`tput bold`
 readonly dim=`tput dim`
 
 
+# Check for BASH Shell
+if [[ -z $(grep -E "^${SUDO_USER:-${USER}}\:.*\/bash.*$" /etc/passwd) ]]; then
+	echo "$(tput setaf 1)BASH Shell is required!$(tput sgr0)"
+	exit 1
+fi
 # STOP and exit if not root or sudo.
 if [[ $(whoami) != "root" ]]; then
 	echo "${red}Please run this script as root or using sudo.${end}"
@@ -455,7 +460,7 @@ pre_install() {
 # Remove Installation Files
 app_purge() {
 	sudo rm $HOME/webinoly.tar
-	sudo rm -rf /opt/webinoly/plugins
+	sudo rm -rf /opt/webinoly/usr
 }
 
 
