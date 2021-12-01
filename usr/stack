@@ -146,7 +146,7 @@ elif [[ -n $purge && -n $php ]]; then
 			sudo service php*-fpm stop
 			ver=$(conf_read php-ver)
 			
-			sudo apt -y purge php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary graphviz php-pear ghostscript
+			sudo apt -y purge php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary php${ver}-intl php-pear graphviz ghostscript
 			
 			sudo apt -y purge php${ver}-memcached php${ver}-memcache memcached
 			sudo apt -y purge redis-server php${ver}-redis postfix
@@ -352,9 +352,9 @@ elif [[ -n $php ]]; then
 	if [[ $(conf_read php) != "true" || ( $(conf_read multi-php) == "true" && $php != true && $(conf_read php-v${php}) != "true" ) ]]; then
 		if [[ $(conf_read nginx) != "true" && $(conf_read force-flag) != "true" && $(conf_read multi-php) != "true" ]]; then
 			echo ""
-			echo "${blu}Nginx is not installed, do you want to install it too [Y/n]?${end} "
+			echo "${blu}Nginx is not installed, do you want to install it too [y/N]?${end} "
 			while read -r -n 1 -s answer; do
-			  answer=${answer:-y}
+			  answer=${answer:-n}
 			  [[ $answer = [YyNn] ]] && break
 			done
 			[[ $answer != [Nn] ]] && stack -nginx $2

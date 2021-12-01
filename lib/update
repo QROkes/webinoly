@@ -171,6 +171,12 @@ onefive_to_onesix() {
 }
 
 
+# v1.16.0
+onesix_to_oneseven() {
+	[[ $(conf_read php) == "true" ]] && sudo apt -y install php$(conf_read php-ver)-intl
+}
+
+
 # Version numbers without point
 [[ ${oldver//.} -lt 11 ]] && onezero_to_oneone > /dev/null 2>&1 &
 wait $!
@@ -183,6 +189,8 @@ wait $!
 [[ ${oldver//.} -lt 15 ]] && onefour_to_onefive > /dev/null 2>&1 &
 wait $!
 [[ ${oldver//.} -lt 16 ]] && onefive_to_onesix > /dev/null 2>&1 &
+wait $!
+[[ ${oldver//.} -lt 17 ]] && onesix_to_oneseven > /dev/null 2>&1 &
 wait $!
 
 
