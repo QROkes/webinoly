@@ -19,8 +19,7 @@ if [[ $purge == "force" || $purge_server_all == "force" || $php == "force" ]]; t
 fi
 
 purge_mysql_client() {
-	# mysql-ver dynvar was introduced in v1.15.0
-	[[ -n $(conf_read mysql-ver) ]] && local mysqlver=$(conf_read mysql-ver) || local mysqlver=$(sudo mysql -V | cut -f 6 -d " " -s | cut -f -2 -d "." -s)
+	local mysqlver=$(conf_read mysql-ver)
 	sudo apt -y purge mariadb-client
 	sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
 	sudo apt-key del 0xF1656F24C74CD1D8
@@ -233,7 +232,7 @@ elif [[ -n $purge && -n $mysql ]]; then
 			fi
 			
 			# mysql-ver dynvar was introduced in v1.15.0
-			[[ -n $(conf_read mysql-ver) ]] && mysqlver=$(conf_read mysql-ver) || mysqlver=$(sudo mysql -V | cut -f 6 -d " " -s | cut -f -2 -d "." -s)
+			mysqlver=$(conf_read mysql-ver)
 			sudo service mysql stop
 			
 			if [[ $mysql == "keep-data" ]]; then
@@ -445,9 +444,6 @@ elif [[ -n $php_ver ]]; then
 
 elif [[ -n $mysql_ver ]]; then
 	api-events_update st4
-	
-	# REMOVE IT in the future! This dynvar was introduced in v1.15.0
-	[[ $(conf_read mysql) == "true" && -z $(conf_read mysql-ver) ]] && conf_write mysql-ver $(sudo mysql -V | cut -f 6 -d " " -s | cut -f -2 -d "." -s)
 	
 	if [[ $mysql_ver != true && $(check_mysql_version $mysql_ver) == "true" ]]; then
 		echo "${blu}New MySQL (MariaDB) version: '$mysql_ver' ${end}"

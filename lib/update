@@ -174,6 +174,7 @@ onefive_to_onesix() {
 # v1.16.0
 onesix_to_oneseven() {
 	[[ $(conf_read php) == "true" ]] && sudo apt -y install php$(conf_read php-ver)-intl
+	[[ $(conf_read mysql-client) == "true" && -z $(conf_read mysql-ver) ]] && conf_write mysql-ver $(sudo mysql -V | cut -f 6 -d " " -s | cut -f -2 -d "." -s)
 }
 
 

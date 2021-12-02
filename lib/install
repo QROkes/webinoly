@@ -253,10 +253,6 @@ mysql_install() {
 		local reinstall="true"
 	fi
 	
-	# REMOVE IT in the future!
-	# Just in the rare case mysql-client was intalled before v1.15.0 and now you try to install MySQL
-	[[ -z $(conf_read mysql-ver) ]] && conf_write mysql-ver $(sudo mysql -V | cut -f 6 -d " " -s | cut -f -2 -d "." -s)
-	
 	# MariaDB Installation
 	local ver=$(conf_read mysql-ver)
 	echo "mariadb-server-${ver} mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections
@@ -432,7 +428,7 @@ php_optim() {
 	fi
 	
 	[[ $(conf_read php-pm) =~ ^(static|ondemand)$ ]] && local phpm=$(conf_read php-pm) || local phpm="dynamic"
-	[[ -z $(conf_read php-pm) && $ram -gt 6 ]] && local phpm="static"
+	[[ -z $(conf_read php-pm) && $ram -gt 8 ]] && local phpm="static"
 	
 	sudo sed -i "/pm =/c\pm = $phpm" /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i "/pm.max_children =/c\pm.max_children = $maxchil" /etc/php/$ver/fpm/pool.d/www.conf
@@ -448,7 +444,6 @@ php_optim() {
 		[[ $ver == 8.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
 		[[ $ver == 8.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/www.conf
 		[[ $ver == 7.4 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.3 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9003' /etc/php/$ver/fpm/pool.d/www.conf
 	else
 		sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
 	fi
