@@ -7,8 +7,14 @@
 ssl_nginx() {
 	sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /etc/nginx/sites-available/$domain
-	sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$domain
+	
+	# Headers
+	sudo sed -i '/header.conf;/c \	include common/headers.conf;' /etc/nginx/sites-available/$domain
+	for pxy in "/etc/nginx/apps.d/${domain}"*-proxy.conf
+	do
+		[[ -f $pxy ]] && sudo sed -i '/headers-http.conf;/a \		include common/headers-https.conf;' $pxy
+	done
 	
 	[[ -n $add_to_wildcard ]] && cert=$add_to_wildcard || cert=$domain
 	sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$cert/}" /etc/nginx/sites-available/$domain
@@ -212,9 +218,15 @@ site_ssl_off() {
 	
 	sudo sed -i '/listen 443/c \	listen 80;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/listen \[::\]:443/c \	listen [::]:80;' /etc/nginx/sites-available/$domain
-	sudo sed -i '/headers-https.conf/d' /etc/nginx/sites-available/$domain
 	sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$domain
 	sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
+	
+	# Headers
+	sudo sed -i '/headers.conf;/c \	include common/header.conf;' /etc/nginx/sites-available/$domain
+	for pxy in "/etc/nginx/apps.d/${domain}"*-proxy.conf
+	do
+		[[ -f $pxy ]] && sudo sed -i '/CacheStaticFiles/,/BasicLocationRootFiles/{/headers-https.conf;/d}' $pxy
+	done
 	
 	# In case this domain is used as tools-site or default-site
 	if [[ $(conf_read default-site) == $domain ]]; then

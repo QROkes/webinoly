@@ -175,6 +175,24 @@ onefive_to_onesix() {
 onesix_to_oneseven() {
 	[[ $(conf_read php) == "true" ]] && sudo apt -y install php$(conf_read php-ver)-intl
 	[[ $(conf_read mysql-client) == "true" && -z $(conf_read mysql-ver) ]] && conf_write mysql-ver $(sudo mysql -V | cut -f 6 -d " " -s | cut -f -2 -d "." -s)
+	
+	for site in "/etc/nginx/sites-available"/*
+	do
+		local domi=$(echo $site | cut -f 5 -d "/")
+		if [[ $domi != "html" && $domi != $(conf_read tools-port) && -f /etc/nginx/sites-available/$domi ]]; then
+			sudo sed -i '/headers-https.conf;/d' /etc/nginx/sites-available/$domi
+			if [[ $(is_ssl $domi) == "true" ]]; then
+				sudo sed -i '/headers-http.conf;/c \	include common/headers.conf;' /etc/nginx/sites-available/$domi
+			else
+				sudo sed -i '/headers-http.conf;/c \	include common/header.conf;' /etc/nginx/sites-available/$domi
+			fi
+		fi
+		
+		for pxy in "/etc/nginx/apps.d/${domi}"*-proxy.conf
+		do
+			[[ -f $pxy && $(is_ssl $domi) == "false" ]] && sudo sed -i '/CacheStaticFiles/,/BasicLocationRootFiles/{/headers-https.conf;/d}' $pxy
+		done		
+	done
 }
 
 

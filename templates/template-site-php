@@ -20,8 +20,7 @@ server {
 	
 	include common/php.conf;
 	include common/locations.conf;
-	include common/headers-http.conf;
-	include common/headers-html.conf;
+	include common/header.conf;
 	include /var/www/domain.com/*-nginx.conf;
 }
 # WebinolyNginxServerEnd

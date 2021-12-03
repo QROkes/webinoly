@@ -1292,7 +1292,9 @@ reverse_proxy() {
 		sudo sed -i '/BasicLocationRootFiles/,/BasicLocEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
 		sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	fi
-	sudo sed -i "s#http://localhost:8080#${url_scheme}${rpurl}#g"  /etc/nginx/apps.d/$domain$subname-proxy.conf
+	sudo sed -i "s#http://localhost:8080#${url_scheme}${rpurl}#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
+	
+	[[ $(is_ssl $domain) != "true" ]] && sudo sed -i '/CacheStaticFiles/,/BasicLocationRootFiles/{/headers-https.conf;/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
 	
 	# Check host and port
 	local code=$(wget -t 1 --timeout=5 --server-response --spider $rpurl 2>&1 | awk '/^  HTTP/{print $2}')
