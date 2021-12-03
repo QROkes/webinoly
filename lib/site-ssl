@@ -11,6 +11,7 @@ ssl_nginx() {
 	
 	# Headers
 	sudo sed -i '/header.conf;/c \	include common/headers.conf;' /etc/nginx/sites-available/$domain
+	[[ -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && sudo sed -i '/header.conf;/c \	include common/headers.conf;' /etc/nginx/sites-available/$(conf_read tools-port)
 	for pxy in "/etc/nginx/apps.d/${domain}"*-proxy.conf
 	do
 		[[ -f $pxy ]] && sudo sed -i '/headers-http.conf;/a \		include common/headers-https.conf;' $pxy
@@ -223,6 +224,7 @@ site_ssl_off() {
 	
 	# Headers
 	sudo sed -i '/headers.conf;/c \	include common/header.conf;' /etc/nginx/sites-available/$domain
+	[[ -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && sudo sed -i '/headers.conf;/c \	include common/header.conf;' /etc/nginx/sites-available/$(conf_read tools-port)
 	for pxy in "/etc/nginx/apps.d/${domain}"*-proxy.conf
 	do
 		[[ -f $pxy ]] && sudo sed -i '/CacheStaticFiles/,/BasicLocationRootFiles/{/headers-https.conf;/d}' $pxy

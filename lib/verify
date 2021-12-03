@@ -89,8 +89,8 @@ if [[ ! -f /opt/webinoly/templates/nginx/nginx.conf ]]; then
 	echo "- [ERROR] File: /opt/webinoly/templates/nginx/nginx.conf not found!"
 	ver_one_err="1"
 fi
-if [[ ! -f /opt/webinoly/templates/nginx/22222 ]]; then
-	echo "- [ERROR] File: /opt/webinoly/templates/nginx/22222 not found!"
+if [[ ! -f /opt/webinoly/templates/nginx/admin_tools.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/nginx/admin_tools.conf not found!"
 	ver_one_err="1"
 fi
 if [[ ! -f /opt/webinoly/templates/nginx/conf.d/fastcgi.conf ]]; then

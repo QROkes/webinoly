@@ -12,6 +12,7 @@ readonly php_default="8.0"
 readonly mysql_supported=(10.4 10.5 10.6)
 readonly mysql_default="10.6"
 readonly datadog_agent_ver="7"
+readonly tools_port_default="22222"
 
 # echo colors
 readonly red=`tput setaf 1`

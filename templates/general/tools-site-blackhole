@@ -1,8 +1,8 @@
 
 # WebinolyToolsStartBlackhole
 server {
-	listen 22222 ssl default_server;
-	listen [::]:22222 ssl default_server;
+	listen <port> ssl default_server;
+	listen [::]:<port> ssl default_server;
 
 	ssl_certificate /etc/ssl/certs/webinoly-blackhole.crt.pem;
 	ssl_certificate_key /etc/ssl/private/webinoly-blackhole.key.pem;

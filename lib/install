@@ -456,10 +456,9 @@ php_optim() {
 
 
 nginx_tool_site() {
-	# Port 22222 tools site
 	sudo site $(conf_read tools-port) -php > /dev/null 2>&1
-	sudo cp /opt/webinoly/templates/nginx/22222 /etc/nginx/sites-available/$(conf_read tools-port)
-	sudo sed -i "s/22222/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
+	sudo cp /opt/webinoly/templates/nginx/admin_tools.conf /etc/nginx/sites-available/$(conf_read tools-port)
+	sudo sed -i "s/<port>/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
 	sudo nginx -t && sudo service nginx reload
 	
 	# Robots.txt file in case someone remove HTTP Auth
@@ -473,7 +472,7 @@ Disallow: /' > /var/www/$(conf_read tools-port)/htdocs/robots.txt
 
 nginx_tool() {
 	api-events_update in9
-	[[ -z $(conf_read tools-port) ]] && conf_write tools-port 22222
+	[[ -z $(conf_read tools-port) ]] && conf_write tools-port $tools_port_default
 	[[ $(conf_read php) == "true" ]] && nginx_tool_site
 	# in case php was installed before nginx
 	[[ $(conf_read php-tool) == "true" && ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]] && php_tool_site

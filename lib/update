@@ -57,7 +57,7 @@ onetwo_to_onethree() {
 	for site in "/etc/nginx/sites-available"/*
 	do
 		domi=$(echo $site | cut -f 5 -d "/")
-		[[ $domi != "html" && $domi != 22222 ]] && sudo sed -i "/ssl on;/c\	#ssl on;" /etc/nginx/sites-available/$domi
+		[[ $domi != "html" && $domi != $(conf_read tools-port) ]] && sudo sed -i "/ssl on;/c\	#ssl on;" /etc/nginx/sites-available/$domi
 	done
 	
 	# swappines is now included by default in linux optimization.

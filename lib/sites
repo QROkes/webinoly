@@ -1186,6 +1186,7 @@ parked_domain() {
 	
 	cusconl=$( grep -o "include /var/www/$domain/.*" /etc/nginx/sites-available/$domain | sed "s/$domain/$parked/" )
 	sed -i "/include \/var\/www\/$domain/c \	${cusconl}" /etc/nginx/sites-available/$domain
+	sed -i "/include \/var\/www\/$parked/a \	include \/var\/www\/${parked}/*-$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;" /etc/nginx/sites-available/$domain
 	
 	# WordPress Domain Mapping
 	if [[ $domain_mapping_wp_id == 1  ]]; then

@@ -435,7 +435,7 @@ show_db_data() {
 change_tools_port() {
 	local oldport=$(conf_read tools-port)
 	if [[ $tools_port == true ]]; then
-		[[ -z $oldport ]] && local oldport="22222"	
+		[[ -z $oldport ]] && local oldport=$tools_port_default
 		read -p "${blu}Tools Port [Current: $oldport]: " port
 	else
 		port=$tools_port
@@ -527,7 +527,7 @@ set_tools_site() {
 		
 		# Default blackhole for requests different from our assigned Tools-Site
 		sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-blackhole' /etc/nginx/sites-available/$(conf_read tools-port)
-		sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/22222/$(conf_read tools-port)/}" /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/<port>/$(conf_read tools-port)/}" /etc/nginx/sites-available/$(conf_read tools-port)
 		if [[ $(is_ssl $tools_site) == "false" ]]; then
 			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/ssl_certificate/d}" /etc/nginx/sites-available/$(conf_read tools-port)
 			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/error_page/d}" /etc/nginx/sites-available/$(conf_read tools-port)
@@ -539,8 +539,8 @@ set_tools_site() {
 		echo "${gre}Domain${blu} ${tools_site}:$(conf_read tools-port) ${gre}was successfully assigned to access your server tools!${end}"
 	elif [[ $tools_site == "default" ]]; then
 		sudo rm -rf /etc/nginx/sites-available/$(conf_read tools-port)
-		sudo cp /opt/webinoly/templates/nginx/22222 /etc/nginx/sites-available/$(conf_read tools-port)
-		sudo sed -i "s/22222/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo cp /opt/webinoly/templates/nginx/admin_tools.conf /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i "s/<port>/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
 		conf_delete tools-site
 		echo "${gre}Tools Site settings has been reset successfully!${end}"
 	elif [[ -f /etc/nginx/sites-available/$tools_site && ! -f /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
