@@ -185,13 +185,13 @@ onesix_to_oneseven() {
 				sudo sed -i '/headers-http.conf;/c \	include common/headers.conf;' /etc/nginx/sites-available/$domi
 			else
 				sudo sed -i '/headers-http.conf;/c \	include common/header.conf;' /etc/nginx/sites-available/$domi
+				
+				for pxy in "/etc/nginx/apps.d/${domi}"*-proxy.conf
+				do
+					[[ -f $pxy ]] && sudo sed -i '/CacheStaticFiles/,/BasicLocationRootFiles/{/headers-https.conf;/d}' $pxy
+				done
 			fi
-		fi
-		
-		for pxy in "/etc/nginx/apps.d/${domi}"*-proxy.conf
-		do
-			[[ -f $pxy && $(is_ssl $domi) == "false" ]] && sudo sed -i '/CacheStaticFiles/,/BasicLocationRootFiles/{/headers-https.conf;/d}' $pxy
-		done		
+		fi		
 	done
 }
 
