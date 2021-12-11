@@ -4,9 +4,10 @@ source /opt/webinoly/lib/general
 readonly cores=$(grep ^processor /proc/cpuinfo | wc -l)
 readonly swapm=$(($(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024))
 readonly swap=$(($swapm/1000))
-readonly ramb=$(($(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024))
+readonly ramk=$(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
+readonly ramb=$(($ramk/1024))
 [[ $(($ramb%1000)) -gt 700 ]] && readonly ram=$((($ramb/1000)+1)) || readonly ram=$(($ramb/1000))
-
+[[ $(($ramb*30)) -lt 65535 ]] && readonly fd_per_process=65535 || readonly fd_per_process=$(($ramb*30)) # File descriptors per process 3%
 
 set_timezone() {
 	if [[ -n $(conf_read timezone) ]] && grep -Fxq $(conf_read timezone) /opt/webinoly/lib/timezone.dat; then
@@ -17,73 +18,84 @@ set_timezone() {
 			# Don't reload if running inside php-optim process.
 			[[ $(conf_read status-api) != "ip3" ]] && sudo systemctl reload php$(conf_read php-ver)-fpm
 		fi
-		echo "${gre}Timezone: $(conf_read timezone) ${end}"
+		echo "${gre}Timezone has been successfully set!${dim} ($(conf_read timezone)) ${end}"
 	else
 		conf_delete timezone
 		echo "${red}Timezone not found or not valid!${end}"
-		exit 1
+		return 1
 	fi
 }
 
 
 linux_optim() {
 	api-events_update in4
-	if [[ $(conf_read linux-optim) == "true" ]]; then
-		return
+	[[ $(conf_read linux-optim) == "true" ]] && return
+	
+	# Kernel Optimization
+	if [[ $(conf_read kernel-optim) != "false" ]]; then
+		sudo cat /opt/webinoly/templates/general/sysctl >> /etc/sysctl.conf
+		sudo modprobe tcp_bbr
+		
+		# https://github.com/amazonlinux/autotune
+		# https://github.com/amzn/amzn-drivers/blob/master/kernel/linux/ena/ENA_Linux_Best_Practices.rst
+		# https://www.brendangregg.com/Slides/AWSreInvent2017_performance_tuning_EC2.pdf
+		# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/performance_tuning_guide/s-memory-tunables
+		# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-configuration_tools-configuring_system_memory_capacity
+		
+		if [[ $ram -gt 28 ]]; then
+			# https://mariadb.com/kb/en/configuring-swappiness/
+			sudo sed -i "/vm.swappiness =/c \vm.swappiness = 1" /etc/sysctl.conf
+			
+			sudo sed -i "/vm.min_free_kbytes =/c \vm.min_free_kbytes = $(($ramb*20))" /etc/sysctl.conf
+			sudo sed -i "/vm.dirty_ratio =/c \vm.dirty_ratio = 0" /etc/sysctl.conf
+			sudo sed -i "/vm.dirty_background_ratio =/c \vm.dirty_background_ratio = 0" /etc/sysctl.conf
+			sudo sed -i "/vm.dirty_expire_centisecs =/c \vm.dirty_expire_centisecs = 500" /etc/sysctl.conf
+			sudo sed -i "/#vm.dirty_bytes =/c \vm.dirty_bytes = 5505024000" /etc/sysctl.conf
+			sudo sed -i "/#vm.dirty_background_bytes =/c \vm.dirty_background_bytes = 917504000" /etc/sysctl.conf
+			sudo sed -i "/#vm.dirty_writeback_centisecs =/c \vm.dirty_writeback_centisecs = 100" /etc/sysctl.conf
+		elif [[ $ram -gt 2 ]]; then
+			# Default is 65M, if RAM >= 3Gb take 3%, and > 28Gb only 2%
+			sudo sed -i "/vm.min_free_kbytes =/c \vm.min_free_kbytes = $(($ramb*30))" /etc/sysctl.conf
+			
+			# https://lonesysadmin.net/2013/12/22/better-linux-disk-caching-performance-vm-dirty_ratio/
+			sudo sed -i "/vm.dirty_ratio =/c \vm.dirty_ratio = 30" /etc/sysctl.conf
+			sudo sed -i "/vm.dirty_expire_centisecs =/c \vm.dirty_expire_centisecs = 900" /etc/sysctl.conf
+			sudo sed -i "/vm.swappiness =/c \vm.swappiness = 5" /etc/sysctl.conf
+		fi
+		
+		if [[ $ram -gt 1 ]]; then
+			local shmmni=$(($ram*256))
+			local msgmni=$(($ram*1024))
+		else
+			local shmmni=256
+			local msgmni=1024
+		fi
+		
+		# https://www.ibm.com/docs/es/db2/11.1?topic=unix-modifying-kernel-parameters-linux
+		sudo sed -i "/kernel.shmmni =/c \kernel.shmmni = $shmmni" /etc/sysctl.conf
+		sudo sed -i "/kernel.shmmax =/c \kernel.shmmax = $(($ramk*800))" /etc/sysctl.conf # Less than 80% of total ram
+		sudo sed -i "/kernel.shmall =/c \kernel.shmall = $(($(getconf PAGE_SIZE)*2))" /etc/sysctl.conf
+		sudo sed -i "/kernel.msgmni =/c \kernel.msgmni = $msgmni" /etc/sysctl.conf
+		sudo sed -i "/kernel.sem =/c \kernel.sem = 250 1024000 32 $shmmni" /etc/sysctl.conf
+		sudo sysctl -p -q
 	fi
 	
-	if [[ -n $(conf_read fd-ratio) && $(conf_read fd-ratio) =~ ^[0-9]+$ && $(conf_read fd-ratio) -le "100" ]]; then
-		local fdratio=$(conf_read fd-ratio)
-	else
-		local fdratio="30"
-	fi
-	if [[ -n $(conf_read nginx-fd-ratio) && $(conf_read nginx-fd-ratio) =~ ^[0-9]+$ && $(conf_read nginx-fd-ratio) -le "100" ]]; then
-		local nginxfdratio=$(conf_read nginx-fd-ratio)
-	else
-		local nginxfdratio="65"
-	fi
-	
-	local newfd=$(($ramb*$fdratio*10))
-	local nginxfd=$((($newfd*$nginxfdratio)/100))
-	local cachefd=$(($nginxfd/3))
-	
-	[ -d /etc/systemd/system/nginx.service.d ] || sudo mkdir /etc/systemd/system/nginx.service.d
-	[ -f /etc/systemd/system/nginx.service.d/nofile_limit.conf ] || sudo touch /etc/systemd/system/nginx.service.d/nofile_limit.conf
-	sudo echo "[Service]
-LimitNOFILE=$nginxfd" >> /etc/systemd/system/nginx.service.d/nofile_limit.conf
-	
-	sudo sed -i "/worker_rlimit_nofile/c \worker_rlimit_nofile $nginxfd;" /etc/nginx/nginx.conf
-	sudo sed -i "/client_max_body_size/c \	client_max_body_size $(check_var max-uploads)m;" /etc/nginx/nginx.conf
-	sudo sed -i "/open_file_cache max/c \	open_file_cache max=$cachefd inactive=5m;" /etc/nginx/nginx.conf
-	sudo sed -i "/fastcgi_read_timeout/c \fastcgi_read_timeout $(check_var max-time)s;" /etc/nginx/conf.d/fastcgi.conf
-	
-	# RAM: By default linux takes 10% for /run, we increase this value to 25%, so cache max_size should never be greater than that! https://github.com/QROkes/webinoly/issues/19
-	if [[ -n $(conf_read cache-size) && $(conf_read cache-size) =~ ^[0-9]+$ && $(conf_read cache-size) -le "100" ]]; then
-		local cachesize=$(conf_read cache-size)
-	else
-		local cachesize="20"
-	fi
-	local cacheram=$((($ramb*$cachesize)/100))
-	echo "tmpfs	/run	tmpfs	nodev,nosuid,size=25%,mode=755	0	0" >> /etc/fstab
-	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=${cacheram}m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
-	
-	[[ $newfd -gt $(ulimit -Hn) ]] && rootfd=$newfd || rootfd=$(ulimit -Hn)
+	# File directors per process
+	[[ -n $(ulimit -Hn) && $fd_per_process -lt $(ulimit -Hn) ]] && local rootfd=$(ulimit -Hn) || local rootfd=$fd_per_process
 	sudo sed -i "/End of file/i \# WebinolyStart - Don't delete" /etc/security/limits.conf
 	sudo sed -i "/End of file/i \root	-	nofile	${rootfd}" /etc/security/limits.conf
-	sudo sed -i "/End of file/i \*	-	nofile	${newfd}" /etc/security/limits.conf
+	sudo sed -i "/End of file/i \*	-	nofile	${fd_per_process}" /etc/security/limits.conf
+	sudo sed -i "/End of file/i \mysql soft core unlimited" /etc/security/limits.conf
+	sudo sed -i "/End of file/i \mysql hard core unlimited" /etc/security/limits.conf
+	sudo sed -i "/End of file/i \mysql soft nofile 65535" /etc/security/limits.conf
+	sudo sed -i "/End of file/i \mysql hard nofile 65535" /etc/security/limits.conf
 	sudo sed -i "/End of file/i \# WebinolyEnd" /etc/security/limits.conf
-
-	sudo cat /opt/webinoly/templates/general/sysctl >> /etc/sysctl.conf
-	sudo sed -i "/fs.file-max =/c \ fs.file-max = ${newfd}" /etc/sysctl.conf
-	sudo sed -i "/vm.max_map_count =/c \ vm.max_map_count = ${newfd}" /etc/sysctl.conf
-	sudo modprobe tcp_bbr
 	
-	# Default is 65M, if RAM >= 3Gb take 3%, and >= 32Gb only 2%
-	if [[ $ram -gt 30 ]]; then
-		sudo sed -i "/vm.min_free_kbytes =/c \ vm.min_free_kbytes = $(($ramb*20))" /etc/sysctl.conf
-	elif [[ $ram -gt 2 ]]; then
-		sudo sed -i "/vm.min_free_kbytes =/c \ vm.min_free_kbytes = $(($ramb*30))" /etc/sysctl.conf
-	fi
+	# File directors for Nginx
+	[[ ! -d /etc/systemd/system/nginx.service.d ]] && sudo mkdir /etc/systemd/system/nginx.service.d
+	[[ ! -f /etc/systemd/system/nginx.service.d/nofile_limit.conf ]] && sudo touch /etc/systemd/system/nginx.service.d/nofile_limit.conf
+	[[ ! -s /etc/systemd/system/nginx.service.d/nofile_limit.conf ]] && sudo echo "[Service]
+LimitNOFILE=$fd_per_process" >> /etc/systemd/system/nginx.service.d/nofile_limit.conf
 	
 	# Disable Transparent Huge Pages
 	# Just to be sure is disabled, most cloud providers bring this settings disabled by default.
@@ -101,17 +113,20 @@ ExecStart=/bin/sh -c \"echo never > /sys/kernel/mm/transparent_hugepage/enabled 
 WantedBy=multi-user.target" >> /etc/systemd/system/webinoly-disable-thp.service
 	fi
 	
-	swap_create
-	set_timezone &
-	
-	sudo sysctl -p -q
-	sudo mount -o remount tmpfs
-	sudo systemctl daemon-reload
 	sudo systemctl start webinoly-disable-thp
 	sudo systemctl enable webinoly-disable-thp > /dev/null 2>&1
-	sudo kill $(cat /run/nginx.pid)
+	
+	# RUN folder is in RAM for fast access, like FastCGI Cache! (Default is 10%)
+	echo "tmpfs	/run	tmpfs	nodev,nosuid,size=25%,mode=755	0	0" >> /etc/fstab
+	sudo mount -o remount tmpfs
+	
+	swap_create
+	set_timezone
+	
+	sudo systemctl daemon-reload
+	[[ -s /run/nginx.pid && -n $(cat /run/nginx.pid) ]] && sudo kill $(cat /run/nginx.pid) && sudo service nginx start
+	
 	conf_write linux-optim true
-	sudo service nginx start
 	api-events_update in7
 }
 
@@ -119,10 +134,14 @@ WantedBy=multi-user.target" >> /etc/systemd/system/webinoly-disable-thp.service
 linux_purge() {
 	if [[ $(conf_read linux-optim) == "true" ]]; then
 		api-events_update pn7
+		
+		sudo rm -rf /etc/systemd/system/nginx.service.d
 		sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/security/limits.conf
 		sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/sysctl.conf
-		sudo rm -rf /etc/systemd/system/nginx.service.d
-		sudo sed -i '\/run/d' /etc/fstab
+		sudo sysctl -p -q
+		
+		sudo sed -i '/\/run/d' /etc/fstab
+		sudo mount -o remount tmpfs
 		
 		# Check in case of upgrading old stacks (before 1.14.0) when this service still not included
 		if [[ -f /etc/systemd/system/webinoly-disable-thp.service ]]; then
@@ -133,9 +152,9 @@ linux_purge() {
 		
 		[[ -z $server_reset || $recalculate == "on" ]] && swap_delete
 		
-		sudo sysctl -p -q
-		sudo mount -o remount tmpfs
 		sudo systemctl daemon-reload
+		[[ -s /run/nginx.pid && -n $(cat /run/nginx.pid) ]] && sudo kill $(cat /run/nginx.pid) && sudo service nginx start
+		
 		conf_write linux-optim purged
 		api-events_update pn8
 	fi
@@ -298,6 +317,11 @@ nginx_optim() {
 	
 	sudo chown -R www-data:www-data /var/www
 	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
+
+	if [[ ! -f /etc/ssl/dhparam.pem ]]; then
+		sudo openssl dhparam -out /etc/ssl/dhparam.pem 2048
+		sudo chmod 600 /etc/ssl/dhparam.pem
+	fi
 	
 	sudo cp -R /opt/webinoly/templates/nginx/common /etc/nginx/common
 	sudo cp -R /opt/webinoly/templates/nginx/conf.d/* /etc/nginx/conf.d/
@@ -306,6 +330,10 @@ nginx_optim() {
 	# This files are backedup by server-reset (needs to be here to avoid nginx errors)
 	[[ -f /tmp/webinoly_blockips_backup ]] && sudo mv /tmp/webinoly_blockips_backup /etc/nginx/conf.d/blockips.conf
 	[[ -f /tmp/webinoly_backup ]] && sudo mv /tmp/webinoly_backup /etc/nginx/conf.d/webinoly.conf
+
+	sudo sed -i "/client_max_body_size/c \	client_max_body_size $(check_var max-uploads)m;" /etc/nginx/nginx.conf
+	sudo sed -i "/worker_rlimit_nofile/c \worker_rlimit_nofile $fd_per_process;" /etc/nginx/nginx.conf
+	sudo sed -i "/open_file_cache max/c \	open_file_cache max=$(($fd_per_process/3)) inactive=5m;" /etc/nginx/nginx.conf
 	
 	# Remove it, then add it again to prevent multiple # for each server-reset
 	sudo sed -i '/ SERVER_NAME /s/#//' /etc/nginx/fastcgi_params
@@ -319,25 +347,20 @@ fastcgi_param  HTTP_PROXY         "";
 fastcgi_param  HTTP_ACCEPT_ENCODING "";
 # WebinolyCustomEnd' >> /etc/nginx/fastcgi_params
 	
-	# Create Direct Access for easy navigation
-	if [[ ! -L $CURRENT_HOME/sites-available ]]; then
-		ln -s /etc/nginx/sites-available $CURRENT_HOME
-		sudo chown -h ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/sites-available
+	# RAM: By default linux takes 10% for /run, we increase this value to 25%, so cache max_size should never be greater than that! https://github.com/QROkes/webinoly/issues/19
+	if [[ -n $(conf_read cache-size) && $(conf_read cache-size) =~ ^[0-9]+$ && $(conf_read cache-size) -le "100" ]]; then
+		local cachesize=$(conf_read cache-size)
+	else
+		local cachesize="20"
 	fi
-	if [[ ! -L $CURRENT_HOME/www ]]; then
-		ln -s /var/www $CURRENT_HOME
-		sudo chown -h ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/www
-	fi
+	local cacheram=$((($ramb*$cachesize)/100))
+	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=${cacheram}m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
+	sudo sed -i "/fastcgi_read_timeout/c \fastcgi_read_timeout $(check_var max-time)s;" /etc/nginx/conf.d/fastcgi.conf
+	
+	echo "${gre}Wait while Webinoly optimize your Ubuntu Operating System...${end}"
 	
 	# www-data sftp default uploads permissions 755 and 644, instead of 775 and 664.
 	sudo sed -i '/USERGROUPS_ENAB/c \USERGROUPS_ENAB no' /etc/login.defs
-	
-	if [[ ! -f /etc/ssl/dhparam.pem ]]; then
-		sudo openssl dhparam -out /etc/ssl/dhparam.pem 2048
-		sudo chmod 600 /etc/ssl/dhparam.pem
-	fi
-	
-	echo "${gre}Wait while Webinoly optimize your Ubuntu Operating System...${end}"
 	linux_optim
 
 	# Check for dynamic variables.
@@ -377,6 +400,16 @@ location = /xmlrpc.php {
 		echo "${gre}WordPress XMLRPC successfully configured!${dim} ($(conf_read xmlrpc))${end}"
 	fi
 
+	# Create Direct Access for easy navigation
+	if [[ ! -L $CURRENT_HOME/sites-available ]]; then
+		ln -s /etc/nginx/sites-available $CURRENT_HOME
+		sudo chown -h ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/sites-available
+	fi
+	if [[ ! -L $CURRENT_HOME/www ]]; then
+		ln -s /var/www $CURRENT_HOME
+		sudo chown -h ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/www
+	fi
+	
 	conf_write server-version $svr_version
 	conf_write nginx-optim true
 	api-events_update in8
@@ -414,7 +447,7 @@ php_optim() {
 	sudo sed -i '/opcache.enable_cli=/c\opcache.enable_cli=1' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/opcache.enable=/c\opcache.enable=1' /etc/php/$ver/fpm/php.ini
 	
-	set_timezone &
+	set_timezone
 	
 	if [[ -z $maxchil ]]; then	
 		if [[ $ram  =~ ^[0-9]+$ && ( $ram -gt 3 || $cores -gt 2 ) ]]; then
@@ -554,7 +587,8 @@ php_tool() {
 	sudo apt -y install postfix
 	sudo cp -p /etc/postfix/main.cf /opt/webinoly/templates/source/
 	sudo sed -i '/mydestination =/c \mydestination = localhost' /etc/postfix/main.cf
-
+	sudo sed -i '/smtpd_banner =/c \smtpd_banner = $myhostname ESMTP' /etc/postfix/main.cf # https://cisofy.com/lynis/controls/MAIL-8818/
+	
 	redis_optim
 	sudo service php*-fpm reload
 	sudo service postfix restart
@@ -595,8 +629,7 @@ mysql_tool() {
 swap_delete() {
 	if [[ -n $swap && $swap =~ ^[0-9]+$ && $(conf_read swap-owner) == "webinoly" ]]; then
 		api-events_update pn9
-		sudo swapoff -a -v
-		sudo rm -rf /swapfile
+		sudo swapoff -a -v && sudo rm -rf /swapfile
 		if [[ ! -f /swapfile ]]; then
 			sudo sed -i '/\/swapfile/d' /etc/fstab
 			conf_delete swap-owner

@@ -83,11 +83,11 @@ elif [[ -n $clear_cache ]]; then
 
 elif [[ -n $timezone ]]; then
 	if [[ $timezone == true ]]; then
-		echo "${gre}"
-		echo "Please, enter a valid Timezone for Ubuntu and PHP."
-		echo "http://php.net/manual/en/timezones.php"
+		echo "${blu}${bol}"
+		echo "Please, enter a valid Timezone for Ubuntu and PHP. ${end}"
+		echo "${blu}${dim}http://php.net/manual/en/timezones.php ${end}"
 		echo ""
-		read -p "${blu} Timezone: ${end}" timezone
+		read -p "${blu}Timezone: ${end}" timezone
 		echo ""
 	fi
 	conf_write timezone $timezone

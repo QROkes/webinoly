@@ -14,9 +14,11 @@ system_info() {
 	echo "${blu}Cores:${end}${dim} $cores ${end}"
 	echo "${blu}RAM:${end}${dim} $ramv ${end}"
 	echo "${blu}SWAP:${end}${dim} $swapv ${end}"
-	echo "${blu}File descriptors (OS):${end}${dim} $(sudo cat /proc/sys/fs/file-max) ${end}"
-	[[ $(conf_read nginx) == "true" ]] && echo "${blu}File descriptors (Nginx):${end}${dim} $(grep 'Max open files' /proc/$(cat /run/nginx.pid)/limits | cut -f 15 -d ' ') ${end}"
+	echo ""
 	echo "${blu}Hostname:${end}${dim} $(sudo hostname) ${end}"
+	echo "${blu}File descriptors (OS):${end}${dim} $(sudo cat /proc/sys/fs/file-max) ${end}"
+	echo "${blu}File descriptors (root):${end}${dim} $(ulimit -Hn) ${end}"
+	[[ $(conf_read nginx) == "true" ]] && echo "${blu}File descriptors (nginx/per process):${end}${dim} $(grep 'Max open files' /proc/$(cat /run/nginx.pid)/limits | cut -f 15 -d ' ') ${end}"
 	echo ""
 	echo "${blu}${bol}[Disk Usage]${end}${dim}"
 	sudo df -Th /
@@ -337,10 +339,10 @@ server_reset() {
 		[[ -f /etc/nginx/conf.d/blockips.conf ]] && sudo cp -p /etc/nginx/conf.d/blockips.conf /tmp/webinoly_blockips_backup
 		[[ -f /etc/nginx/conf.d/webinoly.conf ]] && sudo cp -p /etc/nginx/conf.d/webinoly.conf /tmp/webinoly_backup
 		
+		linux_purge
 		sudo sed -i '/WebinolyCustom/,/WebinolyCustomEnd/{/.*/d}' /etc/nginx/fastcgi_params
 		sudo rm -rf /etc/nginx/common
 		sudo rm -rf /etc/nginx/conf.d/*
-		linux_purge
 		nginx_optim
 		echo "${gre}Nginx settings has been updated successfully!${end}"
 		nginx_not="true" # Nginx-Reload not-needed.
