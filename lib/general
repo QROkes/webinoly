@@ -1124,12 +1124,37 @@ log_error = /var/log/mysql/error.log" >> /etc/mysql/mariadb.conf.d/90-webinoly.c
 
 check_var() {
 	# fastcgi_read_timeout,max_execution_time,request_terminate_timeout
-	if [[ $1 == "max-time" ]]; then
-		[[ -n $(conf_read php-max-time) && $(conf_read php-max-time) =~ ^[0-9]+$ && $(conf_read php-max-time) -gt 0 ]] && local out=$(conf_read php-max-time) || local out=300
+	if [[ $1 == "php-max-time" ]]; then
+		[[ -n $(conf_read php-max-time) && $(conf_read php-max-time) =~ ^[0-9]+$ && $(conf_read php-max-time) -gt 0 ]] && local out=$(conf_read php-max-time) || local out=30
 	
+	# PHP Memory limit
+	elif [[ $1 == "php-max-mem" ]]; then
+		[[ -n $(conf_read php-max-mem) && $(conf_read php-max-mem) =~ ^[0-9]+$ && $(conf_read php-max-mem) -gt 0 ]] && local out=$(conf_read php-max-mem) || local out=192
+	
+	# PHP Process Manager
+	elif [[ $1 == "php-pm" ]]; then
+		if [[ $(conf_read php-pm) =~ ^(static|ondemand|dynamic)$ ]]; then
+			local out=$(conf_read php-pm)
+		else
+			[[ $ram -gt 1 ]] && local out="static" || local out="dynamic"
+		fi
+		
+	# PHP Workers
+	elif [[ $1 == "php-max-child" ]]; then
+		if [[ -n $(conf_read php-max-child) && $(conf_read php-max-child) =~ ^[0-9]+$ && $(conf_read php-max-child) -ge 3 ]]; then
+			local out=$(conf_read php-max-child)
+		else
+			[[ $((3*$cores)) =~ ^[0-9]+ && $((3*$cores)) -ge 6 ]] && local out=$((3*$cores)) || local out=6
+		fi
+		
 	# client_max_body_size,upload_max_filesize,post_max_size
-	elif [[ $1 == "max-uploads" ]]; then
+	elif [[ $1 == "max-mb-uploads" ]]; then
 		[[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ && $(conf_read max-mb-uploads) -gt 0 ]] && local out=$(conf_read max-mb-uploads) || local out=50
+	
+	# FastCGI Cache size
+	elif [[ $1 == "run-folder-size" ]]; then
+		[[ -n $(conf_read run-folder-size) && $(conf_read run-folder-size) =~ ^[0-9]+$ && $(conf_read run-folder-size) -gt 10 && $(conf_read run-folder-size) -le "70" ]] && local out=$(conf_read run-folder-size) || local out=25
+		
 	else
 		local out="false"
 	fi

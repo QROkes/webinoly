@@ -9,6 +9,12 @@ readonly ramb=$(($ramk/1024))
 [[ $(($ramb%1000)) -gt 700 ]] && readonly ram=$((($ramb/1000)+1)) || readonly ram=$(($ramb/1000))
 [[ $(($ramb*30)) -lt 65535 ]] && readonly fd_per_process=65535 || readonly fd_per_process=$(($ramb*30)) # File descriptors per process 3%
 
+# Validation
+[[ $cores =~ ^[0-9]+$ ]] || echo "${red}[ERROR] System info (cores) retrieve corrupted!${end}"
+[[ $swapm =~ ^[0-9]+$ ]] || echo "${red}[ERROR] System info (swap) retrieve corrupted!${end}"
+[[ $ramk =~ ^[0-9]+$ ]] || echo "${red}[ERROR] System info (ram) retrieve corrupted!${end}"
+
+
 set_timezone() {
 	if [[ -n $(conf_read timezone) ]] && grep -Fxq $(conf_read timezone) /opt/webinoly/lib/timezone.dat; then
 		sudo timedatectl set-timezone $(conf_read timezone)
@@ -85,6 +91,8 @@ linux_optim() {
 	sudo sed -i "/End of file/i \# WebinolyStart - Don't delete" /etc/security/limits.conf
 	sudo sed -i "/End of file/i \root	-	nofile	${rootfd}" /etc/security/limits.conf
 	sudo sed -i "/End of file/i \*	-	nofile	${fd_per_process}" /etc/security/limits.conf
+	
+	# https://mariadb.com/kb/en/configuring-linux-for-mariadb/
 	sudo sed -i "/End of file/i \mysql soft core unlimited" /etc/security/limits.conf
 	sudo sed -i "/End of file/i \mysql hard core unlimited" /etc/security/limits.conf
 	sudo sed -i "/End of file/i \mysql soft nofile 65535" /etc/security/limits.conf
@@ -116,8 +124,8 @@ WantedBy=multi-user.target" >> /etc/systemd/system/webinoly-disable-thp.service
 	sudo systemctl start webinoly-disable-thp
 	sudo systemctl enable webinoly-disable-thp > /dev/null 2>&1
 	
-	# RUN folder is in RAM for fast access, like FastCGI Cache! (Default is 10%)
-	echo "tmpfs	/run	tmpfs	nodev,nosuid,size=25%,mode=755	0	0" >> /etc/fstab
+	# RAM: By default linux takes 10% for /run, we increase this value to 25%! https://github.com/QROkes/webinoly/issues/19
+	echo "tmpfs	/run	tmpfs	nodev,nosuid,size=$(check_var run-folder-size)%,mode=755	0	0" >> /etc/fstab
 	sudo mount -o remount tmpfs
 	
 	swap_create
@@ -331,9 +339,10 @@ nginx_optim() {
 	[[ -f /tmp/webinoly_blockips_backup ]] && sudo mv /tmp/webinoly_blockips_backup /etc/nginx/conf.d/blockips.conf
 	[[ -f /tmp/webinoly_backup ]] && sudo mv /tmp/webinoly_backup /etc/nginx/conf.d/webinoly.conf
 
-	sudo sed -i "/client_max_body_size/c \	client_max_body_size $(check_var max-uploads)m;" /etc/nginx/nginx.conf
-	sudo sed -i "/worker_rlimit_nofile/c \worker_rlimit_nofile $fd_per_process;" /etc/nginx/nginx.conf
-	sudo sed -i "/open_file_cache max/c \	open_file_cache max=$(($fd_per_process/3)) inactive=5m;" /etc/nginx/nginx.conf
+	sudo sed -i "/client_max_body_size /c \	client_max_body_size $(check_var max-mb-uploads)m;" /etc/nginx/nginx.conf
+	sudo sed -i "/worker_rlimit_core /c \worker_rlimit_core $fd_per_process;" /etc/nginx/nginx.conf
+	sudo sed -i "/worker_rlimit_nofile /c \worker_rlimit_nofile $fd_per_process;" /etc/nginx/nginx.conf
+	sudo sed -i "/open_file_cache max /c \	open_file_cache max=$(($fd_per_process/3)) inactive=5m;" /etc/nginx/nginx.conf
 	
 	# Remove it, then add it again to prevent multiple # for each server-reset
 	sudo sed -i '/ SERVER_NAME /s/#//' /etc/nginx/fastcgi_params
@@ -347,15 +356,9 @@ fastcgi_param  HTTP_PROXY         "";
 fastcgi_param  HTTP_ACCEPT_ENCODING "";
 # WebinolyCustomEnd' >> /etc/nginx/fastcgi_params
 	
-	# RAM: By default linux takes 10% for /run, we increase this value to 25%, so cache max_size should never be greater than that! https://github.com/QROkes/webinoly/issues/19
-	if [[ -n $(conf_read cache-size) && $(conf_read cache-size) =~ ^[0-9]+$ && $(conf_read cache-size) -le "100" ]]; then
-		local cachesize=$(conf_read cache-size)
-	else
-		local cachesize="20"
-	fi
-	local cacheram=$((($ramb*$cachesize)/100))
-	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=${cacheram}m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
-	sudo sed -i "/fastcgi_read_timeout/c \fastcgi_read_timeout $(check_var max-time)s;" /etc/nginx/conf.d/fastcgi.conf
+	# FastCGI Cache size: We take 90% of /run folder size! https://github.com/QROkes/webinoly/issues/19
+	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=$(((9*$ramb*$(check_var run-folder-size))/1000))m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
+	sudo sed -i "/fastcgi_read_timeout/c \fastcgi_read_timeout $(check_var php-max-time)s;" /etc/nginx/conf.d/fastcgi.conf
 	
 	echo "${gre}Wait while Webinoly optimize your Ubuntu Operating System...${end}"
 	
@@ -422,26 +425,22 @@ php_optim() {
 	api-events_update ip3
 	
 	# Check if exist in case of server-reset
-	[[ ! -f /opt/webinoly/templates/source/php.ini ]] && sudo cp -p /etc/php/$(conf_read php-ver)/fpm/php.ini /opt/webinoly/templates/source/
-	[[ ! -f /opt/webinoly/templates/source/www.conf ]] && sudo cp -p /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf /opt/webinoly/templates/source/
-	[[ ! -f /opt/webinoly/templates/source/php-fpm.conf ]] && sudo cp -p /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf /opt/webinoly/templates/source/
+	local ver=$(conf_read php-ver)
+	[[ ! -f /opt/webinoly/templates/source/php.ini ]] && sudo cp -p /etc/php/${ver}/fpm/php.ini /opt/webinoly/templates/source/
+	[[ ! -f /opt/webinoly/templates/source/www.conf ]] && sudo cp -p /etc/php/${ver}/fpm/pool.d/www.conf /opt/webinoly/templates/source/
+	[[ ! -f /opt/webinoly/templates/source/php-fpm.conf ]] && sudo cp -p /etc/php/${ver}/fpm/php-fpm.conf /opt/webinoly/templates/source/
+	[[ -n $1 ]] && local ver="$1"
 	
-	
-	# Check for dynamic variables
-	[[ -n $1 ]] && ver="$1" || ver=$(conf_read php-ver)
-	[[ -n $(conf_read php-max-child) && $(conf_read php-max-child) =~ ^[0-9]+$ && $(conf_read php-max-child) -gt 2 ]] && local maxchil=$(conf_read php-max-child)
-	[[ -n $(conf_read php-max-mem) && $(conf_read php-max-mem) =~ ^[0-9]+$ && $(conf_read php-max-mem) -gt 0 ]] && local maxmem=$(conf_read php-max-mem) || local maxmem=192
-	
-	sudo sed -i "/memory_limit =/c\memory_limit = ${maxmem}M" /etc/php/$ver/fpm/php.ini
-	sudo sed -i "/max_execution_time =/c\max_execution_time = $(check_var max-time)" /etc/php/$ver/fpm/php.ini
-	sudo sed -i "/upload_max_filesize =/c\upload_max_filesize = $(check_var max-uploads)M" /etc/php/$ver/fpm/php.ini
-	sudo sed -i "/post_max_size =/c\post_max_size = $(check_var max-uploads)M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/memory_limit =/c\memory_limit = $(check_var php-max-mem)M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/max_execution_time =/c\max_execution_time = $(check_var php-max-time)" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/upload_max_filesize =/c\upload_max_filesize = $(check_var max-mb-uploads)M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/post_max_size =/c\post_max_size = $(check_var max-mb-uploads)M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i "/max_input_vars =/c\max_input_vars = 3000" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/max_file_uploads =/c\max_file_uploads = 20' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/session.cookie_httponly =/c\session.cookie_httponly = 1' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/expose_php =/c\expose_php = Off' /etc/php/$ver/fpm/php.ini
 	
-	sudo sed -i "/opcache.memory_consumption=/c\opcache.memory_consumption=${maxmem}" /etc/php/$ver/fpm/php.ini
+	sudo sed -i "/opcache.memory_consumption=/c\opcache.memory_consumption=$(check_var php-max-mem)" /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/opcache.interned_strings_buffer=/c\opcache.interned_strings_buffer=8' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/opcache.max_accelerated_files=/c\opcache.max_accelerated_files=50000' /etc/php/$ver/fpm/php.ini
 	sudo sed -i '/opcache.enable_cli=/c\opcache.enable_cli=1' /etc/php/$ver/fpm/php.ini
@@ -449,26 +448,12 @@ php_optim() {
 	
 	set_timezone
 	
-	if [[ -z $maxchil ]]; then	
-		if [[ $ram  =~ ^[0-9]+$ && ( $ram -gt 3 || $cores -gt 2 ) ]]; then
-			local maxchil=$((5*$ram*$cores))
-			[[ $maxchil -gt 100 ]] && maxchil=100
-		elif [[ $ram  =~ ^[0-9]+$ && $ram -gt 0 ]]; then
-			local maxchil=10
-		else
-			local maxchil=6
-		fi
-	fi
-	
-	[[ $(conf_read php-pm) =~ ^(static|ondemand)$ ]] && local phpm=$(conf_read php-pm) || local phpm="dynamic"
-	[[ -z $(conf_read php-pm) && $ram -gt 8 ]] && local phpm="static"
-	
-	sudo sed -i "/pm =/c\pm = $phpm" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i "/pm.max_children =/c\pm.max_children = $maxchil" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i "/pm.start_servers =/c\pm.start_servers = $(($maxchil/3))" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i "/pm.min_spare_servers =/c\pm.min_spare_servers = $(($maxchil/3))" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i "/pm.max_spare_servers =/c\pm.max_spare_servers = $((2*($maxchil/3)))" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i "/request_terminate_timeout =/c\request_terminate_timeout = $(check_var max-time)" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm =/c\pm = $(check_var php-pm)" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm.max_children =/c\pm.max_children = $(check_var php-max-child)" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm.start_servers =/c\pm.start_servers = $(($(check_var php-max-child)/3))" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm.min_spare_servers =/c\pm.min_spare_servers = $(($(check_var php-max-child)/3))" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/pm.max_spare_servers =/c\pm.max_spare_servers = $((2*($(check_var php-max-child)/3)))" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i "/request_terminate_timeout =/c\request_terminate_timeout = $(check_var php-max-time)" /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.max_requests =/c\pm.max_requests = 1000' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.status_path =/c\pm.status_path = /status' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
