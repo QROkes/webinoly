@@ -8,7 +8,7 @@ echo "${blu}Current server version 'v$oldver' will be upgraded to the newest 'v$
 # v1.5.0
 onezero_to_oneone() {
 	
-	if [[ $(conf_read mysql-tool) == "true" ]]; then
+	if [[ $(conf_read mysql-tool-pma) == "true" ]]; then
 		# Remove old phpMyAdmin
 		echo "phpmyadmin      phpmyadmin/dbconfig-remove      boolean true" | debconf-set-selections
 		echo "phpmyadmin      phpmyadmin/purge        boolean true" | debconf-set-selections
@@ -24,7 +24,7 @@ onezero_to_oneone() {
 	if [[ $(conf_read nginx-tool) == "true" ]]; then
 		# Install LetsEncrypt
 		echo | sudo add-apt-repository ppa:certbot/certbot
-		pre_install
+		sudo apt -qq update
 		sudo apt-get -y install certbot
 		
 		cronrene=$( sudo grep -F "letsencrypt renew" /var/spool/cron/crontabs/root )
@@ -173,9 +173,12 @@ onefive_to_onesix() {
 
 # v1.16.0
 onesix_to_oneseven() {
-	[[ $(conf_read php) == "true" ]] && sudo apt -y install php$(conf_read php-ver)-intl
 	[[ $(conf_read php-tool) == "true" && -f /etc/postfix/main.cf ]] && sudo sed -i '/smtpd_banner =/c \smtpd_banner = $myhostname ESMTP' /etc/postfix/main.cf
 	[[ $(conf_read mysql-client) == "true" && -z $(conf_read mysql-ver) ]] && conf_write mysql-ver $(sudo mysql -V | cut -f 6 -d " " -s | cut -f -2 -d "." -s)
+	
+	[[ $(conf_read mysql-tool) == "true" ]] && conf_write mysql-tool-pma true && conf_delete mysql-tool
+	[[ $(conf_read nginx-tool) == "true" ]] && conf_write nginx-tool-ssl true && conf_write nginx-tool-bkp true && conf_delete nginx-tool
+	[[ $(conf_read php-tool) == "true" ]] && conf_write php-tool-postfix true && conf_write php-tool-redis true && conf_write php-tool-memcached true && conf_delete php-tool
 	
 	for site in "/etc/nginx/sites-available"/*
 	do
@@ -195,6 +198,17 @@ onesix_to_oneseven() {
 			fi
 		fi		
 	done
+	
+	[[ $(conf_read php) != "true" && $(conf_read nginx) == "true" ]] && nginx_tool_site
+	[[ $(conf_read php) == "true" ]] && sudo apt -y install php$(conf_read php-ver)-intl
+	
+	if [[ $(conf_read php-tool-redis) == "true" ]]; then
+		sudo apt -y purge redis-server
+		echo | sudo add-apt-repository --remove 'ppa:chris-lea/redis-server'
+		sudo apt-key del C7917B12
+		conf_write php-tool-redis purged
+		stack -redis
+	fi
 }
 
 

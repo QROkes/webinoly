@@ -467,25 +467,21 @@ check_exported_conf() {
 	[[ -n $(conf_read_exported mysql-ver) ]] && conf_write mysql-ver $(conf_read_exported mysql-ver)
 	
 	# Built stack based on exported conf
-	if [[ $(conf_read_exported nginx) == "true" && $(conf_read_exported nginx-tool) == "true" ]]; then
+	if [[ $(conf_read_exported nginx) == "true" ]]; then
 		sudo stack -nginx
-	elif [[ $(conf_read_exported nginx) == "true" ]]; then
-		sudo stack -nginx -notools
 	fi
 	
-	if [[ $(conf_read_exported php) == "true" && $(conf_read_exported php-tool) == "true" ]]; then
+	if [[ $(conf_read_exported php) == "true" ]]; then
 		sudo stack -php
-	elif [[ $(conf_read_exported php) == "true" ]]; then
-		sudo stack -php -notools
 	fi
 	
-	if [[ $(conf_read_exported mysql) == "true" && $(conf_read_exported mysql-tool) == "true" ]]; then
+	if [[ $(conf_read_exported mysql) == "true" && $(conf_read_exported mysql-tool-pma) == "true" ]]; then
 		# Passwords are imported too, so we don't need to display passwords created during the installation process, because they are replaced.
 		sudo stack -mysql -block-password-display
 	elif [[ $(conf_read_exported mysql) == "true" ]]; then
-		sudo stack -mysql -notools -block-password-display
+		sudo stack -mysql -build=light -block-password-display
 	elif [[ $(conf_read_exported mysql-client) == "true" ]]; then
-		mysql_client_install
+		sudo stack -mysql=client
 	fi
 
 	

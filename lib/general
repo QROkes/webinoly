@@ -139,9 +139,43 @@ check_for_nginx() {
 		exit 1
 	fi
 }
-check_for_nginx_tool() {
-	if [[ $(conf_read nginx) != "true"  || $(conf_read nginx-optim) != "true" || $(conf_read nginx-tool) != "true" ]]; then
-		echo "${red}[ERROR] NGINX Tools are required and not found! ${end}"
+check_for_nginx_tool_ssl() {
+	check_for_nginx
+	if [[ $(conf_read nginx-tool-ssl) != "true" && $1 == "-ask" ]]; then
+		echo "${red}"
+		echo "+ Let's Encrypt Not Found!"
+		echo "${blu}Do you want to install it now? [y/N]? ${end}"
+		while read -r -n 1 -s answer; do
+			answer=${answer:-n}
+			echo ""
+			[[ $answer = [YyNn] ]] && break
+		done
+		
+		[[ $answer == [Yy] ]] && sudo stack -letsencrypt
+	fi
+	
+	if [[ $(conf_read nginx-tool-ssl) != "true" ]]; then
+		echo "${red}[ERROR] Let's Encrypt is required and not found! ${end}"
+		exit 1
+	fi
+}
+check_for_nginx_tool_bkp() {
+	check_for_nginx
+	if [[ $(conf_read nginx-tool-bkp) != "true" && $1 == "-ask" ]]; then
+		echo "${red}"
+		echo "+ BackUp packages Not Found!"
+		echo "${blu}Do you want to install it now? [y/N]? ${end}"
+		while read -r -n 1 -s answer; do
+			answer=${answer:-n}
+			echo ""
+			[[ $answer = [YyNn] ]] && break
+		done
+		
+		[[ $answer == [Yy] ]] && sudo stack -backups
+	fi
+	
+	if [[ $(conf_read nginx-tool-bkp) != "true" ]]; then
+		echo "${red}[ERROR] BackUp packages are required and not found! ${end}"
 		exit 1
 	fi
 }
@@ -164,9 +198,43 @@ check_for_php() {
 		exit 1
 	fi
 }
-check_for_php_tool() {
-	if [[ $(conf_read php) != "true"  || $(conf_read php-optim) != "true" || $(conf_read php-tool) != "true" ]]; then
-		echo "${red}[ERROR] PHP Tools are required and not found! ${end}"
+check_for_php_tool_postfix() {
+	check_for_php
+	if [[ $(conf_read php-tool-postfix) != "true" && $1 == "-ask" ]]; then
+		echo "${red}"
+		echo "+ Postfix Not Found!"
+		echo "${blu}Do you want to install it now? [y/N]? ${end}"
+		while read -r -n 1 -s answer; do
+			answer=${answer:-n}
+			echo ""
+			[[ $answer = [YyNn] ]] && break
+		done
+		
+		[[ $answer == [Yy] ]] && sudo stack -postfix
+	fi
+	
+	if [[ $(conf_read php-tool-postfix) != "true" ]]; then
+		echo "${red}[ERROR] Postfix is required and not found! ${end}"
+		exit 1
+	fi
+}
+check_for_php_tool_redis() {
+	check_for_php
+	if [[ $(conf_read php-tool-redis) != "true" && $1 == "-ask" ]]; then
+		echo "${red}"
+		echo "+ Redis Not Found!"
+		echo "${blu}Do you want to install it now? [y/N]? ${end}"
+		while read -r -n 1 -s answer; do
+			answer=${answer:-n}
+			echo ""
+			[[ $answer = [YyNn] ]] && break
+		done
+		
+		[[ $answer == [Yy] ]] && sudo stack -redis
+	fi
+	
+	if [[ $(conf_read php-tool-redis) != "true" ]]; then
+		echo "${red}[ERROR] Redis is required and not found! ${end}"
 		exit 1
 	fi
 }
@@ -193,7 +261,7 @@ check_for_mysql_client() {
 	if [[ $(conf_read mysql-client) != "true" ]]; then
 		echo "${gre}MySQL Client is not installed and we need it to stablish a connection with your external server.${end}"
 		echo "${dim}Wait while we install MySQL Client...${end}"
-		mysql_client_install > /dev/null 2>&1 &
+		sudo stack -mysql=client > /dev/null 2>&1 &
 		wait $!
 		echo "${gre}MySQL Client has been successfully installed!${end}"
 	fi
@@ -442,48 +510,10 @@ wp_conf_retrieve() {
 }
 
 
-pre_install() {
-	sudo apt -qq update
-	if [[ $(conf_read pre-packs) != true ]]; then
-		# Check for missing essential packages
-		api-events_update i1
-		sudo apt -y -qq install dialog
-		sudo apt -y -qq install software-properties-common
-		sudo apt -y -qq install pwgen
-		sudo apt -y -qq install unzip
-		sudo apt -y -qq install zip
-		conf_write pre-packs true
-		api-events_update i2
-	fi
-}
-
-
 # Remove Installation Files
 app_purge() {
 	sudo rm $HOME/webinoly.tar
 	sudo rm -rf /opt/webinoly/usr
-}
-
-
-mysql_client_install() {
-	api-events_update im2
-	if [[ -n $(conf_read mysql-ver) && $(check_mysql_version $(conf_read mysql-ver)) == "true" ]]; then
-		echo "${gre}MySQL version '$(conf_read mysql-ver)' is set as default.${end}"
-	else
-		# Default MySQL version
-		conf_write mysql-ver $mysql_default
-	fi
-	local ver=$(conf_read mysql-ver)
-	
-	# https://downloads.mariadb.org/mariadb/repositories/
-	sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
-	sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/${ver}/ubuntu $(check_osname) main"
-	
-	pre_install
-	sudo apt -y install mariadb-client
-	conf_write mysql-client true
-	echo "${gre}MySQL Client has been successfully installed!${end}"
-	api-events_update im3
 }
 
 
@@ -1478,4 +1508,3 @@ help_message() {
 	echo "${dim}Link: https://webinoly.com/documentation/ ${end}"
 	echo ""
 }
-

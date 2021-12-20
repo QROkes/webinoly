@@ -66,7 +66,7 @@ site_ssl_on() {
 	local path=$domain
 	
 	# Some validations to prevent errors when creating certs.
-	check_for_nginx_tool
+	check_for_nginx_tool_ssl -ask
 	if [[ -n $root && -f /etc/nginx/sites-available/$root ]]; then
 		path=$root
 	elif [[ -n $root && ! -f /etc/nginx/sites-available/$root ]]; then

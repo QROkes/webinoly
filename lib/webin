@@ -70,10 +70,10 @@ system_info() {
 	echo "${blu}${bol}[MYSQL]${end}"
 	if [[ $(conf_read mysql) == "true" ]]; then
 		
-		[[ $(conf_read mysql-tool) == "true" ]] && local pmaver=$(grep -E "public const VERSION = '[0-9\.]+'.*;" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Version.php | cut -f 2 -d "'") || local pmaver="Not installed!"
+		[[ $(conf_read mysql-tool-pma) == "true" ]] && local pmaver=$(grep -E "public const VERSION = '[0-9\.]+'.*;" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Version.php | cut -f 2 -d "'") || local pmaver="Not installed!"
 		
 		# Legacy support: before v5.1.0 (Feb 23, 2021) version is found here:
-		[[ $(conf_read mysql-tool) == "true" && -z $pmaver ]] && local pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'")
+		[[ $(conf_read mysql-tool-pma) == "true" && -z $pmaver ]] && local pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'")
 
 		
 		echo "${blu}Info:${end}${dim} $(sudo mysql --version) ${end}"
@@ -451,7 +451,7 @@ change_tools_port() {
 			exit 1
 		fi
 		
-		if [[ $(conf_read nginx-tool) == "true" && $(conf_read nginx) == "true" ]]; then
+		if [[ $(conf_read nginx) == "true" && -d /var/www/$oldport ]]; then
 			# MV in some edge cases fails to rename, specially when so much files are within the directories.
 			sudo mkdir -p /var/www/$port
 			sudo cp -rp /var/www/$oldport/* /var/www/$port
@@ -685,7 +685,7 @@ external_sources_update() {
 
 clear_caches() {
 	if [[ $clear_cache =~ ^(redis|all)$ ]]; then
-		if [[ $(conf_read php-tool) == "true" && -f /etc/redis/redis.conf ]]; then
+		if [[ $(conf_read php-tool-redis) == "true" && -f /etc/redis/redis.conf ]]; then
 			sudo redis-cli flushall
 			echo "${gre}- Redis Cache has been successfully cleared!${end}"
 		else
@@ -694,7 +694,7 @@ clear_caches() {
 		fi
 	fi
 	if [[ $clear_cache =~ ^(memcache|memcached|all)$ ]]; then
-		if [[ $(conf_read php-tool) == "true" && -f /etc/memcached.conf ]]; then
+		if [[ $(conf_read php-tool-memcached) == "true" && -f /etc/memcached.conf ]]; then
 			memhost=$(grep ^-l /etc/memcached.conf | cut -f 2 -d ' ')
 			memport=$(grep ^-p /etc/memcached.conf | cut -f 2 -d ' ')
 			echo flush_all > /dev/tcp/$memhost/$memport
@@ -705,7 +705,7 @@ clear_caches() {
 		fi
 	fi
 	if [[ $clear_cache =~ ^(opcache|all)$ ]]; then
-		if [[ $(conf_read nginx-tool) == "true" && $(conf_read php-tool) == "true" ]]; then
+		if [[ $(conf_read nginx) == "true" && $(conf_read php) == "true" ]]; then
 			port=$(conf_read tools-port)
 			if [[ ! -f /var/www/$port/htdocs/php/opcache/index.php ]]; then
 				sudo mkdir /var/www/$port/htdocs/php/opcache

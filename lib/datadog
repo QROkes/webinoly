@@ -440,7 +440,7 @@ dd_install() {
 				[[ $(conf_read nginx) == "true" ]] && dd_nginx
 				[[ $(conf_read php) == "true" ]] && dd_fpm
 				[[ $(conf_read mysql) == "true" ]] && dd_mysql
-				[[ $(conf_read php-tool) == "true" ]] && dd_redis
+				[[ $(conf_read php-tool-redis) == "true" ]] && dd_redis
 			fi
 			
 			sudo service datadog-agent start

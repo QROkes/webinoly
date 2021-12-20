@@ -145,12 +145,9 @@ elif [[ -n $mysql_password ]]; then
 
 
 elif [[ -n $smtp && -n $purge ]]; then
+	check_for_php_tool_postfix
 	if [[ $(conf_read smtp) != "true" ]]; then
 		echo "${red}[ERROR] SMTP configuration not found!${end}"
-		exit 1
-	fi
-	if [[ $(conf_read php-tool) != "true" ]]; then
-		echo "${red}[ERROR] Seems like PHP and Postfix are not installed!${end}"
 		exit 1
 	fi
 	
@@ -163,17 +160,13 @@ elif [[ -n $smtp && -n $purge ]]; then
 	sudo service postfix restart
 	echo "${gre}SMTP configuration has been successfully removed!${end}"
 elif [[ -n $smtp ]]; then
-	if [[ $(conf_read php-tool) != "true" ]]; then
-		echo "${red}[ERROR] Seems like PHP and Postfix are not installed!${end}"
-		exit 1
-	fi
-	
+	check_for_php_tool_postfix -ask
 	[[ $(conf_read smtp) == "true" ]] && echo "${gre}SMTP is already configured!${end}" || smtp_setup
 	nginx_not="true" # Nginx-Reload not-needed.
 
 
 elif [[ -n $backup ]]; then
-	[[ $import =~ ^(stack|full)$ ]] || check_for_nginx_tool
+	[[ $import =~ ^(stack|full)$ ]] || check_for_nginx_tool_bkp -ask
 	
 	if [[ -n $list && -z $add_db_pre ]]; then
 		bkp_s3_list
@@ -238,7 +231,7 @@ elif [[ -n $datadog ]]; then
 			check_for_mysql
 			dd_mysql
 		elif [[ $integrations == "redis" ]]; then
-			check_for_php_tool
+			check_for_php_tool_redis
 			dd_redis
 		else
 			echo "${red}[ERROR] Invalid Datadog integration!${end}"

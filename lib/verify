@@ -313,8 +313,8 @@ if [[ $(conf_read nginx-optim) == "true" ]]; then
 	fi
 fi
 
-# NGINX Tools
-if [[ $(conf_read nginx-tool) == "true" ]]; then
+# NGINX tools site
+if [[ $(conf_read nginx) == "true" ]]; then
 	if [[ ! -f /etc/nginx/sites-available/$(conf_read tools-port) && $(conf_read php) == "true" ]]; then
 		echo "- [ERROR] File: /etc/nginx/sites-available/$(conf_read tools-port) not found!"
 		ver_two_err="1"
@@ -332,7 +332,7 @@ if [[ $(conf_read nginx-tool) == "true" ]]; then
 		ver_two_err="1"
 	fi
 fi
-if [[ $(conf_read nginx-tool) != "true" && -n $(conf_read tools-port) ]]; then
+if [[ $(conf_read nginx) != "true" && -n $(conf_read tools-port) ]]; then
 	if [[ -f /etc/nginx/sites-available/$(conf_read tools-port) || -d /var/www/$(conf_read tools-port) ]]; then
 		echo "${dim}- [WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!${end}${red}"
 		ver_two_war="1"
@@ -350,7 +350,7 @@ if [[ -n $(conf_read tools-site) && ! -L /etc/nginx/sites-enabled/$(conf_read to
 fi
 
 # NGINX Conf check
-if [[ $(conf_read nginx) != "true" && ( $(conf_read nginx-optim) == "true" || $(conf_read nginx-tool) == "true" ) ]]; then
+if [[ $(conf_read nginx) != "true" && $(conf_read nginx-optim) == "true" ]]; then
 	echo "${dim}- [WARNING] NGINX Configuration corrupted!${end}${red}"
 	ver_two_war="1"
 fi
@@ -412,7 +412,7 @@ if [[ $(conf_read php-optim) == "true" ]]; then
 fi
 
 # PHP Tools
-if [[ $(conf_read php-tool) == "true" && $(conf_read nginx) == "true" ]]; then
+if [[ $(conf_read php) == "true" && $(conf_read nginx) == "true" ]]; then
 	if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/status ]]; then
 		echo "- [ERROR] File: /var/www/$(conf_read tools-port)/htdocs/ping not found!"
 		ver_three_err="1"
@@ -426,7 +426,7 @@ if [[ $(conf_read php-tool) == "true" && $(conf_read nginx) == "true" ]]; then
 		ver_three_err="1"
 	fi
 fi
-if [[ $(conf_read php-tool) != "true" && $(conf_read nginx) == "true" ]]; then
+if [[ $(conf_read php) != "true" && $(conf_read nginx) == "true" ]]; then
 	if [[ -f /var/www/$(conf_read tools-port)/htdocs/status ]]; then
 		echo "${dim}- [WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!${end}${red}"
 		ver_three_war="1"
@@ -438,7 +438,7 @@ if [[ $(conf_read php-tool) != "true" && $(conf_read nginx) == "true" ]]; then
 fi
 
 # PHP Conf check
-if [[ $(conf_read php) != "true" && ( $(conf_read php-optim) == "true" || $(conf_read php-tool) == "true" ) ]]; then
+if [[ $(conf_read php) != "true" && $(conf_read php-optim) == "true" ]]; then
 	echo "${dim}- [WARNING] PHP Configuration corrupted!${end}${red}"
 	ver_three_war="1"
 fi
@@ -501,16 +501,16 @@ if [[ $(conf_read mysql) == "true" ]]; then
 	fi
 fi
 
-if [[ $(conf_read mysql) != "true" && $(conf_read mysql-tool) == "true" ]]; then
+if [[ $(conf_read mysql) != "true" && $(conf_read mysql-tool-pma) == "true" ]]; then
 	echo "${dim}- [WARNING] MySQL Configuration corrupted!${end}${red}"
 	ver_four_war="1"
 fi
 
 # MySQL Tools
-if [[ ! -d /var/www/$(conf_read tools-port)/htdocs/pma && $(conf_read mysql-tool) == "true" ]]; then
+if [[ ! -d /var/www/$(conf_read tools-port)/htdocs/pma && $(conf_read mysql-tool-pma) == "true" ]]; then
 	echo "- [ERROR] Folder: /var/www/$(conf_read tools-port)/htdocs/pma not found!"
 	ver_four_err="1"
-elif [[ ( -d /var/www/$(conf_read tools-port)/htdocs/pma || -d /usr/share/phpmyadmin ) && $(conf_read mysql-tool) != "true" ]]; then
+elif [[ ( -d /var/www/$(conf_read tools-port)/htdocs/pma || -d /usr/share/phpmyadmin ) && $(conf_read mysql-tool-pma) != "true" ]]; then
 	echo "${dim}- [WARNING] Seems like MySQL Tools (PhpMyAdmin) are enabled but Webinoly can not detect it!${end}${red}"
 	ver_four_war="1"
 fi
@@ -561,15 +561,15 @@ if ! systemctl is-active --quiet mysql && [[ $(conf_read mysql) == "true" ]]; th
 	echo "- [ERROR] MySQL (MariaDB) service not running!"
 	ver_five_err="1"
 fi
-if ! systemctl is-active --quiet redis-server && [[ $(conf_read php-tool) == "true" ]]; then
+if ! systemctl is-active --quiet redis-server && [[ $(conf_read php-tool-redis) == "true" ]]; then
 	echo "- [ERROR] Redis service not running!"
 	ver_five_err="1"
 fi
-if ! systemctl is-active --quiet memcached && [[ $(conf_read php-tool) == "true" ]]; then
+if ! systemctl is-active --quiet memcached && [[ $(conf_read php-tool-memcached) == "true" ]]; then
 	echo "- [ERROR] Memcached service not running!"
 	ver_five_err="1"
 fi
-if ! systemctl is-active --quiet postfix && [[ $(conf_read php-tool) == "true" ]]; then
+if ! systemctl is-active --quiet postfix && [[ $(conf_read php-tool-postfix) == "true" ]]; then
 	echo "- [ERROR] Postfix service not running!"
 	ver_five_err="1"
 fi
@@ -655,21 +655,21 @@ ver_seven_err="0"
 ver_seven_war="0"
 
 # Web Tools
-if [[ $(conf_read php-tool) == "true" ]]; then
-	if [[ ! -d /etc/redis ]]; then
-		echo "- [ERROR] Folder: /etc/redis not found!"
-		ver_seven_err="1"
-	fi
-	if [[ ! -d /etc/postfix ]]; then
-		echo "- [ERROR] Folder: /etc/postfix not found!"
-		ver_seven_err="1"
-	fi
+if [[ $(conf_read php-tool-redis) == "true" && ! -d /etc/redis ]]; then
+	echo "- [ERROR] Folder: /etc/redis not found!"
+	ver_seven_err="1"
 fi
-if [[ $(conf_read nginx-tool) == "true" ]]; then
+if [[ $(conf_read php-tool-redis) == "true" && ! -d /etc/postfix ]]; then
+	echo "- [ERROR] Folder: /etc/postfix not found!"
+	ver_seven_err="1"
+fi
+if [[ $(conf_read nginx-tool-ssl) == "true" ]]; then
 	if [[ ! -f /usr/bin/duplicity ]]; then
 		echo "- [ERROR] File: /usr/bin/duplicity not found!"
 		ver_seven_err="1"
 	fi
+fi
+if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
 	if [[ ! -f /usr/bin/duply ]]; then
 		echo "- [ERROR] File: /usr/bin/duply not found!"
 		ver_seven_err="1"

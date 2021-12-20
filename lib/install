@@ -15,30 +15,13 @@ readonly ramb=$(($ramk/1024))
 [[ $ramk =~ ^[0-9]+$ ]] || echo "${red}[ERROR] System info (ram) retrieve corrupted!${end}"
 
 
-set_timezone() {
-	if [[ -n $(conf_read timezone) ]] && grep -Fxq $(conf_read timezone) /opt/webinoly/lib/timezone.dat; then
-		sudo timedatectl set-timezone $(conf_read timezone)
-		# It's not compatible with multi-php feature.
-		if [[ $(conf_read php) == "true" ]]; then
-			sudo sed -i "/date.timezone =/c\date.timezone = $(conf_read timezone)" /etc/php/$(conf_read php-ver)/fpm/php.ini
-			# Don't reload if running inside php-optim process.
-			[[ $(conf_read status-api) != "ip3" ]] && sudo systemctl reload php$(conf_read php-ver)-fpm
-		fi
-		echo "${gre}Timezone has been successfully set!${dim} ($(conf_read timezone)) ${end}"
-	else
-		conf_delete timezone
-		echo "${red}Timezone not found or not valid!${end}"
-		return 1
-	fi
-}
-
-
 linux_optim() {
 	api-events_update in4
 	[[ $(conf_read linux-optim) == "true" ]] && return
 	
 	# Kernel Optimization
 	if [[ $(conf_read kernel-optim) != "false" ]]; then
+		api-events_update in5
 		sudo cat /opt/webinoly/templates/general/sysctl >> /etc/sysctl.conf
 		sudo modprobe tcp_bbr
 		
@@ -84,6 +67,7 @@ linux_optim() {
 		sudo sed -i "/kernel.msgmni =/c \kernel.msgmni = $msgmni" /etc/sysctl.conf
 		sudo sed -i "/kernel.sem =/c \kernel.sem = 250 1024000 32 $shmmni" /etc/sysctl.conf
 		sudo sysctl -p -q
+		api-events_update in6
 	fi
 	
 	# File directors per process
@@ -132,10 +116,11 @@ WantedBy=multi-user.target" >> /etc/systemd/system/webinoly-disable-thp.service
 	set_timezone
 	
 	sudo systemctl daemon-reload
-	[[ -s /run/nginx.pid && -n $(cat /run/nginx.pid) ]] && sudo kill $(cat /run/nginx.pid) && sudo service nginx start
+	[[ -s /run/nginx.pid && -n $(cat /run/nginx.pid) ]] && sudo kill $(cat /run/nginx.pid) && sudo service nginx start 
+	# For an unknown reason "sudo systemctl start nginx" fails to start nginx here!
 	
 	conf_write linux-optim true
-	api-events_update in7
+	api-events_update in9
 }
 
 
@@ -158,10 +143,12 @@ linux_purge() {
 			sudo rm /etc/systemd/system/webinoly-disable-thp.service
 		fi
 		
-		[[ -z $server_reset || $recalculate == "on" ]] && swap_delete
-		
+		[[ $recalculate == "on" ]] && swap_delete
+
 		sudo systemctl daemon-reload
-		[[ -s /run/nginx.pid && -n $(cat /run/nginx.pid) ]] && sudo kill $(cat /run/nginx.pid) && sudo service nginx start
+		
+		# Never reload nginx here - high chances of getting errors due to still-none-updated conf files in the server-reset process
+		#[[ -s /run/nginx.pid && -n $(cat /run/nginx.pid) ]] && sudo kill $(cat /run/nginx.pid) && sudo service nginx start
 		
 		conf_write linux-optim purged
 		api-events_update pn8
@@ -169,35 +156,9 @@ linux_purge() {
 }
 
 
-messagend_install() {
-	local ROOT_PW=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-	local ADMIN_PW=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
-	
-	echo ""
-	echo "${gre}"
-	echo "****************************************************************************"
-	echo "******${bol}            INSTALLATION HAS FINISHED SUCCESSFULLY              ${end}${gre}******"
-	echo "****************************************************************************"
-	echo "********      Save your DB access password in a secure place:       ********"
-	echo "******${dim}      root: ${ROOT_PW}       admin: ${ADMIN_PW}      ${end}${gre}******"
-	echo "****************************************************************************"
-	echo "${end}"
-}
-
-
 nginx_install() {
 	api-events_update in1
-	pre_install
 	
-	sudo apt-key adv --fetch-keys 'https://nginx.org/keys/nginx_signing.key'
-	if [[ ($(conf_read nginx-ppa) == "mainline" || $nginx == "mainline") && $nginx != "stable" ]]; then
-		sudo add-apt-repository "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx"
-		conf_write nginx-ppa mainline
-	else
-		sudo add-apt-repository "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
-		conf_write nginx-ppa stable
-	fi
-	pre_install
 	sudo apt -y install nginx
 	
 	[[ ! -d /var/www ]] && sudo mkdir /var/www
@@ -210,7 +171,7 @@ nginx_install() {
 	sudo mv /etc/nginx/conf.d/default.conf /etc/nginx/sites-available/default
 	sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 	
-	sudo nginx -t && sudo service nginx start
+	sudo nginx -t && sudo systemctl start nginx
 	sudo systemctl enable nginx
 	conf_write nginx true
 	echo "${gre}Nginx has been installed successfully! ${end}"
@@ -228,43 +189,24 @@ php_install() {
 	fi
 	local ver=$(conf_read php-ver)
 	
-	# Multi-PHP
-	if [[ $(conf_read multi-php) == "true" && -n $1 && $(check_php_version $1) == "true" && $(conf_read php) == "true" && $1 != $ver ]]; then
-		ver="$1"
-		echo "${gre}Multi-PHP version is enabled. PHP '$ver' will be installed!${end}"
-	elif [[ $(conf_read multi-php) != "true" && -n $1 ]]; then
-		echo "${red}[ERROR] Multi-PHP is not enabled! ${end}"
-		exit 1
-	elif [[ $(conf_read multi-php) == "true" && -n $1 ]]; then
-		echo "${red}[ERROR] Please, enter a valid PHP version or default PHP is not installed yet! ${end}"
-		exit 1
-	fi
-	
-	pre_install
-	if [[ $(conf_read php) != "true" ]]; then
-		# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
-		sudo apt install -y language-pack-en-base
-		sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
-	fi
-	pre_install
 	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary php${ver}-intl php-pear graphviz ghostscript
 	
 	conf_write php true
-	conf_write php-v$ver true
-	echo "${gre}PHP has been installed successfully! ${end}"
 	api-events_update ip2
+	echo "${gre}PHP has been installed successfully! ${end}"
 }
 
 
 mysql_install() {
 	api-events_update im1
-	pre_install
-	[[ $(conf_read mysql-client) != "true" ]] && mysql_client_install
+	echo "${gre}MySQL version '$(conf_read mysql-ver)' is set as default.${end}"
 	
 	# debconf-utils for unattended scripts
-	#  debconf-get-selections | grep phpmyadmin   <<-- list conf variables
-	sudo apt -y install debconf-utils
-	
+	# debconf-get-selections | grep phpmyadmin   <<-- list conf variables
+
+	sudo apt -y -qq install apt-transport-https
+	sudo apt -y -qq install dirmngr
+		
 	# Generate mysql user passwords
 	if [[ -z $(conf_read mysql-root) && -z $(conf_read mysql-admin) ]]; then
 		local AUTOGENPASS_ROOT=`pwgen -s -1 16`
@@ -310,8 +252,16 @@ GRANT ALL PRIVILEGES ON *.* TO 'admin'@'localhost' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 _EOF_
 	
-	echo "${gre}MySQL has been installed successfully! ${end}"
 	api-events_update im4
+	echo "${gre}MySQL has been installed successfully! ${end}"
+}
+
+mysql_client_install() {
+	api-events_update im2
+	sudo apt -y install mariadb-client
+	conf_write mysql-client true
+	api-events_update im3
+	echo "${gre}MySQL Client has been successfully installed!${end}"
 }
 
 
@@ -415,7 +365,8 @@ location = /xmlrpc.php {
 	
 	conf_write server-version $svr_version
 	conf_write nginx-optim true
-	api-events_update in8
+	api-events_update in10
+	echo "${gre}Nginx has been successfully Optimized by Webinoly! ${end}"
 }
 
 
@@ -429,7 +380,6 @@ php_optim() {
 	[[ ! -f /opt/webinoly/templates/source/php.ini ]] && sudo cp -p /etc/php/${ver}/fpm/php.ini /opt/webinoly/templates/source/
 	[[ ! -f /opt/webinoly/templates/source/www.conf ]] && sudo cp -p /etc/php/${ver}/fpm/pool.d/www.conf /opt/webinoly/templates/source/
 	[[ ! -f /opt/webinoly/templates/source/php-fpm.conf ]] && sudo cp -p /etc/php/${ver}/fpm/php-fpm.conf /opt/webinoly/templates/source/
-	[[ -n $1 ]] && local ver="$1"
 	
 	sudo sed -i "/memory_limit =/c\memory_limit = $(check_var php-max-mem)M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i "/max_execution_time =/c\max_execution_time = $(check_var php-max-time)" /etc/php/$ver/fpm/php.ini
@@ -457,27 +407,27 @@ php_optim() {
 	sudo sed -i '/pm.max_requests =/c\pm.max_requests = 1000' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/pm.status_path =/c\pm.status_path = /status' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i '/ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
-
-	if [[ $(conf_read multi-php) == "true" ]]; then
-		[[ $ver == 8.0 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 8.1 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9001' /etc/php/$ver/fpm/pool.d/www.conf
-		[[ $ver == 7.4 ]] && sudo sed -i '/listen = /c\listen = 127.0.0.1:9002' /etc/php/$ver/fpm/pool.d/www.conf
-	else
-		sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
-	fi
+	sudo sed -i '/listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
 	
-	[[ $(conf_read php-tool) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
+	[[ $(conf_read php-tool-redis) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
 	conf_write php-optim true
 	sudo systemctl restart php${ver}-fpm
 	api-events_update ip4
+	echo "${gre}PHP has been successfully Optimized by Webinoly! ${end}"
 }
 
 
 nginx_tool_site() {
-	sudo site $(conf_read tools-port) -php > /dev/null 2>&1
+	# Tools site creation
+	[[ -z $(conf_read tools-port) ]] && conf_write tools-port $tools_port_default
+	
+	sudo site $(conf_read tools-port) -empty > /dev/null 2>&1
 	sudo cp /opt/webinoly/templates/nginx/admin_tools.conf /etc/nginx/sites-available/$(conf_read tools-port)
 	sudo sed -i "s/<port>/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
-	sudo nginx -t && sudo service nginx reload
+	sudo nginx -t && sudo systemctl reload nginx
+	
+	# Nginx Status Page
+	sudo touch /var/www/$(conf_read tools-port)/htdocs/nginx_status	
 	
 	# Robots.txt file in case someone remove HTTP Auth
 	sudo touch /var/www/$(conf_read tools-port)/htdocs/robots.txt
@@ -485,18 +435,36 @@ nginx_tool_site() {
 Disallow: /' > /var/www/$(conf_read tools-port)/htdocs/robots.txt
 	sudo chmod 644 /var/www/$(conf_read tools-port)/htdocs/robots.txt
 	sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs
+	
+	# in case php was installed before nginx
+	[[ $(conf_read php) == "true" && ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]] && php_tool_site
 }
 
 
-nginx_tool() {
-	api-events_update in9
-	[[ -z $(conf_read tools-port) ]] && conf_write tools-port $tools_port_default
-	[[ $(conf_read php) == "true" ]] && nginx_tool_site
-	# in case php was installed before nginx
-	[[ $(conf_read php-tool) == "true" && ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]] && php_tool_site
+php_tool_site() {
+	[[ $(conf_read nginx) != "true" ]] && return
+
+	# Just for legacy support when tools site were created only with PHP support, today is created since Nginx always.
+	[[ ! -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && nginx_tool_site
+	
+	# Add PHP options in tools site.
+	
+	# Status pages
+	sudo touch /var/www/$(conf_read tools-port)/htdocs/ping
+	sudo touch /var/www/$(conf_read tools-port)/htdocs/status
+	
+	#PHP info site
+	sudo mkdir -p /var/www/$(conf_read tools-port)/htdocs/php
+	sudo touch /var/www/$(conf_read tools-port)/htdocs/php/index.php
+	sudo echo '<?php phpinfo(); ?>' >> /var/www/$(conf_read tools-port)/htdocs/php/index.php
+	sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs
+}
+
+
+nginx_tool_ssl() {
+	api-events_update in11
 
 	# Install LetsEncrypt
-	pre_install
 	local certb=0
 	while [[ $certb -le 3 ]]
 	do
@@ -515,27 +483,39 @@ nginx_tool() {
 	done
 	[[ ! -L /usr/bin/certbot ]] && sudo ln -s /snap/bin/certbot /usr/bin/certbot
 	
-	# Instalar Duply & Duplicity
-	[[ $(check_osname) == "bionic" ]] && sudo apt -y install python-boto duplicity duply || sudo apt -y install python3-boto3 duplicity duply
-	
-	conf_write nginx-tool true
-	api-events_update in10
+	conf_write nginx-tool-ssl true
+	api-events_update in12
+	echo "${gre}Let's Encrypt (certbot) has been installed successfully! ${end}"
 }
 
 
-php_tool_site() {
-	api-events_update ip6
-	# Status pages
-	sudo touch /var/www/$(conf_read tools-port)/htdocs/ping
-	sudo touch /var/www/$(conf_read tools-port)/htdocs/status
-	sudo touch /var/www/$(conf_read tools-port)/htdocs/nginx_status	
+nginx_tool_bkp() {	
+	api-events_update in13
 	
-	#PHP info site
-	sudo mkdir -p /var/www/$(conf_read tools-port)/htdocs/php
-	sudo touch /var/www/$(conf_read tools-port)/htdocs/php/index.php
-	sudo echo '<?php phpinfo(); ?>' >> /var/www/$(conf_read tools-port)/htdocs/php/index.php
-	sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs
-	api-events_update ip7
+	# Instalar Duply & Duplicity with S3 support
+	[[ $(check_osname) == "bionic" ]] && sudo apt -y install python-boto duplicity duply || sudo apt -y install python3-boto3 duplicity duply
+	
+	conf_write nginx-tool-bkp true
+	api-events_update in14
+	echo "${gre}BackUp packages has been installed successfully! ${end}"
+}
+
+
+php_tool_postfix() {
+	api-events_update ip5
+	
+	# Postfix mail
+	echo "postfix postfix/main_mailer_type        select  Internet Site" | debconf-set-selections
+	echo "postfix postfix/mailname        string  $hostname" | debconf-set-selections
+	sudo apt -y install postfix
+	sudo cp -p /etc/postfix/main.cf /opt/webinoly/templates/source/
+	sudo sed -i '/mydestination =/c \mydestination = localhost' /etc/postfix/main.cf
+	sudo sed -i '/smtpd_banner =/c \smtpd_banner = $myhostname ESMTP' /etc/postfix/main.cf # https://cisofy.com/lynis/controls/MAIL-8818/
+	sudo systemctl reload postfix
+	
+	conf_write php-tool-postfix true
+	api-events_update ip6
+	echo "${gre}Postfix has been installed successfully! ${end}"
 }
 
 
@@ -545,46 +525,40 @@ redis_optim() {
 	sudo sed -i "/# maxmemory <bytes>/c\maxmemory ${maxmem}mb" /etc/redis/redis.conf
 	sudo sed -i "/^maxmemory /c\maxmemory ${maxmem}mb" /etc/redis/redis.conf
 	sudo sed -i "/# maxmemory-policy/c\maxmemory-policy allkeys-lfu" /etc/redis/redis.conf
-	sudo service redis-server restart
+	sudo systemctl restart redis-server
+}
+php_tool_redis() {
+	api-events_update ip7
+	local ver=$(conf_read php-ver)
+	
+	# Redis (Object Cache)
+	sudo apt -y install redis-server php${ver}-redis
+	redis_optim
+	sudo systemctl enable redis-server
+	
+	conf_write php-tool-redis true
+	api-events_update ip8
+	echo "${gre}Redis has been installed successfully! ${end}"
 }
 
 
-php_tool() {
-	api-events_update ip5
+php_tool_memcached() {
+	api-events_update ip9
 	local ver=$(conf_read php-ver)
-	
-	# in case nginx was installed before php
-	[[ $(conf_read nginx-tool) == "true" && ! -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && nginx_tool_site
-	[[ $(conf_read nginx) == "true" ]] && php_tool_site
-
-	# Redis (Object Cache)
-	echo | sudo add-apt-repository ppa:chris-lea/redis-server
-	pre_install
-	sudo apt -y install redis-server php${ver}-redis
-	sudo systemctl enable redis-server
 	
 	# Memcached (Object Cache)
 	sudo apt -y install php${ver}-memcached php${ver}-memcache memcached
 	
-	# Postfix mail
-	echo "postfix postfix/main_mailer_type        select  Internet Site" | debconf-set-selections
-	echo "postfix postfix/mailname        string  $hostname" | debconf-set-selections
-	sudo apt -y install postfix
-	sudo cp -p /etc/postfix/main.cf /opt/webinoly/templates/source/
-	sudo sed -i '/mydestination =/c \mydestination = localhost' /etc/postfix/main.cf
-	sudo sed -i '/smtpd_banner =/c \smtpd_banner = $myhostname ESMTP' /etc/postfix/main.cf # https://cisofy.com/lynis/controls/MAIL-8818/
-	
-	redis_optim
-	sudo service php*-fpm reload
-	sudo service postfix restart
-	conf_write php-tool true
-	api-events_update ip8
+	conf_write php-tool-memcached true
+	api-events_update ip10
+	echo "${gre}Memcached has been installed successfully! ${end}"
 }
 
 
-mysql_tool() {
+mysql_tool_pma() {
 	api-events_update im5
 	
+	echo "${blu}${dim}Downloading phpMyAdmin...${end}"
 	sudo mkdir -p /var/www/$(conf_read tools-port)/htdocs/pma
 	sudo wget --timeout=15 -t 1 -qrO /var/www/$(conf_read tools-port)/htdocs/pma.tar.xz https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.xz
 	
@@ -601,13 +575,30 @@ mysql_tool() {
 		sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs/pma
 		sudo find /var/www/$(conf_read tools-port)/htdocs/pma -type f -exec chmod 644 {} \;
 		
-		conf_write mysql-tool true
+		conf_write mysql-tool-pma true
 		echo "${gre}phpMyAdmin has been installed successfully! ${end}"
 	else
 		echo "${red}[ERROR] Downloading phpMyAdmin failed!${end}"
 	fi
 	
 	api-events_update im6
+}
+
+
+set_timezone() {
+	if [[ -n $(conf_read timezone) ]] && grep -Fxq $(conf_read timezone) /opt/webinoly/lib/timezone.dat; then
+		sudo timedatectl set-timezone $(conf_read timezone)
+		if [[ $(conf_read php) == "true" ]]; then
+			sudo sed -i "/date.timezone =/c\date.timezone = $(conf_read timezone)" /etc/php/$(conf_read php-ver)/fpm/php.ini
+			# Don't reload if running inside php-optim process.
+			[[ $(conf_read status-api) != "ip3" ]] && sudo systemctl reload php$(conf_read php-ver)-fpm
+		fi
+		echo "${gre}Timezone has been successfully set!${dim} ($(conf_read timezone)) ${end}"
+	else
+		conf_delete timezone
+		echo "${red}Timezone not found or not valid!${end}"
+		return 1
+	fi
 }
 
 
@@ -632,7 +623,7 @@ swap_create() {
 
 	# https://help.ubuntu.com/community/SwapFaq
 	if [[ -z $sw || $sw == "0" ]]; then
-		api-events_update in5
+		api-events_update in7
 		if [[ -n $(conf_read swap-mem) && $(conf_read swap-mem) =~ ^[0-9]+$ ]]; then
 			local newswap=$(conf_read swap-mem)
 		elif [[ $ram -le 2 ]]; then
@@ -686,9 +677,161 @@ swap_create() {
 			conf_write swap-owner webinoly
 			echo "${gre}A new SWAP file (${newswap}Gb) has been created! ${end}"
 		fi
-		api-events_update in6
+		api-events_update in8
 	else
 		[[ $(conf_read swap-owner) != "webinoly" ]] && conf_write swap-owner system
 		echo "${gre}SWAP file (${sw}Gb) detected!${end}"
 	fi
+}
+
+
+messagend_install() {
+	local ROOT_PW=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+	local ADMIN_PW=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+	
+	echo ""
+	echo "${gre}"
+	echo "****************************************************************************"
+	echo "******${bol}            INSTALLATION HAS FINISHED SUCCESSFULLY              ${end}${gre}******"
+	echo "****************************************************************************"
+	echo "********      Save your DB access password in a secure place:       ********"
+	echo "******${dim}      root: ${ROOT_PW}       admin: ${ADMIN_PW}      ${end}${gre}******"
+	echo "****************************************************************************"
+	echo "${end}"
+}
+
+message_welcome() {
+	echo "${blu}"
+	echo "***********************************************************"
+	echo "***************   ${bol}Welcome to Webinoly   ${end}${blu}*******************"
+	echo "********   ${dim}Stack Builder & Configuration Manager   ${end}${blu}********"
+	echo "***********************************************************"
+	
+	if [[ $1 =~ ^(full|basic|light)$ ]]; then
+		echo "${dim} -    -    -    -    -    -    -    -    -    -    -    - ${end}${blu}"
+		echo ""
+		[[ $1 == "full" ]] && echo "Build Profile: ${dim}Full Stack (Nginx, PHP, MySQL and ALL the additional tools)"
+		[[ $1 == "basic" ]] && echo "Build Profile: ${dim}Basic Stack (Only the most essential tools)"
+		[[ $1 == "light" ]] && echo "Build Profile: ${dim}Light Stack (Only core packages, NO additional tools will be installed)"
+	fi
+	echo "${end}"
+}
+
+
+stack_builder() {
+	# Example: stack_builder nginx php mysql
+	# Example: stack_builder nginx false false
+	# Example: stack_builder false false mysql-client
+	# Example: stack_builder <empty> - just update and install pre-packs
+	
+	# Backups can be installed alone...
+	[[ $4 == "letsencrypt" || $4 == "pma" ]] && check_for_nginx -ask
+	[[ $4 == "postfix" || $4 == "redis" || $4 == "memcached" || $4 == "pma" ]] && check_for_php -ask
+	[[ $4 == "pma" ]] && check_for_mysql -ask
+	
+	# Set Welcome Message
+	[[ -n $4 ]] && local mess=$4 # We trust in build variable validation
+	[[ -n $lemp && -z $4 ]] && local mess="full"
+	
+	# Check for missing essential packages
+	if [[ $(conf_read pre-packs) != true ]]; then
+		message_welcome $mess
+		api-events_update i1
+		sudo apt -qq update
+		
+		# Usually comes by default with Ubuntu. Ensure we have it always!
+		sudo apt -y -qq install software-properties-common
+		sudo apt -y -qq install debconf-utils
+		sudo apt -y -qq install zip
+		
+		# Webinoly tools
+		sudo apt -y -qq install pwgen
+		sudo apt -y -qq install unzip
+		
+		# Fix issue installing in some Digital Ocean droplets
+		sudo apt -y -qq install dialog
+		
+		conf_write pre-packs true
+		api-events_update i2
+	fi
+	
+	# PPA's
+	if [[ $1 == "nginx" && $(conf_read nginx) != "true" ]]; then
+		sudo apt-key adv --fetch-keys 'https://nginx.org/keys/nginx_signing.key'
+		if [[ $(conf_read nginx-ppa) == "mainline" ]]; then
+			sudo add-apt-repository "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx"
+		else
+			sudo add-apt-repository "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
+			conf_write nginx-ppa stable
+		fi
+		local code="run"
+	elif [[ $1 == "nginx" ]]; then
+		echo "${dim}Nginx is already installed!${end}"
+		local code=0
+	fi
+	
+	if [[ $2 == "php" && $(conf_read php) != "true" ]]; then
+		# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
+		#sudo apt install -y language-pack-en-base
+		sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
+		local code="run"
+	elif [[ $2 == "php" ]]; then
+		echo "${dim}PHP is already installed!${end}"
+		[[ $code != "run" ]] && local code=0
+	fi
+	if [[ ( $2 == "php" || $4 == "redis" ) && $(conf_read php-tool-redis) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]]; then
+		# Now there is an Official PPA: https://github.com/redis/redis-debian - https://launchpad.net/~redislabs/+archive/ubuntu/redis
+		echo | sudo add-apt-repository ppa:redislabs/redis
+		local code="run"
+	fi
+	
+	if [[ $3 =~ ^(mysql|mysql-client)$ && $(conf_read mysql-client) != "true" ]]; then
+		[[ -n $(conf_read mysql-ver) && $(check_mysql_version $(conf_read mysql-ver)) == "true" ]] || conf_write mysql-ver $mysql_default
+		
+		# https://downloads.mariadb.org/mariadb/repositories/
+		sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
+		sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main"
+		local code="run"
+	elif [[ $3 == "mysql-client" && $(conf_read mysql-client) == "true" ]]; then
+		echo "${dim}MySQL Client is already installed!${end}"
+		[[ $code != "run" ]] && local code=0
+	elif [[ $3 == "mysql" && $(conf_read mysql) == "true" ]]; then
+		echo "${dim}MySQL is already installed!${end}"
+		[[ $code != "run" ]] && local code=0
+	fi
+	
+	# Exit before update!
+	# Don't run the "update" if nothing will be installed!
+	# This validation only runs when core package is already instaled, so we need to check if a tool will be installed.
+	# We need this validation, because for example, LEMP can install additional tools when main package is already installed.
+	if [[ $code =~ [01] && $build != "light" ]]; then
+		[[ ( $1 == "nginx" || $4 == "letsencrypt" ) && $(conf_read nginx) == "true" && $(conf_read nginx-tool-ssl) != "true" ]] && unset code
+		[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" ]] && unset code # Backups doesn't need nginx, can be installed alone!
+		[[ ( $2 == "php" || $4 == "postfix" ) && $(conf_read php) == "true" && $(conf_read php-tool-postfix) != "true" ]] && unset code
+		
+		if [[ $build != "basic" ]]; then
+			#[[ ( $2 == "php" || $4 == "redis" ) && $(conf_read php) == "true" && $(conf_read php-tool-redis) != "true" ]] && unset code # Unset in PPA
+			[[ ( $2 == "php" || $4 == "memcached" ) && $(conf_read php) == "true" && $(conf_read php-tool-memcached) != "true" ]] && unset code
+			[[ ( $3 == "mysql" || $4 == "pma" ) && $(conf_read mysql) == "true" && $(conf_read mysql-tool-pma) != "true" ]] && unset code
+		fi
+	fi
+	[[ $code = [01] ]] && return $code
+	
+	# PMA doesn't need update!
+	[[ $1 == "false" && $2 == "false" && $3 == "false" && $4 == "pma" ]] || sudo apt -qq update
+	
+	# Install Packages!
+	[[ $1 == "nginx" && $(conf_read nginx) != "true" ]] && nginx_install && nginx_optim && nginx_tool_site
+	[[ ( $1 == "nginx" || $4 == "letsencrypt" ) && $(conf_read nginx) == "true" && $(conf_read nginx-tool-ssl) != "true" && $build != "light" ]] && nginx_tool_ssl
+	[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" && $build != "light" ]] && nginx_tool_bkp # Backups doesn't need nginx, can be installed alone!
+	
+	[[ $2 == "php" && $(conf_read php) != "true" ]] && php_install && php_optim && php_tool_site
+	[[ ( $2 == "php" || $4 == "postfix" ) && $(conf_read php) == "true" && $(conf_read php-tool-postfix) != "true" && $4 != "light" ]] && php_tool_postfix
+	[[ ( $2 == "php" || $4 == "redis" ) && $(conf_read php) == "true" && $(conf_read php-tool-redis) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && php_tool_redis
+	[[ ( $2 == "php" || $4 == "memcached" ) && $(conf_read php) == "true" && $(conf_read php-tool-memcached) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && php_tool_memcached
+	
+	[[ $3 == "mysql-client" && $(conf_read mysql-client) != "true" ]] && mysql_client_install
+	[[ $3 == "mysql" && $(conf_read mysql) != "true" ]] && mysql_client_install && mysql_install && local mysql_pass_display="true"
+	[[ ( $3 == "mysql" || $4 == "pma" ) && $(conf_read mysql) == "true" && $(conf_read mysql-tool-pma) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && mysql_tool_pma
+	[[ $mysql_pass_display == "true" && -z $block_password_display ]] && messagend_install || return 0 # Functions should never end with negative open!
 }
