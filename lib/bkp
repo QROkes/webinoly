@@ -385,17 +385,14 @@ s3_send() {
 	[[ -z $bucket || $bucket == "true" ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
 	bucket_validation $bucket
 	
-	folder=$(echo $bucket | cut -f 2- -d "/" -s)
-	[[ -n $folder ]] && keyfol="${folder}/"
-	[[ -n $folder ]] && folder="/${folder}/"
+	local keyfol=$(echo $bucket | cut -f 2- -d "/" -s)
+	[[ -n $keyfol ]] && keyfol="${keyfol}/"
 	
 	export keyfol
-	export folder
 	export bucket=$(echo $bucket | cut -f 1 -d "/")
 	export send_to_s3
 
-	if [[ $(check_osname) == "focal" ]]; then
-		python3 - &>/dev/null <<END
+	python3 - &>/dev/null <<END
 import os,boto3
 
 filepath = os.environ['send_to_s3']
@@ -406,21 +403,6 @@ s3_client = boto3.client('s3')
 s3_client.upload_file(filepath, BUCKET, folder + filepath.split('/')[-1])
 
 END
-	else
-		python - &>/dev/null <<END
-import os,boto
-
-filepath = os.environ['send_to_s3']
-BUCKET = os.environ['bucket']
-folder = os.environ['folder']
-
-conn = boto.connect_s3()
-bucket = conn.lookup(BUCKET)
-k = bucket.new_key(folder + filepath.split('/')[-1])
-k.set_contents_from_filename(filepath)
-
-END
-	fi
 	
 	if [[ $? == 0 ]]; then
 		unset send_to_s3

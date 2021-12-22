@@ -174,12 +174,14 @@ if [[ $statskip != "true" ]]; then
 fi
 
 
-# Stack installation & updates
+# Update stack!
 [[ -n $oldver && ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
+[[ $type == "Updates" && $(conf_read nginx-tool-bkp) == "true" ]] && sudo cp /opt/webinoly/templates/general/duply /usr/bin/ && sudo chmod 755 /usr/bin/duply
+
+# Stack installation
 [[ $setup -gt 0 && $setup -le 3 ]] && stack -nginx
 [[ $setup -gt 1 && $setup -le 3 ]] && stack -php
 [[ $setup == 3 ]] && stack -mysql
-
 
 # Message Center
 if [[ $new_install == "true" && $setup == 0 ]]; then

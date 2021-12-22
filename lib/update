@@ -202,6 +202,11 @@ onesix_to_oneseven() {
 	[[ $(conf_read php) != "true" && $(conf_read nginx) == "true" ]] && nginx_tool_site
 	[[ $(conf_read php) == "true" ]] && sudo apt -y install php$(conf_read php-ver)-intl
 	
+	if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
+		sudo apt -y purge python-boto duplicity duply
+		conf_write nginx-tool-bkp purged
+		stack -backups
+	fi
 	if [[ $(conf_read php-tool-redis) == "true" ]]; then
 		sudo apt -y purge redis-server
 		echo | sudo add-apt-repository --remove 'ppa:chris-lea/redis-server'
@@ -209,6 +214,8 @@ onesix_to_oneseven() {
 		conf_write php-tool-redis purged
 		stack -redis
 	fi
+	
+	sudo apt -yqq autoremove
 }
 
 

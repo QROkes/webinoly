@@ -306,7 +306,11 @@ elif [[ -n $purge && -n $backups ]]; then
 				echo "${gre}${dim}Backup (duply) profiles deleted!${end}"
 			fi
 			
-			[[ $(check_osname) == "bionic" ]] && sudo apt -y purge python-boto duplicity duply || sudo apt -y purge python3-boto3 duplicity duply
+			sudo apt -y purge python3-boto3 duplicity
+			echo | sudo add-apt-repository --remove 'ppa:duplicity-team/duplicity-release-git'
+			sudo apt-key del 7A86F4A2
+			sudo rm -rf /usr/bin/duply
+			
 			purge_autoremove="true"
 			conf_write nginx-tool-bkp purged
 			
@@ -507,6 +511,9 @@ elif [[ -n $purge_server_all ]]; then
 		stack -nginx -purge=force
 		stack -mysql -purge=force
 		stack -php -purge=force
+		
+		# Backups can be installed alone (without nginx)
+		[[ $(conf_read nginx-tool-bkp) == "true" ]] && stack -backups -purge=force
 		
 		# Remove remanent packages and things!
 		[[ -d /etc/datadog-agent ]] && webinoly -datadog -purge

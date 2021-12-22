@@ -487,7 +487,11 @@ nginx_tool_bkp() {
 	api-events_update in13
 	
 	# Instalar Duply & Duplicity with S3 support
-	[[ $(check_osname) == "bionic" ]] && sudo apt -y install python-boto duplicity duply || sudo apt -y install python3-boto3 duplicity duply
+	sudo apt -y install python3-boto3 duplicity
+	
+	# https://sourceforge.net/projects/ftplicity/files/duply%20%28simple%20duplicity%29/
+	sudo cp /opt/webinoly/templates/general/duply /usr/bin/
+	sudo chmod 755 /usr/bin/duply
 	
 	conf_write nginx-tool-bkp true
 	api-events_update in14
@@ -764,6 +768,11 @@ stack_builder() {
 		echo "${dim}Nginx is already installed!${end}"
 		local code=0
 	fi
+	if [[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]]; then
+		# Now there is an Official PPA: https://launchpad.net/~duplicity-team/+archive/ubuntu/duplicity-release-git
+		echo | sudo add-apt-repository ppa:duplicity-team/duplicity-release-git
+		local code="run"
+	fi
 	
 	if [[ $2 == "php" && $(conf_read php) != "true" ]]; then
 		# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
@@ -801,7 +810,7 @@ stack_builder() {
 	# We need this validation, because for example, LEMP can install additional tools when main package is already installed.
 	if [[ $code =~ [01] && $build != "light" ]]; then
 		[[ ( $1 == "nginx" || $4 == "letsencrypt" ) && $(conf_read nginx) == "true" && $(conf_read nginx-tool-ssl) != "true" ]] && unset code
-		[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" ]] && unset code # Backups doesn't need nginx, can be installed alone!
+		#[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" ]] && unset code # Backups doesn't need nginx, can be installed alone! # Unset in PPA
 		[[ ( $2 == "php" || $4 == "postfix" ) && $(conf_read php) == "true" && $(conf_read php-tool-postfix) != "true" ]] && unset code
 		
 		if [[ $build != "basic" ]]; then

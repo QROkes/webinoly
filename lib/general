@@ -160,7 +160,7 @@ check_for_nginx_tool_ssl() {
 	fi
 }
 check_for_nginx_tool_bkp() {
-	check_for_nginx
+	#check_for_nginx # Backups doesn't need nginx, can be installed alone!
 	if [[ $(conf_read nginx-tool-bkp) != "true" && $1 == "-ask" ]]; then
 		echo "${red}"
 		echo "+ BackUp packages Not Found!"
