@@ -363,5 +363,5 @@ else
 	exit 1
 fi
 
-[[ $(conf_read nginx) == "true" && -z $nginx_not ]] && sudo service nginx reload
+[[ $(conf_read nginx) == "true" && -z $nginx_not ]] && sudo systemctl reload nginx
 api-events_update hae

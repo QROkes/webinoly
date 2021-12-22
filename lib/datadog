@@ -410,7 +410,7 @@ instances:
 dd_purge() {
 	if [[ -d /etc/datadog-agent ]]; then
 		sudo apt-get remove --purge datadog-agent -y
-		sudo sed -i '/WebinolyLocalhostStart/,/WebinolyLocalhostEnd/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+		[[ -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && sudo sed -i '/WebinolyLocalhostStart/,/WebinolyLocalhostEnd/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
 		echo "${gre}Datadog Agent has been removed successfully from your server!${end}"
 	else
 		echo "${red}[ERROR] Datadog Agent is not installed on your server!${end}"
@@ -443,7 +443,7 @@ dd_install() {
 				[[ $(conf_read php-tool-redis) == "true" ]] && dd_redis
 			fi
 			
-			sudo service datadog-agent start
+			sudo systemctl start datadog-agent
 			echo "${gre}Datadog Agent has been successfully installed in your server!${end}"
 		fi
 	fi

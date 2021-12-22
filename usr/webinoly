@@ -157,7 +157,7 @@ elif [[ -n $smtp && -n $purge ]]; then
 	rm -rf /etc/postfix/sasl_passwd
 	rm -rf /etc/mailname
 	conf_write smtp purged
-	sudo service postfix restart
+	sudo systemctl restart postfix
 	echo "${gre}SMTP configuration has been successfully removed!${end}"
 elif [[ -n $smtp ]]; then
 	check_for_php_tool_postfix -ask
@@ -212,7 +212,7 @@ elif [[ -n $datadog ]]; then
 		
 		if [[ -n $integrations ]]; then
 			dd_logs_disable
-			sudo service datadog-agent restart
+			sudo systemctl restart datadog-agent
 		fi
 		
 	elif [[ -n $integrations && $integrations != "off" ]]; then
@@ -238,7 +238,7 @@ elif [[ -n $datadog ]]; then
 			exit 1
 		fi
 		
-		sudo service datadog-agent restart
+		sudo systemctl restart datadog-agent
 	else
 		dd_install
 	fi
@@ -306,5 +306,5 @@ else
 fi
 
 [[ -n $err_cont ]] && exit 1
-[[ $(conf_read nginx) == "true" && -z $nginx_not ]] && sudo service nginx reload
+[[ $(conf_read nginx) == "true" && -z $nginx_not ]] && sudo systemctl reload nginx
 api-events_update wye

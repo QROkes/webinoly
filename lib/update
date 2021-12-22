@@ -144,7 +144,7 @@ onefive_to_onesix() {
 	# Just to be sure in case of added with new nginx package
 	[[ -f /etc/nginx/conf.d/default.conf ]] && sudo rm /etc/nginx/conf.d/default.conf
 	
-	sudo nginx -t && sudo service nginx start
+	sudo nginx -t && sudo systemctl start nginx
 	sudo systemctl enable nginx
 	
 	[[ $(conf_read php) == "true" ]] && sudo apt -y install ghostscript

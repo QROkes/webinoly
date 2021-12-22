@@ -547,7 +547,7 @@ check_exported_conf() {
 	if [[ $(conf_read mysql) == "true" ]]; then
 		if tar -tvf $file --absolute-names | grep -oq "/etc/mysql/mariadb.conf.d/90-webinoly.cnf"; then
 			tar -C / -xf $file /etc/mysql/mariadb.conf.d/90-webinoly.cnf --absolute-names
-			sudo service mysql restart
+			sudo systemctl restart mysql
 		fi
 	fi
 }

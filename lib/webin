@@ -202,7 +202,7 @@ smtp_setup() {
 	sudo chmod 0600 /etc/postfix/sasl_passwd.db
 	
 	conf_write smtp true
-	sudo service postfix restart
+	sudo systemctl restart postfix
 	echo "${gre}SMTP was successfully enabled!${end}"
 }
 
@@ -229,18 +229,8 @@ mysql_change_password() {
 		exit 1
 	fi
 	
-	
-	sudo mysql --connect-timeout=10 --user=root -p$( echo $(conf_read mysql-root) | openssl enc -d -a -salt ) -e "ALTER USER '${user}'@'localhost' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
-	[[ $? != 0 ]] && catcherror=true
-	
-	if [[ $user == "root" && -z $catcherror ]]; then
-		sudo mysql --connect-timeout=10 --user=root -p$pass -e "ALTER USER '${user}'@'127.0.0.1' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
-		[[ $? != 0 ]] && catcherror=true
-		sudo mysql --connect-timeout=10 --user=root -p$pass -e "ALTER USER '${user}'@'::1' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
-		[[ $? != 0 ]] && catcherror=true
-	fi
-	
-	if [[ -z $catcherror ]]; then
+	sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "ALTER USER '${user}'@'localhost' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
+	if [[ $? == 0 ]]; then
 		conf_write mysql-${user} $( echo $pass | openssl enc -a -salt )
 		echo "${gre}MySQL Password successfully changed!${end}"
 	else
@@ -594,7 +584,7 @@ Match Group sftponly
 		[[ -n $falus ]] && sudo sed -i "s/$falus/$falus www-data/" /etc/ssh/sshd_config
 
 		conf_write login-www-data true
-		sudo service ssh restart
+		sudo systemctl restart ssh
 		echo "${gre}SFTP access for www-data user has been successfuly enabled! ${end}"
 	
 	elif [[ $login_www_data == "off" ]]; then
@@ -614,7 +604,7 @@ Match Group sftponly
 		fi
 
 		conf_write login-www-data purged
-		sudo service ssh restart
+		sudo systemctl restart ssh
 		echo "${gre}SFTP access for www-data user has been successfuly disabled! ${end}"
 	else
 		echo "${red}[ERROR] Invalid value for login-www-data! ${end}"

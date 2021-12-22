@@ -116,9 +116,7 @@ WantedBy=multi-user.target" >> /etc/systemd/system/webinoly-disable-thp.service
 	set_timezone
 	
 	sudo systemctl daemon-reload
-	[[ -s /run/nginx.pid && -n $(cat /run/nginx.pid) ]] && sudo kill $(cat /run/nginx.pid) && sudo service nginx start 
-	# For an unknown reason "sudo systemctl start nginx" fails to start nginx here!
-	
+	sudo systemctl restart nginx # We need to kill the process, don't use reload
 	conf_write linux-optim true
 	api-events_update in9
 }
@@ -146,10 +144,7 @@ linux_purge() {
 		[[ $recalculate == "on" ]] && swap_delete
 
 		sudo systemctl daemon-reload
-		
-		# Never reload nginx here - high chances of getting errors due to still-none-updated conf files in the server-reset process
-		#[[ -s /run/nginx.pid && -n $(cat /run/nginx.pid) ]] && sudo kill $(cat /run/nginx.pid) && sudo service nginx start
-		
+		# Never reload/restart nginx here!
 		conf_write linux-optim purged
 		api-events_update pn8
 	fi
@@ -242,7 +237,6 @@ mysql_install() {
 
 	#Instead of mysql_secure_installation we do this: (same but manually, because not acept unattended)
 	sudo mysql --user=root -p$AUTOGENPASS_ROOT <<_EOF_
-ALTER USER 'root'@'localhost' IDENTIFIED BY '${AUTOGENPASS_ROOT}';
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
@@ -729,13 +723,14 @@ stack_builder() {
 	[[ $4 == "postfix" || $4 == "redis" || $4 == "memcached" || $4 == "pma" ]] && check_for_php -ask
 	[[ $4 == "pma" ]] && check_for_mysql -ask
 	
-	# Set Welcome Message
-	[[ -n $4 ]] && local mess=$4 # We trust in build variable validation
-	[[ -n $lemp && -z $4 ]] && local mess="full"
-	
 	# Check for missing essential packages
 	if [[ $(conf_read pre-packs) != true ]]; then
+		# Set Welcome Message
+		[[ -n $4 ]] && local mess=$4 # We trust in build variable validation
+		[[ -n $lemp && -z $4 ]] && local mess="full"
 		message_welcome $mess
+		
+		# Any action run after the meesage is displayed!
 		api-events_update i1
 		sudo apt -qq update
 		
