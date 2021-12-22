@@ -319,6 +319,14 @@ bkp_s3_profile() {
 			echo "${red}[ERROR] Can not create profile${blu} '$profile' ${red}because already exists!${end}"
 			exit 1
 		fi
+		
+		# S3 Compatible services
+		if [[ -n $s3_compatible_endpoint ]] && ! [[ $(is_url $s3_compatible_endpoint) =~ ^(http|https)$ ]]; then
+			echo "${red}[ERROR] Invalid endpoint URL!${end}"
+			exit 1
+		elif [[ -n $s3_compatible_endpoint ]]; then
+			echo "${blu}${dim}S3 Compatible service mode enabled (Not AWS)${end}"
+		fi
 	
 		[[ -z $bucket || $bucket == "true" ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
 		bucket_validation $bucket
@@ -337,13 +345,8 @@ bkp_s3_profile() {
 		sudo sed -i -E "/^[#]?MAX_AGE=/c MAX_AGE=$max_age" $HOME/.duply/$profile/conf
 		sudo sed -i '/^#MAX_FULLBKP_AGE=/s/#//' $HOME/.duply/$profile/conf
 		sudo sed -i '/^#DUPL_PARAMS="\$DUPL_PARAMS --full-if-older-than \$MAX_FULLBKP_AGE "/s/#//' $HOME/.duply/$profile/conf
-		
-		if [[ $(check_osname) == "focal" ]]; then
-			sudo sed -i -E "/^[#]?TARGET=/c TARGET='boto3+s3://${bucket}'" $HOME/.duply/$profile/conf
-		else
-			sudo sed -i -E "/^[#]?TARGET=/c TARGET='s3+http://${bucket}'" $HOME/.duply/$profile/conf
-			sudo echo 'DUPL_PARAMS="$DUPL_PARAMS --s3-use-new-style "' >> $HOME/.duply/$profile/conf
-		fi
+		sudo sed -i -E "/^[#]?TARGET=/c TARGET='boto3+s3://${bucket}'" $HOME/.duply/$profile/conf
+		[[ -n $s3_compatible_endpoint ]] && sudo echo "DUPL_PARAMS=\"\$DUPL_PARAMS --s3-endpoint-url $s3_compatible_endpoint \"" >> $HOME/.duply/$profile/conf
 		
 		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully created!${end}"
 	fi
@@ -376,13 +379,23 @@ s3_send() {
 		exit 1
 	fi
 	
-	[[ -z $send_to_s3 || $send_to_s3 == "true" ]] && read -p "${gre}File to send: ${end}" send_to_s3
+	# S3 Compatible services
+	if [[ -n $s3_compatible_endpoint ]] && ! [[ $(is_url $s3_compatible_endpoint) =~ ^(http|https)$ ]]; then
+		echo "${red}[ERROR] Invalid endpoint URL!${end}"
+		exit 1
+	elif [[ -n $s3_compatible_endpoint ]]; then
+		echo "${blu}${dim}S3 Compatible service mode enabled (Not AWS)${end}"
+	else
+		local s3_compatible_endpoint=""
+	fi
+	
+	[[ -z $send_to_s3 || $send_to_s3 == "true" ]] && read -p "${blu}File to send: ${end}" send_to_s3
 	if [[ ! -f $send_to_s3 ]]; then
 		echo "${red}[ERROR] File not found!${end}"
 		exit 1
 	fi
 	
-	[[ -z $bucket || $bucket == "true" ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
+	[[ -z $bucket || $bucket == "true" ]] &&	read -p "${blu}S3 Bucket name: ${end}" bucket
 	bucket_validation $bucket
 	
 	local keyfol=$(echo $bucket | cut -f 2- -d "/" -s)
@@ -391,32 +404,36 @@ s3_send() {
 	export keyfol
 	export bucket=$(echo $bucket | cut -f 1 -d "/")
 	export send_to_s3
-
+	export s3_compatible_endpoint
+	
 	python3 - &>/dev/null <<END
 import os,boto3
 
 filepath = os.environ['send_to_s3']
 BUCKET = os.environ['bucket']
 folder = os.environ['keyfol']
+similar = os.environ['s3_compatible_endpoint']
 
-s3_client = boto3.client('s3')
+if similar:
+	s3_client = boto3.client('s3',endpoint_url = similar)
+else:
+	s3_client = boto3.client('s3')
+	
 s3_client.upload_file(filepath, BUCKET, folder + filepath.split('/')[-1])
-
 END
 	
 	if [[ $? == 0 ]]; then
 		unset send_to_s3
-		unset folder
+		unset keyfol
 		unset bucket
 		echo "${gre}File was sent to S3 successfully!${end}"
 	else
 		unset send_to_s3
-		unset folder
+		unset keyfol
 		unset bucket
 		echo "${red}[ERROR] Can not connect with your bucket!${end}"
 		exit 1
 	fi
-	
 }
 
 

@@ -187,7 +187,7 @@ wpinstall() {
 					url_path=""
 					done="0"
 					[[ $type == [2345] ]] && exit 1 || continue 1
-				elif [[ $(is_url $dbhost) =~ ^(http|https|ip|true)$ ]]; then	
+				elif [[ $(is_url $dbhost) =~ ^(http|https|ip|true)$ ]]; then
 					local dburl=$url_host
 					local dbport=$url_port
 				else

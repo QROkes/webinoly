@@ -206,6 +206,9 @@ onesix_to_oneseven() {
 		sudo apt -y purge python-boto duplicity duply
 		conf_write nginx-tool-bkp purged
 		stack -backups
+		
+		# Not break the old profiles
+		[[ $(check_osname) == "bionic" ]] && sudo apt -y install python3-boto
 	fi
 	if [[ $(conf_read php-tool-redis) == "true" ]]; then
 		sudo apt -y purge redis-server
