@@ -17,20 +17,6 @@ error() {
 waiting_for_log() {
 	echo "${blu}[Log File is Empty] ${dim}Waiting to receive some data, you will see it in real-time here...${end}"
 }
-cnf_delete() {
-	#Example: cnf_delete error_log
-	[[ -f /etc/mysql/mariadb.conf.d/90-webinoly.cnf ]] && sudo sed -i "/^$1 /d" /etc/mysql/mariadb.conf.d/90-webinoly.cnf
-}
-cnf_write() {
-	#Example: cnf_write error_log /var/log/mysql/error.log
-	cnf_delete $1
-	[[ -n $2 ]] && local value="= $2"
-	echo "$1 $value" >> /etc/mysql/mariadb.conf.d/90-webinoly.cnf
-}
-cnf_read() {
-	#Example: cnf_read error_log
-	echo $( grep -P "^$1 = " /etc/mysql/mariadb.conf.d/90-webinoly.cnf | cut -f 2 -d "=" -s | sed 's/ //g' )
-}
 
 
 # Check for custom "lines" value

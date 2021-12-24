@@ -223,9 +223,9 @@ mysql_change_password() {
 		exit 1
 	fi
 	
-	if [[ -z $user || -z $pass || $user == *"'"* || $pass == *"'"* || ${#pass} -lt 8  || ! ( $user =~ ^(root|admin)$  ) ]]; then
+	if [[ -z $user || -z $pass || $user == *"'"* || $pass == *"'"* || ${#pass} -lt 8 ]]; then
 		echo "${red}[ERROR] Please, enter a valid username and password!"
-		echo "Only 'root and admin' users allowed and password can not contain a 'single quote' and must be at least 8 characters long.${end}"
+		echo "Password can not contain a 'single quote' and must be at least 8 characters long.${end}"
 		exit 1
 	fi
 	
@@ -236,6 +236,66 @@ mysql_change_password() {
 	else
 		echo "${red}[ERROR] Unexpected error!${end}"
 		exit 1
+	fi
+}
+
+
+mysql_public_access() {
+	if ! [[ $mysql_public_access =~ ^(on|off)$ ]]; then
+		echo "${red}[ERROR] Please, enter a valid value! ${dim}(on/off)${end}"
+		exit 1
+	fi
+	
+	check_for_mysql -ask
+	
+	if [[ $mysql_public_access == "on" ]]; then
+		cnf_write skip-networking 0
+		cnf_write skip-bind-address
+		echo ""
+		echo "${red}[WARNING] Please, be careful and take the proper security actions to protect your server, now that MySQL is open for public access you should at least set your firewall to prevent against any unwanted request.${end}"
+		echo ""
+		[[ -z $create_master_user ]] && echo "${dim}[INFO] Be sure you have a MySQL User with public access!${end}"
+		echo "${gre}MySQL public access successfully enabled!${end}"
+	elif [[ $mysql_public_access == "off" ]]; then
+		cnf_delete skip-networking
+		cnf_delete skip-bind-address
+		echo "${gre}MySQL public access successfully disabled!${end}"
+	fi
+	
+	sudo systemctl restart mysql
+	
+	if [[ -n $create_master_user ]]; then
+		if [[ $create_master_user != true && $(echo "${create_master_user}" | cut -c-1) == "[" && $(echo "${create_master_user}" | rev | cut -c-1) == "]" ]]; then
+			local user=$(echo ${create_master_user:1:-1} | cut -d',' -f 1 -s)
+			local pass=$(echo ${create_master_user:1:-1} | cut -d',' -f 2 -s)
+		fi
+		
+		if [[ -z $user || -z $pass ]]; then
+			read -p "${blu}Master User Name: ${end}" user
+			read -p "${blu}Master User Password: ${end}" pass
+		fi
+		
+		if [[ -z $user || -z $pass || $user == *"'"* || $pass == *"'"* || ${#pass} -lt 8 ]]; then
+			echo "${red}[ERROR] Please, enter a valid username and password!"
+			echo "Password can not contain a 'single quote' and must be at least 8 characters long.${end}"
+			exit 1
+		elif [[ $user != $(dbword_check $user user) ]]; then
+			echo "${red}[ERROR] The DB Name can not be a reserved word or should only contain allowed characters!${blu}"
+			exit 1
+		elif [[ -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "SELECT User FROM mysql.user;" | grep -ow $user) ]]; then
+			echo "${red}[ERROR] User ${blu}$user ${red}already exists!${end}"
+			exit 1
+		else
+			[[ -n $replication_slave ]] && local priv="replication slave" || local priv="ALL PRIVILEGES"
+			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+CREATE USER '${user}'@'%' IDENTIFIED BY '${pass}';
+GRANT ${priv} ON *.* TO '${user}'@'%';
+FLUSH PRIVILEGES;
+_EOF_
+
+			[[ $? == 0 ]] && echo "${gre}${dim}Master User${blu} '${user}' ${gre}successfully created!${end}" || echo "${red}[ERROR] Unexpected error!${end}"
+		fi
+	
 	fi
 }
 
