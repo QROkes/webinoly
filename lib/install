@@ -5,7 +5,7 @@ readonly cores=$(grep ^processor /proc/cpuinfo | wc -l)
 readonly swapm=$(($(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024))
 readonly swap=$(($swapm/1000))
 readonly ramk=$(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')
-readonly ramb=$(($ramk/1024))
+readonly ramb=$(($ramk/1000))
 [[ $(($ramb%1000)) -gt 700 ]] && readonly ram=$((($ramb/1000)+1)) || readonly ram=$(($ramb/1000))
 [[ $(($ramb*30)) -lt 65535 ]] && readonly fd_per_process=65535 || readonly fd_per_process=$(($ramb*30)) # File descriptors per process 3%
 
@@ -705,12 +705,13 @@ message_welcome() {
 	echo "********   ${dim}Stack Builder & Configuration Manager   ${end}${blu}********"
 	echo "***********************************************************"
 	
-	if [[ $1 =~ ^(full|basic|light)$ ]]; then
+	if [[ $1 =~ ^(full|basic|light|partial)$ ]]; then
 		echo "${dim} -    -    -    -    -    -    -    -    -    -    -    - ${end}${blu}"
 		echo ""
 		[[ $1 == "full" ]] && echo "Build Profile: ${dim}Full Stack (Nginx, PHP, MySQL and ALL the additional tools)"
 		[[ $1 == "basic" ]] && echo "Build Profile: ${dim}Basic Stack (Only the most essential tools)"
 		[[ $1 == "light" ]] && echo "Build Profile: ${dim}Light Stack (Only core packages, NO additional tools will be installed)"
+		[[ $1 == "partial" ]] && echo "Build Profile: ${dim}Partial Stack"
 	fi
 	echo "${end}"
 }
@@ -725,12 +726,12 @@ stack_builder() {
 	# Backups can be installed alone...
 	[[ $4 == "letsencrypt" || $4 == "pma" ]] && check_for_nginx -ask
 	[[ $4 == "postfix" || $4 == "redis" || $4 == "memcached" || $4 == "pma" ]] && check_for_php -ask
-	[[ $4 == "pma" ]] && check_for_mysql -ask
+	[[ $4 == "pma" ]] && check_for_mysql -ask && local code=0
 	
 	# Check for missing essential packages
 	if [[ $(conf_read pre-packs) != true ]]; then
 		# Set Welcome Message
-		[[ -n $4 ]] && local mess=$4 # We trust in build variable validation
+		[[ -n $4 ]] && local mess=$4 || local mess="partial" # We trust in build variable validation
 		[[ -n $lemp && -z $4 ]] && local mess="full"
 		message_welcome $mess
 		
@@ -808,26 +809,26 @@ stack_builder() {
 	# Don't run the "update" if nothing will be installed!
 	# This validation only runs when core package is already instaled, so we need to check if a tool will be installed.
 	# We need this validation, because for example, LEMP can install additional tools when main package is already installed.
-	if [[ $code =~ [01] && $build != "light" ]]; then
+	if [[ $code =~ [01] && $4 != "light" ]]; then
 		[[ ( $1 == "nginx" || $4 == "letsencrypt" ) && $(conf_read nginx) == "true" && $(conf_read nginx-tool-ssl) != "true" ]] && unset code
 		#[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" ]] && unset code # Backups doesn't need nginx, can be installed alone! # Unset in PPA
 		[[ ( $2 == "php" || $4 == "postfix" ) && $(conf_read php) == "true" && $(conf_read php-tool-postfix) != "true" ]] && unset code
 		
-		if [[ $build != "basic" ]]; then
+		if [[ $4 != "basic" ]]; then
 			#[[ ( $2 == "php" || $4 == "redis" ) && $(conf_read php) == "true" && $(conf_read php-tool-redis) != "true" ]] && unset code # Unset in PPA
 			[[ ( $2 == "php" || $4 == "memcached" ) && $(conf_read php) == "true" && $(conf_read php-tool-memcached) != "true" ]] && unset code
-			[[ ( $3 == "mysql" || $4 == "pma" ) && $(conf_read mysql) == "true" && $(conf_read mysql-tool-pma) != "true" ]] && unset code
+			[[ -n $code && ( $3 == "mysql" || $4 == "pma" ) && $(conf_read mysql) == "true" && $(conf_read mysql-tool-pma) != "true" ]] && local code="noupd"
 		fi
 	fi
 	[[ $code = [01] ]] && return $code
 	
 	# PMA doesn't need update!
-	[[ $1 == "false" && $2 == "false" && $3 == "false" && $4 == "pma" ]] || sudo apt -qq update
+	[[ $code != "noupd" ]] && sudo apt -qq update
 	
 	# Install Packages!
 	[[ $1 == "nginx" && $(conf_read nginx) != "true" ]] && nginx_install && nginx_optim && nginx_tool_site
-	[[ ( $1 == "nginx" || $4 == "letsencrypt" ) && $(conf_read nginx) == "true" && $(conf_read nginx-tool-ssl) != "true" && $build != "light" ]] && nginx_tool_ssl
-	[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" && $build != "light" ]] && nginx_tool_bkp # Backups doesn't need nginx, can be installed alone!
+	[[ ( $1 == "nginx" || $4 == "letsencrypt" ) && $(conf_read nginx) == "true" && $(conf_read nginx-tool-ssl) != "true" && $4 != "light" ]] && nginx_tool_ssl
+	[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" && $4 != "light" ]] && nginx_tool_bkp # Backups doesn't need nginx, can be installed alone!
 	
 	[[ $2 == "php" && $(conf_read php) != "true" ]] && php_install && php_optim && php_tool_site
 	[[ ( $2 == "php" || $4 == "postfix" ) && $(conf_read php) == "true" && $(conf_read php-tool-postfix) != "true" && $4 != "light" ]] && php_tool_postfix

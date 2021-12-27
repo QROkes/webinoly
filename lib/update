@@ -193,8 +193,15 @@ onesix_to_oneseven() {
 				
 				for pxy in "/etc/nginx/apps.d/${domi}"*-proxy.conf
 				do
-					[[ -f $pxy ]] && sudo sed -i '/CacheStaticFiles/,/BasicLocationRootFiles/{/headers-https.conf;/d}' $pxy
+					[[ -f $pxy ]] && sudo sed -i '/CacheStaticFiles/,/expires max;/{/headers-https.conf;/d}' $pxy
 				done
+			fi
+			
+			if [[ $(is_parked $domi) == "true" ]]; then
+				local main=$(grep -G "root .*;" /etc/nginx/sites-available/$domi | cut -d'/' -f 4)
+				if [[ -f /etc/nginx/sites-available/$main ]]; then
+					sed -i "/include \/var\/www\/$main/a \	include \/var\/www\/${main}/*-$(echo $domi | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;" /etc/nginx/sites-available/$domi
+				fi
 			fi
 		fi		
 	done
@@ -203,7 +210,7 @@ onesix_to_oneseven() {
 	[[ $(conf_read php) == "true" ]] && sudo apt -y install php$(conf_read php-ver)-intl
 	
 	if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
-		sudo apt -y purge python-boto duplicity duply
+		sudo apt -y purge duplicity duply python-boto
 		conf_write nginx-tool-bkp purged
 		stack -backups
 		

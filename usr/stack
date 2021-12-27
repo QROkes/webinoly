@@ -508,6 +508,11 @@ elif [[ -n $purge_server_all ]]; then
 	fi
 
 	if [[ $answer == [Yy] ]]; then
+		if [[ $(conf_read mysql) == true ]]; then
+			# Usually comes by default with Ubuntu. Not removed: dirmngr
+			sudo apt -y purge apt-transport-https
+		fi
+		
 		stack -nginx -purge=force
 		stack -mysql -purge=force
 		stack -php -purge=force
@@ -522,10 +527,6 @@ elif [[ -n $purge_server_all ]]; then
 		[[ -f /etc/ssl/dhparam.pem ]] && sudo rm -rf /etc/ssl/dhparam.pem
 		[[ -f $HOME/.aws/credentials ]] && sudo rm -rf $HOME/.aws/credentials
 		
-		if [[ $(conf_read mysql) == purged ]]; then
-			# Usually comes by default with Ubuntu. Not removed: dirmngr
-			sudo apt -y purge apt-transport-https
-		fi
 		if [[ $(conf_read pre-packs) == true ]]; then
 			# Usually comes by default with Ubuntu. Not removed: software-properties-common, zip
 			sudo apt -y purge pwgen unzip
@@ -537,8 +538,8 @@ elif [[ -n $purge_server_all ]]; then
 		
 		echo "${gre}"
 		echo "****************************************************************************"
-		echo "***     Webinoly Stack have been completely removed from your server     ***"
-		echo "****         We are sad because you decided to remove Webinoly!!        ****"
+		echo "***     ${bol}Webinoly Stack have been completely removed from your server${end}${gre}     ***"
+		echo "****         ${dim}We are sad because you decided to remove Webinoly!!${end}${gre}        ****"
 		echo "****************************************************************************"
 		echo "${end}"
 	else
@@ -557,7 +558,7 @@ elif [[ -n $html || -n $nginx ]]; then
 	stack_builder nginx false false $build
 	
 elif [[ -n $php ]]; then
-	if [[ $(conf_read nginx) != "true" && $(conf_read force-flag) != "true" ]]; then
+	if [[ $(conf_read nginx) != "true" && $(conf_read force-flag) != "true" && $php != "nginx" ]]; then
 		echo ""
 		echo "${blu}Nginx is not installed, do you want to install it too [y/N]?${end} "
 		while read -r -n 1 -s answer; do
@@ -565,7 +566,7 @@ elif [[ -n $php ]]; then
 		  [[ $answer = [YyNn] ]] && break
 		done
 	fi
-	[[ $answer = [Yy] ]] && stack_builder nginx php false $build || stack_builder false php false $build
+	[[ $answer = [Yy] || $php == "nginx" ]] && stack_builder nginx php false $build || stack_builder false php false $build
 	
 elif [[ -n $mysql ]]; then
 	[[ $(conf_read php) != "true" || $(conf_read nginx) != "true" ]] && build=light

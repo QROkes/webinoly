@@ -627,7 +627,7 @@ fi
 
 # Check for updates
 if [[ -a /usr/lib/update-notifier/apt-check ]]; then
-	ver_os_updates=$(echo $(/usr/lib/update-notifier/apt-check --human-readable) | grep -Eo "^[1-9]+ " | head -1 | sed "s/ //")
+	ver_os_updates=$(echo $(/usr/lib/update-notifier/apt-check --human-readable) | grep -Eo "^[0-9]+ " | head -1 | sed "s/ //")
 	if [[ $ver_os_updates =~ ^[0-9]+$ && $ver_os_updates -gt 0 ]]; then
 		echo "${dim}- [WARNING] Operating System is not updated, $ver_os_updates updates can be installed immediately.${end}${red}"
 		ver_six_war="1"

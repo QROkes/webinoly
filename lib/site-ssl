@@ -227,7 +227,7 @@ site_ssl_off() {
 	[[ -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && sudo sed -i '/headers.conf;/c \	include common/header.conf;' /etc/nginx/sites-available/$(conf_read tools-port)
 	for pxy in "/etc/nginx/apps.d/${domain}"*-proxy.conf
 	do
-		[[ -f $pxy ]] && sudo sed -i '/CacheStaticFiles/,/BasicLocationRootFiles/{/headers-https.conf;/d}' $pxy
+		[[ -f $pxy ]] && sudo sed -i '/CacheStaticFiles/,/expires max;/{/headers-https.conf;/d}' $pxy
 	done
 	
 	# In case this domain is used as tools-site or default-site

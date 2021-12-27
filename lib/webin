@@ -11,9 +11,13 @@ system_info() {
 	echo "${blu}OS Info:${end}${dim} $(sudo cat /proc/version) ${end}"
 	echo "${blu}Description:${end}${dim} $(sudo lsb_release -d | cut -d':' -f 2- -s) ${end}"
 	echo "${blu}Codename:${end}${dim} $(sudo lsb_release -c | cut -d':' -f 2- -s) ${end}"
-	echo "${blu}Cores:${end}${dim} $cores ${end}"
 	echo "${blu}RAM:${end}${dim} $ramv ${end}"
 	echo "${blu}SWAP:${end}${dim} $swapv ${end}"
+	echo ""
+	echo "${blu}CPU Model:${end}${dim} $(lscpu | grep "Model name:" | cut -d ":" -f 2 -s | sed 's/^[ \t]*//') ${end}"
+	echo "${blu}Architecture:${end}${dim} $(lscpu | grep "Vendor ID:" | cut -d ":" -f 2 -s | sed 's/^[ \t]*//') ($(lscpu | grep "Architecture:" | cut -d ":" -f 2 -s | sed 's/^[ \t]*//')) ${end}"
+	echo "${blu}Cores:${end}${dim} $cores ${end}"
+	echo "${blu}Threads per core:${end}${dim} $(lscpu | grep "Thread(s) per core:" | cut -d ":" -f 2 -s | sed 's/^[ \t]*//') ${end}"
 	echo ""
 	echo "${blu}Hostname:${end}${dim} $(sudo hostname) ${end}"
 	echo "${blu}File descriptors (OS):${end}${dim} $(sudo cat /proc/sys/fs/file-max) ${end}"
@@ -227,11 +231,14 @@ mysql_change_password() {
 		echo "${red}[ERROR] Please, enter a valid username and password!"
 		echo "Password can not contain a 'single quote' and must be at least 8 characters long.${end}"
 		exit 1
+	elif [[ -z $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "SELECT User FROM mysql.user;" | grep -ow $user) ]]; then
+			echo "${red}[ERROR] User ${blu}$user ${red}doesn't exists!${end}"
+			exit 1
 	fi
 	
 	sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "ALTER USER '${user}'@'localhost' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
 	if [[ $? == 0 ]]; then
-		conf_write mysql-${user} $( echo $pass | openssl enc -a -salt )
+		[[ $user =~ ^(root|admin)$ ]] && conf_write mysql-${user} $( echo $pass | openssl enc -a -salt )
 		echo "${gre}MySQL Password successfully changed!${end}"
 	else
 		echo "${red}[ERROR] Unexpected error!${end}"
@@ -685,6 +692,7 @@ webinoly_uninstall() {
 	
 	if [[ $answer == [Yy] ]]; then
 		[[ -z $no_recovery ]] && sudo tar -Pcf $HOME/.webinoly-conf-restore_dont-remove /opt/webinoly/webinoly.conf /opt/webinoly/templates/source
+		[[ -z $no_recovery ]] && echo "${gre}${dim}Configuration saved!${end}"
 		sudo rm -rf /opt/webinoly
 		sudo rm /usr/bin/webinoly
 		sudo rm /usr/bin/stack

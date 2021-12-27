@@ -30,7 +30,7 @@ fi
 # Prevent "compulsive" re-installation, force the use of the 'update' command.
 if [[ -f /opt/webinoly/webinoly.conf && $1 != "upd" && $2 != "-ver=alpha" ]]; then
 	echo "$(tput setaf 2)Webinoly is already installed on your server!"
-	echo "$(tput setaf 6)To update use the proper command.$(tput sgr0)"
+	echo "$(tput setaf 6)To update use the proper command:$(tput dim) sudo webinoly -update $(tput sgr0)"
 	sudo rm weby
 	exit 0
 elif [[ ! -f /opt/webinoly/webinoly.conf && $1 == "upd" ]]; then
@@ -63,6 +63,7 @@ elif ! [[ $1 -ge 0 && $1 -le 3 && $1 =~ ^[0-9]+$ ]]; then
 	read -p "$(tput setaf 2)Select the desired option to configure your server: $(tput sgr0)" setup
 	echo ""
 	setup=${setup:-3}
+	[[ $setup -ge 0 && $setup -le 3 && $setup =~ ^[0-9]+$ ]] || setup=0
 else
 	setup=$1
 fi
@@ -109,8 +110,12 @@ sudo find /opt/webinoly -type d -exec chmod 755 {} \;
 sudo find /opt/webinoly -type f -exec chmod 644 {} \;
 sudo chmod -f 744 /opt/webinoly/lib/ex-*
 
-sudo chmod 755 /opt/webinoly/usr/*
-sudo mv /opt/webinoly/usr/* /usr/bin/
+# REMOVE when unsupported! (Only to maintain compatibility with versions before 1.16.0)
+[[ ! -d /opt/webinoly/usr ]] && usrw="/opt/webinoly/plugins" || usrw="/opt/webinoly/usr"
+
+sudo chmod 755 ${usrw}/*
+sudo mv ${usrw}/* /usr/bin/
+[[ -f /usr/bin/duply ]] && sudo cp /opt/webinoly/templates/general/duply /usr/bin/ && sudo chmod 755 /usr/bin/duply
 
 source /opt/webinoly/lib/general
 
@@ -176,12 +181,11 @@ fi
 
 # Update stack!
 [[ -n $oldver && ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
-[[ $type == "Updates" && $(conf_read nginx-tool-bkp) == "true" ]] && sudo cp /opt/webinoly/templates/general/duply /usr/bin/ && sudo chmod 755 /usr/bin/duply
 
 # Stack installation
-[[ $setup -gt 0 && $setup -le 3 ]] && stack -nginx
-[[ $setup -gt 1 && $setup -le 3 ]] && stack -php
-[[ $setup == 3 ]] && stack -mysql
+[[ $setup == 1 ]] && stack -nginx
+[[ $setup == 2 ]] && stack -php=nginx
+[[ $setup == 3 ]] && stack -lemp
 
 # Message Center
 if [[ $new_install == "true" && $setup == 0 ]]; then

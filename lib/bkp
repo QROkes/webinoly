@@ -324,8 +324,6 @@ bkp_s3_profile() {
 		if [[ -n $s3_compatible_endpoint ]] && ! [[ $(is_url $s3_compatible_endpoint) =~ ^(http|https)$ ]]; then
 			echo "${red}[ERROR] Invalid endpoint URL!${end}"
 			exit 1
-		elif [[ -n $s3_compatible_endpoint ]]; then
-			echo "${blu}${dim}S3 Compatible service mode enabled (Not AWS)${end}"
 		fi
 	
 		[[ -z $bucket || $bucket == "true" ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
@@ -346,7 +344,11 @@ bkp_s3_profile() {
 		sudo sed -i '/^#MAX_FULLBKP_AGE=/s/#//' $HOME/.duply/$profile/conf
 		sudo sed -i '/^#DUPL_PARAMS="\$DUPL_PARAMS --full-if-older-than \$MAX_FULLBKP_AGE "/s/#//' $HOME/.duply/$profile/conf
 		sudo sed -i -E "/^[#]?TARGET=/c TARGET='boto3+s3://${bucket}'" $HOME/.duply/$profile/conf
-		[[ -n $s3_compatible_endpoint ]] && sudo echo "DUPL_PARAMS=\"\$DUPL_PARAMS --s3-endpoint-url $s3_compatible_endpoint \"" >> $HOME/.duply/$profile/conf
+		
+		if [[ -n $s3_compatible_endpoint ]]; then
+			sudo echo "DUPL_PARAMS=\"\$DUPL_PARAMS --s3-endpoint-url $s3_compatible_endpoint \"" >> $HOME/.duply/$profile/conf
+			echo "${blu}${dim}S3 Compatible service mode enabled (Not AWS)${end}"
+		fi
 		
 		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully created!${end}"
 	fi
