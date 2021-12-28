@@ -107,9 +107,7 @@ system_info() {
 	
 	echo "${blu}${bol}[Internal]${end}"
 	if [[ -f /opt/webinoly/webinoly.conf ]]; then
-		echo -n "${blu}${dim}"
-		sudo cat /opt/webinoly/webinoly.conf
-		echo "${end}"
+		sudo sed -nr "s/^([a-z].*)\:(.*)$/${blu}\1\:${end}${dim}\2${end}/p" /opt/webinoly/webinoly.conf
 	else
 		echo "${red} [ERROR] Configuration File not found! ${end}"
 	fi

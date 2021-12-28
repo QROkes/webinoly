@@ -1,0 +1,116 @@
+
+#############################################################################
+#################        Webinoly Configuration file        #################
+#############################################################################
+
+# Please, NEVER modify this file if you are not sure about what you are doing
+# Read: https://webinoly.com/documentation/webinolys/#server-settings
+#
+# 1 - Uncomment the variable (Remove the '#' at the beggining)
+# 2 - Set your custom value (var:value)
+# 3 - And then 'sudo webinoly -server-reset' to changes take effect.
+#############################################################################
+
+
+
+# Kernel Optimization
+# Values: boolean (true/false)
+# Default: true
+###########################
+#kernel-optim:true
+
+
+# Number of lines shown when log command is used
+# Values: numeric int
+# Default: 10
+###########################
+#log-lines:10
+
+
+# Maximum upload file size
+# Values: numeric int (MB)
+# Default: 100
+###########################
+#max-mb-uploads:100
+
+
+# Nginx Branch (set before installing, server-reset not needed)
+# Values: stable | mainline
+# Default: stable
+###########################
+#nginx-ppa:stable
+
+
+# PHP Path_Info
+# Values: boolean (true/false)
+# Default: true
+###########################
+#php-info:true
+
+
+# PHP number of child processes to be created
+# Values: static | dynamic | ondemand
+# Default: <variable> (calculated based in your server resources)
+###########################
+#php-pm:dynamic
+
+# PHP number of child processes to be created
+# Values: numeric int
+# Default: <variable> (calculated based in your server resources)
+###########################
+#php-max-child:6
+
+
+# PHP maximum amount of memory that a script is allowed to allocate
+# Values: numeric int (MB)
+# Default: 192
+###########################
+#php-max-mem:192
+
+
+# PHP maximum time in seconds a script is allowed to run before it is terminated
+# Values: numeric int (seconds)
+# Default: 60
+###########################
+#php-max-time:60
+
+
+# Redis maximum amount of memory before eviction policies
+# Values: numeric int (% < 100)
+# Default: 10
+###########################
+#redis-max-mem:10
+
+
+# Percentage of RAM assigned to /run folder
+# Values: numeric int (10 < % < 70)
+# Default: 25
+###########################
+#run-folder-size:25
+
+
+# Size of linux swap file
+# Values: numeric int (GB)
+# Default: <variable> (calculated based in your server resources)
+###########################
+#swap-mem:1
+
+
+# WordPress XMLRPC requests
+# Values: open | limited | blocked
+# Default: limited
+###########################
+#xmlrpc:limited
+
+
+
+#
+##
+#####
+##########
+##############
+# Stop editing!
+# You should NEVER change the values listed below.
+# Just for internal use!
+###################################################
+

@@ -59,7 +59,11 @@ conf_delete() {
 }
 
 conf_write() {
-	[[ ! -f /opt/webinoly/webinoly.conf ]] && sudo touch /opt/webinoly/webinoly.conf
+	if [[ ! -f /opt/webinoly/webinoly.conf ]]; then
+		sudo touch /opt/webinoly/webinoly.conf
+		sudo cat /opt/webinoly/templates/general/conf >> /opt/webinoly/webinoly.conf
+	fi
+	
 	conf_delete $1
 	echo "$1:$2" >> /opt/webinoly/webinoly.conf
 }
@@ -1203,7 +1207,7 @@ log_error = /var/log/mysql/error.log" >> /etc/mysql/mariadb.conf.d/90-webinoly.c
 check_var() {
 	# fastcgi_read_timeout,max_execution_time,request_terminate_timeout
 	if [[ $1 == "php-max-time" ]]; then
-		[[ -n $(conf_read php-max-time) && $(conf_read php-max-time) =~ ^[0-9]+$ && $(conf_read php-max-time) -gt 0 ]] && local out=$(conf_read php-max-time) || local out=30
+		[[ -n $(conf_read php-max-time) && $(conf_read php-max-time) =~ ^[0-9]+$ && $(conf_read php-max-time) -gt 0 ]] && local out=$(conf_read php-max-time) || local out=60
 	
 	# PHP Memory limit
 	elif [[ $1 == "php-max-mem" ]]; then
@@ -1224,10 +1228,14 @@ check_var() {
 		else
 			[[ $((3*$cores)) =~ ^[0-9]+ && $((3*$cores)) -ge 6 ]] && local out=$((3*$cores)) || local out=6
 		fi
+	
+	# Redis Memory
+	elif [[ $1 == "redis-max-mem" ]]; then
+		[[ -n $(conf_read redis-max-mem) && $(conf_read redis-max-mem) =~ ^[0-9]+$ && $(conf_read redis-max-mem) -le 100 ]] && local out=$(conf_read redis-max-mem) || local out=10
 		
 	# client_max_body_size,upload_max_filesize,post_max_size
 	elif [[ $1 == "max-mb-uploads" ]]; then
-		[[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ && $(conf_read max-mb-uploads) -gt 0 ]] && local out=$(conf_read max-mb-uploads) || local out=50
+		[[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ && $(conf_read max-mb-uploads) -gt 0 ]] && local out=$(conf_read max-mb-uploads) || local out=100
 	
 	# FastCGI Cache size
 	elif [[ $1 == "run-folder-size" ]]; then
