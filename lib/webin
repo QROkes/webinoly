@@ -294,9 +294,10 @@ mysql_public_access() {
 			exit 1
 		else
 			[[ -n $replication_slave ]] && local priv="replication slave" || local priv="ALL PRIVILEGES"
+			[[ -n $replication_slave ]] && local grant="" || local grant="WITH GRANT OPTION"
 			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
 CREATE USER '${user}'@'%' IDENTIFIED BY '${pass}';
-GRANT ${priv} ON *.* TO '${user}'@'%';
+GRANT ${priv} ON *.* TO '${user}'@'%' ${grant};
 FLUSH PRIVILEGES;
 _EOF_
 
