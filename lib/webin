@@ -107,7 +107,7 @@ system_info() {
 	
 	echo "${blu}${bol}[Internal]${end}"
 	if [[ -f /opt/webinoly/webinoly.conf ]]; then
-		sudo sed -nr "s/^([a-z].*)\:(.*)$/${blu}\1\:${end}${dim}\2${end}/p" /opt/webinoly/webinoly.conf
+		sudo sed -nr "s/^([a-z\-]+)\:(.*)$/${blu}\1\:${end}${dim}\2${end}/p" /opt/webinoly/webinoly.conf
 	else
 		echo "${red} [ERROR] Configuration File not found! ${end}"
 	fi
@@ -538,8 +538,6 @@ set_tools_site() {
 	if [[ -z $tools_site ]]; then
 		echo "${red}[ERROR] Please, enter a valid value!${end}"
 		exit 1
-	elif [[ ( $tools_site == "default" && -z $(conf_read tools-site) ) || ( -n $(conf_read tools-site) && $tools_site == $(conf_read tools-site) ) ]]; then
-		echo "${gre}Tools-Site is already set to${blu} $tools_site${end}"
 	elif [[ -f /etc/nginx/sites-available/$tools_site && -f /etc/nginx/sites-available/$(conf_read tools-port) && $tools_site != "default" ]]; then
 		# Check for previous assigned domain and remove
 		if [[ -n $(conf_read tools-site) ]]; then
@@ -599,7 +597,7 @@ set_tools_site() {
 		sudo rm -rf /etc/nginx/sites-available/$(conf_read tools-port)
 		sudo cp /opt/webinoly/templates/nginx/admin_tools.conf /etc/nginx/sites-available/$(conf_read tools-port)
 		sudo sed -i "s/<port>/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
-		conf_delete tools-site
+		conf_write tools-site default
 		echo "${gre}Tools Site settings has been reset successfully!${end}"
 	elif [[ -f /etc/nginx/sites-available/$tools_site && ! -f /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
 		echo "${red}[ERROR] Tools Site is not enabled! ${end}"
@@ -815,6 +813,18 @@ nginx_blockip() {
 			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
 		else
 			[[ $blockip == true ]] && read -p "${blu}IP address to block: ${end}" blockip
+			
+			# Check for list of IP's
+			if [[ -n $(echo $blockip | cut -d',' -f 2 -s) ]]; then
+				local c=1
+				while [[ -n $(echo $blockip | cut -d',' -f $c -s) ]]
+				do  
+					[[ $(is_ip $(echo $blockip | cut -d',' -f $c -s)) == "true" ]] && sudo webinoly -blockip=$(echo $blockip | cut -d',' -f $c -s)
+					local c=$(($c+1))
+				done
+				exit 0
+			fi
+			
 			if [[ $(is_ip $blockip) == "true" ]]; then
 				if [[ ! -f /etc/nginx/conf.d/blockips.conf ]]; then
 					sudo touch /etc/nginx/conf.d/blockips.conf
@@ -835,6 +845,18 @@ nginx_blockip() {
 		fi
 	elif [[ -n $purge ]]; then
 		[[ $blockip == true ]] && read -p "${blu}IP address to unblock: ${end}" blockip
+		
+		# Check for list of IP's
+		if [[ -n $(echo $blockip | cut -d',' -f 2 -s) ]]; then
+			local c=1
+			while [[ -n $(echo $blockip | cut -d',' -f $c -s) ]]
+			do  
+				[[ $(is_ip $(echo $blockip | cut -d',' -f $c -s)) == "true" ]] && sudo webinoly -blockip=$(echo $blockip | cut -d',' -f $c -s) -purge
+				local c=$(($c+1))
+			done
+			exit 0
+		fi
+		
 		if [[ $(is_ip $blockip) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
 			[[ -f /etc/nginx/conf.d/blockips.conf ]] && sed -i "\#^deny ${blockip};#d" /etc/nginx/conf.d/blockips.conf
@@ -860,8 +882,6 @@ set_default_nginx_response() {
 		read -p "${blu}default/blackhole or any existing domain: ${end}" default_site
 		default_site=${default_site:-NeverMatchDotCom}
 	fi
-	
-	[[ $default_site == $(conf_read default-site) ]] && echo "${blu}${dim}Default site is already set as '${default_site}' but we will try to reassing it!${end}"
 	
 	if [[ $default_site == "default" ]]; then
 		if [[ -f /opt/webinoly/templates/source/default ]]; then
@@ -984,10 +1004,10 @@ database_import() {
 
 ext_db_save() {
 	if [[ $external_db_save == "purge" || -n $purge ]]; then
-		conf_delete external-dbu
-		conf_delete external-dbp
-		conf_delete external-dbh
-		conf_delete external-dbx
+		conf_delete external-dbu -commented
+		conf_delete external-dbp -commented
+		conf_delete external-dbh -commented
+		conf_delete external-dbx -commented
 		echo "${gre}External DB data successfully removed!${end}"
 	else
 		if [[ $external_db_save == "true" ]]; then

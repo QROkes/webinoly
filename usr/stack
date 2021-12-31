@@ -64,12 +64,15 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 				done
 			fi
 			if [[ $answer == [Yy] ]]; then
-				[[ $(conf_read mysql-tool-pma) == "true" ]] && stack -pma -purge=force
 				api-events_update pn2
 				site -delete-all=force
-				sudo rm -rf /var/www/$(conf_read tools-port)
-				sudo rm -rf /var/www/html
 			fi
+			
+			# Remove tools-site
+			[[ $(conf_read mysql-tool-pma) == "true" ]] && stack -pma -purge=force
+			sudo rm -rf /var/www/html
+			sudo rm -rf /var/www/$(conf_read tools-port)
+			conf_delete tools-site -commented
 			
 			[[ $(conf_read login-www-data) == "true" ]] && webinoly -login-www-data=off
 			[[ $(conf_read nginx-tool-ssl) == "true" ]] && stack -letsencrypt -purge=force
@@ -159,12 +162,11 @@ elif [[ -n $purge && -n $php ]]; then
 			sudo rm -rf /opt/webinoly/templates/source/main.cf
 			
 			# Remove tools-site
-			sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/fpm
-			sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/php
-			sudo rm -rf /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo rm -rf /etc/nginx/sites-enabled/$(conf_read tools-port)
-			sudo rm -rf /var/www/$(conf_read tools-port)
-			conf_delete tools-site
+			if [[ -d /var/www/$(conf_read tools-port)/htdocs ]]; then
+				sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/status
+				sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/ping
+				sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/php
+			fi
 			
 			conf_write php purged
 			conf_write php-optim purged

@@ -180,6 +180,25 @@ onesix_to_oneseven() {
 	[[ $(conf_read nginx-tool) == "true" ]] && conf_write nginx-tool-ssl true && conf_write nginx-tool-bkp true && conf_delete nginx-tool
 	[[ $(conf_read php-tool) == "true" ]] && conf_write php-tool-postfix true && conf_write php-tool-redis true && conf_write php-tool-memcached true && conf_delete php-tool
 	
+	
+	if [[ -s /opt/webinoly/templates/source/csp_webinoly.data ]]; then
+		echo "header-csp:$(sed -n '1p' /opt/webinoly/templates/source/csp_webinoly.data)" >> /opt/webinoly/webinoly.conf
+		sudo mv /opt/webinoly/templates/source/csp_webinoly.data /opt/webinoly/templates/source/csp_webinoly.data.old
+	fi
+	if [[ -s /opt/webinoly/templates/source/pph_webinoly.data ]]; then
+		echo "header-permissions:$(sed -n '1p' /opt/webinoly/templates/source/pph_webinoly.data)" >> /opt/webinoly/webinoly.conf
+		sudo mv /opt/webinoly/templates/source/pph_webinoly.data /opt/webinoly/templates/source/pph_webinoly.data.old
+	fi
+	if [[ -s /opt/webinoly/templates/source/cch_webinoly.data ]]; then
+		echo "header-cache-control:$(sed -n '1p' /opt/webinoly/templates/source/cch_webinoly.data)" >> /opt/webinoly/webinoly.conf
+		sudo mv /opt/webinoly/templates/source/cch_webinoly.data /opt/webinoly/templates/source/cch_webinoly.data.old
+	fi
+	if [[ -s /opt/webinoly/templates/source/rob_webinoly.data ]]; then
+		echo "header-robots:$(sed -n '1p' /opt/webinoly/templates/source/rob_webinoly.data)" >> /opt/webinoly/webinoly.conf
+		sudo mv /opt/webinoly/templates/source/rob_webinoly.data /opt/webinoly/templates/source/rob_webinoly.data.old
+	fi
+	
+	
 	for site in "/etc/nginx/sites-available"/*
 	do
 		local domi=$(echo $site | cut -f 5 -d "/")

@@ -35,7 +35,7 @@ http_header_hsts() {
 		fi
 	fi
 	
-	[[ $header_hsts == "default" ]] && conf_delete header-hsts || conf_write header-hsts $header_hsts
+	conf_write header-hsts $header_hsts
 	[[ $header_hsts == "off" ]] && echo "${gre}HSTS Header successfully disabled!${end}" || echo "${gre}HSTS Header successfully configured!${end}"
 }
 
@@ -44,20 +44,16 @@ http_header_csp() {
 	if ! [[ $header_csp =~ ^(true|on|off|reset)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid option for CSP header!${end}"
 		exit 1
-	elif [[ $header_csp =~ ^(on|true)$ && ! -s /opt/webinoly/templates/source/csp_webinoly.data ]]; then
+	elif [[ $header_csp =~ ^(on|true)$ && -z $(conf_read header-csp) ]]; then
 		read -p "${blu}CSP header value: ${end}" csp_data
 		
 		if [[ -n $csp_data ]]; then
-			sudo touch /opt/webinoly/templates/source/csp_webinoly.data
-			sudo chmod 644 /opt/webinoly/templates/source/csp_webinoly.data
-			sudo chown -R root:root /opt/webinoly/templates/source/csp_webinoly.data
-			
-			echo "$csp_data" >> /opt/webinoly/templates/source/csp_webinoly.data
+			conf_write header-csp $csp_data
 			echo "${blu}${dim}CSP Header... saving data!${end}"
 		fi
-	elif [[ $header_csp =~ ^(true|on)$ && -s /opt/webinoly/templates/source/csp_webinoly.data ]]; then
+	elif [[ $header_csp =~ ^(true|on)$ && -n $(conf_read header-csp) ]]; then
 		echo "${blu}${dim}Recovering existing saved data for CSP!${end}"
-		csp_data=$(sed -n '1p' /opt/webinoly/templates/source/csp_webinoly.data)
+		csp_data=$(conf_read header-csp)
 	fi
 	
 	if [[ $header_csp =~ ^(true|on)$ && -z $csp_data ]]; then
@@ -65,7 +61,7 @@ http_header_csp() {
 		exit 1
 	elif [[ $header_csp == "reset" ]]; then
 		sudo sed -i '/^add_header Content-Security-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
-		sudo rm -rf /opt/webinoly/templates/source/csp_webinoly.data
+		conf_delete header-csp -commented
 		echo "${gre}CSP Header disabled and saved data successfully removed!${end}"
 	elif [[ $(conf_read nginx) == "true" ]]; then
 		if [[ $header_csp == "off" ]]; then
@@ -89,30 +85,19 @@ http_header_csp() {
 
 
 http_header_permissions_policy() {
-	local floc_data="interest-cohort=()"
-	if [[ ${header_permissions_policy,,} == "floc" ]]; then
-		[[ -f /opt/webinoly/templates/source/pph_webinoly.data ]] && sudo rm -rf /opt/webinoly/templates/source/pph_webinoly.data
-		local pph_data=$floc_data
-	fi
-	
 	if ! [[ $header_permissions_policy =~ ^(true|on|off|reset|floc)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid option for Permissions Policy header!${end}"
 		exit 1
-	elif [[ $header_permissions_policy =~ ^(on|true|floc)$ && ! -s /opt/webinoly/templates/source/pph_webinoly.data ]]; then
+	elif [[ $header_permissions_policy =~ ^(on|true|floc)$ && -z $(conf_read header-permissions) ]]; then
 		[[ $header_permissions_policy != "floc" ]] && read -p "${blu}Permissions Policy header value: ${end}" pph_data
-		[[ ${pph_data,,} == "floc" ]] && local pph_data=$floc_data
 		
 		if [[ -n $pph_data ]]; then
-			sudo touch /opt/webinoly/templates/source/pph_webinoly.data
-			sudo chmod 644 /opt/webinoly/templates/source/pph_webinoly.data
-			sudo chown -R root:root /opt/webinoly/templates/source/pph_webinoly.data
-			
-			echo "$pph_data" >> /opt/webinoly/templates/source/pph_webinoly.data
+			conf_write header-permissions $pph_data
 			echo "${blu}${dim}Permissions Policy Header... saving data!${end}"
 		fi
-	elif [[ $header_permissions_policy =~ ^(true|on|floc)$ && -s /opt/webinoly/templates/source/pph_webinoly.data ]]; then
+	elif [[ $header_permissions_policy =~ ^(true|on|floc)$ && -n $(conf_read header-permissions) ]]; then
 		echo "${blu}${dim}Recovering existing saved data for Permissions Policy!${end}"
-		local pph_data=$(sed -n '1p' /opt/webinoly/templates/source/pph_webinoly.data)
+		local pph_data=$(conf_read header-permissions)
 	fi
 	
 	if [[ $header_permissions_policy =~ ^(true|on|floc)$ && -z $pph_data ]]; then
@@ -120,7 +105,7 @@ http_header_permissions_policy() {
 		exit 1
 	elif [[ $header_permissions_policy == "reset" ]]; then
 		sudo sed -Ei '/^add_header Permission[s]?-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
-		sudo rm -rf /opt/webinoly/templates/source/pph_webinoly.data
+		conf_delete header-permissions -commented
 		echo "${gre}Permissions Policy Header disabled and saved data successfully removed!${end}"
 	elif [[ $(conf_read nginx) == "true" ]]; then
 		if [[ $header_permissions_policy == "off" ]]; then
@@ -128,6 +113,7 @@ http_header_permissions_policy() {
 			echo "${gre}Permissions Policy Header successfully disabled!${end}"
 		elif [[ $header_permissions_policy =~ ^(true|on|floc)$ ]]; then
 			sudo sed -Ei "/^#?add_header Permission[s]?-Policy/d" /etc/nginx/common/headers-html.conf			
+			[[ ${pph_data,,} == "floc" ]] && local pph_data="interest-cohort=()"
 			sudo echo "add_header Permissions-Policy \"${pph_data}\";" >> /etc/nginx/common/headers-html.conf
 			echo "${gre}Permissions Policy Header successfully configured!${end}"
 		fi
@@ -146,20 +132,16 @@ http_header_cache_control() {
 	if ! [[ $header_cache_control =~ ^(true|on|off|reset)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid option for Cache Control header!${end}"
 		exit 1
-	elif [[ $header_cache_control =~ ^(on|true)$ && ! -s /opt/webinoly/templates/source/cch_webinoly.data ]]; then
+	elif [[ $header_cache_control =~ ^(on|true)$ && -z $(conf_read header-cache-control) ]]; then
 		read -p "${blu}Cache Control header value: ${end}" cch_data
 		
 		if [[ -n $cch_data ]]; then
-			sudo touch /opt/webinoly/templates/source/cch_webinoly.data
-			sudo chmod 644 /opt/webinoly/templates/source/cch_webinoly.data
-			sudo chown -R root:root /opt/webinoly/templates/source/cch_webinoly.data
-			
-			echo "$cch_data" >> /opt/webinoly/templates/source/cch_webinoly.data
+			conf_write header-cache-control $cch_data
 			echo "${blu}${dim}Cache Control Header... saving data!${end}"
 		fi
-	elif [[ $header_cache_control =~ ^(true|on)$ && -s /opt/webinoly/templates/source/cch_webinoly.data ]]; then
+	elif [[ $header_cache_control =~ ^(true|on)$ && -n $(conf_read header-cache-control) ]]; then
 		echo "${blu}${dim}Recovering existing saved data for Cache Control!${end}"
-		cch_data=$(sed -n '1p' /opt/webinoly/templates/source/cch_webinoly.data)
+		cch_data=$(conf_read header-cache-control)
 	fi
 	
 	if [[ $header_cache_control =~ ^(true|on)$ && -z $cch_data ]]; then
@@ -167,7 +149,7 @@ http_header_cache_control() {
 		exit 1
 	elif [[ $header_cache_control == "reset" ]]; then
 		sudo sed -i '/^add_header Cache-Control/s/^/#/' /etc/nginx/common/headers-html.conf
-		sudo rm -rf /opt/webinoly/templates/source/cch_webinoly.data
+		conf_delete header-cache-control -commented
 		echo "${gre}Cache Control Header disabled and saved data successfully removed!${end}"
 	elif [[ $(conf_read nginx) == "true" ]]; then
 		if [[ $header_cache_control == "off" ]]; then
@@ -193,20 +175,16 @@ http_header_robots() {
 	if ! [[ $header_robots =~ ^(true|on|off|reset)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid option for X-Robots-Tag header!${end}"
 		exit 1
-	elif [[ $header_robots =~ ^(on|true)$ && ! -s /opt/webinoly/templates/source/rob_webinoly.data ]]; then
+	elif [[ $header_robots =~ ^(on|true)$ && -z $(conf_read header-robots) ]]; then
 		read -p "${blu}X-Robots-Tag header value: ${end}" rob_data
 		
 		if [[ -n $rob_data ]]; then
-			sudo touch /opt/webinoly/templates/source/rob_webinoly.data
-			sudo chmod 644 /opt/webinoly/templates/source/rob_webinoly.data
-			sudo chown -R root:root /opt/webinoly/templates/source/rob_webinoly.data
-			
-			echo "$rob_data" >> /opt/webinoly/templates/source/rob_webinoly.data
+			conf_write header-robots $rob_data
 			echo "${blu}${dim}X-Robots-Tag Header... saving data!${end}"
 		fi
-	elif [[ $header_robots =~ ^(true|on)$ && -s /opt/webinoly/templates/source/rob_webinoly.data ]]; then
+	elif [[ $header_robots =~ ^(true|on)$ && -n $(conf_read header-robots) ]]; then
 		echo "${blu}${dim}Recovering existing saved data for X-Robots-Tag!${end}"
-		rob_data=$(sed -n '1p' /opt/webinoly/templates/source/rob_webinoly.data)
+		rob_data=$(conf_read header-robots)
 	fi
 	
 	if [[ $header_robots =~ ^(true|on)$ && -z $rob_data ]]; then
@@ -214,7 +192,7 @@ http_header_robots() {
 		exit 1
 	elif [[ $header_robots == "reset" ]]; then
 		sudo sed -i '/^add_header X-Robots-Tag/s/^/#/' /etc/nginx/common/headers-http.conf
-		sudo rm -rf /opt/webinoly/templates/source/rob_webinoly.data
+		conf_delete header-robots -commented
 		echo "${gre}X-Robots-Tag Header disabled and saved data successfully removed!${end}"
 	elif [[ $(conf_read nginx) == "true" ]]; then
 		if [[ $header_robots == "off" ]]; then
@@ -222,7 +200,19 @@ http_header_robots() {
 			echo "${gre}X-Robots-Tag Header successfully disabled!${end}"
 		elif [[ $header_robots =~ ^(true|on)$ ]]; then
 			sudo sed -Ei "/^#?add_header X-Robots-Tag/d" /etc/nginx/common/headers-http.conf			
-			sudo echo "add_header X-Robots-Tag \"${rob_data}\";" >> /etc/nginx/common/headers-http.conf
+			
+			# Check for multiple values
+			if [[ -n $(echo $rob_data | cut -d'|' -f 2 -s) ]]; then
+				local c=1
+				while [[ -n $(echo $rob_data | cut -d'|' -f $c -s) ]]
+				do  
+					sudo echo "add_header X-Robots-Tag \"$(echo $rob_data | cut -d'|' -f $c -s)\";" >> /etc/nginx/common/headers-http.conf
+					local c=$(($c+1))
+				done
+			else
+				sudo echo "add_header X-Robots-Tag \"${rob_data}\";" >> /etc/nginx/common/headers-http.conf
+			fi
+			
 			echo "${gre}X-Robots-Tag Header successfully configured!${end}"
 		fi
 	elif [[ $(conf_read nginx) != "true" ]]; then	
@@ -248,7 +238,7 @@ http_header_xssp() {
 			sudo sed -i '/^add_header X-XSS-Protection/s/^/#/' /etc/nginx/common/headers-http.conf
 			echo "${gre}X-XSS-Protection Header successfully disabled!${end}"
 		elif [[ $header_xssp == "on" ]]; then
-			conf_delete header-xssp
+			conf_write header-xssp true
 			sudo sed -Ei "/^#?add_header X-XSS-Protection/d" /etc/nginx/common/headers-http.conf			
 			sudo echo "add_header X-XSS-Protection \"1; mode=block\";" >> /etc/nginx/common/headers-http.conf
 			echo "${gre}X-XSS-Protection Header successfully configured!${end}"
@@ -258,7 +248,7 @@ http_header_xssp() {
 			conf_write header-xssp false
 			echo "${gre}X-XSS-Protection Header successfully configured and it will be disabled next time NGINX is installed!${end}"
 		elif [[ $header_xssp == "on" ]]; then
-			conf_delete header-xssp
+			conf_write header-xssp true
 			echo "${gre}X-XSS-Protection Header successfully configured and it will be used next time NGINX is installed!${end}"
 		fi
 	fi
@@ -277,7 +267,7 @@ http_header_xcto() {
 			sudo sed -i '/^add_header X-Content-Type-Options/s/^/#/' /etc/nginx/common/headers-http.conf
 			echo "${gre}X-Content-Type-Options Header successfully disabled!${end}"
 		elif [[ $header_xcto == "on" ]]; then
-			conf_delete header-xcto
+			conf_write header-xcto true
 			sudo sed -Ei "/^#?add_header X-Content-Type-Options/d" /etc/nginx/common/headers-http.conf			
 			sudo echo "add_header X-Content-Type-Options nosniff;" >> /etc/nginx/common/headers-http.conf
 			echo "${gre}X-Content-Type-Options Header successfully configured!${end}"
@@ -287,7 +277,7 @@ http_header_xcto() {
 			conf_write header-xcto false
 			echo "${gre}X-Content-Type-Options Header successfully configured and it will be disabled next time NGINX is installed!${end}"
 		elif [[ $header_xcto == "on" ]]; then
-			conf_delete header-xcto
+			conf_write header-xcto true
 			echo "${gre}X-Content-Type-Options Header successfully configured and it will be used next time NGINX is installed!${end}"
 		fi
 	fi
@@ -309,8 +299,6 @@ http_header_xfo() {
 		fi
 		local param="\"${header_xfo^^} $url\""
 		conf_write header-xfo-url $url
-	else
-		conf_delete header-xfo-url
 	fi
 	conf_write header-xfo $header_xfo
 	
@@ -379,7 +367,7 @@ $html
 		conf_write header-custom true
 		echo "${gre}Custom Headers successfully configured and it will be used next time NGINX is installed!${end}"
 	else
-		conf_delete header-custom
+		conf_write header-custom false
 		echo "${gre}Custom Headers successfully removed!${end}"
 	fi
 }

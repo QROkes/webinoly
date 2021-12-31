@@ -115,7 +115,7 @@ sudo chmod -f 744 /opt/webinoly/lib/ex-*
 
 sudo chmod 755 ${usrw}/*
 sudo mv ${usrw}/* /usr/bin/
-[[ -f /usr/bin/duply ]] && sudo cp /opt/webinoly/templates/general/duply /usr/bin/ && sudo chmod 755 /usr/bin/duply
+[[ -f /usr/bin/duply && -f /opt/webinoly/templates/general/duply ]] && sudo cp /opt/webinoly/templates/general/duply /usr/bin/ && sudo chmod 755 /usr/bin/duply
 
 source /opt/webinoly/lib/general
 

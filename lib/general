@@ -45,8 +45,7 @@ conf_read() {
 		exit 1
 	fi
 	
-	local val=$(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf | cut -f 2 -d ':')
-	echo $val
+	echo $(grep -w -m 1 "^${1}:.*" /opt/webinoly/webinoly.conf | cut -f 2- -d ':')
 }
 
 conf_delete() {
@@ -55,7 +54,12 @@ conf_delete() {
 		exit 1
 	fi
 	
-	sed -i "/^${1}:/d" /opt/webinoly/webinoly.conf
+	if [[ $2 == "-commented" ]]; then
+		# Remove it, then add it again to prevent multiple # for each server-reset
+		sudo sed -i "/^${1}:/s/^/#/" /opt/webinoly/webinoly.conf
+	else
+		sed -i "/^${1}:/d" /opt/webinoly/webinoly.conf
+	fi
 }
 
 conf_write() {
@@ -64,8 +68,12 @@ conf_write() {
 		sudo cat /opt/webinoly/templates/general/conf >> /opt/webinoly/webinoly.conf
 	fi
 	
-	conf_delete $1
-	echo "$1:$2" >> /opt/webinoly/webinoly.conf
+	# If exists modify just the line, if not then add it.
+	if [[ -n $(sudo grep -E "^[# \t]?${1}\:.*$" /opt/webinoly/webinoly.conf) ]]; then
+		sudo sed -i -E "/^[# \t]?${1}\:.*$/c $1:$2" /opt/webinoly/webinoly.conf
+	else
+		echo "$1:$2" >> /opt/webinoly/webinoly.conf
+	fi
 }
 
 
@@ -1212,6 +1220,10 @@ check_var() {
 	# PHP Memory limit
 	elif [[ $1 == "php-max-mem" ]]; then
 		[[ -n $(conf_read php-max-mem) && $(conf_read php-max-mem) =~ ^[0-9]+$ && $(conf_read php-max-mem) -gt 0 ]] && local out=$(conf_read php-max-mem) || local out=192
+	
+	# PHP simultaneous file uploads
+	elif [[ $1 == "php-max-files" ]]; then
+		[[ -n $(conf_read php-max-files) && $(conf_read php-max-files) =~ ^[0-9]+$ && $(conf_read php-max-files) -gt 0 ]] && local out=$(conf_read php-max-files) || local out=20
 	
 	# PHP Process Manager
 	elif [[ $1 == "php-pm" ]]; then

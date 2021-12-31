@@ -113,7 +113,7 @@ WantedBy=multi-user.target" >> /etc/systemd/system/webinoly-disable-thp.service
 	sudo mount -o remount tmpfs
 	
 	swap_create
-	set_timezone
+	[[ -n $(conf_read timezone) ]] && set_timezone
 	
 	sudo systemctl daemon-reload
 	sudo systemctl restart nginx # We need to kill the process, don't use reload
@@ -311,14 +311,23 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	linux_optim
 
 	# Check for dynamic variables.
-	[[ $(conf_read global-access-log-off) == "purged" ]] && sudo log -only-error=off || sudo log -only-error=on
-	[[ -n $(conf_read fastcgi-conf) ]] && sudo webinoly -config-cache=[$(conf_read fastcgi-conf)]
+	[[ -n $(conf_read default-response) ]] && sudo webinoly -default-site=$(conf_read default-response)
+	[[ -n $(conf_read tools-port-set) ]] && sudo webinoly -tools-port=$(conf_read tools-port-set)
+	[[ -n $(conf_read tools-site) ]] && sudo webinoly -tools-site=$(conf_read tools-site)
+	[[ $(conf_read global-access-log-off) =~ ^(false|purged)$ ]] && sudo log -only-error=off || sudo log -only-error=on
+	[[ -n $(conf_read fastcgi-conf) ]] && sudo webinoly -cache-valid=[$(conf_read fastcgi-conf)]
+	[[ -n $(conf_read auth-whitelist-ip) ]] && sudo httpauth -whitelist=$(conf_read auth-whitelist-ip)
+	[[ -n $(conf_read blockip) ]] && sudo webinoly -blockip=$(conf_read blockip)
+	
+	[[ $(conf_read sftp-www-data) == "true" ]] && sudo webinoly -login-www-data=on
+	[[ $(conf_read sftp-www-data) == "false" ]] && sudo webinoly -login-www-data=off
+	
 	[[ -n $(conf_read header-referrer) ]] && sudo webinoly -header-referrer=$(conf_read header-referrer)
 	[[ -n $(conf_read header-hsts) ]] && sudo webinoly -header-hsts=$(conf_read header-hsts)
-	[[ -s /opt/webinoly/templates/source/csp_webinoly.data ]] && sudo webinoly -header-csp=on
-	[[ -s /opt/webinoly/templates/source/pph_webinoly.data ]] && sudo webinoly -header-permissions-policy=on
-	[[ -s /opt/webinoly/templates/source/cch_webinoly.data ]] && sudo webinoly -header-cache-control=on
-	[[ -s /opt/webinoly/templates/source/rob_webinoly.data ]] && sudo webinoly -header-robots=on
+	[[ -n $(conf_read header-cache-control) ]] && sudo webinoly -header-cache-control=on
+	[[ -n $(conf_read header-csp) ]] && sudo webinoly -header-csp=on
+	[[ -n $(conf_read header-permissions) ]] && sudo webinoly -header-permissions-policy=on
+	[[ -n $(conf_read header-robots) ]] && sudo webinoly -header-robots=on
 	[[ $(conf_read header-xssp) == "false" ]] && sudo webinoly -header-xssp=off
 	[[ $(conf_read header-xcto) == "false" ]] && sudo webinoly -header-xcto=off
 	[[ $(conf_read header-xfo) == "allow-from" && -n $(conf_read header-xfo-url) ]] && sudo webinoly -header-xfo=allow-from -url=$(conf_read header-xfo-url)
@@ -383,7 +392,7 @@ php_optim() {
 	# post_max must be a little larger and memory a little more larger - https://www.php.net/manual/en/ini.core.php#ini.post-max-size
 	sudo sed -i -r "/^[;]?upload_max_filesize =/c\upload_max_filesize = $(check_var max-mb-uploads)M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r "/^[;]?post_max_size =/c\post_max_size = $(($(check_var max-mb-uploads)+1))M" /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r '/^[;]?max_file_uploads =/c\max_file_uploads = 20' /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r '/^[;]?max_file_uploads =/c\max_file_uploads = $(check_var php-max-files)' /etc/php/$ver/fpm/php.ini
 	[[ $(check_var php-max-mem) -gt $(($(check_var max-mb-uploads)+1)) ]] && local phpmem=$(check_var php-max-mem) || local phpmem=$(($(check_var max-mb-uploads)+2))
 	sudo sed -i -r "/^[;]?memory_limit =/c\memory_limit = ${phpmem}M" /etc/php/$ver/fpm/php.ini
 	
@@ -393,7 +402,7 @@ php_optim() {
 	sudo sed -i -r '/^[;]?opcache.enable_cli=/c\opcache.enable_cli=1' /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.enable=/c\opcache.enable=1' /etc/php/$ver/fpm/php.ini
 	
-	set_timezone
+	[[ -n $(conf_read timezone) ]] && set_timezone
 	
 	sudo sed -i -r "/^[;]?pm =/c\pm = $(check_var php-pm)" /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i -r "/^[;]?pm.max_children =/c\pm.max_children = $(check_var php-max-child)" /etc/php/$ver/fpm/pool.d/www.conf
@@ -595,7 +604,6 @@ set_timezone() {
 		fi
 		echo "${gre}Timezone has been successfully set!${dim} ($(conf_read timezone)) ${end}"
 	else
-		conf_delete timezone
 		echo "${red}Timezone not found or not valid!${end}"
 		return 1
 	fi
@@ -608,7 +616,7 @@ swap_delete() {
 		sudo swapoff -a -v && sudo rm -rf /swapfile
 		if [[ ! -f /swapfile ]]; then
 			sudo sed -i '/\/swapfile/d' /etc/fstab
-			conf_delete swap-owner
+			conf_write swap-owner purged
 			api-events_update pn10
 		else
 			echo "${dim}SWAP file is busy or can't be removed!${end}"
@@ -678,9 +686,11 @@ swap_create() {
 			echo "${gre}A new SWAP file (${newswap}Gb) has been created! ${end}"
 		fi
 		api-events_update in8
-	else
+	elif [[ -n $sw && $sw =~ ^[0-9]+$ ]]; then
 		[[ $(conf_read swap-owner) != "webinoly" ]] && conf_write swap-owner system
 		echo "${gre}SWAP file (${sw}Gb) detected!${end}"
+	else
+		echo "${red}[ERROR] Unexpected error while trying to read your SWAP file!${end}"
 	fi
 }
 

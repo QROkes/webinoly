@@ -136,7 +136,7 @@ elif [[ -n $wp_admin ]]; then
 		echo "${gre}WordPress Admin HTTP Authentication has been enabled! (global)${end}"
 		nginx_not="true" # Nginx-Reload not-needed.
 	elif [[ $wp_admin == "off" ]]; then
-		conf_write wp-admin-auth purged
+		conf_write wp-admin-auth false
 		echo "${gre}WordPress Admin HTTP Authentication has been disabled! (global)${end}"
 		nginx_not="true" # Nginx-Reload not-needed.
 	else
@@ -160,6 +160,18 @@ elif [[ -n $whitelist ]]; then
 			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
 		else
 			[[ $whitelist == true ]] && read -p "${blu}IP address to whitelist: ${end}" whitelist
+			
+			# Check for list of IP's
+			if [[ -n $(echo $whitelist | cut -d',' -f 2 -s) ]]; then
+				c=1
+				while [[ -n $(echo $whitelist | cut -d',' -f $c -s) ]]
+				do  
+					[[ $(is_ip $(echo $whitelist | cut -d',' -f $c -s)) == "true" ]] && sudo httpauth -whitelist=$(echo $whitelist | cut -d',' -f $c -s)
+					c=$(($c+1))
+				done
+				exit 0
+			fi
+			
 			if [[ $(is_ip $whitelist) == "true" ]]; then
 				if [[ ! -f /etc/nginx/apps.d/whitelist-acl.conf ]]; then
 					sudo touch /etc/nginx/apps.d/whitelist-acl.conf
@@ -182,6 +194,18 @@ elif [[ -n $whitelist ]]; then
 		fi
 	else
 		[[ $whitelist == true ]] && read -p "${blu}IP address to remove from whitelist: ${end}" whitelist
+		
+		# Check for list of IP's
+		if [[ -n $(echo $whitelist | cut -d',' -f 2 -s) ]]; then
+			c=1
+			while [[ -n $(echo $whitelist | cut -d',' -f $c -s) ]]
+			do  
+				[[ $(is_ip $(echo $whitelist | cut -d',' -f $c -s)) == "true" ]] && sudo httpauth -whitelist=$(echo $whitelist | cut -d',' -f $c -s) -purge
+				c=$(($c+1))
+			done
+			exit 0
+		fi
+		
 		if [[ $(is_ip $whitelist) == "true" ]]; then
 			# https://stackoverflow.com/questions/1797906/delete-using-a-different-delimiter-with-sed
 			[[ -f /etc/nginx/apps.d/whitelist-acl.conf ]] && sudo sed -i "\#^allow ${whitelist};#d" /etc/nginx/apps.d/whitelist-acl.conf

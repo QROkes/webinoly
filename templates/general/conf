@@ -1,16 +1,28 @@
 
-#############################################################################
-#################        Webinoly Configuration file        #################
-#############################################################################
+###############################################################################
+##################        Webinoly Configuration file        ##################
+###############################################################################
 
-# Please, NEVER modify this file if you are not sure about what you are doing
-# Read: https://webinoly.com/documentation/webinolys/#server-settings
-#
-# 1 - Uncomment the variable (Remove the '#' at the beggining)
-# 2 - Set your custom value (var:value)
-# 3 - And then 'sudo webinoly -server-reset' to changes take effect.
-#############################################################################
+# Please, NEVER modify this file if you are not sure about what you are doing #
+# Read: https://webinoly.com/documentation/webinolys/#server-settings         #
+#                                                                             #
+# 1 - Uncomment the variable (Remove the '#' at the beggining)                #
+# 2 - Set your custom value (var:value)                                       #
+# 3 - And then 'sudo webinoly -server-reset' to changes take effect.          #
+###############################################################################
 
+
+
+###########################
+#####      Linux      #####
+###########################
+
+# Timezone
+# Values: https://www.php.net/manual/en/timezones.php
+# Default: <empty>
+# Same as: sudo webinoly -timezone
+###########################
+#timezone:America/Mexico_City
 
 
 # Kernel Optimization
@@ -20,43 +32,239 @@
 #kernel-optim:true
 
 
-# Number of lines shown when log command is used
-# Values: numeric int
-# Default: 10
+# Percentage of RAM assigned to /run folder
+# Values: numeric int (10 < % < 70)
+# Default: 25
 ###########################
-#log-lines:10
+#run-folder-size:25
 
 
-# Maximum upload file size
+# Size of linux swap file
+# Values: numeric int (GB)
+# Default: <variable> (calculated based on your server resources)
+# Note: (server-reset with 'recalculate' is needed)
+###########################
+#swap-mem:1
+
+
+
+
+###########################
+#####      NGINX      #####
+###########################
+
+# Nginx Branch
+# Values: stable | mainline
+# Default: stable
+# Note: (set before installing, server-reset not needed)
+###########################
+#nginx-ppa:stable
+
+
+# Maximum Upload file size
 # Values: numeric int (MB)
 # Default: 100
 ###########################
 #max-mb-uploads:100
 
 
-# Nginx Branch (set before installing, server-reset not needed)
-# Values: stable | mainline
-# Default: stable
+# Saved Email Address
+# Values: <email-address>
+# Default: <empty>
+# Note: (server-reset not needed, here won't update existing accounts)
+# Same as: sudo webinoly -email=user@example.com
 ###########################
-#nginx-ppa:stable
+#mail:user@example.com
 
 
-# PHP Path_Info
+# SFTP Access for www-data user
+# Values: boolean (true/false)
+# Default: false
+# Same as: sudo webinoly -login-www-data=on
+###########################
+#sftp-www-data:false
+
+
+# FastCGI Cache
+# Values: <time> (s,m,h,d,w,M,y)
+# Default: 30d,7d,1m (Success,Inactive,Redirects)
+# Note: https://webinoly.com/documentation/webinolys/#cache
+# Same as: sudo webinoly -cache-valid
+###########################
+#fastcgi-conf:30d,7d,1m
+
+
+# Nginx Access Logs Disabled
 # Values: boolean (true/false)
 # Default: true
+# Same as: sudo log -only-error=on
 ###########################
-#php-info:true
+#global-access-log-off:true
 
 
-# PHP number of child processes to be created
+# Nginx Default Response
+# Values: default | blackhole | <example.com>
+# Default: default
+# Same as: sudo webinoly -default-site=blackhole
+###########################
+#default-response:default
+
+
+# Admin Tools Access
+# Values: default | <example.com>
+# Default: default
+# Same as: sudo webinoly -tools-site
+###########################
+#tools-site:default
+
+
+# Admin Tools Access Port
+# Values: numeric int (< 65535)
+# Default: 22222
+# Same as: sudo webinoly -tools-port
+###########################
+#tools-port-set:22222
+
+
+# Authentication Whitelist IP
+# Values: <ip>,<ip>,<ip>...
+# Default: <empty>
+# Same as: sudo httpauth -whitelist
+###########################
+#auth-whitelist-ip:1.1.1.1,2.2.2.2
+
+
+# Block IP Access
+# Values: <ip>,<ip>,<ip>...
+# Default: <empty>
+# Same as: sudo webinoly -blockip
+###########################
+#blockip:1.1.1.1,2.2.2.2
+
+
+# IAM Role (AWS Credentials)
+# Values: boolean (true/false)
+# Default: false
+# Note: Set to 'true' if your EC2 instance has an IAM Role attached with full access to S3 (server-reset not needed)
+# Same as: sudo webinoly -aws-s3-credentials=awsiamrole
+###########################
+#awsiamrole:false
+
+
+# Number of lines shown when log command is used (tail)
+# Values: numeric int
+# Default: 10
+###########################
+#log-lines:10
+
+
+# HTTP Header: Cache Control
+# Values: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+# Default: no-cache
+# Same as: sudo webinoly -header-cache-control
+###########################
+#header-cache-control:public, max-age=604800, immutable
+
+
+# HTTP Header: Content Security Policy
+# Values: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+# Default: <empty>
+# Same as: sudo webinoly -header-csp
+###########################
+#header-csp:default-src https: 'unsafe-eval' 'unsafe-inline'; object-src 'none'
+
+
+# HTTP Header: HTTP Strict Transport Security (HSTS)
+# Values: default | preload | <max-age> | off
+# Default: default (31536000)
+# Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security
+# Same as: sudo webinoly -header-hsts=preload
+###########################
+#header-hsts:default
+
+
+# HTTP Header: Permissions Policy
+# Values: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Feature-Policy
+# Default: <empty>
+# Same as: sudo webinoly -header-permissions-policy
+###########################
+#header-permissions:microphone 'none'; geolocation 'none'
+
+
+# HTTP Header: Referrer Policy
+# Values: no-referrer | no-referrer-when-downgrade | origin | origin-when-cross-origin | same-origin | strict-origin | strict-origin-when-cross-origin | unsafe-url
+# Default: no-referrer-when-downgrade
+# Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy
+# Same as: sudo webinoly -header-referrer
+###########################
+#header-referrer:no-referrer-when-downgrade
+
+
+# HTTP Header: X-Content-Type-Options
+# Values: boolean (true/false)
+# Default: true (nosniff)
+# Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
+# Same as: sudo webinoly -header-xcto=on
+###########################
+#header-xcto:true
+
+
+# HTTP Header: X-Frame-Options
+# Values: deny | sameorigin | allow-from
+# Default: sameorigin
+# Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
+# Same as: sudo webinoly -header-xfo=sameorigin
+###########################
+#header-xfo:sameorigin
+#header-xfo-url:<allow-from url>
+
+
+# HTTP Header: X-Robots-Tag
+# Values: https://developers.google.com/search/docs/advanced/robots/robots_meta_tag#xrobotstag
+# Default: <empty>
+# Note: Multiple X-Robots-Tag headers can be combined using the '|' delimiter.
+# Note: For example, two separate headers will be added (googlebot: nofollow|otherbot: noindex, nofollow)
+# Same as: sudo webinoly -header-robots
+###########################
+#header-robots:noindex,nofollow
+
+
+# HTTP Header: X-XSS-Protection
+# Values: boolean (true/false)
+# Default: true (X-XSS-Protection: 1; mode=block)
+# Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
+# Same as: sudo webinoly -header-xssp=on
+###########################
+#header-xssp:true
+
+
+
+
+
+###########################
+######      PHP      ######
+###########################
+
+# PHP Version
+# Values: https://www.php.net/supported-versions.php
+# Default: <latest-stable>
+# Note: (set before installing, server-reset not needed)
+# Note: NEVER change this value here when package is already installed, use the proper command instead.
+# Same as: sudo stack -php-ver=8.1
+###########################
+#php-ver:8.1
+
+
+# PHP Process Manager
 # Values: static | dynamic | ondemand
-# Default: <variable> (calculated based in your server resources)
+# Default: <variable> (calculated based on your server resources)
 ###########################
 #php-pm:dynamic
 
 # PHP number of child processes to be created
 # Values: numeric int
 # Default: <variable> (calculated based in your server resources)
+# Note: start, min and max_spare_servers are calculated automatically based on this 'max_child' value.
 ###########################
 #php-max-child:6
 
@@ -75,6 +283,23 @@
 #php-max-time:60
 
 
+# PHP maximum number of files allowed to be uploaded simultaneously
+# Values: numeric int
+# Default: 20
+# Note: To modify the max file/post size, see the 'max-mb-uploads' in Nginx section, this value is also taken by PHP.
+###########################
+#php-max-files:20
+
+
+# PHP Path_Info
+# Values: boolean (true/false)
+# Default: true
+# Note: (server-reset not needed)
+# Note: It will be applied ONLY for sites created after this setting is changed.
+###########################
+#php-info:true
+
+
 # Redis maximum amount of memory before eviction policies
 # Values: numeric int (% < 100)
 # Default: 10
@@ -82,18 +307,61 @@
 #redis-max-mem:10
 
 
-# Percentage of RAM assigned to /run folder
-# Values: numeric int (10 < % < 70)
-# Default: 25
-###########################
-#run-folder-size:25
 
 
-# Size of linux swap file
-# Values: numeric int (GB)
-# Default: <variable> (calculated based in your server resources)
 ###########################
-#swap-mem:1
+#####      MySQL      #####
+###########################
+
+# MariaDB Version
+# Values: https://mariadb.com/kb/en/mariadb-server-release-dates/ (at least latest three stable)
+# Default: <latest-stable>
+# Note: (set before installing, server-reset not needed)
+# Note: NEVER change this value here when package is already installed, use the proper command instead.
+# Same as: sudo stack -mysql-ver=10.6
+###########################
+#mysql-ver:10.6
+
+
+# Saved External DB Credentials to use instead of localhost
+# Values: <access-data>
+# Default: <empty>
+# Note: (server-reset not needed)
+# Note: https://webinoly.com/documentation/sites/#externaldb
+# Same as: sudo webinoly -external-db-save=[user,pass,host:port]
+###########################
+#external-dbh:<host>
+#external-dbx:<port>
+#external-dbu:<user>
+#external-dbp:<pass>
+
+
+# Default Database Privileges
+# Values: basic | limited | extra | complete | full | grant | all
+# Default: full
+# Note: (server-reset not needed)
+# Note: https://webinoly.com/documentation/webinolys/#privileges
+# Same as: sudo webinoly -db-role-default=full
+###########################
+#dbrole:full
+
+
+
+
+###########################
+#####    WordPress    #####
+###########################
+
+# WordPress Login Basic Authentican
+# Values: boolean (true/false)
+# Default: true
+# Note: (server-reset not needed)
+# Note: It will be applied ONLY for sites created after this setting is changed.
+# Note: For existing sites you should use the proper command 'sudo httpauth example.com -wp-admin=on'.
+# Note: You can whitelist an IP to skip authentication. Read the docs!
+# Same as: sudo httpauth -wp-admin=on
+###########################
+#wp-admin-auth:true
 
 
 # WordPress XMLRPC requests
@@ -101,6 +369,7 @@
 # Default: limited
 ###########################
 #xmlrpc:limited
+
 
 
 
