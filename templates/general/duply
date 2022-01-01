@@ -541,7 +541,8 @@ DEFAULT_TARGET_PASS='_backend_password_'
 DEFAULT_GPG='gpg'
 DEFAULT_GPG_KEY='_KEY_ID_'
 DEFAULT_GPG_PW='_GPG_PASSWORD_'
-DEFAULT_PYTHON='python2'
+DEFAULT_PYTHON='python3'
+DUPL_PYTHON_BIN="$DEFAULT_PYTHON"
 
 # function definitions ##########################
 
@@ -1138,7 +1139,7 @@ function duplicity_version_get {
   PYTHON_BIN="$(python_binary)" &&\
     CMD="$(qw "$PYTHON_BIN") $(which $CMD)"
   CMD="$CMD --version 2>&1"
-  DUPL_VERSION_OUT=$(eval "$CMD")
+  DUPL_VERSION_OUT=$(eval "$CMD" | grep -E "^duplicity ")
   DUPL_VERSION=`echo $DUPL_VERSION_OUT | awk '/^duplicity /{print $2; exit;}'`
   #DUPL_VERSION='0.7.03' #'0.6.08b' #,0.4.4.RC4,0.6.08b
   DUPL_VERSION_VALUE=0

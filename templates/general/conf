@@ -1,15 +1,17 @@
 
-###############################################################################
-##################        Webinoly Configuration file        ##################
-###############################################################################
+###################################################################################
+####################        Webinoly Configuration file        ####################
+###################################################################################
 
-# Please, NEVER modify this file if you are not sure about what you are doing #
-# Read: https://webinoly.com/documentation/webinolys/#server-settings         #
-#                                                                             #
-# 1 - Uncomment the variable (Remove the '#' at the beggining)                #
-# 2 - Set your custom value (var:value)                                       #
-# 3 - And then 'sudo webinoly -server-reset' to changes take effect.          #
-###############################################################################
+#        Don't like our defaults? Every part of Webinoly is overrideable!         #
+#                                                                                 # 
+# You should NEVER modify this file if you are not sure about what you are doing  #
+# Please, read: https://webinoly.com/documentation/webinolys/#server-settings     #
+#                                                                                 #
+# 1 - Uncomment the variable (Remove the '#' at the beggining)                    #
+# 2 - Set your custom value (var:value)                                           #
+# 3 - And then 'sudo webinoly -server-reset' to changes take effect.              #
+###################################################################################
 
 
 
@@ -57,6 +59,7 @@
 # Values: stable | mainline
 # Default: stable
 # Note: (set before installing, server-reset not needed)
+# Note: NEVER change this value here when package is already installed
 ###########################
 #nginx-ppa:stable
 
@@ -71,7 +74,9 @@
 # Saved Email Address
 # Values: <email-address>
 # Default: <empty>
-# Note: (server-reset not needed, here won't update existing accounts)
+# Note: (server-reset not needed)
+# Note: Let's Encrypt uses this email to register your certs.
+# Note: Existing accounts won't be updated, in that case you better use the proper command shown below to update all your current certs.
 # Same as: sudo webinoly -email=user@example.com
 ###########################
 #mail:user@example.com
@@ -104,7 +109,8 @@
 
 # Nginx Default Response
 # Values: default | blackhole | <example.com>
-# Default: default
+# Default: default (Nginx Welcome Page)
+# Note: For better security 'blackhole' is highly recommended.
 # Same as: sudo webinoly -default-site=blackhole
 ###########################
 #default-response:default
@@ -145,7 +151,8 @@
 # IAM Role (AWS Credentials)
 # Values: boolean (true/false)
 # Default: false
-# Note: Set to 'true' if your EC2 instance has an IAM Role attached with full access to S3 (server-reset not needed)
+# Note: (server-reset not needed)
+# Note: Set to 'true' if your EC2 instance has an IAM Role attached with full access to S3
 # Same as: sudo webinoly -aws-s3-credentials=awsiamrole
 ###########################
 #awsiamrole:false
@@ -263,10 +270,10 @@
 
 # PHP number of child processes to be created
 # Values: numeric int
-# Default: <variable> (calculated based in your server resources)
+# Default: <variable> (calculated based on your server resources)
 # Note: start, min and max_spare_servers are calculated automatically based on this 'max_child' value.
 ###########################
-#php-max-child:6
+#php-max-child:10
 
 
 # PHP maximum amount of memory that a script is allowed to allocate
@@ -296,6 +303,7 @@
 # Default: true
 # Note: (server-reset not needed)
 # Note: It will be applied ONLY for sites created after this setting is changed.
+# Note: This setting is always 'false' for WP sites.
 ###########################
 #php-info:true
 

@@ -225,6 +225,15 @@ onesix_to_oneseven() {
 		fi		
 	done
 	
+	if [[ -f /opt/webinoly/webinoly.conf ]]; then
+		mv /opt/webinoly/webinoly.conf /opt/webinoly/webinoly.conf.old
+		IFS=$'\n' # FOR loop takes whitespace as a delimiter, so IFS overwrite this.
+		for i in $(grep -E "^([a-z\-]+)\:.*$" /opt/webinoly/webinoly.conf.old)
+		do
+			conf_write $(echo $i | cut -d':' -f 1 -s) $(echo $i | cut -d':' -f 2- -s)
+		done
+	fi
+	
 	[[ $(conf_read php) != "true" && $(conf_read nginx) == "true" ]] && nginx_tool_site
 	[[ $(conf_read php) == "true" ]] && sudo apt -y install php$(conf_read php-ver)-intl
 	

@@ -308,9 +308,8 @@ elif [[ -n $purge && -n $backups ]]; then
 				echo "${gre}${dim}Backup (duply) profiles deleted!${end}"
 			fi
 			
-			sudo apt -y purge python3-boto3 duplicity
-			echo | sudo add-apt-repository --remove 'ppa:duplicity-team/duplicity-release-git'
-			sudo apt-key del 7A86F4A2
+			sudo snap remove duplicity
+			sudo apt -y purge python3-boto3
 			sudo rm -rf /usr/bin/duply
 			
 			purge_autoremove="true"
@@ -675,6 +674,11 @@ if [[ $force == 1 ]]; then
 	force="0"
 fi
 
-[[ $purge_autoremove == "true" ]] && sudo apt -yqq autoremove &> /dev/null
+# Remove all unnecessary packages!
+# Bash maintains an internal hash of previously found executables in your path. (clear all hashed locations)
+if [[ $purge_autoremove == "true" ]]; then
+	sudo apt -yqq autoremove &> /dev/null
+	hash -r
+fi
 
 api-events_update ste

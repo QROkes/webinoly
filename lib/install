@@ -393,7 +393,7 @@ php_optim() {
 	sudo sed -i -r "/^[;]?upload_max_filesize =/c\upload_max_filesize = $(check_var max-mb-uploads)M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r "/^[;]?post_max_size =/c\post_max_size = $(($(check_var max-mb-uploads)+1))M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?max_file_uploads =/c\max_file_uploads = $(check_var php-max-files)' /etc/php/$ver/fpm/php.ini
-	[[ $(check_var php-max-mem) -gt $(($(check_var max-mb-uploads)+1)) ]] && local phpmem=$(check_var php-max-mem) || local phpmem=$(($(check_var max-mb-uploads)+2))
+	[[ $(check_var php-max-mem) -gt $(($(check_var max-mb-uploads)+1)) ]] && local phpmem=$(check_var php-max-mem) || local phpmem=$(($(check_var max-mb-uploads)+10))
 	sudo sed -i -r "/^[;]?memory_limit =/c\memory_limit = ${phpmem}M" /etc/php/$ver/fpm/php.ini
 	
 	sudo sed -i -r "/^[;]?opcache.memory_consumption=/c\opcache.memory_consumption=$(check_var php-max-mem)" /etc/php/$ver/fpm/php.ini
@@ -474,8 +474,6 @@ nginx_tool_ssl() {
 	local certb=0
 	while [[ $certb -le 3 ]]
 	do
-		sudo snap install core
-		sudo snap refresh core
 		sudo snap install --classic certbot
 		
 		# SNAP Repo fails a lot, so we need to be sure and retry!!!
@@ -499,7 +497,10 @@ nginx_tool_bkp() {
 	api-events_update in13
 	
 	# Instalar Duply & Duplicity with S3 support
-	sudo apt -y install python3-boto3 duplicity
+	# Now there is an Official PPA: https://launchpad.net/~duplicity-team/+archive/ubuntu/duplicity-release-git
+	# We use snap because PPA has no support for ARM architecture.
+	sudo snap install --classic duplicity
+	sudo apt -y install python3-boto3
 	
 	# https://sourceforge.net/projects/ftplicity/files/duply%20%28simple%20duplicity%29/
 	sudo cp /opt/webinoly/templates/general/duply /usr/bin/
@@ -763,6 +764,10 @@ stack_builder() {
 		# Fix issue installing in some Digital Ocean droplets
 		sudo apt -y -qq install dialog
 		
+		# Snap is installed by default since 16.04, but better be sure!
+		sudo snap install core
+		sudo snap refresh core
+		
 		conf_write pre-packs true
 		api-events_update i2
 	fi
@@ -774,17 +779,11 @@ stack_builder() {
 			sudo add-apt-repository "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx"
 		else
 			sudo add-apt-repository "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
-			conf_write nginx-ppa stable
 		fi
 		local code="run"
 	elif [[ $1 == "nginx" ]]; then
 		echo "${dim}Nginx is already installed!${end}"
 		local code=0
-	fi
-	if [[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]]; then
-		# Now there is an Official PPA: https://launchpad.net/~duplicity-team/+archive/ubuntu/duplicity-release-git
-		echo | sudo add-apt-repository ppa:duplicity-team/duplicity-release-git
-		local code="run"
 	fi
 	
 	if [[ $2 == "php" && $(conf_read php) != "true" ]]; then
@@ -798,6 +797,7 @@ stack_builder() {
 	fi
 	if [[ ( $2 == "php" || $4 == "redis" ) && $(conf_read php-tool-redis) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]]; then
 		# Now there is an Official PPA: https://github.com/redis/redis-debian - https://launchpad.net/~redislabs/+archive/ubuntu/redis
+		# Snap is available but it has no support for ARM architecture: https://snapcraft.io/redis
 		echo | sudo add-apt-repository ppa:redislabs/redis
 		local code="run"
 	fi
@@ -823,7 +823,7 @@ stack_builder() {
 	# We need this validation, because for example, LEMP can install additional tools when main package is already installed.
 	if [[ $code =~ [01] && $4 != "light" ]]; then
 		[[ ( $1 == "nginx" || $4 == "letsencrypt" ) && $(conf_read nginx) == "true" && $(conf_read nginx-tool-ssl) != "true" ]] && unset code
-		#[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" ]] && unset code # Backups doesn't need nginx, can be installed alone! # Unset in PPA
+		[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" ]] && unset code # Backups doesn't need nginx, can be installed alone!
 		[[ ( $2 == "php" || $4 == "postfix" ) && $(conf_read php) == "true" && $(conf_read php-tool-postfix) != "true" ]] && unset code
 		
 		if [[ $4 != "basic" ]]; then
