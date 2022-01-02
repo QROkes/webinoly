@@ -115,7 +115,6 @@ sudo chmod -f 744 /opt/webinoly/lib/ex-*
 
 sudo chmod 755 ${usrw}/*
 sudo mv ${usrw}/* /usr/bin/
-[[ -f /usr/bin/duply && -f /opt/webinoly/templates/general/duply ]] && sudo cp /opt/webinoly/templates/general/duply /usr/bin/ && sudo chmod 755 /usr/bin/duply
 
 source /opt/webinoly/lib/general
 
@@ -181,6 +180,7 @@ fi
 
 # Update stack!
 [[ -n $oldver && ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
+[[ -f /usr/bin/duply && -f /opt/webinoly/templates/general/duply ]] && sudo cp /opt/webinoly/templates/general/duply /usr/bin/ && sudo chmod 755 /usr/bin/duply
 
 # Stack installation
 [[ $setup == 1 ]] && stack -nginx

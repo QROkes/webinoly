@@ -664,8 +664,8 @@ if [[ $(conf_read php-tool-redis) == "true" && ! -d /etc/postfix ]]; then
 	ver_seven_err="1"
 fi
 if [[ $(conf_read nginx-tool-ssl) == "true" ]]; then
-	if [[ ! -f /usr/bin/duplicity ]]; then
-		echo "- [ERROR] File: /usr/bin/duplicity not found!"
+	if [[ ! -f /snap/bin/duplicity ]]; then
+		echo "- [ERROR] File: /snap/bin/duplicity not found!"
 		ver_seven_err="1"
 	fi
 fi

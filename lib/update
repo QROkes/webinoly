@@ -1,8 +1,13 @@
 #!/bin/bash
 
 echo "${red}"
-echo "Your server configuration will be updated and all changes you manually did will be lost!!"
-echo "${blu}Current server version 'v$oldver' will be upgraded to the newest 'v$newver'. Wait...${end}"
+echo "[WARNING] Your server configuration will be updated and all changes you manually did will be lost!!"
+echo "${blu}Current server version 'v$oldver' will be upgraded to the newest 'v$newver'."
+echo "${bol}"
+read -n 1 -s -r -p "Press any key to continue..."
+echo ""
+echo "${end}${dim}This is going to take a little bit of time...${end}"
+sleep 1
 
 
 # v1.5.0
@@ -138,6 +143,7 @@ onefive_to_onesix() {
 	fi
 	
 	#Fix new Nginx repo
+	sudo apt update
 	sudo apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' nginx
 	[[ $(conf_read php) != "true" ]] && sudo apt-key del E5267A6C # ondrej
 	
@@ -235,7 +241,7 @@ onesix_to_oneseven() {
 	fi
 	
 	[[ $(conf_read php) != "true" && $(conf_read nginx) == "true" ]] && nginx_tool_site
-	[[ $(conf_read php) == "true" ]] && sudo apt -y install php$(conf_read php-ver)-intl
+	#[[ $(conf_read php) == "true" ]] && sudo apt -y install php$(conf_read php-ver)-intl
 	
 	if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
 		sudo apt -y purge duplicity duply python-boto
@@ -258,20 +264,13 @@ onesix_to_oneseven() {
 
 
 # Version numbers without point
-[[ ${oldver//.} -lt 11 ]] && onezero_to_oneone > /dev/null 2>&1 &
-wait $!
-[[ ${oldver//.} -lt 12 ]] && oneone_to_onetwo > /dev/null 2>&1 &
-wait $!
-[[ ${oldver//.} -lt 13 ]] && onetwo_to_onethree > /dev/null 2>&1 &
-wait $!
-[[ ${oldver//.} -lt 14 ]] && onethree_to_onefour > /dev/null 2>&1 &
-wait $!
-[[ ${oldver//.} -lt 15 ]] && onefour_to_onefive > /dev/null 2>&1 &
-wait $!
-[[ ${oldver//.} -lt 16 ]] && onefive_to_onesix > /dev/null 2>&1 &
-wait $!
-[[ ${oldver//.} -lt 17 ]] && onesix_to_oneseven > /dev/null 2>&1 &
-wait $!
+[[ ${oldver//.} -lt 11 ]] && onezero_to_oneone
+[[ ${oldver//.} -lt 12 ]] && oneone_to_onetwo
+[[ ${oldver//.} -lt 13 ]] && onetwo_to_onethree
+[[ ${oldver//.} -lt 14 ]] && onethree_to_onefour
+[[ ${oldver//.} -lt 15 ]] && onefour_to_onefive
+[[ ${oldver//.} -lt 16 ]] && onefive_to_onesix
+[[ ${oldver//.} -lt 17 ]] && onesix_to_oneseven
 
 
 sudo webinoly -server-reset
