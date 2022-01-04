@@ -708,15 +708,16 @@ messagend_install() {
 	echo "********      Save your DB access password in a secure place:       ********"
 	echo "******${dim}      root: ${ROOT_PW}       admin: ${ADMIN_PW}      ${end}${gre}******"
 	echo "****************************************************************************"
+	echo "${blu}Never change these passwords! Read:${end}${dim} https://webinoly.com/documentation/webinolys/#dbpass"
 	echo "${end}"
 }
 
 message_welcome() {
 	echo "${blu}"
-	echo "***********************************************************"
-	echo "***************   ${bol}Welcome to Webinoly   ${end}${blu}*******************"
-	echo "********   ${dim}Stack Builder & Configuration Manager   ${end}${blu}********"
-	echo "***********************************************************"
+	echo "***************************************************************"
+	echo "*****************   ${bol}Welcome to Webinoly   ${end}${blu}*********************"
+	echo "**********   ${dim}Stack Builder & Configuration Manager   ${end}${blu}**********"
+	echo "***************************************************************"
 	
 	if [[ $1 =~ ^(full|basic|light|partial)$ ]]; then
 		echo "${dim} -    -    -    -    -    -    -    -    -    -    -    - ${end}${blu}"
@@ -821,7 +822,7 @@ stack_builder() {
 	# Don't run the "update" if nothing will be installed!
 	# This validation only runs when core package is already instaled, so we need to check if a tool will be installed.
 	# We need this validation, because for example, LEMP can install additional tools when main package is already installed.
-	if [[ $code =~ [01] && $4 != "light" ]]; then
+	if [[ $code == 0 && $4 != "light" ]]; then
 		[[ ( $1 == "nginx" || $4 == "letsencrypt" ) && $(conf_read nginx) == "true" && $(conf_read nginx-tool-ssl) != "true" ]] && unset code
 		[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" ]] && unset code # Backups doesn't need nginx, can be installed alone!
 		[[ ( $2 == "php" || $4 == "postfix" ) && $(conf_read php) == "true" && $(conf_read php-tool-postfix) != "true" ]] && unset code
@@ -832,23 +833,31 @@ stack_builder() {
 			[[ -n $code && ( $3 == "mysql" || $4 == "pma" ) && $(conf_read mysql) == "true" && $(conf_read mysql-tool-pma) != "true" ]] && local code="noupd"
 		fi
 	fi
-	[[ $code = [01] ]] && return $code
 	
-	# PMA doesn't need update!
-	[[ $code != "noupd" ]] && sudo apt -qq update
+	if [[ $code != 0 ]]; then
+		# PMA doesn't need update!
+		[[ $code != "noupd" ]] && sudo apt -qq update
+		
+		# Install Packages!
+		[[ $1 == "nginx" && $(conf_read nginx) != "true" ]] && nginx_install && nginx_optim && nginx_tool_site
+		[[ ( $1 == "nginx" || $4 == "letsencrypt" ) && $(conf_read nginx) == "true" && $(conf_read nginx-tool-ssl) != "true" && $4 != "light" ]] && nginx_tool_ssl
+		[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" && $4 != "light" ]] && nginx_tool_bkp # Backups doesn't need nginx, can be installed alone!
+		
+		[[ $2 == "php" && $(conf_read php) != "true" ]] && php_install && php_optim && php_tool_site
+		[[ ( $2 == "php" || $4 == "postfix" ) && $(conf_read php) == "true" && $(conf_read php-tool-postfix) != "true" && $4 != "light" ]] && php_tool_postfix
+		[[ ( $2 == "php" || $4 == "redis" ) && $(conf_read php) == "true" && $(conf_read php-tool-redis) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && php_tool_redis
+		[[ ( $2 == "php" || $4 == "memcached" ) && $(conf_read php) == "true" && $(conf_read php-tool-memcached) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && php_tool_memcached
+		
+		[[ $3 == "mysql-client" && $(conf_read mysql-client) != "true" ]] && mysql_client_install
+		[[ $3 == "mysql" && $(conf_read mysql) != "true" ]] && mysql_client_install && mysql_install && local mysql_pass_display="true"
+		[[ ( $3 == "mysql" || $4 == "pma" ) && $(conf_read mysql) == "true" && $(conf_read mysql-tool-pma) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && mysql_tool_pma
+		[[ $mysql_pass_display == "true" && -z $block_password_display ]] && messagend_install
+	fi
 	
-	# Install Packages!
-	[[ $1 == "nginx" && $(conf_read nginx) != "true" ]] && nginx_install && nginx_optim && nginx_tool_site
-	[[ ( $1 == "nginx" || $4 == "letsencrypt" ) && $(conf_read nginx) == "true" && $(conf_read nginx-tool-ssl) != "true" && $4 != "light" ]] && nginx_tool_ssl
-	[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" && $4 != "light" ]] && nginx_tool_bkp # Backups doesn't need nginx, can be installed alone!
-	
-	[[ $2 == "php" && $(conf_read php) != "true" ]] && php_install && php_optim && php_tool_site
-	[[ ( $2 == "php" || $4 == "postfix" ) && $(conf_read php) == "true" && $(conf_read php-tool-postfix) != "true" && $4 != "light" ]] && php_tool_postfix
-	[[ ( $2 == "php" || $4 == "redis" ) && $(conf_read php) == "true" && $(conf_read php-tool-redis) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && php_tool_redis
-	[[ ( $2 == "php" || $4 == "memcached" ) && $(conf_read php) == "true" && $(conf_read php-tool-memcached) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && php_tool_memcached
-	
-	[[ $3 == "mysql-client" && $(conf_read mysql-client) != "true" ]] && mysql_client_install
-	[[ $3 == "mysql" && $(conf_read mysql) != "true" ]] && mysql_client_install && mysql_install && local mysql_pass_display="true"
-	[[ ( $3 == "mysql" || $4 == "pma" ) && $(conf_read mysql) == "true" && $(conf_read mysql-tool-pma) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && mysql_tool_pma
-	[[ $mysql_pass_display == "true" && -z $block_password_display ]] && messagend_install || return 0 # Functions should never end with negative open!
+	if [[ $code != 0 || -n $(conf_read stack_build_error_flag) ]]; then
+		sudo webinoly -verify=critical
+		[[ $? != 0 ]] && conf_write stack_build_error_flag true || return 0 # Functions should never end with negative open!
+	else
+		 return 0
+	fi
 }

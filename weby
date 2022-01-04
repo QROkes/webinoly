@@ -123,12 +123,12 @@ if [[ -f $HOME/.webinoly-conf-restore_dont-remove ]]; then
 	echo "${gre}Seems like Webinoly was installed previously, we will try to recover your old configuration!${end}"
 	sudo tar -Pxf $HOME/.webinoly-conf-restore_dont-remove -C /
 	sudo rm -rf $HOME/.webinoly-conf-restore_dont-remove
-	sudo webinoly -verify
-	if [[ $? != 0 ]]; then
-		sudo rm weby
-		app_purge
-		exit 1
-	fi
+	sudo webinoly -verify=critical
+	#if [[ $? != 0 ]]; then
+	#	sudo rm weby
+	#	app_purge
+	#	exit 1
+	#fi
 fi
 
 
@@ -137,7 +137,7 @@ if [[ -f /opt/webinoly/webinoly.conf ]]; then
 	oldapp=$(conf_read app-version)
 	oldver=$(conf_read server-version)
 	newver=$svr_version
-	echo "${gre}Webinoly Configuration file was found, so we will use it!${end}"
+	echo "${gre}${dim}Webinoly Configuration file was found, so we will use it!${end}"
 else
 	new_install="true"
 fi
@@ -186,27 +186,43 @@ fi
 [[ $setup == 1 ]] && stack -nginx
 [[ $setup == 2 ]] && stack -php=nginx
 [[ $setup == 3 ]] && stack -lemp
+[[ $setup != [123] && -n $(conf_read stack_build_error_flag) ]] && sudo webinoly -verify=critical
 
 # Message Center
-if [[ $new_install == "true" && $setup == 0 ]]; then
-	echo "${blu}You have chosen the option '0', it means that you have to manually build your own stack."
-	echo "But, don't worry! With Webinoly this is an easy task, just use the stack command, i.e. 'sudo stack -lemp'"
-	echo "${gre}"
-	echo "Webinoly has been successfully installed!!!"
-fi
+if [[ -z $(conf_read stack_build_error_flag) ]]; then
+	if [[ $new_install == "true" && $setup == 0 ]]; then
+		echo "${blu}You have chosen the option '0', it means that you have to manually build your own stack."
+		echo "But, don't worry! With Webinoly this is an easy task, just use the stack command, i.e. 'sudo stack -lemp' ${end}"
+	fi
 
-echo "${blu}"
-echo "****************************************************************************"
-echo "************************${bol}     D O N A T I O N S     ${end}${blu}*************************"
-echo "***   ${dim}If you like Webinoly, buy me a coffee or a beer to show support.${end}${blu}   ***"
-echo "****************************************************************************"
-echo "*************     Bitcoin: 1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3     **********"
-echo "*******   GitHub Sponsors: https://github.com/sponsors/QROkes     **********"
-echo "***************    PayPal: https://www.paypal.me/qrokes     ****************"
-echo "****************************************************************************"
-echo "***   ${dim}Your regular donations is what keep this project moving forward.${end}${blu}   ***"
-echo "****************************************************************************"
-echo "${end}"
+	if [[ -z $update ]]; then
+		echo ""
+		echo "${blu}${bol}Don't like our defaults? Every part of Webinoly is overrideable!${end}"
+		echo "${blu}- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - "
+		echo "${blu}Please, read the documentation:${end}${dim} https://webinoly.com/documentation/${end}"
+		echo "${blu}Be sure your firewall ports are correctly set:${end}${dim} https://webinoly.com/install/${end}"
+		echo "${blu}Configuration file is here:${end}${dim} /opt/webinoly/webinoly.conf${end}"
+		echo ""
+	fi
+	
+	[[ $setup == 0 ]] && echo "${gre}${dim}Webinoly has been successfully installed!!!${end}"
+	[[ $setup == 1 ]] && echo "${gre}${dim}Nginx and some other useful tools have been installed successfully! ${end}"
+	[[ $setup == 2 ]] && echo "${gre}${dim}Nginx, PHP and some other useful tools have been installed successfully! ${end}"
+	[[ $setup == 3 ]] && echo "${gre}${dim}Nginx, PHP, MySQL (MariaDB) and some other useful tools have been installed successfully! ${end}"
+	
+	echo "${blu}"
+	echo "****************************************************************************"
+	echo "************************${bol}     D O N A T I O N S     ${end}${blu}*************************"
+	echo "***   ${dim}If you like Webinoly, buy me a coffee or a beer to show support.${end}${blu}   ***"
+	echo "****************************************************************************"
+	echo "*************     Bitcoin: 1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3     **********"
+	echo "*******   GitHub Sponsors: https://github.com/sponsors/QROkes     **********"
+	echo "***************    PayPal: https://www.paypal.me/qrokes     ****************"
+	echo "****************************************************************************"
+	echo "***   ${dim}Your regular donations is what keep this project moving forward.${end}${blu}   ***"
+	echo "****************************************************************************"
+	echo "${end}"
+fi
 
 
 # Remove Installation File

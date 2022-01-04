@@ -576,10 +576,6 @@ elif [[ -n $mysql ]]; then
 elif [[ -n $lemp ]]; then
 	api-events_update st1
 	stack_builder nginx php mysql $build
-	echo ""
-	echo "${gre}Nginx, PHP, MySQL (MariaDB) and some other useful tools have been installed successfully! ${end}"
-	echo ""
-
 
 elif [[ -n $letsencrypt ]]; then
 	[[ $(conf_read nginx-tool-ssl) != "true" ]] && stack_builder false false false letsencrypt || echo "${dim}Let's Encrypt is already installed!${end}"

@@ -8,6 +8,7 @@
 source /opt/webinoly/lib/webin
 source /opt/webinoly/lib/datadog
 source /opt/webinoly/lib/headers
+source /opt/webinoly/lib/verify
 source /opt/webinoly/lib/bkp
 check_for_parameters $@
 api-events_update wys
@@ -31,7 +32,7 @@ elif [[ -n $server_reset ]]; then
 	
 	
 elif [[ -n $verify ]]; then
-	source /opt/webinoly/lib/verify
+	webinoly_verify || exit 1
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 	
