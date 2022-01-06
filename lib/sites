@@ -892,7 +892,7 @@ redirection_manager() {
 		
 		echo ""
 		[[ -z $from || $from == "true" ]] && read -p "${blu}Redirect from: ${end}" from
-		[[ -z $to || $to == "true" ]] && ! [[ $http_code =~ ^(410|444|451)$ ]] && read -p "${blu}Redirect to: ${end}" to
+		[[ -z $to || $to == "true" ]] && ! [[ $http_code =~ ^(403|410|444|451)$ ]] && read -p "${blu}Redirect to: ${end}" to
 		echo ""
 		
 		if [[ -f /etc/nginx/apps.d/$domain-nginx.conf && -n $( grep -E "^# Path: ${from}( \([Exact]+\))?$" /etc/nginx/apps.d/$domain-nginx.conf ) ]]; then
@@ -904,7 +904,7 @@ redirection_manager() {
 		elif [[ $from == "/" ]]; then
 			echo "${red}[ERROR] Root folder redirection is not allowed, use the 'domain forwarding' feature if want to redirect a complete domain!${end}"
 			exit 1
-		elif ! [[ $http_code =~ ^(301|302|303|307|308|410|444|451)$ ]]; then
+		elif ! [[ $http_code =~ ^(301|302|303|307|308|403|410|444|451)$ ]]; then
 			echo "${red}[ERROR] Invalid redirection HTTP Code!${end}"
 			exit 1
 		elif [[ -n $regex ]] && ! [[ $regex =~ ^(sensitive|insensitive|longest)$ ]]; then
@@ -958,7 +958,7 @@ location $sign$from {
 	return $http_code $to;
 }
 # RedirectEnd" >> /etc/nginx/apps.d/$domain-nginx.conf
-			elif [[ $http_code =~ ^(410|444|451)$ ]]; then
+			elif [[ $http_code =~ ^(403|410|444|451)$ ]]; then
 				echo "# RedirectFrom: ${code}
 # To: $to ($http_code)
 location $sign$from {
