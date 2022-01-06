@@ -130,10 +130,20 @@ elif [[ -n $mysql ]]; then
 	# Slow Query Log
 	elif [[ $mysql == "slow" ]]; then
 		if [[ -n $enable ]]; then
+			# https://mariadb.com/kb/en/slow-query-log-overview/
+			if [[ -n $long_query_time && $long_query_time =~ ^[0-9]+$ && $long_query_time -gt 1 ]]; then
+				cnf_write long_query_time $long_query_time
+				echo "${gre}${dim}MySQL long query time set to ${long_query_time}s ${end}"
+			elif [[ -n $long_query_time ]]; then
+				echo "${red}[ERROR] Invalid value for long query time! ${dim}(Should be a number greater than zero)${end}"
+				exit 1
+			fi
+			
 			cnf_write slow_query_log 1
 			sudo systemctl restart mysql
 			echo "${gre}MariaDB Slow Query log was successfully enabled!${end}"
 		elif [[ -n $disable ]]; then
+			# Don't remove long_query_time variable to preserve the value
 			cnf_write slow_query_log 0
 			sudo systemctl restart mysql
 			echo "${gre}MariaDB Slow Query log was successfully disabled!${end}"

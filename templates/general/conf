@@ -399,6 +399,14 @@
 #mysql-log-slow:false
 
 
+# MySQL Long Query Time
+# Values: number int (seconds)
+# Default: 10
+# Note: If a query takes longer than this many seconds to execute, the query is logged to the slow query log.
+# Same as: sudo log -mysql=slow -enable -long-query-time=3
+#mysql-long-query-time:3
+
+
 # MySQL Public/External Access
 # Values: boolean (true/false)
 # Default: false
