@@ -182,6 +182,7 @@ onesix_to_oneseven() {
 	[[ $(conf_read php-tool) == "true" && -f /etc/postfix/main.cf ]] && sudo sed -i '/smtpd_banner =/c \smtpd_banner = $myhostname ESMTP' /etc/postfix/main.cf
 	[[ $(conf_read mysql-client) == "true" && -z $(conf_read mysql-ver) ]] && conf_write mysql-ver $(sudo mysql -V | cut -f 6 -d " " -s | cut -f -2 -d "." -s)
 	
+	[[ $(conf_read mysql) == "true" ]] && conf_write mysql-optim true
 	[[ $(conf_read mysql-tool) == "true" ]] && conf_write mysql-tool-pma true && conf_delete mysql-tool
 	[[ $(conf_read nginx-tool) == "true" ]] && conf_write nginx-tool-ssl true && conf_write nginx-tool-bkp true && conf_delete nginx-tool
 	[[ $(conf_read php-tool) == "true" ]] && conf_write php-tool-postfix true && conf_write php-tool-redis true && conf_write php-tool-memcached true && conf_delete php-tool

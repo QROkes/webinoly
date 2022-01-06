@@ -423,6 +423,28 @@ php_optim() {
 }
 
 
+# MySQL OPTIM
+mysql_optim() {
+	api-events_update im5
+	
+	# If value is empty we will respect any other previous action done via commmand.
+	[[ $(conf_read mysql-log-general) == "true" ]] && sudo log -mysql=general -enable
+	[[ $(conf_read mysql-log-general) == "false" ]] && sudo log -mysql=general -disable
+	
+	[[ $(conf_read mysql-log-binary) == "true" ]] && sudo log -mysql=binary -enable
+	[[ $(conf_read mysql-log-binary) == "false" ]] && sudo log -mysql=binary -disable
+	
+	[[ $(conf_read mysql-log-slow) == "true" ]] && sudo log -mysql=slow -enable
+	[[ $(conf_read mysql-log-slow) == "false" ]] && sudo log -mysql=slow -disable
+	
+	[[ $(conf_read mysql-public-access) == "true" ]] && sudo webinoly -mysql-public-access=on
+	[[ $(conf_read mysql-public-access) == "false" ]] && sudo webinoly -mysql-public-access=off
+	
+	conf_write mysql-optim true
+	api-events_update im6
+	echo "${gre}MySQL (MariaDB) has been successfully Optimized by Webinoly! ${end}"
+}
+
 nginx_tool_site() {
 	# Tools site creation
 	[[ -z $(conf_read tools-port) ]] && conf_write tools-port $tools_port_default
@@ -566,7 +588,7 @@ php_tool_memcached() {
 
 
 mysql_tool_pma() {
-	api-events_update im5
+	api-events_update im7
 	
 	echo "${blu}${dim}Downloading phpMyAdmin...${end}"
 	sudo mkdir -p /var/www/$(conf_read tools-port)/htdocs/pma
@@ -591,7 +613,7 @@ mysql_tool_pma() {
 		echo "${red}[ERROR] Downloading phpMyAdmin failed!${end}"
 	fi
 	
-	api-events_update im6
+	api-events_update im8
 }
 
 
@@ -849,7 +871,7 @@ stack_builder() {
 		[[ ( $2 == "php" || $4 == "memcached" ) && $(conf_read php) == "true" && $(conf_read php-tool-memcached) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && php_tool_memcached
 		
 		[[ $3 == "mysql-client" && $(conf_read mysql-client) != "true" ]] && mysql_client_install
-		[[ $3 == "mysql" && $(conf_read mysql) != "true" ]] && mysql_client_install && mysql_install && local mysql_pass_display="true"
+		[[ $3 == "mysql" && $(conf_read mysql) != "true" ]] && mysql_client_install && mysql_install && local mysql_pass_display="true" && mysql_optim
 		[[ ( $3 == "mysql" || $4 == "pma" ) && $(conf_read mysql) == "true" && $(conf_read mysql-tool-pma) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && mysql_tool_pma
 		[[ $mysql_pass_display == "true" && -z $block_password_display ]] && messagend_install
 	fi

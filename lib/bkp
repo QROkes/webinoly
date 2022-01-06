@@ -495,37 +495,6 @@ check_exported_conf() {
 	[[ $(conf_read_exported header-xcto) == "false" ]] && sudo webinoly -header-xcto=off
 	[[ $(conf_read_exported header-xfo) =~ ^(off|deny|sameorigin)$ ]] && sudo webinoly -header-xfo=$(conf_read_exported header-xfo)
 	[[ $(conf_read_exported header-xfo) == "allow-from" && -n $(conf_read_exported header-xfo-url) ]] && sudo webinoly -header-xfo=allow-from -url=$(conf_read_exported header-xfo-url)
-	
-	if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/csp_webinoly.data"; then
-		tar -C / -xf $file /opt/webinoly/templates/source/csp_webinoly.data --absolute-names
-		sudo webinoly -header-csp=on
-	fi
-	if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/pph_webinoly.data"; then
-		tar -C / -xf $file /opt/webinoly/templates/source/pph_webinoly.data --absolute-names
-		sudo webinoly -header-permissions-policy=on
-	fi
-	if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/cch_webinoly.data"; then
-		tar -C / -xf $file /opt/webinoly/templates/source/cch_webinoly.data --absolute-names
-		sudo webinoly -header-cache-control=on
-	fi
-	if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/rob_webinoly.data"; then
-		tar -C / -xf $file /opt/webinoly/templates/source/rob_webinoly.data --absolute-names
-		[[ -s /opt/webinoly/templates/source/rob_webinoly.data ]] && sudo webinoly -header-robots=on
-	fi
-
-	if [[ $(conf_read_exported header-custom) == "true" ]]; then
-		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/custom_header_http_webinoly.data"; then
-			tar -C / -xf $file /opt/webinoly/templates/source/custom_header_http_webinoly.data --absolute-names
-		fi
-		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/custom_header_https_webinoly.data"; then
-			tar -C / -xf $file /opt/webinoly/templates/source/custom_header_https_webinoly.data --absolute-names
-		fi
-		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/custom_header_html_webinoly.data"; then
-			tar -C / -xf $file /opt/webinoly/templates/source/custom_header_html_webinoly.data --absolute-names
-		fi
-		sudo webinoly -custom-headers=reload
-	fi
-	
 	[[ -n $(conf_read_exported log-lines) ]] && conf_write log-lines $(conf_read_exported log-lines)
 	[[ -n $(conf_read_exported awsiamrole) ]] && conf_write awsiamrole $(conf_read_exported awsiamrole)
 	[[ -n $(conf_read_exported wp-admin-auth) ]] && conf_write wp-admin-auth $(conf_read_exported wp-admin-auth)
@@ -535,20 +504,53 @@ check_exported_conf() {
 	[[ -n $(conf_read_exported external-dbu) ]] && conf_write external-dbu $(conf_read_exported external-dbu)
 	[[ -n $(conf_read_exported external-dbp) ]] && conf_write external-dbp $(conf_read_exported external-dbp)
 
-	# Conf stack files
-	if tar -tvf $file --absolute-names | grep -oq "/etc/nginx/conf.d/blockips.conf"; then
-		tar -C / -xf $file /etc/nginx/conf.d/blockips.conf --absolute-names
-	fi
-	if tar -tvf $file --absolute-names | grep -oq "/etc/nginx/.htpasswd"; then
-		tar -C / -xf $file /etc/nginx/.htpasswd --absolute-names
-	fi
-	if tar -tvf $file --absolute-names | grep -oq "$HOME/.aws/credentials"; then
-		tar -C / -xf $file $HOME/.aws/credentials --absolute-names
-	fi
-	if [[ $(conf_read mysql) == "true" ]]; then
-		if tar -tvf $file --absolute-names | grep -oq "/etc/mysql/mariadb.conf.d/90-webinoly.cnf"; then
-			tar -C / -xf $file /etc/mysql/mariadb.conf.d/90-webinoly.cnf --absolute-names
-			sudo systemctl restart mysql
+	
+	if [[ $is_tar == "true" ]]; then
+		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/csp_webinoly.data"; then
+			tar -C / -xf $file /opt/webinoly/templates/source/csp_webinoly.data --absolute-names
+			sudo webinoly -header-csp=on
+		fi
+		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/pph_webinoly.data"; then
+			tar -C / -xf $file /opt/webinoly/templates/source/pph_webinoly.data --absolute-names
+			sudo webinoly -header-permissions-policy=on
+		fi
+		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/cch_webinoly.data"; then
+			tar -C / -xf $file /opt/webinoly/templates/source/cch_webinoly.data --absolute-names
+			sudo webinoly -header-cache-control=on
+		fi
+		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/rob_webinoly.data"; then
+			tar -C / -xf $file /opt/webinoly/templates/source/rob_webinoly.data --absolute-names
+			[[ -s /opt/webinoly/templates/source/rob_webinoly.data ]] && sudo webinoly -header-robots=on
+		fi
+
+		if [[ $(conf_read_exported header-custom) == "true" ]]; then
+			if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/custom_header_http_webinoly.data"; then
+				tar -C / -xf $file /opt/webinoly/templates/source/custom_header_http_webinoly.data --absolute-names
+			fi
+			if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/custom_header_https_webinoly.data"; then
+				tar -C / -xf $file /opt/webinoly/templates/source/custom_header_https_webinoly.data --absolute-names
+			fi
+			if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/custom_header_html_webinoly.data"; then
+				tar -C / -xf $file /opt/webinoly/templates/source/custom_header_html_webinoly.data --absolute-names
+			fi
+			sudo webinoly -custom-headers=reload
+		fi
+		
+		# Conf stack files
+		if tar -tvf $file --absolute-names | grep -oq "/etc/nginx/conf.d/blockips.conf"; then
+			tar -C / -xf $file /etc/nginx/conf.d/blockips.conf --absolute-names
+		fi
+		if tar -tvf $file --absolute-names | grep -oq "/etc/nginx/.htpasswd"; then
+			tar -C / -xf $file /etc/nginx/.htpasswd --absolute-names
+		fi
+		if tar -tvf $file --absolute-names | grep -oq "$HOME/.aws/credentials"; then
+			tar -C / -xf $file $HOME/.aws/credentials --absolute-names
+		fi
+		if [[ $(conf_read mysql) == "true" ]]; then
+			if tar -tvf $file --absolute-names | grep -oq "/etc/mysql/mariadb.conf.d/90-webinoly.cnf"; then
+				tar -C / -xf $file /etc/mysql/mariadb.conf.d/90-webinoly.cnf --absolute-names
+				sudo systemctl restart mysql
+			fi
 		fi
 	fi
 }
@@ -892,6 +894,23 @@ import_server() {
 	elif ! [[ $import =~ ^(true|sites|stack|full)$ ]]; then
 		echo "${red}[ERROR] Invalid value for import parameter!${end}"
 		exit 1
+	elif [[ -n $(sudo file $file | grep -Fo " tar archive ") ]]; then
+		is_tar="true"
+	fi
+	
+	
+	if [[ $is_tar != "true" ]]; then
+		if [[ -z $(grep -w "^app-version:.*" $file | cut -f 2 -d ':') ]]; then
+			echo "${red}[ERROR] Invalid File, Webinoly configuration not found!${end}"
+			exit 1
+		elif ! [[ $import =~ ^(true|stack)$ ]]; then
+			echo "${red}[ERROR] Invalid value for import parameter!${end}"
+			exit 1
+		fi
+		
+		[[ $import == "true" ]] && import="stack"
+		echo "${gre}${dim}Webinoly single file Stack Configuration found...${end}"
+		
 	elif ! tar -tvf $file --absolute-names | grep -o "/opt/webinoly/webinoly.conf.exported"; then
 		if tar -tvf $file --absolute-names | grep -Goq "/etc/nginx/sites-available/.*"; then
 			import_site
@@ -903,7 +922,8 @@ import_server() {
 	fi
 
 	if [[ $import =~ ^(stack|full)$ ]]; then
-		tar -C / -xf $file /opt/webinoly/webinoly.conf.exported --absolute-names
+		[[ $is_tar == "true" ]] &&  tar -C / -xf $file /opt/webinoly/webinoly.conf.exported --absolute-names || sudo cp $file /opt/webinoly/webinoly.conf.exported
+		
 		check_exported_conf
 		echo "${gre}Webinoly Stack Server was built using your imported configuration!${end}"
 	fi

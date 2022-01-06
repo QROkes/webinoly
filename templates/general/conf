@@ -5,19 +5,23 @@
 
 #        Don't like our defaults? Every part of Webinoly is overrideable!         #
 #                                                                                 # 
-# You should NEVER modify this file if you are not sure about what you are doing  #
-# Please, read: https://webinoly.com/documentation/webinolys/#server-settings     #
+# You should NEVER modify this file if you are not sure about what you are doing. #
+# We have made a very detailed and extensive documentation just for you!
+# Please, read: https://webinoly.com/documentation/                               #
 #                                                                                 #
 # 1 - Uncomment the variable (Remove the '#' at the beggining)                    #
 # 2 - Set your custom value (var:value)                                           #
 # 3 - And then 'sudo webinoly -server-reset' to changes take effect.              #
+#                                                                                 #
+# * Reset only one package is allowed: -server-reset=php (nginx,php,mysql)        #
+# ** Operating System settings are loaded with Nginx.                             #
 ###################################################################################
 
 
 
-###########################
-#####      Linux      #####
-###########################
+############################
+##### Operating System #####
+############################
 
 # Timezone
 # Values: https://www.php.net/manual/en/timezones.php
@@ -51,6 +55,7 @@
 
 
 
+
 ###########################
 #####      NGINX      #####
 ###########################
@@ -59,7 +64,7 @@
 # Values: stable | mainline
 # Default: stable
 # Note: (set before installing, server-reset not needed)
-# Note: NEVER change this value here when package is already installed
+# Note: NEVER change this value here when Nginx package is already installed
 ###########################
 #nginx-ppa:stable
 
@@ -132,7 +137,7 @@
 #tools-port-set:22222
 
 
-# Authentication Whitelist IP
+# HTTP Authentication Whitelist IP
 # Values: <ip>,<ip>,<ip>...
 # Default: <empty>
 # Same as: sudo httpauth -whitelist
@@ -158,6 +163,25 @@
 #awsiamrole:false
 
 
+# WordPress Login Basic Authentican
+# Values: boolean (true/false)
+# Default: true
+# Note: (server-reset not needed)
+# Note: It will be applied ONLY for sites created after this setting is changed.
+# Note: For existing sites you should use the proper command 'sudo httpauth example.com -wp-admin=on'.
+# Note: You can whitelist an IP to skip authentication. Read the docs!
+# Same as: sudo httpauth -wp-admin=on
+###########################
+#wp-admin-auth:true
+
+
+# WordPress XMLRPC requests
+# Values: open | limited | blocked
+# Default: limited
+###########################
+#xmlrpc:limited
+
+
 # Number of lines shown when log command is used (tail)
 # Values: numeric int
 # Default: 10
@@ -168,7 +192,6 @@
 # HTTP Header: Cache Control
 # Values: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
 # Default: no-cache
-# Same as: sudo webinoly -header-cache-control
 ###########################
 #header-cache-control:public, max-age=604800, immutable
 
@@ -176,7 +199,6 @@
 # HTTP Header: Content Security Policy
 # Values: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
 # Default: <empty>
-# Same as: sudo webinoly -header-csp
 ###########################
 #header-csp:default-src https: 'unsafe-eval' 'unsafe-inline'; object-src 'none'
 
@@ -185,7 +207,6 @@
 # Values: default | preload | <max-age> | off
 # Default: default (31536000)
 # Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security
-# Same as: sudo webinoly -header-hsts=preload
 ###########################
 #header-hsts:default
 
@@ -193,7 +214,6 @@
 # HTTP Header: Permissions Policy
 # Values: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Feature-Policy
 # Default: <empty>
-# Same as: sudo webinoly -header-permissions-policy
 ###########################
 #header-permissions:microphone 'none'; geolocation 'none'
 
@@ -202,7 +222,6 @@
 # Values: no-referrer | no-referrer-when-downgrade | origin | origin-when-cross-origin | same-origin | strict-origin | strict-origin-when-cross-origin | unsafe-url
 # Default: no-referrer-when-downgrade
 # Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy
-# Same as: sudo webinoly -header-referrer
 ###########################
 #header-referrer:no-referrer-when-downgrade
 
@@ -211,7 +230,6 @@
 # Values: boolean (true/false)
 # Default: true (nosniff)
 # Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
-# Same as: sudo webinoly -header-xcto=on
 ###########################
 #header-xcto:true
 
@@ -220,7 +238,6 @@
 # Values: deny | sameorigin | allow-from
 # Default: sameorigin
 # Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
-# Same as: sudo webinoly -header-xfo=sameorigin
 ###########################
 #header-xfo:sameorigin
 #header-xfo-url:<allow-from url>
@@ -231,7 +248,6 @@
 # Default: <empty>
 # Note: Multiple X-Robots-Tag headers can be combined using the '|' delimiter.
 # Note: For example, two separate headers will be added (googlebot: nofollow|otherbot: noindex, nofollow)
-# Same as: sudo webinoly -header-robots
 ###########################
 #header-robots:noindex,nofollow
 
@@ -240,9 +256,13 @@
 # Values: boolean (true/false)
 # Default: true (X-XSS-Protection: 1; mode=block)
 # Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
-# Same as: sudo webinoly -header-xssp=on
 ###########################
 #header-xssp:true
+
+
+# HTTP Header: Add any other Custom Header
+# Read: https://webinoly.com/documentation/webinolys/#customheaders
+############################
 
 
 
@@ -256,8 +276,8 @@
 # Values: https://www.php.net/supported-versions.php
 # Default: <latest-stable>
 # Note: (set before installing, server-reset not needed)
-# Note: NEVER change this value here when package is already installed, use the proper command instead.
-# Same as: sudo stack -php-ver=8.1
+# Note: NEVER change this value here when PHP package is already installed, use the proper command instead.
+# Same as: sudo stack -php-ver=8.1 (<-This is the proper command to change the PHP version even when is already installed)
 ###########################
 #php-ver:8.1
 
@@ -293,7 +313,7 @@
 # PHP maximum number of files allowed to be uploaded simultaneously
 # Values: numeric int
 # Default: 20
-# Note: To modify the max file/post size, see the 'max-mb-uploads' in Nginx section, this value is also taken by PHP.
+# Note: To modify the max file/post size, see the 'max-mb-uploads' in Nginx section, that value is also taken by PHP.
 ###########################
 #php-max-files:20
 
@@ -317,6 +337,7 @@
 
 
 
+
 ###########################
 #####      MySQL      #####
 ###########################
@@ -325,8 +346,8 @@
 # Values: https://mariadb.com/kb/en/mariadb-server-release-dates/ (at least latest three stable)
 # Default: <latest-stable>
 # Note: (set before installing, server-reset not needed)
-# Note: NEVER change this value here when package is already installed, use the proper command instead.
-# Same as: sudo stack -mysql-ver=10.6
+# Note: NEVER change this value here when MySQL (MariaDB) package is already installed, use the proper command instead.
+# Same as: sudo stack -mysql-ver=10.6 (<-This is the proper command to change the MarianDB version even when is already installed)
 ###########################
 #mysql-ver:10.6
 
@@ -354,29 +375,36 @@
 #dbrole:full
 
 
-
-
-###########################
-#####    WordPress    #####
-###########################
-
-# WordPress Login Basic Authentican
+# MySQL General Log
 # Values: boolean (true/false)
-# Default: true
-# Note: (server-reset not needed)
-# Note: It will be applied ONLY for sites created after this setting is changed.
-# Note: For existing sites you should use the proper command 'sudo httpauth example.com -wp-admin=on'.
-# Note: You can whitelist an IP to skip authentication. Read the docs!
-# Same as: sudo httpauth -wp-admin=on
-###########################
-#wp-admin-auth:true
+# Default: false
+# Note: When enabled, you can see this log in real-time using 'sudo log -mysql=general'
+# Same as: sudo log -mysql=general -enable
+#mysql-log-general:false
 
 
-# WordPress XMLRPC requests
-# Values: open | limited | blocked
-# Default: limited
-###########################
-#xmlrpc:limited
+# MySQL Binary Log
+# Values: boolean (true/false)
+# Default: false
+# Note: When enabled, you can see this log in real-time using 'sudo log -mysql=binary'
+# Same as: sudo log -mysql=binary -enable
+#mysql-log-binary:false
+
+
+# MySQL Slow Query Log
+# Values: boolean (true/false)
+# Default: false
+# Note: When enabled, you can see this log in real-time using 'sudo log -mysql=slow'
+# Same as: sudo log -mysql=slow -enable
+#mysql-log-slow:false
+
+
+# MySQL Public/External Access
+# Values: boolean (true/false)
+# Default: false
+# Same as: sudo webinoly -mysql-public-access=on
+#mysql-public-access:false
+
 
 
 

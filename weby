@@ -124,11 +124,6 @@ if [[ -f $HOME/.webinoly-conf-restore_dont-remove ]]; then
 	sudo tar -Pxf $HOME/.webinoly-conf-restore_dont-remove -C /
 	sudo rm -rf $HOME/.webinoly-conf-restore_dont-remove
 	sudo webinoly -verify=critical
-	#if [[ $? != 0 ]]; then
-	#	sudo rm weby
-	#	app_purge
-	#	exit 1
-	#fi
 fi
 
 
@@ -212,14 +207,14 @@ if [[ -z $(conf_read stack_build_error_flag) ]]; then
 	
 	echo "${blu}"
 	echo "****************************************************************************"
-	echo "************************${bol}     D O N A T I O N S     ${end}${blu}*************************"
-	echo "***   ${dim}If you like Webinoly, buy me a coffee or a beer to show support.${end}${blu}   ***"
+	echo "************************     D O N A T I O N S     *************************"
+	echo "***    ${bol}If you like Webinoly, buy me a coffee or beer to show support.${end}${blu}    ***"
 	echo "****************************************************************************"
-	echo "*************     Bitcoin: 1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3     **********"
-	echo "*******   GitHub Sponsors: https://github.com/sponsors/QROkes     **********"
-	echo "***************    PayPal: https://www.paypal.me/qrokes     ****************"
+	echo "*************     Bitcoin: ${end}${dim}1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3     ${end}${blu}**********"
+	echo "*******   GitHub Sponsors:${end}${dim} https://github.com/sponsors/QROkes     ${end}${blu}**********"
+	echo "***************    PayPal:${end}${dim} https://www.paypal.me/qrokes     ${end}${blu}****************"
 	echo "****************************************************************************"
-	echo "***   ${dim}Your regular donations is what keep this project moving forward.${end}${blu}   ***"
+	echo "***   ${end}${dim}Your regular donations is what keep this project moving forward.${end}${blu}   ***"
 	echo "****************************************************************************"
 	echo "${end}"
 fi

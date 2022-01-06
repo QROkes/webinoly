@@ -401,8 +401,6 @@ server_reset() {
 		sudo rm -rf /etc/nginx/conf.d/*
 		nginx_optim
 		echo "${gre}Nginx settings has been updated successfully!${end}"
-		nginx_not="true" # Nginx-Reload not-needed.
-		
 		fix_permissions
 		echo "${gre}Permissions fixed successfully!${end}"
 	elif [[ $(conf_read nginx-optim) != "true" && $server_reset == "nginx" ]]; then
@@ -422,13 +420,23 @@ server_reset() {
 			echo "${gre}PHP settings has been updated successfully!${end}"
 		else
 			echo "${red}[ERROR] PHP could not been updated, source files not found!${end}"
-			exit 1
+			err_cont=true
 		fi
 	elif [[ $(conf_read php-optim) != "true" && $server_reset == "php" ]]; then
 		echo "${red}[ERROR] PHP settings couldn't been updated, seems like is not installed in your server!${end}"
-		exit 1
+		err_cont=true
 	fi
 	
+	# Check MySQL Conf
+	if [[ $(conf_read mysql-optim) == "true" && $server_reset =~ ^(mysql|all)$ ]]; then
+		mysql_optim
+		echo "${gre}MySQL settings has been updated successfully!${end}"
+	elif [[ $(conf_read mysql-optim) != "true" && $server_reset == "mysql" ]]; then
+		echo "${red}[ERROR] MySQL settings couldn't been updated, seems like is not installed in your server!${end}"
+		err_cont=true
+	fi
+	
+	# Permissions
 	if [[ $(conf_read nginx) == "true" && $server_reset == "permissions" ]]; then
 		fix_permissions
 		echo "${gre}Permissions fixed successfully!${end}"
@@ -440,7 +448,7 @@ server_reset() {
 	
 	# Display message just to show we are alive.
 	if [[ $server_reset == "all" && $(conf_read php-optim) != "true" && $(conf_read nginx-optim) != "true" ]]; then
-		echo "${blu}Nothing to do, NGINX and PHP are not installed yet!${end}"
+		echo "${blu}Nothing to do here! ${dim}(NGINX, PHP or MySQL are not installed yet)${end}"
 	fi
 }
 
