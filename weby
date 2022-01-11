@@ -181,10 +181,10 @@ fi
 [[ $setup == 1 ]] && stack -nginx
 [[ $setup == 2 ]] && stack -php=nginx
 [[ $setup == 3 ]] && stack -lemp
-[[ $setup != [123] && -n $(conf_read stack_build_error_flag) ]] && sudo webinoly -verify=critical
+[[ $setup != [123] && -n $(conf_read stack-build-error-flag) ]] && sudo webinoly -verify=critical
 
 # Message Center
-if [[ -z $(conf_read stack_build_error_flag) ]]; then
+if [[ -z $(conf_read stack-build-error-flag) ]]; then
 	if [[ $new_install == "true" && $setup == 0 ]]; then
 		echo "${blu}You have chosen the option '0', it means that you have to manually build your own stack."
 		echo "But, don't worry! With Webinoly this is an easy task, just use the stack command, i.e. 'sudo stack -lemp' ${end}"
@@ -217,6 +217,8 @@ if [[ -z $(conf_read stack_build_error_flag) ]]; then
 	echo "***   ${end}${dim}Your regular donations is what keep this project moving forward.${end}${blu}   ***"
 	echo "****************************************************************************"
 	echo "${end}"
+else
+	echo "${red}[ERROR] Sorry, unexpected error during installation and building stack process!${end}"
 fi
 
 

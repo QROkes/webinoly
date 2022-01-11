@@ -189,19 +189,19 @@ onesix_to_oneseven() {
 	
 	
 	if [[ -s /opt/webinoly/templates/source/csp_webinoly.data ]]; then
-		echo "header-csp:$(sed -n '1p' /opt/webinoly/templates/source/csp_webinoly.data)" >> /opt/webinoly/webinoly.conf
+		conf_write header-csp "$(sed -n '1p' /opt/webinoly/templates/source/csp_webinoly.data)"
 		sudo mv /opt/webinoly/templates/source/csp_webinoly.data /opt/webinoly/templates/source/csp_webinoly.data.old
 	fi
 	if [[ -s /opt/webinoly/templates/source/pph_webinoly.data ]]; then
-		echo "header-permissions:$(sed -n '1p' /opt/webinoly/templates/source/pph_webinoly.data)" >> /opt/webinoly/webinoly.conf
+		conf_write header-permissions "$(sed -n '1p' /opt/webinoly/templates/source/pph_webinoly.data)"
 		sudo mv /opt/webinoly/templates/source/pph_webinoly.data /opt/webinoly/templates/source/pph_webinoly.data.old
 	fi
 	if [[ -s /opt/webinoly/templates/source/cch_webinoly.data ]]; then
-		echo "header-cache-control:$(sed -n '1p' /opt/webinoly/templates/source/cch_webinoly.data)" >> /opt/webinoly/webinoly.conf
+		conf_write header-cache-control "$(sed -n '1p' /opt/webinoly/templates/source/cch_webinoly.data)"
 		sudo mv /opt/webinoly/templates/source/cch_webinoly.data /opt/webinoly/templates/source/cch_webinoly.data.old
 	fi
 	if [[ -s /opt/webinoly/templates/source/rob_webinoly.data ]]; then
-		echo "header-robots:$(sed -n '1p' /opt/webinoly/templates/source/rob_webinoly.data)" >> /opt/webinoly/webinoly.conf
+		conf_write header-robots "$(sed -n '1p' /opt/webinoly/templates/source/rob_webinoly.data)"
 		sudo mv /opt/webinoly/templates/source/rob_webinoly.data /opt/webinoly/templates/source/rob_webinoly.data.old
 	fi
 	
@@ -247,18 +247,21 @@ onesix_to_oneseven() {
 	if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
 		sudo apt -y purge duplicity duply python-boto
 		conf_write nginx-tool-bkp purged
-		stack -backups
-		
-		# Not break the old profiles
-		[[ $(check_osname) == "bionic" ]] && sudo apt -y install python3-boto
+		[[ $(check_osname) == "bionic" ]] && sudo apt -y install python3-boto # Not break the old profiles
+		local reinstall_bkp="true"
 	fi
 	if [[ $(conf_read php-tool-redis) == "true" ]]; then
 		sudo apt -y purge redis-server
 		echo | sudo add-apt-repository --remove 'ppa:chris-lea/redis-server'
 		sudo apt-key del C7917B12
 		conf_write php-tool-redis purged
-		stack -redis
+		local reinstall_redis="true"
 	fi
+	
+	# All of these is here separated to prevent errors when verify runs inside the stack command
+	sudo webinoly -server-reset=nginx
+	[[ -n $reinstall_bkp ]] && stack -backups
+	[[ -n $reinstall_redis ]] && stack -redis
 	
 	sudo apt -yqq autoremove
 }

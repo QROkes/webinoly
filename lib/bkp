@@ -440,32 +440,38 @@ END
 
 
 conf_read_exported() {
-	local val=$(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf.exported | cut -f 2 -d ':')
-	echo $val
+	echo $(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf.exported | cut -f 2- -d ':')
 }
 
 
 check_exported_conf() {
 	
 	# Check for stack variables
+	[[ -n $(conf_read_exported swap-mem) ]] && conf_write swap-mem $(conf_read_exported swap-mem)
+	[[ -n $(conf_read_exported run-folder-size) ]] && conf_write run-folder-size $(conf_read_exported run-folder-size)
+	[[ -n $(conf_read_exported timezone) ]] && conf_write timezone $(conf_read_exported timezone)
+	[[ -n $(conf_read_exported kernel-optim) ]] && conf_write kernel-optim $(conf_read_exported kernel-optim)
+	
+	[[ -n $(conf_read_exported nginx-ppa) ]] && conf_write nginx-ppa $(conf_read_exported nginx-ppa)
 	[[ -n $(conf_read_exported tools-port) ]] && conf_write tools-port $(conf_read_exported tools-port)
 	[[ -n $(conf_read_exported fastcgi-conf) ]] && conf_write fastcgi-conf $(conf_read_exported fastcgi-conf)
-	[[ -n $(conf_read_exported fd-ratio) ]] && conf_write fd-ratio $(conf_read_exported fd-ratio)
-	[[ -n $(conf_read_exported nginx-fd-ratio) ]] && conf_write nginx-fd-ratio $(conf_read_exported nginx-fd-ratio)
-	[[ -n $(conf_read_exported swap-mem) ]] && conf_write swap-mem $(conf_read_exported swap-mem)
-	[[ -n $(conf_read_exported nginx-ppa) ]] && conf_write nginx-ppa $(conf_read_exported nginx-ppa)
-	[[ -n $(conf_read_exported cache-size) ]] && conf_write nginx-ppa $(conf_read_exported cache-size)
-	[[ -n $(conf_read_exported timezone) ]] && conf_write timezone $(conf_read_exported timezone)
+	[[ -n $(conf_read_exported xmlrpc) ]] && conf_write xmlrpc $(conf_read_exported xmlrpc)
+	[[ -n $(conf_read_exported max-mb-uploads) ]] && conf_write max-mb-uploads $(conf_read_exported max-mb-uploads)
 	
 	[[ -n $(conf_read_exported php-ver) ]] && conf_write php-ver $(conf_read_exported php-ver)
-	[[ -n $(conf_read_exported php-info) ]] && conf_write php-info $(conf_read_exported php-info)
-	[[ -n $(conf_read_exported max-mb-uploads) ]] && conf_write max-mb-uploads $(conf_read_exported max-mb-uploads)
-	[[ -n $(conf_read_exported redis-max-mem) ]] && conf_write redis-max-mem $(conf_read_exported redis-max-mem)
 	[[ -n $(conf_read_exported php-max-mem) ]] && conf_write php-max-mem $(conf_read_exported php-max-mem)
 	[[ -n $(conf_read_exported php-pm) ]] && conf_write php-pm $(conf_read_exported php-pm)
 	[[ -n $(conf_read_exported php-max-child) ]] && conf_write php-max-child $(conf_read_exported php-max-child)
 	[[ -n $(conf_read_exported php-max-time) ]] && conf_write php-max-time $(conf_read_exported php-max-time)
+	[[ -n $(conf_read_exported php-max-files) ]] && conf_write php-max-files $(conf_read_exported php-max-files)
+	[[ -n $(conf_read_exported redis-max-mem) ]] && conf_write redis-max-mem $(conf_read_exported redis-max-mem)
+	
 	[[ -n $(conf_read_exported mysql-ver) ]] && conf_write mysql-ver $(conf_read_exported mysql-ver)
+	[[ -n $(conf_read_exported mysql-log-general) ]] && conf_write mysql-log-general $(conf_read_exported mysql-log-general)
+	[[ -n $(conf_read_exported mysql-log-binary) ]] && conf_write mysql-log-binary $(conf_read_exported mysql-log-binary)
+	[[ -n $(conf_read_exported mysql-log-slow) ]] && conf_write mysql-log-slow $(conf_read_exported mysql-log-slow)
+	[[ -n $(conf_read_exported mysql-long-query-time) ]] && conf_write mysql-long-query-time $(conf_read_exported mysql-long-query-time)
+	[[ -n $(conf_read_exported mysql-public-access) ]] && conf_write mysql-public-access $(conf_read_exported mysql-public-access)
 	
 	# Built stack based on exported conf
 	if [[ $(conf_read_exported nginx) == "true" ]]; then
@@ -487,23 +493,32 @@ check_exported_conf() {
 
 	
 	# Load custom conf
-	[[ -n $(conf_read_exported login-www-data) ]] && sudo webinoly -login-www-data=on
+	[[ $(conf_read_exported global-access-log-off) =~ ^(false|purged)$ ]] && sudo log -only-error=off || sudo log -only-error=on
+	[[ -n $(conf_read_exported login-www-data) ]] && sudo webinoly -login-www-data=on # Same as sftp-www-data
 	[[ -n $(conf_read_exported mail) ]] && sudo webinoly -email=$(conf_read_exported mail)
-	[[ -n $(conf_read_exported header-hsts) ]] && sudo webinoly -header-hsts=$(conf_read_exported header-hsts)
-	[[ -n $(conf_read_exported header-referrer) ]] && sudo webinoly -header-referrer=$(conf_read_exported header-referrer)
-	[[ $(conf_read_exported header-xssp) == "false" ]] && sudo webinoly -header-xssp=off
-	[[ $(conf_read_exported header-xcto) == "false" ]] && sudo webinoly -header-xcto=off
-	[[ $(conf_read_exported header-xfo) =~ ^(off|deny|sameorigin)$ ]] && sudo webinoly -header-xfo=$(conf_read_exported header-xfo)
-	[[ $(conf_read_exported header-xfo) == "allow-from" && -n $(conf_read_exported header-xfo-url) ]] && sudo webinoly -header-xfo=allow-from -url=$(conf_read_exported header-xfo-url)
+	[[ -n $(conf_read_exported auth-whitelist-ip) ]] && sudo httpauth -whitelist=$(conf_read_exported auth-whitelist-ip)
+	#[[ -n $(conf_read_exported blockip) ]] && sudo webinoly -blockip=$(conf_read blockip) # File is exported below and should have more precedence!
 	[[ -n $(conf_read_exported log-lines) ]] && conf_write log-lines $(conf_read_exported log-lines)
 	[[ -n $(conf_read_exported awsiamrole) ]] && conf_write awsiamrole $(conf_read_exported awsiamrole)
 	[[ -n $(conf_read_exported wp-admin-auth) ]] && conf_write wp-admin-auth $(conf_read_exported wp-admin-auth)
-	[[ -n $(conf_read_exported global-access-log-off) ]] && conf_write global-access-log-off $(conf_read_exported global-access-log-off)
+	[[ -n $(conf_read_exported php-info) ]] && conf_write php-info $(conf_read_exported php-info)
+	
+	[[ -n $(conf_read_exported dbrole) ]] && conf_write dbrole $(conf_read_exported dbrole)
 	[[ -n $(conf_read_exported external-dbh) ]] && conf_write external-dbh $(conf_read_exported external-dbh)
 	[[ -n $(conf_read_exported external-dbx) ]] && conf_write external-dbx $(conf_read_exported external-dbx)
 	[[ -n $(conf_read_exported external-dbu) ]] && conf_write external-dbu $(conf_read_exported external-dbu)
 	[[ -n $(conf_read_exported external-dbp) ]] && conf_write external-dbp $(conf_read_exported external-dbp)
 
+	[[ $(conf_read_exported header-xssp) == "false" ]] && sudo webinoly -header-xssp=off
+	[[ $(conf_read_exported header-xcto) == "false" ]] && sudo webinoly -header-xcto=off
+	[[ $(conf_read_exported header-xfo) =~ ^(off|deny|sameorigin)$ ]] && sudo webinoly -header-xfo=$(conf_read_exported header-xfo)
+	[[ $(conf_read_exported header-xfo) == "allow-from" && -n $(conf_read_exported header-xfo-url) ]] && sudo webinoly -header-xfo=allow-from -url=$(conf_read_exported header-xfo-url)
+	[[ -n $(conf_read_exported header-referrer) ]] && sudo webinoly -header-referrer=$(conf_read_exported header-referrer)
+	[[ -n $(conf_read_exported header-hsts) ]] && sudo webinoly -header-hsts=$(conf_read_exported header-hsts)
+	[[ -n $(conf_read_exported header-cache-control) ]] && conf_write header-cache-control "$(conf_read_exported header-cache-control)" && sudo webinoly -header-cache-control=on
+	[[ -n $(conf_read_exported header-csp) ]] && conf_write header-csp "$(conf_read_exported header-csp)" && sudo webinoly -header-csp=on
+	[[ -n $(conf_read_exported header-permissions) ]] && conf_write header-permissions "$(conf_read_exported header-permissions)" && sudo webinoly -header-permissions-policy=on
+	[[ -n $(conf_read_exported header-robots) ]] && conf_write header-robots "$(conf_read_exported header-robots)" && sudo webinoly -header-robots=on
 	
 	if [[ $is_tar == "true" ]]; then
 		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/csp_webinoly.data"; then
@@ -921,8 +936,9 @@ import_server() {
 		fi
 	fi
 
-	if [[ $import =~ ^(stack|full)$ ]]; then
+	if [[ $import =~ ^(true|stack|full)$ ]]; then
 		[[ $is_tar == "true" ]] &&  tar -C / -xf $file /opt/webinoly/webinoly.conf.exported --absolute-names || sudo cp $file /opt/webinoly/webinoly.conf.exported
+		[[ $is_tar == "true" && $import == "true" ]] && import="full"
 		
 		check_exported_conf
 		echo "${gre}Webinoly Stack Server was built using your imported configuration!${end}"
@@ -963,7 +979,7 @@ import_server() {
 			sudo webinoly -default-site=$(conf_read_exported default-site)
 		fi
 		
-		[[ -f /etc/nginx/sites-available/$(conf_read_exported tools-site) ]] && sudo webinoly -tools-site=$(conf_read_exported default-site)
+		[[ -f /etc/nginx/sites-available/$(conf_read_exported tools-site) ]] && sudo webinoly -tools-site=$(conf_read_exported tools-site)
 	fi
 	
 	sudo mv /opt/webinoly/webinoly.conf.exported /opt/webinoly/webinoly.conf.imported_$(date +%F)-$(date +%T)

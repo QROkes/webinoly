@@ -877,10 +877,5 @@ stack_builder() {
 		[[ $mysql_pass_display == "true" && -z $block_password_display ]] && messagend_install
 	fi
 	
-	if [[ $code != 0 || -n $(conf_read stack_build_error_flag) ]]; then
-		sudo webinoly -verify=critical
-		[[ $? != 0 ]] && conf_write stack_build_error_flag true || return 0 # Functions should never end with negative open!
-	else
-		 return 0
-	fi
+	[[ $code != 0 || -n $(conf_read stack-build-error-flag) ]] && sudo webinoly -verify=critical || return 0 # Never end a function with negative open!
 }

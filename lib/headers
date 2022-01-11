@@ -48,7 +48,7 @@ http_header_csp() {
 		read -p "${blu}CSP header value: ${end}" csp_data
 		
 		if [[ -n $csp_data ]]; then
-			conf_write header-csp $csp_data
+			conf_write header-csp "$csp_data"
 			echo "${blu}${dim}CSP Header... saving data!${end}"
 		fi
 	elif [[ $header_csp =~ ^(true|on)$ && -n $(conf_read header-csp) ]]; then
@@ -92,7 +92,7 @@ http_header_permissions_policy() {
 		[[ $header_permissions_policy != "floc" ]] && read -p "${blu}Permissions Policy header value: ${end}" pph_data
 		
 		if [[ -n $pph_data ]]; then
-			conf_write header-permissions $pph_data
+			conf_write header-permissions "$pph_data"
 			echo "${blu}${dim}Permissions Policy Header... saving data!${end}"
 		fi
 	elif [[ $header_permissions_policy =~ ^(true|on|floc)$ && -n $(conf_read header-permissions) ]]; then
@@ -136,7 +136,7 @@ http_header_cache_control() {
 		read -p "${blu}Cache Control header value: ${end}" cch_data
 		
 		if [[ -n $cch_data ]]; then
-			conf_write header-cache-control $cch_data
+			conf_write header-cache-control "$cch_data"
 			echo "${blu}${dim}Cache Control Header... saving data!${end}"
 		fi
 	elif [[ $header_cache_control =~ ^(true|on)$ && -n $(conf_read header-cache-control) ]]; then
@@ -179,7 +179,7 @@ http_header_robots() {
 		read -p "${blu}X-Robots-Tag header value: ${end}" rob_data
 		
 		if [[ -n $rob_data ]]; then
-			conf_write header-robots $rob_data
+			conf_write header-robots "$rob_data"
 			echo "${blu}${dim}X-Robots-Tag Header... saving data!${end}"
 		fi
 	elif [[ $header_robots =~ ^(true|on)$ && -n $(conf_read header-robots) ]]; then

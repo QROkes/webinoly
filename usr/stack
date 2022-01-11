@@ -671,10 +671,6 @@ if [[ $force == 1 ]]; then
 fi
 
 # Remove all unnecessary packages!
-# Bash maintains an internal hash of previously found executables in your path. (clear all hashed locations)
-if [[ $purge_autoremove == "true" ]]; then
-	sudo apt -yqq autoremove &> /dev/null
-	hash -r
-fi
+[[ $purge_autoremove == "true" ]] && sudo apt -yqq autoremove &> /dev/null
 
 api-events_update ste

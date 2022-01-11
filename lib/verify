@@ -394,7 +394,7 @@ if [[ -z $critical_mode ]]; then
 		echo "${dim}- [WARNING] Default site not found or is not enabled!${end}${red}"
 		ver_two_war="1"
 	fi
-	if [[ -n $(conf_read tools-site) && ! -L /etc/nginx/sites-enabled/$(conf_read tools-site) ]]; then
+	if [[ -n $(conf_read tools-site) && $(conf_read tools-site) != "default" && ! -L /etc/nginx/sites-enabled/$(conf_read tools-site) ]]; then
 		echo "${dim}- [WARNING] Tools site not found or is not enabled!${end}${red}"
 		ver_two_war="1"
 	fi
@@ -438,7 +438,7 @@ if [[ $(conf_read php) == "true" ]]; then
 		echo "- [ERROR] PHP Apt Key not found!"
 		ver_two_err="1"
 	fi
-	if [[ ! -s /etc/apt/sources.list.d/ondrej-ubuntu-php-focal.list ]]; then
+	if [[ ! -s /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list ]]; then
 		echo "- [ERROR] PHP PPA not found in sources list!"
 		ver_two_err="1"
 	fi
@@ -742,7 +742,7 @@ if [[ $(conf_read php-tool-redis) == "true" ]]; then
 		echo "- [ERROR] Redis Apt Key not found!"
 		ver_two_err="1"
 	fi
-	if [[ ! -s /etc/apt/sources.list.d/redislabs-ubuntu-redis-focal.list ]]; then
+	if [[ ! -s /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list ]]; then
 		echo "- [ERROR] Redis PPA not found in sources list!"
 		ver_two_err="1"
 	fi
@@ -936,6 +936,7 @@ if [[ $ver_one_err != 0 || $ver_two_err != 0 || $ver_three_err != 0 || $ver_four
 	echo "********      ${bol}> > >  E R R O R < < <${end}${red}        ***********"
 	echo "********   ${bol}System could not work properly${end}${red}   ***********"
 	echo "******************************************************* ${end}"
+	conf_write stack-build-error-flag true
 	return 1
 elif [[ $ver_one_war != 0 || $ver_two_war != 0 || $ver_three_war != 0 || $ver_four_war != 0 || $ver_five_war != 0 || $ver_six_war != 0 || $ver_seven_war != 0 || $ver_eight_war != 0 || $ver_nine_war != 0 ]]; then
 	if [[ -z $critical_mode ]]; then
@@ -943,10 +944,10 @@ elif [[ $ver_one_war != 0 || $ver_two_war != 0 || $ver_three_war != 0 || $ver_fo
 		echo "********      ${bol}[ W A R N I N G ] There are some messages that should be attended!${end}${red}        ***********"
 		echo "*************************************************************************************************** ${end}"
 	fi
-	conf_delete stack_build_error_flag
+	conf_delete stack-build-error-flag
 	return 0
 else
-	conf_delete stack_build_error_flag
+	conf_delete stack-build-error-flag
 	[[ -z $critical_mode ]] && echo "${bol}${gre}Integrity test successfully passed!!! ${end}"
 	return 0
 fi

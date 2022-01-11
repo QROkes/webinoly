@@ -33,7 +33,8 @@ elif [[ -n $server_reset ]]; then
 	
 	
 elif [[ -n $verify ]]; then
-	webinoly_verify || exit 1
+	webinoly_verify
+	[[ $? != 0 ]] && exit 1
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 	
@@ -168,7 +169,7 @@ elif [[ -n $smtp ]]; then
 
 
 elif [[ -n $backup ]]; then
-	[[ $import =~ ^(stack|full)$ ]] || check_for_nginx_tool_bkp -ask
+	[[ $import =~ ^(true|stack|full)$ ]] || check_for_nginx_tool_bkp -ask
 	
 	if [[ -n $list && -z $add_db_pre ]]; then
 		bkp_s3_list
@@ -314,5 +315,5 @@ fi
 
 
 [[ $(conf_read nginx) == "true" && -z $nginx_not ]] && sudo systemctl reload nginx
-api-events_update wye
 [[ -n $err_cont ]] && exit 1
+api-events_update wye
