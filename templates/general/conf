@@ -163,7 +163,7 @@
 #awsiamrole:false
 
 
-# WordPress Login Basic Authentican
+# WordPress Login Basic Authentication
 # Values: boolean (true/false)
 # Default: true
 # Note: (server-reset not needed)

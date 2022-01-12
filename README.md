@@ -34,7 +34,7 @@ Webinoly provides a set of tools and commands that facilitate web server adminis
 
 ```bash
 # Install Webinoly and LEMP
-wget -qO weby qrok.es/wy && sudo bash weby 3
+wget -qO weby qrok.es/wy && sudo bash weby
 
 # Create your first site.
 sudo site example.com -wp
