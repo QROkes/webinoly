@@ -74,11 +74,17 @@ system_info() {
 	echo "${blu}${bol}[MYSQL]${end}"
 	if [[ $(conf_read mysql) == "true" ]]; then
 		
-		[[ $(conf_read mysql-tool-pma) == "true" ]] && local pmaver=$(grep -E "public const VERSION = '[0-9\.]+'.*;" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Version.php | cut -f 2 -d "'") || local pmaver="Not installed!"
+		# Check if file exist because in legacy it doesn't!
+		if [[ $(conf_read mysql-tool-pma) == "true" && -f /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Version.php ]]; then
+			local pmaver=$(grep -E "public const VERSION = '[0-9\.]+'.*;" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Version.php | cut -f 2 -d "'")
 		
 		# Legacy support: before v5.1.0 (Feb 23, 2021) version is found here:
-		[[ $(conf_read mysql-tool-pma) == "true" && -z $pmaver ]] && local pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'")
-
+		elif [[ $(conf_read mysql-tool-pma) == "true" ]]; then
+			local pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'")
+		
+		elif [[ $(conf_read mysql-tool-pma) != "true" ]]; then
+			local pmaver="Not installed!"
+		fi
 		
 		echo "${blu}Info:${end}${dim} $(sudo mysql --version) ${end}"
 		echo "${blu}phpMyAdmin:${end}${dim} $pmaver ${end}"
@@ -368,18 +374,19 @@ webinoly_update() {
 
 
 fix_permissions() {
-	sudo find /var/www ! -path "/var/www/\.*" -type d -exec chmod 755 {} \;
-	sudo find /var/www ! -path "/var/www/\.*" -type f -exec chmod 644 {} \;
+	# https://github.com/QROkes/webinoly/issues/49
+	sudo find /var/www ! -path "/var/www/\.*" -type d -print0 | sudo xargs -r -0 chmod 755
+	sudo find /var/www ! -path "/var/www/\.*" -type f -print0 | sudo xargs -r -0 chmod 644
 	
 	if [[ -d /var/www/.ssh ]]; then
-		sudo find /var/www/.ssh -type d -exec chmod 700 {} \;
-		sudo find /var/www/.ssh ! -path "/var/www/.ssh/*.pub" -type f -exec chmod 600 {} \;
-		sudo find /var/www/.ssh -path "/var/www/.ssh/*.pub" -type f -exec chmod 644 {} \;
+		sudo find /var/www/.ssh -type d -print0 | sudo xargs -r -0 chmod 700
+		sudo find /var/www/.ssh ! -path "/var/www/.ssh/*.pub" -type f -print0 | sudo xargs -r -0 chmod 600
+		sudo find /var/www/.ssh -path "/var/www/.ssh/*.pub" -type f -print0 | sudo xargs -r -0 chmod 644
 	fi
 	if [[ -d $CURRENT_HOME/.ssh ]]; then
-		sudo find $CURRENT_HOME/.ssh -type d -exec chmod 700 {} \;
-		sudo find $CURRENT_HOME/.ssh ! -path "$CURRENT_HOME/.ssh/*.pub" -type f -exec chmod 600 {} \;
-		sudo find $CURRENT_HOME/.ssh -path "$CURRENT_HOME/.ssh/*.pub" -type f -exec chmod 644 {} \;
+		sudo find $CURRENT_HOME/.ssh -type d -print0 | sudo xargs -r -0 chmod 700
+		sudo find $CURRENT_HOME/.ssh ! -path "$CURRENT_HOME/.ssh/*.pub" -type f -print0 | sudo xargs -r -0 chmod 600
+		sudo find $CURRENT_HOME/.ssh -path "$CURRENT_HOME/.ssh/*.pub" -type f -print0 | sudo xargs -r -0 chmod 644
 		sudo chown -R ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/.ssh
 	fi
 	
