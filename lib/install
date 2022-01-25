@@ -606,7 +606,7 @@ mysql_tool_pma() {
 		sudo cp /var/www/$(conf_read tools-port)/htdocs/pma/config.sample.inc.php /var/www/$(conf_read tools-port)/htdocs/pma/config.inc.php
 		sudo sed -i "/blowfish_secret/c \$cfg['blowfish_secret'] = '$(pwgen -s -1 32)';" /var/www/$(conf_read tools-port)/htdocs/pma/config.inc.php
 		sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs/pma
-		sudo find /var/www/$(conf_read tools-port)/htdocs/pma -type f -exec chmod 644 {} \;
+		sudo find /var/www/$(conf_read tools-port)/htdocs/pma -type f -print0 | sudo xargs -r -0 chmod 644
 		
 		conf_write mysql-tool-pma true
 		echo "${gre}phpMyAdmin has been installed successfully! ${end}"
