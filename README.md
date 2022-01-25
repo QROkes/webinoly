@@ -11,7 +11,9 @@
 </div>
 
 ## Overview
-Linux Ubuntu + Nginx + MariaDB (MySQL) + PHP is one of the most reliable and powerful configurations to host your websites. **With Webinoly you can set up your web server in just one step.**
+A complete LEMP stack _– Linux Ubuntu + Nginx + MariaDB (MySQL) + PHP –_ or install individual packages according to your needs.
+
+**One of the most reliable configurations to host your websites and with Webinoly you can do it in just one step.**
 
 Webinoly provides a set of tools and commands that facilitate web server administration.
 - Unique commands to create, delete, disable sites.
