@@ -170,7 +170,6 @@
 # Note: It will be applied ONLY for sites created after this setting is changed.
 # Note: For existing sites you should use the proper command 'sudo httpauth example.com -wp-admin=on'.
 # Note: You can whitelist an IP to skip authentication. Read the docs!
-# Same as: sudo httpauth -wp-admin=on
 ###########################
 #wp-admin-auth:true
 
@@ -214,6 +213,8 @@
 # HTTP Header: Permissions Policy
 # Values: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Feature-Policy
 # Default: <empty>
+# Note: Use 'floc' value to automatically include the policy to forbid Topics API calculation.
+# Note: https://developer.chrome.com/docs/privacy-sandbox/topics/#site-opt-out
 ###########################
 #header-permissions:microphone 'none'; geolocation 'none'
 
@@ -357,7 +358,6 @@
 # Default: <empty>
 # Note: (server-reset not needed)
 # Note: https://webinoly.com/documentation/sites/#externaldb
-# Same as: sudo webinoly -external-db-save=[user,pass,host:port]
 ###########################
 #external-dbh:<host>
 #external-dbx:<port>
@@ -370,7 +370,6 @@
 # Default: full
 # Note: (server-reset not needed)
 # Note: https://webinoly.com/documentation/webinolys/#privileges
-# Same as: sudo webinoly -db-role-default=full
 ###########################
 #dbrole:full
 
