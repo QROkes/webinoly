@@ -216,6 +216,11 @@ smtp_setup() {
 
 
 mysql_change_password() {
+	if ! sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "quit" 2>/dev/null; then
+		echo "${red}[ERROR] MySQL Connection to localhost failed! ${dim}(admin)${end}"
+		exit 1
+	fi
+	
 	if [[ $mysql_password == true ]]; then
 		echo ""
 		read -p "${blu}MySQL User: ${end}" user
@@ -240,10 +245,13 @@ mysql_change_password() {
 			exit 1
 	fi
 	
-	sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "ALTER USER '${user}'@'localhost' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
+	# First get the User host: 'localhost' or '%'
+	local userhost=$(sudo mysql -ss --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "SELECT Host FROM mysql.user WHERE User='${user}' LIMIT 1;")
+	
+	sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "ALTER USER '${user}'@'${userhost}' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
 	if [[ $? == 0 ]]; then
 		[[ $user =~ ^(root|admin)$ ]] && conf_write mysql-${user} $( echo $pass | openssl enc -a -salt )
-		echo "${gre}MySQL Password successfully changed!${end}"
+		echo "${gre}MySQL Password successfully changed! ${dim}('${user}'@'${userhost}')${end}"
 	else
 		echo "${red}[ERROR] Unexpected error!${end}"
 		exit 1
