@@ -1535,6 +1535,15 @@ wp_cache() {
 cloning_site() {
 	if [[ -f /etc/nginx/sites-available/$domain && $overwrite == "on" ]]; then
 		echo "${blu}Site already exists! ${dim} Overwriting...${end}"
+		
+		# Preserve these data when overwriting (important because they can be custom)
+		if [[ $iswpclone == "true" ]]; then
+			local custom_wp_dbname=$( wp_config_read $domain DB_NAME $subfolder )
+			local custom_wp_dbuser=$( wp_config_read $domain DB_USER $subfolder )
+			local custom_wp_dbpass=$( wp_config_read $domain DB_PASSWORD $subfolder )
+			local custom_wp_dbpref=$( grep -F "table_prefix" $(wp_config_path $domain $subfolder) | cut -f 2 -d "'" -s)
+		fi
+		
 		[[ -z $subfolder ]] && sudo site $domain -delete=force > /dev/null 2>&1 || sudo site $domain -subfolder=$subfolder -delete=force > /dev/null 2>&1
 	fi
 	
@@ -1621,19 +1630,26 @@ cloning_site() {
 	# Only for WP sites
 	if [[ $iswpclone == "true" ]]; then
 		local dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
+		local usr=$dom
 		local AUTOGENPASS_WPDB=`pwgen -s -1 16`
 		
+		# Preserve these data when overwriting (important because they can be custom)
+		[[ -n $custom_wp_dbname ]] && local dom=$custom_wp_dbname
+		[[ -n $custom_wp_dbuser ]] && local usr=$custom_wp_dbuser
+		[[ -n $custom_wp_dbpass ]] && local AUTOGENPASS_WPDB=$custom_wp_dbpass
+		[[ -n $custom_wp_dbpref ]] && sudo sed -i "/table_prefix/c \$table_prefix  = '$custom_wp_dbpref';" $(wp_config_path $domain $subfolder)
+		
 		wp_config_write $domain DB_NAME \'$dom\' $subfolder
-		wp_config_write $domain DB_USER \'$dom\' $subfolder
+		wp_config_write $domain DB_USER \'$usr\' $subfolder
 		wp_config_write $domain DB_PASSWORD \'$AUTOGENPASS_WPDB\' $subfolder
 		wp_config_write $domain WP_CACHE_KEY_SALT \'wp_$domain$(echo $subfolder | sed "s/\//_/g")\' $subfolder
 		
 		if [[ $wp_dbhost == "localhost" ]]; then
-			site -mysql=[localhost,$dom,$dom,$AUTOGENPASS_WPDB] > /dev/null 2>&1
+			site -mysql=[localhost,$dom,$usr,$AUTOGENPASS_WPDB] > /dev/null 2>&1
 			mysqldump -u admin -p$ADMIN_PASS $wp_dbname | mysql -u admin -p$ADMIN_PASS $dom
 			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
 		else
-			site -mysql=[$wp_dbhost,$dom,$dom,$AUTOGENPASS_WPDB,$extdb_user,$extdb_pass] > /dev/null 2>&1
+			site -mysql=[$wp_dbhost,$dom,$usr,$AUTOGENPASS_WPDB,$extdb_user,$extdb_pass] > /dev/null 2>&1
 			mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $wp_dbname | mysql -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $dom
 			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
 		fi
