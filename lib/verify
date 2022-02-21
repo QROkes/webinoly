@@ -750,6 +750,21 @@ if [[ $ver_disk =~ ^[0-9]+$ && $ver_disk -gt 75 ]]; then
 fi
 
 if [[ -z $critical_mode ]]; then
+	# Check for BASH Shell
+	if [[ -f /proc/$(ps -aux | grep -E "${SUDO_USER:-${USER}}.*pts/0" | grep -v "grep" | tail -n 1 | awk '{print $2}')/cmdline ]]; then
+		# This is a very "shity" method, but checking if file exists is very reliable
+		local ver_shell_current=$(tr -d '\000' < /proc/$(ps -aux | grep -E "${SUDO_USER:-${USER}}.*pts/0" | grep -v "grep" | tail -n 1 | awk '{print $2}')/cmdline)
+	elif [[ -f /proc/$(ps -aux | grep -E "$USER.*pts/0[ ]+S[ ]+" | tail -n 1 | awk '{print $2}')/cmdline ]]; then
+		local ver_shell_current=$(tr -d '\000' < /proc/$(ps -aux | grep -E "$USER.*pts/0[ ]+S[ ]+" | tail -n 1 | awk '{print $2}')/cmdline)
+	else
+		echo "${blu}${dim}- [INFO] Shell check fails to retrieve data! ${end}${red}"
+	fi
+	if [[ -n $ver_shell_current && $ver_shell_current != *"bash"* ]]; then
+		# Should never be displayed because is blocked in general lib, but who knows!
+		echo "${red}- [WARNING] BASH Shell is required! ${dim}(${shell_current}) ${end}"
+		local ver_six_war="1"
+	fi
+	
 	# Check for updates
 	if [[ -a /usr/lib/update-notifier/apt-check ]]; then
 		local ver_os_updates=$(echo $(/usr/lib/update-notifier/apt-check --human-readable) | grep -Eo "^[0-9]+ " | head -1 | sed "s/ //")

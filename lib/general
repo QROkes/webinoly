@@ -24,10 +24,17 @@ readonly dim=`tput dim`
 
 
 # Check for BASH Shell
-if [[ -z $(grep -E "^${SUDO_USER:-${USER}}\:.*\/bash.*$" /etc/passwd) ]]; then
-	echo "$(tput setaf 1)BASH Shell is required!$(tput sgr0)"
+if [[ -f /proc/$(ps -aux | grep -E "${SUDO_USER:-${USER}}.*pts/0" | grep -v "grep" | tail -n 1 | awk '{print $2}')/cmdline ]]; then
+	# This is a very "shity" method, but checking if file exists is very reliable
+	shell_current=$(tr -d '\000' < /proc/$(ps -aux | grep -E "${SUDO_USER:-${USER}}.*pts/0" | grep -v "grep" | tail -n 1 | awk '{print $2}')/cmdline)
+elif [[ -f /proc/$(ps -aux | grep -E "$USER.*pts/0[ ]+S[ ]+" | tail -n 1 | awk '{print $2}')/cmdline ]]; then
+	shell_current=$(tr -d '\000' < /proc/$(ps -aux | grep -E "$USER.*pts/0[ ]+S[ ]+" | tail -n 1 | awk '{print $2}')/cmdline)
+fi
+if [[ -n $shell_current && $shell_current != *"bash"* ]]; then
+	echo "${red}BASH Shell is required! ${dim}(${shell_current}) ${end}"
 	exit 1
 fi
+
 # STOP and exit if not root or sudo.
 if [[ $(whoami) != "root" ]]; then
 	echo "${red}Please run this script as root or using sudo.${end}"

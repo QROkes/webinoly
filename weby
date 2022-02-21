@@ -14,8 +14,15 @@ if ! [[ $distr == "Ubuntu" && $osver =~ ^(bionic|focal)$ ]]; then
 fi
 
 # Check for BASH Shell
-if [[ -z $(grep -E "^${SUDO_USER:-${USER}}\:.*\/bash.*$" /etc/passwd) ]]; then
-	echo "$(tput setaf 1)BASH Shell is required!$(tput sgr0)"
+if [[ -f /proc/$(ps -aux | grep -E "${SUDO_USER:-${USER}}.*pts/0" | grep -v "grep" | tail -n 1 | awk '{print $2}')/cmdline ]]; then
+	# This is a very "shity" method, but checking if file exists is very reliable
+	shell_current=$(tr -d '\000' < /proc/$(ps -aux | grep -E "${SUDO_USER:-${USER}}.*pts/0" | grep -v "grep" | tail -n 1 | awk '{print $2}')/cmdline)
+elif [[ -f /proc/$(ps -aux | grep -E "$USER.*pts/0[ ]+S[ ]+" | tail -n 1 | awk '{print $2}')/cmdline ]]; then
+	# This second check is useful when logedin as root
+	shell_current=$(tr -d '\000' < /proc/$(ps -aux | grep -E "$USER.*pts/0[ ]+S[ ]+" | tail -n 1 | awk '{print $2}')/cmdline)
+fi
+if [[ -n $shell_current && $shell_current != *"bash"* ]]; then
+	echo "$(tput setaf 1)BASH Shell is required! $(tput dim)(${shell_current}) $(tput sgr0)"
 	sudo rm weby
 	exit 1
 fi
