@@ -754,9 +754,9 @@ if [[ -z $critical_mode ]]; then
 	# This is a very "shity" method, but checking if file exists is very reliable
 	# If modified: this same script is in installer, general lib and verify
 	# The second check is useful when logedin as root
-	ver_shell_pid=$(ps -aux | grep -E "${SUDO_USER:-${USER}}.*pts/0[ ]+S[s]?[ ]+" | grep -v "grep" | tail -n 1 | awk '{print $2}')
-	[[ -z $ver_shell_pid || ! -f /proc/$ver_shell_pid/cmdline ]] && ver_shell_pid=$(ps -aux | grep -E "$USER.*pts/0[ ]+S[s]?[ ]+" | tail -n 1 | awk '{print $2}')
-	[[ -n $ver_shell_pid && -f /proc/$ver_shell_pid/cmdline ]] && ver_shell_current=$(tr -d '\000' < /proc/$ver_shell_pid/cmdline)
+	local ver_shell_pid=$(ps -aux | grep -E "${SUDO_USER:-${USER}}.*pts/0[ ]+S[s]?[ ]+" | grep -v "grep" | tail -n 1 | awk '{print $2}')
+	[[ -z $ver_shell_pid || ! -f /proc/$ver_shell_pid/cmdline ]] && local ver_shell_pid=$(ps -aux | grep -E "$USER.*pts/0[ ]+S[s]?[ ]+" | tail -n 1 | awk '{print $2}')
+	[[ -n $ver_shell_pid && -f /proc/$ver_shell_pid/cmdline ]] && local ver_shell_current=$(tr -d '\000' < /proc/$ver_shell_pid/cmdline)
 	if [[ -n $ver_shell_current && $ver_shell_current != *"bash"* ]]; then
 		# Should never be displayed because is blocked in general lib, but who knows!
 		echo "${dim}- [WARNING] BASH Shell is required! ${dim}(${ver_shell_current}) ${end}${red}"
