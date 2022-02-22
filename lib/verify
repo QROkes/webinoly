@@ -751,17 +751,19 @@ fi
 
 if [[ -z $critical_mode ]]; then
 	# Check for BASH Shell
-	if [[ -f /proc/$(ps -aux | grep -E "${SUDO_USER:-${USER}}.*pts/0" | grep -v "grep" | tail -n 1 | awk '{print $2}')/cmdline ]]; then
+	if [[ -f /proc/$(ps -aux | grep -E "${SUDO_USER:-${USER}}.*pts/0[ ]+S[s]?[ ]+" | grep -v "grep" | tail -n 1 | awk '{print $2}')/cmdline ]]; then
 		# This is a very "shity" method, but checking if file exists is very reliable
-		local ver_shell_current=$(tr -d '\000' < /proc/$(ps -aux | grep -E "${SUDO_USER:-${USER}}.*pts/0" | grep -v "grep" | tail -n 1 | awk '{print $2}')/cmdline)
-	elif [[ -f /proc/$(ps -aux | grep -E "$USER.*pts/0[ ]+S[ ]+" | tail -n 1 | awk '{print $2}')/cmdline ]]; then
-		local ver_shell_current=$(tr -d '\000' < /proc/$(ps -aux | grep -E "$USER.*pts/0[ ]+S[ ]+" | tail -n 1 | awk '{print $2}')/cmdline)
+		# If modified: this same script is in installer, general lib and verify
+		local ver_shell_current=$(tr -d '\000' < /proc/$(ps -aux | grep -E "${SUDO_USER:-${USER}}.*pts/0[ ]+S[s]?[ ]+" | grep -v "grep" | tail -n 1 | awk '{print $2}')/cmdline)
+	elif [[ -f /proc/$(ps -aux | grep -E "$USER.*pts/0[ ]+S[s]?[ ]+" | tail -n 1 | awk '{print $2}')/cmdline ]]; then
+		# This second check is useful when logedin as root
+		local ver_shell_current=$(tr -d '\000' < /proc/$(ps -aux | grep -E "$USER.*pts/0[ ]+S[s]?[ ]+" | tail -n 1 | awk '{print $2}')/cmdline)
 	else
 		echo "${blu}${dim}- [INFO] Shell check fails to retrieve data! ${end}${red}"
 	fi
 	if [[ -n $ver_shell_current && $ver_shell_current != *"bash"* ]]; then
 		# Should never be displayed because is blocked in general lib, but who knows!
-		echo "${red}- [WARNING] BASH Shell is required! ${dim}(${shell_current}) ${end}"
+		echo "${dim}- [WARNING] BASH Shell is required! ${dim}(${ver_shell_current}) ${end}${red}"
 		local ver_six_war="1"
 	fi
 	
