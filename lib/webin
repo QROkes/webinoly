@@ -543,6 +543,7 @@ change_tools_port() {
 		fi
 		
 		conf_write tools-port $port
+		conf_write tools-port-set $port
 		echo "${gre}Port${blu} $port ${gre}has been enabled to access all your Tools! ${end}"
 	else
 		echo "${red}[ERROR] Please, enter a valid port number (1-65535)!${end}"
@@ -671,6 +672,7 @@ Match Group sftponly
 		[[ -n $falus ]] && sudo sed -i "s/$falus/$falus www-data/" /etc/ssh/sshd_config
 
 		conf_write login-www-data true
+		conf_write sftp-www-data true
 		sudo systemctl restart ssh
 		echo "${gre}SFTP access for www-data user has been successfuly enabled! ${end}"
 	
@@ -691,6 +693,7 @@ Match Group sftponly
 		fi
 
 		conf_write login-www-data purged
+		conf_write sftp-www-data purged
 		sudo systemctl restart ssh
 		echo "${gre}SFTP access for www-data user has been successfuly disabled! ${end}"
 	else
@@ -911,6 +914,7 @@ set_default_nginx_response() {
 			sudo cat /opt/webinoly/templates/source/default >| /etc/nginx/sites-available/default
 			remove_domain_default_site
 			conf_write default-site default
+			conf_write default-response default
 			echo "${gre}Default Nginx was successfully assigned as default site!${end}"
 		else
 			echo "${red}[ERROR] Nginx Default file backup not found! ${end}"
@@ -921,6 +925,7 @@ set_default_nginx_response() {
 		remove_domain_default_site
 		create_blackhole_cert
 		conf_write default-site blackhole
+		conf_write default-response blackhole
 		echo "${gre}Blackhole Nginx site was successfully assigned as default site!${end}"
 	else
 		# Domain option
@@ -943,6 +948,7 @@ set_default_nginx_response() {
 			
 			sudo rm -rf /etc/nginx/sites-enabled/default
 			conf_write default-site $default_site
+			conf_write default-response $default_site
 			echo "${gre}Site${blu} ${default_site} ${gre}was successfully assigned as default site!${end}"
 		else
 			[[ -f /etc/nginx/sites-available/$default_site ]] && echo "${red}Site found but is disabled.${end}"
