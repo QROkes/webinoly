@@ -631,7 +631,7 @@ elif [[ -n $php_ver ]]; then
 			
 			smtp_backup_recovery
 			[[ $pmaflag == "true" ]] && sudo stack -pma
-		elif [[ $(conf_read php) != "true" && $(conf_read mysql-tool-pma) != "true" ]]; then
+		elif [[ $(conf_read php) != "true" ]]; then
 			conf_write php-ver $php_ver
 			echo "${gre}PHP is not already installed but this version will be installed next time! ${end}"
 		fi
