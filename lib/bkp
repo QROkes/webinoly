@@ -456,6 +456,11 @@ check_exported_conf() {
 	[[ -n $(conf_read_exported tools-port) ]] && conf_write tools-port $(conf_read_exported tools-port)
 	[[ -n $(conf_read_exported fastcgi-conf) ]] && conf_write fastcgi-conf $(conf_read_exported fastcgi-conf)
 	[[ -n $(conf_read_exported xmlrpc) ]] && conf_write xmlrpc $(conf_read_exported xmlrpc)
+	[[ $(conf_read_exported global-access-log-off) =~ ^(false|purged)$ ]] && conf_write global-access-log-off $(conf_read_exported global-access-log-off)
+	[[ $(conf_read_exported default-site) == "blackhole" ]] && conf_write default-response $(conf_read_exported default-site) # In case of site is exported at the end, not here!
+	[[ -n $(conf_read_exported login-www-data) ]] && conf_write sftp-www-data $(conf_read_exported login-www-data)
+	[[ -n $(conf_read_exported auth-whitelist-ip) ]] && conf_write auth-whitelist-ip $(conf_read_exported auth-whitelist-ip)
+	[[ -n $(conf_read_exported blockip) ]] && conf_write blockip $(conf_read_exported blockip)
 	[[ -n $(conf_read_exported max-mb-uploads) ]] && conf_write max-mb-uploads $(conf_read_exported max-mb-uploads)
 	
 	[[ -n $(conf_read_exported php-ver) ]] && conf_write php-ver $(conf_read_exported php-ver)
@@ -473,18 +478,71 @@ check_exported_conf() {
 	[[ -n $(conf_read_exported mysql-long-query-time) ]] && conf_write mysql-long-query-time $(conf_read_exported mysql-long-query-time)
 	[[ -n $(conf_read_exported mysql-public-access) ]] && conf_write mysql-public-access $(conf_read_exported mysql-public-access)
 	
+	[[ -n $(conf_read_exported dbrole) ]] && conf_write dbrole $(conf_read_exported dbrole)
+	[[ -n $(conf_read_exported external-dbh) ]] && conf_write external-dbh $(conf_read_exported external-dbh)
+	[[ -n $(conf_read_exported external-dbx) ]] && conf_write external-dbx $(conf_read_exported external-dbx)
+	[[ -n $(conf_read_exported external-dbu) ]] && conf_write external-dbu $(conf_read_exported external-dbu)
+	[[ -n $(conf_read_exported external-dbp) ]] && conf_write external-dbp $(conf_read_exported external-dbp)
+
+	[[ -n $(conf_read_exported mail) ]] && conf_write mail $(conf_read_exported mail)
+	[[ -n $(conf_read_exported log-lines) ]] && conf_write log-lines $(conf_read_exported log-lines)
+	[[ -n $(conf_read_exported awsiamrole) ]] && conf_write awsiamrole $(conf_read_exported awsiamrole)
+	[[ -n $(conf_read_exported wp-admin-auth) ]] && conf_write wp-admin-auth $(conf_read_exported wp-admin-auth)
+	[[ -n $(conf_read_exported php-info) ]] && conf_write php-info $(conf_read_exported php-info)
+
+	[[ $(conf_read_exported header-xssp) == "false" ]] && conf_write header-xssp $(conf_read_exported header-xssp)
+	[[ $(conf_read_exported header-xcto) == "false" ]] && conf_write header-xcto $(conf_read_exported header-xcto)
+	[[ -n $(conf_read_exported header-xfo) ]] && conf_write header-xfo $(conf_read_exported header-xfo)
+	[[ -n $(conf_read_exported header-xfo-url) && $(conf_read_exported header-xfo) == "allow-from" ]] && conf_write header-xfo-url $(conf_read_exported header-xfo-url)
+	[[ -n $(conf_read_exported header-referrer) ]] && conf_write header-referrer $(conf_read_exported header-referrer)
+	[[ -n $(conf_read_exported header-hsts) ]] && conf_write header-hsts $(conf_read_exported header-hsts)
+	[[ -n $(conf_read_exported header-cache-control) ]] && conf_write header-cache-control "$(conf_read_exported header-cache-control)"
+	[[ -n $(conf_read_exported header-csp) ]] && conf_write header-csp "$(conf_read_exported header-csp)"
+	[[ -n $(conf_read_exported header-permissions) ]] && conf_write header-permissions "$(conf_read_exported header-permissions)"
+	[[ -n $(conf_read_exported header-robots) ]] && conf_write header-robots "$(conf_read_exported header-robots)"
+	
+	
 	# Built stack based on exported conf
 	if [[ $(conf_read_exported nginx) == "true" ]]; then
-		sudo stack -nginx
+		if [[ $(conf_read nginx) == "true" ]]; then
+			sudo webinoly -server-reset=nginx # If already installed, do a server-reset to load the exported settings
+		elif [[ $(conf_read_exported nginx-tool-bkp) == "true" && $(conf_read_exported nginx-tool-ssl) == "true" ]]; then
+			sudo stack -nginx
+		elif [[ $(conf_read_exported nginx-tool) == "true" ]]; then
+			# Support for old configuration - REMOVE in the future!
+			sudo stack -nginx
+		else
+			sudo stack -nginx -build=light
+			[[ $(conf_read_exported nginx-tool-bkp) == "true" ]] && sudo stack -backups
+			[[ $(conf_read_exported nginx-tool-ssl) == "true" ]] && sudo stack -letsencrypt
+		fi
+	elif [[ $(conf_read_exported nginx) != "true" && $(conf_read_exported nginx-tool-bkp) == "true" ]]; then
+		# Backups can be installed alone...
+		sudo stack -backups
 	fi
 	
 	if [[ $(conf_read_exported php) == "true" ]]; then
-		sudo stack -php
+		if [[ $(conf_read php) == "true" ]]; then
+			sudo webinoly -server-reset=php # If already installed, do a server-reset to load the exported settings
+		elif [[ $(conf_read_exported php-tool-postfix) == "true" && $(conf_read_exported php-tool-redis) == "true" && $(conf_read_exported php-tool-memcached) == "true" ]]; then
+			sudo stack -php
+		elif [[ $(conf_read_exported php-tool) == "true" ]]; then
+			# Support for old configuration - REMOVE in the future!
+			sudo stack -php
+		else
+			sudo stack -php -build=light
+			[[ $(conf_read_exported php-tool-postfix) == "true" ]] && sudo stack -postfix
+			[[ $(conf_read_exported php-tool-redis) == "true" ]] && sudo stack -redis
+			[[ $(conf_read_exported php-tool-memcached) == "true" ]] && sudo stack -memcached
+		fi
 	fi
 	
 	if [[ $(conf_read_exported mysql) == "true" && $(conf_read_exported mysql-tool-pma) == "true" ]]; then
 		# Passwords are imported too, so we don't need to display passwords created during the installation process, because they are replaced.
 		sudo stack -mysql -block-password-display
+	elif [[ $(conf_read_exported mysql-tool) == "true" ]]; then
+			# Support for old configuration - REMOVE in the future!
+			sudo stack -mysql -block-password-display
 	elif [[ $(conf_read_exported mysql) == "true" ]]; then
 		sudo stack -mysql -build=light -block-password-display
 	elif [[ $(conf_read_exported mysql-client) == "true" ]]; then
@@ -492,52 +550,8 @@ check_exported_conf() {
 	fi
 
 	
-	# Load custom conf
-	[[ $(conf_read_exported global-access-log-off) =~ ^(false|purged)$ ]] && sudo log -only-error=off || sudo log -only-error=on
-	[[ -n $(conf_read_exported login-www-data) ]] && sudo webinoly -login-www-data=on # Same as sftp-www-data
-	[[ -n $(conf_read_exported mail) ]] && sudo webinoly -email=$(conf_read_exported mail)
-	[[ -n $(conf_read_exported auth-whitelist-ip) ]] && sudo httpauth -whitelist=$(conf_read_exported auth-whitelist-ip)
-	#[[ -n $(conf_read_exported blockip) ]] && sudo webinoly -blockip=$(conf_read blockip) # File is exported below and should have more precedence!
-	[[ -n $(conf_read_exported log-lines) ]] && conf_write log-lines $(conf_read_exported log-lines)
-	[[ -n $(conf_read_exported awsiamrole) ]] && conf_write awsiamrole $(conf_read_exported awsiamrole)
-	[[ -n $(conf_read_exported wp-admin-auth) ]] && conf_write wp-admin-auth $(conf_read_exported wp-admin-auth)
-	[[ -n $(conf_read_exported php-info) ]] && conf_write php-info $(conf_read_exported php-info)
-	
-	[[ -n $(conf_read_exported dbrole) ]] && conf_write dbrole $(conf_read_exported dbrole)
-	[[ -n $(conf_read_exported external-dbh) ]] && conf_write external-dbh $(conf_read_exported external-dbh)
-	[[ -n $(conf_read_exported external-dbx) ]] && conf_write external-dbx $(conf_read_exported external-dbx)
-	[[ -n $(conf_read_exported external-dbu) ]] && conf_write external-dbu $(conf_read_exported external-dbu)
-	[[ -n $(conf_read_exported external-dbp) ]] && conf_write external-dbp $(conf_read_exported external-dbp)
-
-	[[ $(conf_read_exported header-xssp) == "false" ]] && sudo webinoly -header-xssp=off
-	[[ $(conf_read_exported header-xcto) == "false" ]] && sudo webinoly -header-xcto=off
-	[[ $(conf_read_exported header-xfo) =~ ^(off|deny|sameorigin)$ ]] && sudo webinoly -header-xfo=$(conf_read_exported header-xfo)
-	[[ $(conf_read_exported header-xfo) == "allow-from" && -n $(conf_read_exported header-xfo-url) ]] && sudo webinoly -header-xfo=allow-from -url=$(conf_read_exported header-xfo-url)
-	[[ -n $(conf_read_exported header-referrer) ]] && sudo webinoly -header-referrer=$(conf_read_exported header-referrer)
-	[[ -n $(conf_read_exported header-hsts) ]] && sudo webinoly -header-hsts=$(conf_read_exported header-hsts)
-	[[ -n $(conf_read_exported header-cache-control) ]] && conf_write header-cache-control "$(conf_read_exported header-cache-control)" && sudo webinoly -header-cache-control=on
-	[[ -n $(conf_read_exported header-csp) ]] && conf_write header-csp "$(conf_read_exported header-csp)" && sudo webinoly -header-csp=on
-	[[ -n $(conf_read_exported header-permissions) ]] && conf_write header-permissions "$(conf_read_exported header-permissions)" && sudo webinoly -header-permissions-policy=on
-	[[ -n $(conf_read_exported header-robots) ]] && conf_write header-robots "$(conf_read_exported header-robots)" && sudo webinoly -header-robots=on
-	
 	if [[ $is_tar == "true" ]]; then
-		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/csp_webinoly.data"; then
-			tar -C / -xf $file /opt/webinoly/templates/source/csp_webinoly.data --absolute-names
-			sudo webinoly -header-csp=on
-		fi
-		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/pph_webinoly.data"; then
-			tar -C / -xf $file /opt/webinoly/templates/source/pph_webinoly.data --absolute-names
-			sudo webinoly -header-permissions-policy=on
-		fi
-		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/cch_webinoly.data"; then
-			tar -C / -xf $file /opt/webinoly/templates/source/cch_webinoly.data --absolute-names
-			sudo webinoly -header-cache-control=on
-		fi
-		if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/rob_webinoly.data"; then
-			tar -C / -xf $file /opt/webinoly/templates/source/rob_webinoly.data --absolute-names
-			[[ -s /opt/webinoly/templates/source/rob_webinoly.data ]] && sudo webinoly -header-robots=on
-		fi
-
+		# Check for custom HTTP Headers
 		if [[ $(conf_read_exported header-custom) == "true" ]]; then
 			if tar -tvf $file --absolute-names | grep -oq "/opt/webinoly/templates/source/custom_header_http_webinoly.data"; then
 				tar -C / -xf $file /opt/webinoly/templates/source/custom_header_http_webinoly.data --absolute-names
@@ -552,11 +566,9 @@ check_exported_conf() {
 		fi
 		
 		# Conf stack files
-		if tar -tvf $file --absolute-names | grep -oq "/etc/nginx/conf.d/blockips.conf"; then
-			tar -C / -xf $file /etc/nginx/conf.d/blockips.conf --absolute-names
-		fi
 		if tar -tvf $file --absolute-names | grep -oq "/etc/nginx/.htpasswd"; then
 			tar -C / -xf $file /etc/nginx/.htpasswd --absolute-names
+			sudo nginx -t && sudo service nginx reload
 		fi
 		if tar -tvf $file --absolute-names | grep -oq "$HOME/.aws/credentials"; then
 			tar -C / -xf $file $HOME/.aws/credentials --absolute-names
@@ -954,7 +966,7 @@ import_server() {
 			echo "${red}[ERROR] PHP is not installed, some exported files may not work properly!${end}"
 		fi
 		if [[ $(conf_read_exported server-version) != $(conf_read server-version) ]]; then
-			echo "${red}[ERROR] Webinoly stack version is different, unexpected errors may occur!${end}"
+			echo "${red}${dim}[WARNING] Imported file was created using an older configuration, the new stack built can differ!${end}"
 		fi
 		
 		if [[ -s /var/www/webinoly_backup_dball && $(conf_read mysql) == "true" && -z $skip_db ]]; then
