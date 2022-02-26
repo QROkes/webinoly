@@ -8,6 +8,9 @@ source /opt/webinoly/lib/site-ssl
 warning_messages() {
 	# Warning Messages
 	if [[ $warning_mes != "true" ]]; then
+		if [[ $type == [123] && $dbhost != "localhost" && $(conf_read dbrole) =~ ^(all|grant)$ ]]; then
+			echo "${dim}[WARNING] You have set '$(conf_read dbrole)' as default privileges, some external DB services may not support it!${end}"
+		fi
 		if [[ $type == [123] && $(conf_read wp-admin-auth) != "purged" && ! -s /etc/nginx/.htpasswd && ! -s /etc/nginx/apps.d/.htpasswd-$domain ]]; then
 			echo "${dim}[WARNING] HTTP Authentication Credentials not found and you may need it to complete the WordPress installation process!!${end}"
 		fi
@@ -139,10 +142,19 @@ wpinstall() {
 		while [[ $done != "1" ]]
 		do
 			done="1"
-			# Ask DB data or suggest default values
 			echo "${blu}"
-			[[ $type == [2345] ]] || read -p "Database Host [localhost]: " dbhost
-			dbhost=${dbhost:-localhost}
+			
+			# Ask DB data or suggest default values
+			[[ $(conf_read mysql) == "true" ]] && local dbhost_suggested="localhost" || local dbhost_suggested="external.host:port"
+			
+			if [[ -n $(conf_read external-dbh) && -n $(conf_read external-dbu) && -n $(conf_read external-dbp) ]]; then
+				[[ -n $(conf_read external-dbx) ]] && local dbhost_suggested="$(conf_read external-dbh):$(conf_read external-dbx)" || local dbhost_suggested=$(conf_read external-dbh)
+				dburoot=$(conf_read external-dbu)
+				dbproot=$( echo $(conf_read external-dbp) | openssl enc -d -a -salt )
+			fi
+			
+			[[ $type == [2345] ]] || read -p "Database Host [${dbhost_suggested}]: " dbhost
+			dbhost=${dbhost:-$dbhost_suggested}
 			[[ ${dbhost,,} == "localhost" && $setupmysql == [yY] ]] && check_for_mysql
 			
 			# In case of external db
@@ -176,7 +188,7 @@ wpinstall() {
 				check_for_mysql_client
 				echo "${blu}"
 				
-				if [[ $dbhost != "localhost" && ( $type == 1 || ( $type == [35] && ( -z $dburoot || -z $dbproot ))) ]]; then
+				if [[ $dbhost != "localhost" && ( $type == [135] && ( -z $dburoot || -z $dbproot )) ]]; then
 					read -p "External DB username: " dburoot
 					read -p "External DB password: " dbproot
 					echo ""

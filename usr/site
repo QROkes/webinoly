@@ -215,7 +215,12 @@ elif [[ -n $multisite_convert && -f /etc/nginx/sites-available/$domain ]]; then
 	if [[ $(is_wp $domain $subfolder) == "false" ]]; then
 		echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WP site!${end}"
 		exit 1
-	elif [[ $(is_wp_installed $domain $subfolder) != "true" ]]; then
+	fi
+	
+	# We need to call this function in the parent shell to preserve variables and avoid asking two or more times for the same values in case of external db.
+	wp_conf_retrieve $domain true false $subfolder 	
+	
+	if [[ $(is_wp_installed $domain $subfolder) != "true" ]]; then
 		echo "${red}[ERROR] WordPress site${blu} $domain$subfolder ${red}is empty and still not configured!${end}"
 		exit 1
 	elif [[ $(is_parked $domain) == "true" ]]; then

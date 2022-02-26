@@ -378,11 +378,9 @@ external_db_parse() {
 			# Make it global only after verification
 			extdb_user=$user
 			extdb_pass=$pass
-			if [[ $1 != "-nohost" ]]; then
-				extdb_host=$host
-				extdb_url=$url
-				extdb_port=$port
-			fi
+			extdb_host=$host
+			extdb_url=$url
+			extdb_port=$port
 		fi
 	else
 		echo "${red}[ERROR] External DB parameter not found!${end}"
@@ -520,8 +518,10 @@ wp_conf_retrieve() {
 		fi
 		
 		if [[ -n $external_db ]]; then
-			external_db_parse -nohost
-		elif [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
+			external_db_parse
+			[[ "${wp_dbhost}:${wp_dbport}" != $extdb_host ]] && unset external_db
+		fi
+		if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
 			echo "" >&2
 			echo "${gre}External DB${blu} '${extdb_url}:${extdb_port}' ${gre}found in${blu} $1 ${gre}(Press 'Enter' key twice to skip)" >&2
 			read -p "${blu}External DB username: " extdb_user
