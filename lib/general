@@ -472,13 +472,13 @@ wp_conf_retrieve() {
 	wp_dbhost=$( wp_config_read $1 DB_HOST $4 )
 	wp_dbpass=$( wp_config_read $1 DB_PASSWORD $4 )
 	wp_dbpref=$( grep -F "table_prefix" $wp_config | cut -f 2 -d "'" -s)
-	extdb_url=$(echo "$wp_dbhost" | cut -f 1 -d ':')
-	extdb_port=$(echo "$wp_dbhost" | cut -f 2 -d ':' -s)
+	wp_extdb_url=$(echo "$wp_dbhost" | cut -f 1 -d ':')
+	wp_extdb_port=$(echo "$wp_dbhost" | cut -f 2 -d ':' -s)
 	
 	wp_dbpref_main=${wp_dbpref} # In case of domain mapping this variable always remains with the main site info
 	
 	[[ ${wp_dbhost,,} == "localhost" ]] && wp_dbhost=${wp_dbhost,,}
-	[[ -z $extdb_port ]] && extdb_port="3306"
+	[[ -z $wp_extdb_port ]] && wp_extdb_port="3306"
 	
 	# In case of parked sites with WP domain mapping
 	if [[ $3 != "false" && $(is_parked $1) == "true" ]]; then
@@ -519,14 +519,24 @@ wp_conf_retrieve() {
 		
 		if [[ -n $external_db ]]; then
 			external_db_parse
-			[[ "${wp_dbhost}:${wp_dbport}" != $extdb_host ]] && unset external_db
+			if [[ $wp_dbhost != $extdb_host ]]; then
+				unset external_db
+				unset extdb_user
+				unset extdb_pass
+				unset extdb_host
+				unset extdb_url
+				unset extdb_port
+			fi
 		fi
 		if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
 			echo "" >&2
-			echo "${gre}External DB${blu} '${extdb_url}:${extdb_port}' ${gre}found in${blu} $1 ${gre}(Press 'Enter' key twice to skip)" >&2
+			echo "${gre}External DB${blu} '${wp_dbhost}' ${gre}found in${blu} ${1}${4} ${gre}(Press 'Enter' key twice to skip)" >&2
 			read -p "${blu}External DB username: " extdb_user
 			read -p "External DB password: " extdb_pass
-			external_db="[$extdb_user,$extdb_pass,${wp_dbhost}:${wp_dbport}]"
+			extdb_host=$wp_dbhost
+			extdb_url=$wp_extdb_url
+			extdb_port=$wp_extdb_port
+			external_db="[${extdb_user},${extdb_pass},${extdb_host}]"
 		fi
 	fi
 }

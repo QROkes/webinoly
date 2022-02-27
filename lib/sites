@@ -490,10 +490,10 @@ db_delete() {
 	[[ $wp_dbhost != "localhost" ]] && check_for_mysql_client
 	
 	if [[ -z $wp_dbhost || -z $wp_dbname || -z $wp_dbuser ]]; then
-		echo "${red}[ERROR] Database${blu} $domain ${red}cannot be deleted! ${dim}(WP configuration corrupted)${end}"
+		echo "${red}[ERROR] Database${blu} ${domain}${subfolder} ${red}cannot be deleted! ${dim}(WP configuration corrupted)${end}"
 		return
 	elif [[ ( $wp_dbhost == "localhost" &&  ( $(conf_read mysql) != "true" || $(check_mysql_connection localhost) != "true" )) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
-		echo "${red}[ERROR] Database${blu} $domain ${red}cannot be deleted! ${dim}(DB Connection failed)${end}"
+		echo "${red}[ERROR] Database${blu} ${domain}${subfolder} ${red}cannot be deleted! ${dim}(DB Connection failed)${end}"
 		return
 	fi
 	

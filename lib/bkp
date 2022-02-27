@@ -728,28 +728,40 @@ export_site() {
 		fi
 
 		# Include database backup for this site!
-		if [[ $(is_wp_installed $siteto $subfolder) == "true" ]]; then
-			# We use dbnames instead of domains because is easier to include subfolders
-			if [[ -z $export_db_list ]]; then
-				local export_db_list="$( wp_config_read $siteto DB_NAME $subfolder )"
-			else
-				local export_db_list="$export_db_list,$( wp_config_read $siteto DB_NAME $subfolder )"
-			fi
-		fi
-		
-		# Check if site contains WP in subfolders and include these db's.
-		for sit in "/etc/nginx/apps.d/${siteto}_"*-wpcommon.conf
-		do 
-			local suby="/$(echo $sit | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
-			if [[ -n $suby && -f /var/www/$siteto/htdocs$suby/wp-config.php ]]; then
+		if [[ -z $skip_db ]]; then
+			if [[ $(conf_read mysql) == "true" && $(is_wp $siteto $subfolder) == "true" && $( wp_config_read $siteto DB_HOST $subfolder ) == "localhost" && $(is_wp_installed $siteto $subfolder) == "true" ]]; then
+				# We use dbnames instead of domains because is easier to include subfolders
 				if [[ -z $export_db_list ]]; then
-					local export_db_list="$( wp_config_read $siteto DB_NAME $suby )"
+					local export_db_list="$( wp_config_read $siteto DB_NAME $subfolder )"
 				else
-					local export_db_list="$export_db_list,$( wp_config_read $siteto DB_NAME $suby )"
+					local export_db_list="$export_db_list,$( wp_config_read $siteto DB_NAME $subfolder )"
 				fi
+				echo "${blu}${dim}Database included: ${siteto}${subfolder} ${end}"
+			elif [[ $(is_wp $siteto $subfolder) == "true" && $( wp_config_read $siteto DB_HOST $subfolder ) == "localhost" ]]; then
+				echo "${red}${dim}Database not found or empty: ${siteto}${subfolder} ${end}"
+			elif [[ $(is_wp $siteto $subfolder) == "true" && $( wp_config_read $siteto DB_HOST $subfolder ) != "localhost" ]]; then
+				echo "${red}${dim}External database not included: ${siteto}${subfolder} ${end}"
 			fi
-			local suby=""
-		done
+			
+			# Check if site contains WP in subfolders
+			for sit in "/etc/nginx/apps.d/${siteto}_"*-wpcommon.conf
+			do 
+				local suby="/$(echo $sit | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+				if [[ -n $suby && $(conf_read mysql) == "true" && -f /var/www/$siteto/htdocs$suby/wp-config.php && $( wp_config_read $siteto DB_HOST $suby ) == "localhost" && $(is_wp_installed $siteto $suby) == "true" ]]; then
+					if [[ -z $export_db_list ]]; then
+						local export_db_list="$( wp_config_read $siteto DB_NAME $suby )"
+					else
+						local export_db_list="$export_db_list,$( wp_config_read $siteto DB_NAME $suby )"
+					fi
+					echo "${blu}${dim}Database included: ${siteto}${suby} ${end}"
+				elif [[ -n $suby && -f /var/www/$siteto/htdocs$suby/wp-config.php && $( wp_config_read $siteto DB_HOST $suby ) == "localhost" ]]; then
+					echo "${red}${dim}Database not found or empty: ${siteto}${suby} ${end}"
+				elif [[ -n $suby && -f /var/www/$siteto/htdocs$suby/wp-config.php && $( wp_config_read $siteto DB_HOST $suby ) != "localhost" ]]; then
+					echo "${red}${dim}External database not included: ${siteto}${suby} ${end}"
+				fi
+				local suby=""
+			done
+		fi
 	
 		[[ -z $multi_export ]] && break
 	done
