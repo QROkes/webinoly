@@ -150,7 +150,7 @@ wpinstall() {
 			if [[ -n $(conf_read external-dbh) && -n $(conf_read external-dbu) && -n $(conf_read external-dbp) ]]; then
 				[[ -n $(conf_read external-dbx) ]] && local dbhost_suggested="$(conf_read external-dbh):$(conf_read external-dbx)" || local dbhost_suggested=$(conf_read external-dbh)
 				dburoot=$(conf_read external-dbu)
-				dbproot=$( echo $(conf_read external-dbp) | openssl enc -d -a -salt )
+				dbproot=$(conf_read external-dbp)
 			fi
 			
 			[[ $type == [2345] ]] || read -p "Database Host [${dbhost_suggested}]: " dbhost
@@ -1167,6 +1167,9 @@ parked_domain() {
 	sed -i "/include \/var\/www\/$domain/c \	${cusconl}" /etc/nginx/sites-available/$domain
 	sed -i "/include \/var\/www\/$parked/a \	include \/var\/www\/${parked}/*-$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;" /etc/nginx/sites-available/$domain
 	
+	# Prevent asking multiple times in case of external DB.
+	[[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ && $(is_wp $parked) == "true" ]] && wp_conf_retrieve $parked true false $subfolder
+	
 	# WordPress Domain Mapping
 	if [[ $domain_mapping_wp_id == 1  ]]; then
 		echo "${red}${dim}[ERROR] Domain Mapping failed because WP blog ID cannot be 1 (main site)! ${end}"
@@ -1556,7 +1559,20 @@ cloning_site() {
 			local custom_wp_dbpref=$( grep -F "table_prefix" $(wp_config_path $domain $subfolder) | cut -f 2 -d "'" -s)
 		fi
 		
-		[[ -z $subfolder ]] && sudo site $domain -delete=force > /dev/null 2>&1 || sudo site $domain -subfolder=$subfolder -delete=force > /dev/null 2>&1
+		if [[ $( wp_config_read $domain DB_HOST $subfolder ) == "localhost" ]]; then
+			[[ -z $subfolder ]] && sudo site $domain -delete=force > /dev/null 2>&1 || sudo site $domain -subfolder=$subfolder -delete=force > /dev/null 2>&1
+		else
+			if [[ -n $extdb_user && -n $extdb_pass && -n $extdb_host ]]; then
+				if [[ -z $subfolder ]]; then
+					sudo site $domain -delete=force -external_db=[${extdb_user},${extdb_pass},${extdb_host}] > /dev/null 2>&1
+				else
+					sudo site $domain -subfolder=$subfolder -delete=force -external_db=[${extdb_user},${extdb_pass},${extdb_host}] > /dev/null 2>&1
+				fi
+			else
+				echo "${red}[ERROR] External DB data corrupted!${end}"
+				exit 1
+			fi
+		fi
 	fi
 	
 	if [[ -n $subfolder ]]; then
@@ -1711,7 +1727,6 @@ wp_replace_content() {
 		exit 1
 	fi
 	
-	wp_conf_retrieve $domain true true $subfolder
 	if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
 		if [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
 			exit 1
@@ -1978,7 +1993,9 @@ wp_env_type() {
 	# WordPress Reading Settings: Discourage Search Engines
 	wp_conf_retrieve $domain true true $subfolder
 	
-	if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
+	if [[ -n $wp_dbhost && $wp_dbhost != "localhost" && ( -z $extdb_url || -z $extdb_port || -z $extdb_user || -z $extdb_pass ) ]]; then
+		echo "${red}${dim}[ERROR] Discourage Search Engines WP option not updated! (External DB data not available)${end}"
+	elif [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
 		if [[ $(is_wp_installed $domain $subfolder) == "true" ]]; then
 			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
 				sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
@@ -2000,10 +2017,11 @@ _EOF_
 		
 			[[ $index == "0" ]] && echo "${gre}Discourage Search Engines WP option has been enabled for${blu} $domain$subfolder ${gre}site!${end}"
 			[[ $index == "1" ]] && echo "${gre}Discourage Search Engines WP option has been disabled for${blu} $domain$subfolder ${gre}site!${end}"
+		else
+			echo "${blu}${dim}Database cannot be updated because WP is still empty! ${end}"
 		fi
 	else
 		echo "${red}${dim}[ERROR] Discourage Search Engines WP option not updated! (WP Configuration corrupted)${end}"
-		exit 1
 	fi
 	
 	echo "${gre}WordPress Environment Type has been set successfully!${end}"

@@ -629,7 +629,7 @@ if [[ -z $critical_mode ]]; then
 		local ver_four_war="1"
 	fi
 
-	if [[ -d /etc/mysql && $(conf_read mysql) != "true" ]]; then
+	if [[ -d /etc/mysql && $(conf_read mysql) != "true" && $(conf_read mysql-client) != "true" ]]; then
 		echo "${dim}- [WARNING] Seems like some MySQL data remains but MySQL is not installed or Webinoly can not detect it!${end}${red}"
 		local ver_four_war="1"
 	fi

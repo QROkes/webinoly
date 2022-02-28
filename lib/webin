@@ -1077,7 +1077,7 @@ ext_db_save() {
 		fi
 		
 		conf_write external-dbu $user
-		conf_write external-dbp $( echo $pass | openssl enc -a -salt )
+		conf_write external-dbp $pass
 		
 		echo "${gre}External DB data successfully saved!${end}"
 	fi

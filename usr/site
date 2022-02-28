@@ -34,9 +34,8 @@ if [[ -n $wp || -n $mysql ]]; then
 			exth=$(conf_read external-dbh)
 		fi
 		
-		extp=$( echo $(conf_read external-dbp) | openssl enc -d -a -salt )
-		[[ $wp == "true" ]] && wp="[true,true,${exth},${dona},${dona},random,wp_,$(conf_read external-dbu),${extp}]"
-		[[ $mysql == "true" ]] && mysql="[${exth},${dona},${dona},random,$(conf_read external-dbu),${extp}]"
+		[[ $wp == "true" ]] && wp="[true,true,${exth},${dona},${dona},random,wp_,$(conf_read external-dbu),$(conf_read external-dbp)]"
+		[[ $mysql == "true" ]] && mysql="[${exth},${dona},${dona},random,$(conf_read external-dbu),$(conf_read external-dbp)]"
 		echo "${blu}${dim}External DB credentials found!${end}"
 	fi
 
@@ -410,6 +409,14 @@ elif [[ -n $clone_from ]]; then
 elif [[ -n $replace_content && -f /etc/nginx/sites-available/$domain ]]; then
 	if [[ $(is_wp $domain $subfolder) != "true" ]]; then
 		echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WordPress site!${end}"
+		exit 1
+	fi
+	
+	#We need to call this function in the parent shell to preserve variables and avoid asking two times for the same values in case of external db.
+	wp_conf_retrieve $domain true true $subfolder
+	
+	if [[ $(is_wp_installed $domain $subfolder) != "true" ]]; then
+		echo "${red}[ERROR] WordPress is empty and still not configured in ${domain}${subfolder} site!${end}"
 		exit 1
 	else
 		wp_replace_content

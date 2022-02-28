@@ -281,11 +281,11 @@ check_for_mysql() {
 }
 check_for_mysql_client() {
 	if [[ $(conf_read mysql-client) != "true" ]]; then
-		echo "${gre}MySQL Client is not installed and we need it to stablish a connection with your external server.${end}"
-		echo "${dim}Wait while we install MySQL Client...${end}"
+		echo "${gre}${dim}MySQL Client is not installed and we need it to stablish a connection with your external server.${end}" >&2
+		echo "${dim}Wait while we install MySQL Client...${end}" >&2
 		sudo stack -mysql=client > /dev/null 2>&1 &
 		wait $!
-		echo "${gre}MySQL Client has been successfully installed!${end}"
+		echo "${gre}MySQL Client has been successfully installed!${end}" >&2
 	fi
 }
 
@@ -293,7 +293,8 @@ check_for_mysql_client() {
 check_mysql_connection() {
 	local query="quit"
 
-	if [[ -n $1 && ${1,,} != "localhost" && -n $2 && -n $3 && -n $4 && $(conf_read mysql-client) == "true"  ]]; then
+	if [[ -n $1 && ${1,,} != "localhost" && -n $2 && -n $3 && -n $4 ]]; then
+		check_for_mysql_client
 		[[ -n $5 ]] && local query="use $5"
 		sudo mysql --connect-timeout=10 -h "$1" -P "$2" -u"$3" -p"$4" -e "$query"
 		if [[ $? != "0" ]]; then
@@ -338,7 +339,7 @@ check_mysql_connection() {
 
 check_external_db_saved() {
 	if [[ -n $(conf_read external-dbh) && -n $(conf_read external-dbu) && -n $(conf_read external-dbp) && -n $(conf_read external-dbx) ]]; then
-		external_db="[$(conf_read external-dbu),$( echo $(conf_read external-dbp) | openssl enc -d -a -salt ),$(conf_read external-dbh):$(conf_read external-dbx)]"
+		external_db="[$(conf_read external-dbu),$(conf_read external-dbp),$(conf_read external-dbh):$(conf_read external-dbx)]"
 		[[ $(conf_read quiet) != "true" ]] && echo "${blu}${dim}External DB credentials found!${end}" >&2
 	fi
 }
@@ -356,16 +357,14 @@ external_db_parse() {
 		local user=$(echo "${dbdata}" | cut -d',' -f 1 -s)
 		local pass=$(echo "${dbdata}" | cut -d',' -f 2 -s)
 		local host=$(echo "${dbdata}" | cut -d',' -f 3 -s)
+		[[ -z $host && -n $wp_dbhost ]] && local host=$wp_dbhost # This is very shitty!
 		local url=$(echo "$host" | cut -f 1 -d ':')
 		local port=$(echo "$host" | cut -f 2 -d ':' -s)
 		
 		if [[ $(echo "${external_db}" | cut -c-1) != "[" || $(echo "${external_db}" | rev | cut -c-1) != "]" ]]; then
 			echo "${red}[ERROR] Invalid syntax for External Database!${end}"
 			return
-		elif [[ $1 == "-nohost" && ( -z $user || -z $pass ) ]]; then
-			echo "${red}[ERROR] Invalid data for External Database!${end}"
-			return
-		elif [[ $1 != "-nohost" && ( -z $user || -z $pass || -z $url || -z $port ) ]]; then
+		elif [[ -z $user || -z $pass ]]; then
 			echo "${red}[ERROR] Invalid data for External Database!${end}"
 			return
 		fi
@@ -530,9 +529,9 @@ wp_conf_retrieve() {
 		fi
 		if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
 			echo "" >&2
-			echo "${gre}External DB${blu} '${wp_dbhost}' ${gre}found in${blu} ${1}${4} ${gre}(Press 'Enter' key twice to skip)" >&2
-			read -p "${blu}External DB username: " extdb_user
-			read -p "External DB password: " extdb_pass
+			echo "${gre}External DB${blu} '${wp_dbhost}' ${gre}found in:${blu}${dim} ${1}${4} ${end}" >&2
+			read -p "${blu}External DB username: ${end}" extdb_user
+			read -p "${blu}External DB password: ${end}" extdb_pass
 			extdb_host=$wp_dbhost
 			extdb_url=$wp_extdb_url
 			extdb_port=$wp_extdb_port
@@ -1060,13 +1059,15 @@ edit_wp_db_url_multisite() {
 	# $3 - WP BlogID to force
 	
 	if [[ -n $1 && -n $2 && -n $3 && $3 =~ ^[0-9]+$ && $(is_wp_multisite $1) =~ ^(subdomain|subdirectory)$ ]]; then
-		wp_conf_retrieve $1 true false
+		wp_conf_retrieve $1 true false $subfolder
 		
 		# Force WP blogID
 		local wp_dbpref="${wp_dbpref}${3}_"
 		local wp_blogid=$3
 		local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
-		if [[ -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup") ]]; then
+		if [[ $wp_dbhost == "localhost" && -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup") ]]; then
+			echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
+		elif [[ $wp_dbhost != "localhost" && -n $(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup") ]]; then
 			echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
 		else
 			echo "${red}${dim}[ERROR] WordPress blog ID (${wp_dbpref}) not found!${end}" >&2
