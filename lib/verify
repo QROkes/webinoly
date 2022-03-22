@@ -840,8 +840,9 @@ if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
 		echo "- [ERROR] File: /usr/bin/duply not found!"
 		local ver_seven_err="1"
 	fi
-	if [[ ! -L /snap/bin/duplicity ]]; then
-		echo "- [ERROR] File: /snap/bin/duplicity not found!"
+	# Remove the snap path!
+	if [[ ! -L /snap/bin/duplicity && ! -f /usr/local/bin/duplicity ]]; then
+		echo "- [ERROR] File: /usr/local/bin/duplicity not found!"
 		local ver_seven_err="1"
 	fi
 fi

@@ -521,9 +521,20 @@ nginx_tool_bkp() {
 	
 	# Instalar Duply & Duplicity with S3 support
 	# Now there is an Official PPA: https://launchpad.net/~duplicity-team/+archive/ubuntu/duplicity-release-git
-	# We use snap because PPA has no support for ARM architecture.
-	sudo snap install --classic duplicity
+	# We removed SNAP because they removed ARM support, also they are having a lot of issues, they are mentioned they are considering removing snap support.
+	# https://gitlab.com/duplicity/duplicity/-/issues
+	
+	# Minimum required, most of them are already installed by default, but we need to be sure: https://gitlab.com/duplicity/duplicity/-/blob/master/debian/control
+	sudo apt install -y debhelper dh-python python3 gnupg librsync-dev par2 pep8 pylint python3-pytest python3-pytest-cov python3-pytest-runner python3-dev python3-fasteners python3-future python3-mock python3-pexpect python3-setuptools python3-setuptools-scm rdiff rename rsync
+	sudo apt install -y python3-pip
+	# Backend for S3
 	sudo apt -y install python3-boto3
+	# Duplicity installation directly from source
+	sudo pip3 install duplicity
+	
+	# Temporal dynvar - in the next stack update we will update all the old snap installations
+	# Be sure to remove it from "stack" command too.
+	conf_write bkp-source-tmp true
 	
 	# https://sourceforge.net/projects/ftplicity/files/duply%20%28simple%20duplicity%29/
 	sudo cp /opt/webinoly/templates/general/duply /usr/bin/
