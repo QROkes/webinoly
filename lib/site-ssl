@@ -31,6 +31,10 @@ ssl_nginx() {
 		sudo chmod 755 $(dirname -- $ssl_crt)
 		sudo chmod 755 $(dirname -- $ssl_key)
 		sudo chown -R root:root $(dirname -- $ssl_crt)
+		
+		# Not duplicate: Custom cert function does not run the same way as LE requests.
+		[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "https://${domain}"
+		
 		if [[ -n $ssl_ocsp && -f $ssl_ocsp ]]; then
 			sudo sed -i "/ssl_trusted_certificate/c \	ssl_trusted_certificate $ssl_ocsp;" /etc/nginx/sites-available/$domain
 			sudo chmod 777 $ssl_ocsp
