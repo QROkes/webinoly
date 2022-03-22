@@ -704,6 +704,15 @@ swap_create() {
 			local newswap="0"
 		fi
 
+		# Check if disk available space is enough!
+		local avail=$(df -hBG --output=avail / | grep -Eo "[0-9]+" | head -n 1)
+		if [[ -n $avail && -n $newswap && $(($newswap+1)) -ge $avail ]]; then
+			echo "${red}[ERROR] No disk space available for SWAP!${dim} (Needed: ${newswap}Gb Available: ${avail}Gb ) ${end}"
+			local newswap="0"
+		else
+			echo "${blu}${dim}Swap size: ${newswap}Gb (Available: ${avail}Gb) ${end}"
+		fi
+		
 		if [[ -z $newswap || $newswap == 0 ]]; then
 			echo "${red}[ERROR] Webinoly could not create a new SWAP file! ${end}"
 		else
