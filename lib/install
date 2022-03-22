@@ -839,6 +839,9 @@ stack_builder() {
 	elif [[ $3 == "mysql" && $(conf_read mysql) == "true" ]]; then
 		echo "${dim}MySQL is already installed!${end}"
 		[[ $code != "run" ]] && local code=0
+	elif [[ $3 == "mysql" && $(conf_read mysql-client) == "true" ]]; then
+		echo "${dim}MySQL Client is already installed!${end}"
+		local code="run"
 	fi
 	
 	# Exit before update!
