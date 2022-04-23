@@ -1859,20 +1859,29 @@ site_info_subfolder() {
 	fi
 	
 	if [[ $typesite == "wp" ]]; then
+		local wph=$(wp_config_read $domain DB_HOST $subfolder)
+		if [[ ${wph,,} == "localhost" || -n $external_db ]]; then
+			local wpmu=$(is_wp_multisite $domain $subfolder)
+			wp_conf_retrieve $domain true true $subfolder
+		else
+			local wpmu="${dim}Not Available${end}"
+			wp_conf_retrieve $domain false false $subfolder
+		fi
+		
 		echo ""
 		echo "${blu}Cache:${end} $cache"
-		echo "${blu}Multisite:${end} $(is_wp_multisite $domain $subfolder)"
+		echo "${blu}Multisite:${end} $wpmu"
 		echo "${blu}WP Auth:${end} $(is_wp_auth $domain $subfolder)"
 		echo "${blu}Debug:${end} $(is_wp_debug $domain $subfolder)"
 	
 		[[ -n $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder) ]] && echo "${blu}Environment:${end} $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder)"
 		echo ""
 		
-		wp_conf_retrieve $domain false true $subfolder
-		echo "${blu}Database:${end} $wp_dbhost"
+		echo "${blu}Database:${end} $wph"
 		echo "${blu}DB Name:${end} $wp_dbname"
 		echo "${blu}DB User:${end} $wp_dbuser"
 		echo "${blu}DB Prefix:${end} $wp_dbpref"
+		[[ -n $wpmu && $wpmu =~ ^(subdomain|subdirectory)$ && -n $wp_blogid ]] && echo "${blu}Blog ID:${end} $wp_blogid"
 	fi
 	
 	[[ $typesite == "proxy" ]] && echo "${blu}Source Server:${end} $(grep 'proxy_pass ' /etc/nginx/apps.d/$domain$subname-proxy.conf | head -1 | cut -d ' ' -f 2 -s | rev | cut -c 2- | rev)"
@@ -1927,20 +1936,29 @@ site_info() {
 	fi
 	
 	if [[ $typesite == "WordPress" || ( $typesite == "Parked" && $(is_wp $domain) == "true" ) ]]; then
+		local wph=$(wp_config_read $domain DB_HOST)
+		if [[ ${wph,,} == "localhost" || -n $external_db ]]; then
+			local wpmu=$(is_wp_multisite $domain)
+			wp_conf_retrieve $domain true true
+		else
+			local wpmu="${dim}Not Available${end}"
+			wp_conf_retrieve $domain false false
+		fi
+		
 		echo ""
 		echo "${blu}Cache:${end} $cache"
-		echo "${blu}Multisite:${end} $(is_wp_multisite $domain)"
+		echo "${blu}Multisite:${end} $wpmu"
 		echo "${blu}WP Auth:${end} $(is_wp_auth $domain)"
 		echo "${blu}Debug:${end} $(is_wp_debug $domain)"
 	
 		[[ -n $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder) ]] && echo "${blu}Environment:${end} $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder)"
 		echo ""
 		
-		wp_conf_retrieve $domain false
-		echo "${blu}Database:${end} $wp_dbhost"
+		echo "${blu}Database:${end} $wph"
 		echo "${blu}DB Name:${end} $wp_dbname"
 		echo "${blu}DB User:${end} $wp_dbuser"
 		echo "${blu}DB Prefix:${end} $wp_dbpref"
+		[[ -n $wpmu && $wpmu =~ ^(subdomain|subdirectory)$ && -n $wp_blogid ]] && echo "${blu}Blog ID:${end} $wp_blogid"
 	fi
 	
 	if [[ $typesite == "Reverse Proxy" ]]; then

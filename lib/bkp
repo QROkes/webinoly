@@ -297,9 +297,7 @@ bkp_s3_profile() {
 			exit 1
 		fi
 		
-		[[ -z $subfolder ]] && local sbf="false" || sbf=$subfolder
-		wp_conf_retrieve $add_db_pre false true $sbf
-		if [[ $wp_dbhost != "localhost" && -z $(conf_read external-dbu) && -z $(conf_read external-dbp) ]]; then
+		if [[ $(wp_config_read $add_db_pre DB_HOST $subfolder) != "localhost" && -z $(conf_read external-dbu) && -z $(conf_read external-dbp) ]]; then
 			echo "${red}[ERROR] Database host is not localhost!${dim} (External databases are supported with -external-db-save)${end}"
 			exit 1
 		fi

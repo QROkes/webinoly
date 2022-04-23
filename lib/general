@@ -4,7 +4,7 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.16.3"
+readonly app_version="1.16.4"
 readonly svr_version="1.7"
 readonly os_ubuntu_supported=(bionic focal)
 readonly php_supported=(7.4 8.0 8.1)
@@ -479,35 +479,6 @@ wp_conf_retrieve() {
 	[[ ${wp_dbhost,,} == "localhost" ]] && wp_dbhost=${wp_dbhost,,}
 	[[ -z $wp_extdb_port ]] && wp_extdb_port="3306"
 	
-	# In case of parked sites with WP domain mapping
-	if [[ $3 != "false" && $(is_parked $1) == "true" ]]; then
-		# If domain doesn't exist, check if it's a subsite of a subdomain Multisite network.
-		if [[ ! -f /etc/nginx/sites-available/$1 && -f /etc/nginx/sites-available/$(echo $1 | cut -d "." -f 2- -s) ]]; then
-			local maindom=$(echo $1 | cut -d "." -f 2- -s)
-		else
-			local maindom=$1
-		fi
-		
-		if [[ $(is_wp_multisite $maindom $4) =~ ^(subdomain|subdirectory)$ ]]; then
-			local dbq="USE $wp_dbname; SELECT blog_id FROM ${wp_dbpref}blogs WHERE domain='$1' OR domain='www.$1';"
-			
-			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-				local bid=$(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbq")
-			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
-				local bid=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbq")
-			fi
-			
-			wp_blogid=$(echo $bid | cut -f 2 -d " " -s)
-			# Number 1 is main site, so we don't need to change the WP prefix.
-			if [[ $wp_blogid =~ ^[0-9]+$  && $wp_blogid -gt 1 ]]; then
-				wp_dbpref="${wp_dbpref}${wp_blogid}_"
-				echo "${blu}${dim}Site${end}${dim} ${1}${4} ${blu}is a subsite (${wp_dbpref}) in a WP Multisite Network!${end}" >&2
-			else
-				[[ $wp_blogid != 1 ]] && wp_blogid=""
-			fi
-		fi		
-	fi
-	
 	
 	if [[ $2 != "false" ]]; then
 		if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" && $wp_dbhost == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
@@ -537,6 +508,36 @@ wp_conf_retrieve() {
 			extdb_port=$wp_extdb_port
 			external_db="[${extdb_user},${extdb_pass},${extdb_host}]"
 		fi
+	fi
+	
+	
+	# In case of parked sites with WP domain mapping
+	if [[ $3 != "false" && $(is_parked $1) == "true" ]]; then
+		# If domain doesn't exist, check if it's a subsite of a subdomain Multisite network.
+		if [[ ! -f /etc/nginx/sites-available/$1 && -f /etc/nginx/sites-available/$(echo $1 | cut -d "." -f 2- -s) ]]; then
+			local maindom=$(echo $1 | cut -d "." -f 2- -s)
+		else
+			local maindom=$1
+		fi
+		
+		if [[ $(is_wp_multisite $maindom $4) =~ ^(subdomain|subdirectory)$ ]]; then
+			local dbq="USE $wp_dbname; SELECT blog_id FROM ${wp_dbpref}blogs WHERE domain='$1' OR domain='www.$1';"
+			
+			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
+				local bid=$(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbq")
+			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
+				local bid=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbq")
+			fi
+			
+			wp_blogid=$(echo $bid | cut -f 2 -d " " -s)
+			# Number 1 is main site, so we don't need to change the WP prefix.
+			if [[ $wp_blogid =~ ^[0-9]+$  && $wp_blogid -gt 1 ]]; then
+				wp_dbpref="${wp_dbpref}${wp_blogid}_"
+				echo "${blu}${dim}Site${end}${dim} ${1}${4} ${blu}is a subsite (${wp_dbpref}) in a WP Multisite Network!${end}" >&2
+			else
+				[[ $wp_blogid != 1 ]] && wp_blogid=""
+			fi
+		fi		
 	fi
 }
 
