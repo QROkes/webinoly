@@ -26,7 +26,7 @@ if [[ -n $wp || -n $mysql ]]; then
 
 	# Check for saved DB external data
 	if [[ ( $wp == "true" || $mysql == "true" ) && -n $(conf_read external-dbh) && -n $(conf_read external-dbu) && -n $(conf_read external-dbp) ]]; then
-		[[ -n $domain ]] && dona=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g") || dona="Webinoly_$(pwgen -s -1)"
+		[[ -n $domain ]] && dona=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g") || dona="Webinoly_$(pwgen -s -1)"
 		
 		if [[ -n $(conf_read external-dbh) && -n $(conf_read external-dbx) ]]; then
 			exth="$(conf_read external-dbh):$(conf_read external-dbx)"
