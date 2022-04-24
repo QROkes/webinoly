@@ -1860,7 +1860,7 @@ site_info_subfolder() {
 	
 	if [[ $typesite == "wp" ]]; then
 		local wph=$(wp_config_read $domain DB_HOST $subfolder)
-		if [[ ${wph,,} == "localhost" || -n $external_db ]]; then
+		if [[ ${wph,,} == "localhost" || -n $external_db || $wph == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
 			local wpmu=$(is_wp_multisite $domain $subfolder)
 			wp_conf_retrieve $domain true true $subfolder
 		else
@@ -1937,7 +1937,7 @@ site_info() {
 	
 	if [[ $typesite == "WordPress" || ( $typesite == "Parked" && $(is_wp $domain) == "true" ) ]]; then
 		local wph=$(wp_config_read $domain DB_HOST)
-		if [[ ${wph,,} == "localhost" || -n $external_db ]]; then
+		if [[ ${wph,,} == "localhost" || -n $external_db || $wph == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
 			local wpmu=$(is_wp_multisite $domain)
 			wp_conf_retrieve $domain true true
 		else
