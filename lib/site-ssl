@@ -4,6 +4,18 @@
 # Functions for SSL On/Off
 
 
+ssl_wp_db_update() {
+	# if main site is WP.
+	[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain $1
+	
+	# Check if site contains WP in subfolders.
+	for site in "/etc/nginx/apps.d/${domain}_"*-wpcommon.conf
+	do
+		local subwp="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+		[[ -n $subwp && -f /var/www/$domain/htdocs$subwp/wp-config.php ]] && edit_wp_db_url $domain ${1}${subwp} $subwp
+	done
+}
+
 ssl_nginx() {
 	sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /etc/nginx/sites-available/$domain
@@ -33,7 +45,7 @@ ssl_nginx() {
 		sudo chown -R root:root $(dirname -- $ssl_crt)
 		
 		# Not duplicate: Custom cert function does not run the same way as LE requests.
-		[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "https://${domain}"
+		ssl_wp_db_update "https://${domain}"
 		
 		if [[ -n $ssl_ocsp && -f $ssl_ocsp ]]; then
 			sudo sed -i "/ssl_trusted_certificate/c \	ssl_trusted_certificate $ssl_ocsp;" /etc/nginx/sites-available/$domain
@@ -170,7 +182,7 @@ site_ssl_on() {
 		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
 		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
 
-		[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "https://${domain}"
+		ssl_wp_db_update "https://${domain}"
 		
 		echo "${gre}SSL have been successfully enabled for your site${blu} $domain${end}"
 	elif [[ -f /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
@@ -246,7 +258,7 @@ site_ssl_off() {
 		echo "${gre}${dim}Tools Site updated with SSL!${end}"
 	fi
 	
-	[[ -z $no_db_update && $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "http://${domain}"
+	[[ -z $no_db_update ]] && ssl_wp_db_update "http://${domain}"
 	
 	# Check if exist to not try to revoke a cert that don't exist, for example a site with a cert added to a wildcard! (-add-to-wildcard)
 	if [[ -f /etc/letsencrypt/renewal/${domain}.conf ]]; then

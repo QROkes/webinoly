@@ -484,29 +484,30 @@ _EOF_
 }
 
 
-db_delete() {	
-	wp_conf_retrieve $1 true false $subfolder
+db_delete() {
+	# Example: db_delete $domain $subfolder
+	wp_conf_retrieve $1 true false $2
 	[[ -z $wp_config ]] && return
 	[[ $wp_dbhost != "localhost" ]] && check_for_mysql_client
 	
 	if [[ -z $wp_dbhost || -z $wp_dbname || -z $wp_dbuser ]]; then
-		echo "${red}[ERROR] Database${blu} ${domain}${subfolder} ${red}cannot be deleted! ${dim}(WP configuration corrupted)${end}"
+		echo "${red}[ERROR] Database${blu} ${1}${2} ${red}cannot be deleted! ${dim}(WP configuration corrupted)${end}"
 		return
 	elif [[ ( $wp_dbhost == "localhost" &&  ( $(conf_read mysql) != "true" || $(check_mysql_connection localhost) != "true" )) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
-		echo "${red}[ERROR] Database${blu} ${domain}${subfolder} ${red}cannot be deleted! ${dim}(DB Connection failed)${end}"
+		echo "${red}[ERROR] Database${blu} ${1}${2} ${red}cannot be deleted! ${dim}(DB Connection failed)${end}"
 		return
 	fi
 	
 	dbsetup="DELETE FROM mysql.user WHERE User='$wp_dbuser';DROP DATABASE IF EXISTS $wp_dbname;DELETE FROM mysql.db WHERE Db='$wp_dbname' OR Db='$wp_dbname\\_%';FLUSH PRIVILEGES;"
 	if [[ $wp_dbhost == "localhost" ]]; then
 		sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup"
-		echo "${gre}${dim}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
+		echo "${gre}${dim}Database of your site ${blu}${1}${2}${gre} has been successfully deleted! ${end}"
 	else
 		if [[ $extdb_user == "root" && -z $extdb_pass ]]; then
 			echo "${red}Action aborted, database not deleted!${end}"
 		else
 			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup"
-			echo "${gre}${dim}Database of your site ${blu}${domain}${subfolder}${gre} has been successfully deleted! ${end}"
+			echo "${gre}${dim}Database of your site ${blu}${1}${2}${gre} has been successfully deleted! ${end}"
 		fi
 	fi
 }
@@ -548,7 +549,7 @@ deletesite() {
 					  [[ $dbsubdel = [YyNn] ]] && break
 					done
 				fi
-				[[ $dbsubdel == [yY] || $dbdel == [yY] ]] && db_delete $domain
+				[[ $dbsubdel == [yY] || $dbdel == [yY] ]] && db_delete $domain $subfolder
 			fi
 			subfolder=""
 		done
@@ -619,7 +620,7 @@ deletesite_subfolder() {
 					  [[ $dbsubdel = [YyNn] ]] && break
 					done
 				fi
-				[[ $dbsubdel == [yY] || $dbdel == [yY] ]] && db_delete $domain
+				[[ $dbsubdel == [yY] || $dbdel == [yY] ]] && db_delete $domain $subfolder
 			fi
 			
 			sudo rm -rf /etc/nginx/apps.d/$domain$subnames-*.conf
