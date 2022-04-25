@@ -26,8 +26,6 @@ bucket_validation() {
 
 
 bkp_local_db() {
-	check_for_mysql_client
-	
 	# Check for Multiple sites or DB's
 	if [[ -z $child_multi_bkp_db && (( $(echo "${wp}" | cut -c-1) == "[" && $(echo "${wp}" | rev | cut -c-1) == "]" ) || ( $(echo "${dbname}" | cut -c-1) == "[" && $(echo "${dbname}" | rev | cut -c-1) == "]" )) ]]; then
 		if [[ -n $subfolder ]]; then
@@ -78,13 +76,14 @@ bkp_local_db() {
 		
 		if [[ -n $wp ]]; then
 			if [[ ! -f /etc/nginx/sites-available/$wp ]]; then
-				echo "${red}[ERROR] Site not found!$ ${dim}($wp)${end}"
+				echo "${red}[ERROR] Site not found! ${dim}($wp)${end}"
 				exit 1
 			elif [[ $(is_wp $wp $subfolder) != "true"  ]]; then
 				echo "${red}[ERROR] Please, enter a valid WP site! ${dim}($wp)${end}"
 				exit 1
 			else
 				wp_conf_retrieve $wp true true $subfolder
+				[[ $wp_dbhost == "localhost" ]] && check_for_mysql || check_for_mysql_client
 				[[ -n $subfolder ]] && local subname=$(echo $subfolder | sed "s/\//_/g")
 			fi
 			
@@ -114,6 +113,7 @@ bkp_local_db() {
 			check_external_db_saved
 			
 			if [[ -z $external_db ]]; then
+				check_for_mysql
 				if [[ $(check_mysql_connection localhost) != "true" ]]; then
 					echo "${red}[ERROR] Cannot connect with your database (localhost)!${end}"
 					exit 1
@@ -121,6 +121,7 @@ bkp_local_db() {
 				local checkdbname=$(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $dbname)
 			else
 				external_db_parse
+				check_for_mysql_client
 				if [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ]]; then
 					echo "${red}[ERROR] Cannot connect with your External Database!${end}"
 					exit 1
@@ -224,11 +225,17 @@ bkp_s3_profile() {
 	elif [[ -n $info ]]; then
 		check_duply_profile
 		
-		tar=$(grep -E "^TARGET[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "'" )
-		sou=$(grep -E "^SOURCE[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "'" )
-		age=$(grep -E "^MAX_AGE[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "=" )
-		par=$(grep "s3-use-new-style" $HOME/.duply/$profile/conf | cut -f 2 -d '"' )
-			
+		local tar=$(grep -E "^TARGET[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "'" )
+		local sou=$(grep -E "^SOURCE[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "'" )
+		local age=$(grep -E "^MAX_AGE[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "=" )
+		local par=$(grep "s3-use-new-style" $HOME/.duply/$profile/conf | cut -f 2 -d '"' )
+		
+		# Validations
+		[[ -z $par ]] && local par="${dim}<Empty>${end}"
+		[[ ! -d $sou ]] && local sou="$sou ${red}${dim}(Error: Path not found!)${end}"
+		
+		
+		# Display	
 		echo ""
 		echo "${blu}S3 Bucket:${end} $tar"
 		echo "${blu}Source:${end} $sou"
@@ -988,7 +995,7 @@ import_server() {
 			echo "${red}[ERROR] Database backup found but can not be restored because MySQL is not installed!${end}"
 		fi
 		
-		echo "${gre}Webinoly Full Server Backup imported successfully!${end}"
+		[[ $import != "sites" ]] && echo "${gre}Webinoly Full Server Backup imported successfully!${end}" || echo "${gre}Webinoly Backup imported successfully!${end}"
 	fi
 	
 	# SMTP Configuration - should be here after sites are extracted and only if sites are imported.

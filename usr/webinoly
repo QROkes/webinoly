@@ -169,7 +169,7 @@ elif [[ -n $smtp ]]; then
 
 
 elif [[ -n $backup ]]; then
-	[[ $import =~ ^(true|stack|full)$ ]] || check_for_nginx_tool_bkp -ask
+	[[ $import =~ ^(true|stack|full)$ || $backup == "local" ]] || check_for_nginx_tool_bkp -ask
 	
 	if [[ -n $list && -z $add_db_pre ]]; then
 		bkp_s3_list
