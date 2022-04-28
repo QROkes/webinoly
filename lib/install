@@ -637,6 +637,8 @@ set_timezone() {
 			# Don't reload if running inside php-optim process.
 			[[ $(conf_read status-api) != "ip3" ]] && sudo systemctl reload php$(conf_read php-ver)-fpm
 		fi
+		
+		sudo systemctl restart cron
 		echo "${gre}Timezone has been successfully set!${dim} ($(conf_read timezone)) ${end}"
 	else
 		echo "${red}Timezone not found or not valid!${end}"
