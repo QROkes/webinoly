@@ -280,6 +280,13 @@ elif [[ -n $redirection && -f /etc/nginx/sites-available/$domain ]]; then
 	redirection_manager
 
 
+# WordPress Environment Type
+elif [[ -n $env && -f /etc/nginx/sites-available/$domain ]]; then
+	wp_env_type
+	nginx_not="true" # Nginx-Reload not-needed.
+	# ENV should be always before cache
+	
+	
 # FastCGI Cache
 elif [[ -n $cache && -f /etc/nginx/sites-available/$domain ]]; then
 	wp_cache
@@ -421,12 +428,6 @@ elif [[ -n $replace_content && -f /etc/nginx/sites-available/$domain ]]; then
 	else
 		wp_replace_content
 	fi
-
-
-# WordPress Environment Type
-elif [[ -n $env && -f /etc/nginx/sites-available/$domain ]]; then
-	wp_env_type
-	nginx_not="true" # Nginx-Reload not-needed.
 	
 
 # List Sites

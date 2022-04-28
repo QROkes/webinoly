@@ -718,7 +718,7 @@ is_url() {
 	if [[ $2 == "-split" && $out != "false" ]]; then
 		url_scheme=$scheme
 		url_host=$host
-		[[ -n $path ]] && url_path="/$path"
+		[[ -n $path || $(echo "${1}" | rev | cut -c-1) == "/" ]] && url_path="/$path" # Check if / is alone, it's also a valid path!
 		url_port=$port
 	elif [[ $2 != "-split" ]]; then
 		echo $out
@@ -990,8 +990,8 @@ is_log() {
 
 
 escaped_string() {
-	# Escaped characters: Put a backslash before $.*/[\]^()
-	echo $(echo $1 | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g" | sed -E "s/\(/\\\(/g" | sed -E "s/\)/\\\)/g")
+	# Escaped characters: Put a backslash before $.*/[\]^()+
+	echo $(echo $1 | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g" | sed -E "s/\(/\\\(/g" | sed -E "s/\)/\\\)/g" | sed "s/\+/\\\+/g")
 }
 
 

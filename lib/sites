@@ -532,6 +532,9 @@ deletesite() {
 		echo "${red}[WARNING] This site is set as default site. Deleting this site can cause unexpected behaviour in your server."
 		sudo webinoly -default-site=default
 	fi
+	if [[ $(is_parked $domain) == "true" ]]; then
+		echo "${dim}This site is a parked site and main site data will not be removed.${end}"
+	fi
 	
 	[[ $delete == "force" ]] && local dbdel="Y"
 	[[ $delete == "keep-db" ]] && local dbdel="N"
@@ -886,7 +889,7 @@ redirection_manager() {
 		fi
 		
 		if [[ -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
-			sudo sed -Ei "/^# RedirectFrom: $(escaped_string $from)( .*)?$/,/^# RedirectEnd/{/.*/d}" /etc/nginx/apps.d/$domain-nginx.conf
+			sudo sed -Ei '/^# RedirectFrom: '$(escaped_string $from)'( .*)?$/,/^# RedirectEnd/{/.*/d}' /etc/nginx/apps.d/$domain-nginx.conf
 			
 			if [[ ! -s /etc/nginx/apps.d/$domain-nginx.conf ]]; then
 				sudo rm /etc/nginx/apps.d/$domain-nginx.conf
@@ -1279,6 +1282,12 @@ reverse_proxy() {
 	sudo sed -i "s#http://localhost:8080#${url_scheme}${rpurl}#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	
 	[[ $(is_ssl $domain) != "true" ]] && sudo sed -i '/CacheStaticFiles/,/expires max;/{/headers-https.conf;/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
+	
+	# Suggest / at the end of the url to pass
+	if [[ $(echo "${rpurl}" | rev | cut -c-1) != "/" ]]; then
+		echo "${dim}[INFO] Your endpoint URL doesn't have a / at the end! You should note that it can have a different behavior."
+		echo "Read: http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass ${end}"
+	fi
 	
 	# Check host and port
 	local code=$(wget -t 1 --timeout=5 --server-response --spider $rpurl 2>&1 | awk '/^  HTTP/{print $2}')
@@ -1992,19 +2001,15 @@ wp_env_type() {
 	else
 		local index="0"
 		wp_config_write $domain WP_ENVIRONMENT_TYPE \'$env\' $subfolder
-		if [[ -n $cache ]]; then
-			wp_cache
-		elif [[ $(is_cache $domain $subfolder) =~ ^(wp|custom)$ ]]; then
-			cache="off"
-			wp_cache
-		fi
+		[[ -z $cache ]] && cache="off"	
+		wp_cache
 	fi
 	
 	# Not change WP debug when invoked from LOG command
 	if [[ -z $skip_debug ]]; then
-		if [[ $env =~ ^(production|staging)$ && $(is_wp_debug $domain $subfolder) == "true" ]]; then
+		if [[ $env =~ ^(production|staging)$ ]]; then
 			[[ -z $subfolder ]] && log $domain -wp=off || log $domain -wp=off -subfolder=$subfolder
-		elif [[ $env =~ ^(development|local)$ && $(is_wp_debug $domain $subfolder) != "true" ]]; then
+		else
 			[[ -z $subfolder ]] && log $domain -wp=on || log $domain -wp=on -subfolder=$subfolder
 		fi
 	fi
@@ -2037,7 +2042,7 @@ _EOF_
 			[[ $index == "0" ]] && echo "${gre}Discourage Search Engines WP option has been enabled for${blu} $domain$subfolder ${gre}site!${end}"
 			[[ $index == "1" ]] && echo "${gre}Discourage Search Engines WP option has been disabled for${blu} $domain$subfolder ${gre}site!${end}"
 		else
-			echo "${blu}${dim}Database cannot be updated because WP is still empty! ${end}"
+			echo "${blu}${dim}Discourage Search Engines cannot be updated because WP is still empty! ${end}"
 		fi
 	else
 		echo "${red}${dim}[ERROR] Discourage Search Engines WP option not updated! (WP Configuration corrupted)${end}"
