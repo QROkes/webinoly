@@ -294,6 +294,8 @@ mysql_public_access() {
 			read -p "${blu}Master User Password: ${end}" pass
 		fi
 		
+		[[ ${pass,,} == "random" ]] && local pass=`pwgen -s -1 16`
+		
 		if [[ -z $user || -z $pass || $user == *"'"* || $pass == *"'"* || ${#pass} -lt 8 ]]; then
 			echo "${red}[ERROR] Please, enter a valid username and password!"
 			echo "Password can not contain a 'single quote' and must be at least 8 characters long.${end}"
@@ -313,7 +315,7 @@ GRANT ${priv} ON *.* TO '${user}'@'%' ${grant};
 FLUSH PRIVILEGES;
 _EOF_
 
-			[[ $? == 0 ]] && echo "${gre}${dim}Master User${blu} '${user}' ${gre}successfully created!${end}" || echo "${red}[ERROR] Unexpected error!${end}"
+			[[ $? == 0 ]] && echo "${gre}${dim}Master User${blu} $user ${gre}with password ${blu}${pass}${gre} successfully created!${end}" || echo "${red}[ERROR] Unexpected error!${end}"
 		fi
 	
 	fi
