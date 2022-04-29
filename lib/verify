@@ -776,6 +776,12 @@ if [[ -z $critical_mode ]]; then
 			local ver_six_war="1"
 		fi
 	fi
+	
+	# Check if timezone is set
+	if [[ -z $(conf_read timezone) ]] || ! grep -Fxq $(conf_read timezone) /opt/webinoly/lib/timezone.dat; then
+		echo "${dim}- [WARNING] Timezone is not set or not valid!${end}${red}"
+		local ver_six_war="1"
+	fi
 
 
 	if [[ $ver_six_err == "1" ]]; then

@@ -88,7 +88,7 @@ elif [[ -n $timezone ]]; then
 	if [[ $timezone == true ]]; then
 		echo "${blu}${bol}"
 		echo "Please, enter a valid Timezone for Ubuntu and PHP. ${end}"
-		echo "${blu}${dim}http://php.net/manual/en/timezones.php ${end}"
+		echo "${blu}${dim}https://www.php.net/manual/en/timezones.php ${end}"
 		echo ""
 		read -p "${blu}Timezone: ${end}" timezone
 		echo ""
