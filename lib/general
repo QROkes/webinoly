@@ -990,8 +990,13 @@ is_log() {
 
 
 escaped_string() {
-	# Escaped characters: Put a backslash before $.*/[\]^()+
-	echo $(echo $1 | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g" | sed -E "s/\(/\\\(/g" | sed -E "s/\)/\\\)/g" | sed "s/\+/\\\+/g")
+	if [[ $2 == "-grep" ]]; then
+		# Escaped characters: Put a backslash before $.*/[\]^()+
+		echo $(echo $1 | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g")
+	else
+		# Escaped characters: Put a backslash before $.*/[\]^
+		echo $(echo $1 | sed "s#/#\\\/#g" | sed "s/\./\\\./g" | sed "s/\\$/\\\\$/g" | sed "s/\*/\\\*/g" | sed "s/\\\/\\\\/g" | sed "s/\[/\\\[/g" | sed "s/\]/\\\]/g" | sed "s/\^/\\\^/g" | sed -E "s/\(/\\\(/g" | sed -E "s/\)/\\\)/g" | sed "s/\+/\\\+/g")
+	fi
 }
 
 

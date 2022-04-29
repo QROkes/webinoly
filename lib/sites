@@ -693,6 +693,7 @@ create_empty_site() {
 	
 	if [[ $1 == "-full" ]]; then
 		sudo sed -i "/locations.conf;/d" /etc/nginx/sites-available/$domain
+		sudo sed -i "/include .*header.*.conf;/d" /etc/nginx/sites-available/$domain
 		sudo sed -i "/include .*headers-.*.conf;/d" /etc/nginx/sites-available/$domain
 	fi
 }
@@ -945,9 +946,9 @@ redirection_manager() {
 			sudo chown -R root:root /etc/nginx/apps.d/$domain-nginx.conf
 		fi
 		
-		local exisa=$( grep -G "^# RedirectFrom: $(escaped_string $from)$" /etc/nginx/apps.d/$domain-nginx.conf )
-		local exisb=$( grep -G "^# RedirectFrom: $(escaped_string $from) (Regex)$" /etc/nginx/apps.d/$domain-nginx.conf )
-		local exisc=$( grep -G "^# RedirectFrom: $(escaped_string $from) (Exact)$" /etc/nginx/apps.d/$domain-nginx.conf )
+		local exisa=$( grep -G "^# RedirectFrom: $(escaped_string $from -grep)$" /etc/nginx/apps.d/$domain-nginx.conf )
+		local exisb=$( grep -G "^# RedirectFrom: $(escaped_string $from -grep) (Regex)$" /etc/nginx/apps.d/$domain-nginx.conf )
+		local exisc=$( grep -G "^# RedirectFrom: $(escaped_string $from -grep) (Exact)$" /etc/nginx/apps.d/$domain-nginx.conf )
 		
 		# Can have both at the same time, one exact and another.
 		if [[ ( -z $exisc && $exact == "true" ) || ( -z $exisa && -z $exisb && -z $exact ) ]]; then
@@ -1254,6 +1255,19 @@ reverse_proxy() {
 		exit 1
 	fi
 	
+	is_url $proxydata -split
+	[[ -n $url_scheme ]] && url_scheme="$url_scheme://" || url_scheme="http://"
+	[[ -n $url_port ]] && url_port=":$url_port"
+	rpurl="$url_host$url_port$url_path"
+	
+	# URI part (subfolders) are not allowed because the proxy configuration we are using includes the static files location
+	# This location block is using regex which is not allowed, dedicated reverse proxy are not affected because they don't have static file location block.
+	# nginx: [emerg] "proxy_pass" cannot have URI part in location given by regular expression, or inside named location, or inside "if" statement, or inside "limit_except" block in /etc/nginx/apps.d/testa.qrokes.com-proxy.conf:31
+	if [[ -z $dedicated_reverse_proxy && -n $url_path ]]; then
+		echo "${red}[ERROR] Subfolders in your endpoint are not allowed in Reverse Proxy sites configured as websites!${end}"
+		exit 1
+	fi
+	
 	if [[ ( -z $subfolder || ( -n $subfolder && ! -f /etc/nginx/sites-available/$domain )) && $(is_empty_root_site $domain) == "false" ]]; then
 		[[ -n $dedicated_reverse_proxy ]] && create_empty_site -full || create_empty_site
 	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "full" && $(is_dedicated_proxy $domain) == "false" ]]; then
@@ -1261,11 +1275,6 @@ reverse_proxy() {
 	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "true" ]]; then
 		echo "${gre}Site configuration found: Main site at${blu} $domain ${gre}root has been successfully set as Reverse-Proxy!${end}"
 	fi
-	
-	is_url $proxydata -split
-	[[ -n $url_scheme ]] && url_scheme="$url_scheme://" || url_scheme="http://"
-	[[ -n $url_port ]] && url_port=":$url_port"
-	rpurl="$url_host$url_port$url_path"
 	
 	sudo cp /opt/webinoly/templates/template-site-proxy /etc/nginx/apps.d/$domain$subname-proxy.conf
 	sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-proxy.conf;" /etc/nginx/sites-available/$domain
@@ -1284,7 +1293,7 @@ reverse_proxy() {
 	[[ $(is_ssl $domain) != "true" ]] && sudo sed -i '/CacheStaticFiles/,/expires max;/{/headers-https.conf;/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
 	
 	# Suggest / at the end of the url to pass
-	if [[ $(echo "${rpurl}" | rev | cut -c-1) != "/" ]]; then
+	if [[ -n $dedicated_reverse_proxy && $(echo "${rpurl}" | rev | cut -c-1) != "/" ]]; then
 		echo "${dim}[INFO] Your endpoint URL doesn't have a / at the end! You should note that it can have a different behavior."
 		echo "Read: http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass ${end}"
 	fi
