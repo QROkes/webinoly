@@ -24,7 +24,7 @@ fi
 purge_mysql_client() {
 	local mysqlver=$(conf_read mysql-ver)
 	sudo apt -y purge mariadb-client
-	sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
+	echo | sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
 	sudo apt-key del 0xF1656F24C74CD1D8
 	conf_write mysql-client purged
 }
@@ -82,7 +82,11 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			sudo systemctl stop nginx
 			sudo apt -y purge nginx nginx-common # Common package is no longer installed, but we purge it in case of old stacks built before 1.14.0.
 			
-			[[ $(conf_read nginx-ppa) == "mainline" ]] && sudo add-apt-repository --remove "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx" || sudo add-apt-repository --remove "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
+			if [[ $(conf_read nginx-ppa) == "mainline" ]]; then
+				echo | sudo add-apt-repository --remove "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx"
+			else
+				echo | sudo add-apt-repository --remove "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
+			fi
 			sudo apt-key del 7BD9BF62
 			
 			# Remove SSL Cron
@@ -221,7 +225,7 @@ elif [[ -n $purge && -n $mysql ]]; then
 			# Purge is better, instead of remove even when keep-data is enabled, it prevents warnings during reinstallation.
 			sudo apt -y purge mariadb-server mariadb-common mysql-common
 			purge_mysql_client
-			sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
+			echo | sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
 			purge_autoremove="true"
 			
 			if [[ $mysql != "keep-data" ]]; then
@@ -308,7 +312,7 @@ elif [[ -n $purge && -n $backups ]]; then
 				echo "${gre}${dim}Backup (duply) profiles deleted!${end}"
 			fi
 			
-			[[ -z $(conf_read bkp-source-tmp) ]] && sudo snap remove duplicity || sudo pip3 uninstall -y duplicity
+			[[ -z $(conf_read bkp-source-tmp) ]] && sudo snap remove duplicity || sudo pip3 uninstall -y duplicity 2>&1 | grep -v "pip as the 'root' user"
 			sudo apt -y purge python3-boto3
 			sudo rm -rf /usr/bin/duply
 			

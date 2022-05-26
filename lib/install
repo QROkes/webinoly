@@ -530,7 +530,8 @@ nginx_tool_bkp() {
 	# Backend for S3
 	sudo apt -y install python3-boto3
 	# Duplicity installation directly from source
-	sudo pip3 install duplicity
+	# Temporal fix to remove warning - wait for: https://github.com/pypa/pip/issues/10556 - remove from stack purge too!
+	sudo pip3 install duplicity 2>&1 | grep -v "pip as the 'root' user"
 	
 	# Temporal dynvar - in the next stack update we will update all the old snap installations
 	# Be sure to remove it from "stack" command too.
@@ -822,9 +823,9 @@ stack_builder() {
 	if [[ $1 == "nginx" && $(conf_read nginx) != "true" ]]; then
 		sudo apt-key adv --fetch-keys 'https://nginx.org/keys/nginx_signing.key'
 		if [[ $(conf_read nginx-ppa) == "mainline" ]]; then
-			sudo add-apt-repository "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx"
+			echo | sudo add-apt-repository "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx"
 		else
-			sudo add-apt-repository "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
+			echo | sudo add-apt-repository "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
 		fi
 		local code="run"
 	elif [[ $1 == "nginx" ]]; then
@@ -851,9 +852,9 @@ stack_builder() {
 	if [[ $3 =~ ^(mysql|mysql-client)$ && $(conf_read mysql-client) != "true" ]]; then
 		[[ -n $(conf_read mysql-ver) && $(check_mysql_version $(conf_read mysql-ver)) == "true" ]] || conf_write mysql-ver $mysql_default
 		
-		# https://downloads.mariadb.org/mariadb/repositories/
+		# https://mariadb.org/download/?t=repo-config
 		sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
-		sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main"
+		echo | sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main"
 		local code="run"
 	elif [[ $3 == "mysql-client" && $(conf_read mysql-client) == "true" ]]; then
 		echo "${dim}MySQL Client is already installed!${end}"

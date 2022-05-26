@@ -273,13 +273,22 @@ if [[ $(conf_read nginx) == "true" ]]; then
 		echo "- [ERROR] File: /etc/nginx/nginx.conf not found!"
 		local ver_two_err="1"
 	fi
-	if [[ ! -f /etc/apt/trusted.gpg || -z $(grep -Fi "nginx signing key" /etc/apt/trusted.gpg) ]]; then
+	
+	
+	if [[ ! -f /etc/apt/trusted.gpg || -z $(grep -Foia "nginx signing key" /etc/apt/trusted.gpg) ]]; then
 		echo "- [ERROR] Nginx Apt Key not found!"
 		local ver_two_err="1"
 	fi
-	if [[ ! -f /etc/apt/sources.list || -z $(grep -Fo "nginx.org/packages/" /etc/apt/sources.list) ]]; then
-		echo "- [ERROR] Nginx PPA not found in sources list!"
-		local ver_two_err="1"
+	if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+		if [[ ! -f /etc/apt/sources.list || -z $(grep -Fo "nginx.org/packages/" /etc/apt/sources.list) ]]; then
+			echo "- [ERROR] Nginx PPA not found in sources list!"
+			local ver_two_err="1"
+		fi
+	else
+		if [[ ! -f /etc/apt/sources.list.d/archive_uri-https_nginx_org_packages_ubuntu_-jammy.list || -z $(grep -Fo "nginx.org/packages/" /etc/apt/sources.list.d/archive_uri-https_nginx_org_packages_ubuntu_-jammy.list) ]]; then
+			echo "- [ERROR] Nginx PPA not found in sources list!"
+			local ver_two_err="1"
+		fi
 	fi
 fi
 
@@ -455,7 +464,8 @@ if [[ $(conf_read php) == "true" ]]; then
 		echo "- [ERROR] File: /etc/php/$(conf_read php-ver)/fpm/php.ini not found!"
 		local ver_three_err="1"
 	fi
-	if [[ ! -f /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg || ! -s /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg ]]; then
+	# First check is used before 22.04
+	if [[ ( ! -f /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg || ! -s /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg ) && ( ! -f /etc/apt/trusted.gpg.d/ondrej-ubuntu-php.gpg || ! -s /etc/apt/trusted.gpg.d/ondrej-ubuntu-php.gpg ) ]]; then
 		echo "- [ERROR] PHP Apt Key not found!"
 		local ver_three_err="1"
 	fi
@@ -570,17 +580,27 @@ local ver_four_war="0"
 
 # MySQL
 if [[ $(conf_read mysql) == "true" ]]; then
+	# To check supported versions: https://mariadb.com/kb/en/mariadb-server/
+	local ver_mysql_ver=$(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.')
+
 	if [[ ! -d /etc/mysql ]]; then
 		echo "- [ERROR] Folder: /etc/mysql not found!"
 		local ver_four_err="1"
 	fi
-	if [[ ! -f /etc/apt/trusted.gpg || -z $(grep -Fi "mariadb signing key" /etc/apt/trusted.gpg) ]]; then
+	if [[ ! -f /etc/apt/trusted.gpg || -z $(grep -Foia "mariadb signing key" /etc/apt/trusted.gpg) ]]; then
 		echo "- [ERROR] MariaDB Apt Key not found!"
 		local ver_four_err="1"
 	fi
-	if [[ ! -f /etc/apt/sources.list || -z $(grep -Fo "mirrors.syringanetworks.net/mariadb/repo" /etc/apt/sources.list) ]]; then
+	if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+		if [[ ! -f /etc/apt/sources.list || -z $(grep -Fo "mirrors.syringanetworks.net/mariadb/repo" /etc/apt/sources.list) ]]; then
 		echo "- [ERROR] MariaDB PPA not found in sources list!"
 		local ver_four_err="1"
+	fi
+	else
+		if [[ ! -f /etc/apt/sources.list.d/archive_uri-http_mirrors_syringanetworks_net_mariadb_repo_$(echo $ver_mysql_ver | sed 's/\./_/')_ubuntu-jammy.list || -z $(grep -Fo "mirrors.syringanetworks.net/mariadb/repo" /etc/apt/sources.list.d/archive_uri-http_mirrors_syringanetworks_net_mariadb_repo_$(echo $ver_mysql_ver | sed 's/\./_/')_ubuntu-jammy.list) ]]; then
+			echo "- [ERROR] MariaDB PPA not found in sources list!"
+			local ver_four_err="1"
+		fi
 	fi
 fi
 
@@ -604,10 +624,7 @@ fi
 
 if [[ -z $critical_mode ]]; then
 	# Check for MySQL version
-	if [[ $(conf_read mysql) == "true" ]]; then
-		# To check supported versions: https://mariadb.com/kb/en/mariadb-server/
-		local ver_mysql_ver=$(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.')
-		
+	if [[ $(conf_read mysql) == "true" ]]; then		
 		if [[ $(conf_read mysql-ver) != $ver_mysql_ver ]]; then
 			echo "${dim}- [WARNING] MariaDB (MySQL) Version corrupted in Configuration file! (Installed: $ver_mysql_ver != Conf: $(conf_read mysql-ver)) ${end}${red}"
 			local ver_four_war="1"
@@ -734,7 +751,9 @@ elif [[ $(check_ubuntu_release) != "true" ]]; then
 	echo "- [ERROR] This Ubuntu version is not supported!"
 	local ver_six_err="1"
 elif [[ $(lsb_release -c | cut -d':' -f 2 | xargs) == "bionic" ]]; then
-	echo "${blu}${dim}- [INFO] You should start considering moving to Ubuntu 20.04 ${end}${red}"
+	#echo "${blu}${dim}- [INFO] You should start considering moving to Ubuntu 20.04 ${end}${red}"
+	echo "${dim}- [WARNING] Support for Ubuntu 18.04 will be removed very soon! ${end}${red}"
+	local ver_six_war="1"
 fi
 # Double-Check for sudo/root privileges
 if [[ $(whoami) != "root" ]]; then
@@ -753,9 +772,8 @@ if [[ -z $critical_mode ]]; then
 	# Check for BASH Shell
 	# This is a very "shity" method, but checking if file exists is very reliable
 	# If modified: this same script is in installer, general lib and verify
-	local ver_shell_tty=$(echo $(tty) | grep -Eo "pts/[0-9]+")
-	if [[ -n $ver_shell_tty ]]; then
-		local ver_shell_pid=$(ps -au | grep -E "${ver_shell_tty}+[ ]+S[s]?[ ]+" | tail -n 1 | awk '{print $2}')
+	if [[ -n $(echo $(tty) | grep -Eo "pts/[0-9]+") && -n $(logname) ]]; then
+		local ver_shell_pid=$(ps -au | grep -E "^$(logname).*pts/[0-9]+[ ]+S[s]?[ ]+" | tail -n 1 | awk '{print $2}')
 		[[ -n $ver_shell_pid && -f /proc/$ver_shell_pid/cmdline ]] && local ver_shell_current=$(tr -d '\000' < /proc/$ver_shell_pid/cmdline)
 		[[ -n $ver_shell_pid && -f /proc/$ver_shell_pid/status ]] && ver_shell_status=$(grep -Eo '^Name:.*bash.*' /proc/$ver_shell_pid/status) # Double check!!!
 		
@@ -809,7 +827,7 @@ if [[ $(conf_read php-tool-redis) == "true" ]]; then
 		echo "- [ERROR] Folder: /etc/redis not found!"
 		local ver_seven_err="1"
 	fi
-	if [[ ! -f /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg || ! -s /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg ]]; then
+	if [[ ( ! -f /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg || ! -s /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg ) && ( ! -f /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg || ! -s /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg ) ]]; then
 		echo "- [ERROR] Redis Apt Key not found!"
 		local ver_seven_err="1"
 	fi
