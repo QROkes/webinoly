@@ -1,373 +1,185 @@
 #!/bin/bash
 
+# Note: Custom headers function defined in webin lib
+# Note: No need to check for Nginx because is only called from nginx-optim function
+
+#############################################
+# If empty these headers set a default value, but they all accept the 'off' value.
+##################################################################################
+
+http_header_cache_control() {
+	[[ -z $(conf_read header-cache-control) ]] && local header_data="no-cache" || local header_data="$(conf_read header-cache-control)"
+	
+	if [[ ${header_data,,} == "off" ]]; then
+		sudo sed -i '/^add_header Cache-Control/s/^/#/' /etc/nginx/common/headers-html.conf
+		echo "${gre}${dim}Cache Control Header successfully disabled!${end}"
+	else
+		sudo sed -Ei "/^#?add_header Cache-Control/d" /etc/nginx/common/headers-html.conf
+		sudo echo "add_header Cache-Control \"${header_data}\";" >> /etc/nginx/common/headers-html.conf
+		echo "${gre}${dim}Cache Control Header successfully configured!${end}"
+	fi
+}
+
 
 http_header_referrer() {
-	[[ -z $header_referrer || $header_referrer == "true" ]] && read -p "${blu}Referrer header value: ${end}" header_referrer
-	if ! [[ $header_referrer =~ ^(no-referrer|no-referrer-when-downgrade|origin|origin-when-cross-origin|same-origin|strict-origin|strict-origin-when-cross-origin|unsafe-url)$ ]]; then
-		echo "${red}[ERROR] Invalid referrer header value!${end}"
-		exit 1
-	fi
+	[[ -z $(conf_read header-referrer) ]] && local header_data="no-referrer-when-downgrade" || local header_data="$(conf_read header-referrer)"
 	
-	conf_write header-referrer $header_referrer
-	[[ $(conf_read nginx) == "true" ]] && sudo sed -i "/^add_header Referrer-Policy /c\add_header Referrer-Policy \"$header_referrer\";" /etc/nginx/common/headers-html.conf
-	echo "${gre}Referrer Policy Header successfully configured!${end}"
+	if [[ ${header_data,,} == "off" ]]; then
+		sudo sed -i '/^add_header Referrer-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
+		echo "${gre}${dim}Referrer Policy Header successfully disabled!${end}"
+	else
+		if [[ ${header_data,,} =~ ^(no-referrer|no-referrer-when-downgrade|origin|origin-when-cross-origin|same-origin|strict-origin|strict-origin-when-cross-origin|unsafe-url)$ ]]; then
+			sudo sed -Ei "/^#?add_header Referrer-Policy/d" /etc/nginx/common/headers-html.conf
+			sudo echo "add_header Referrer-Policy \"${header_data}\";" >> /etc/nginx/common/headers-html.conf
+			echo "${gre}${dim}Referrer Policy Header successfully configured!${end}"
+		else
+			echo "${red}[ERROR] Invalid referrer header value!${end}"
+			return 1
+		fi
+	fi
 }
 
 
 http_header_hsts() {
-	[[ -z $header_hsts || $header_hsts == "true" ]] && read -p "${blu}HSTS header value: ${end}" header_hsts
-	if ! [[ $header_hsts =~ ^([0-9]+|off|preload|default)$ ]]; then
+	[[ -z $(conf_read header-hsts) || $(conf_read header-hsts) == "default" ]] && local header_data="31536000" || local header_data="$(conf_read header-hsts)"
+	
+	if ! [[ ${header_data,,} =~ ^([0-9]+|off|preload|default)$ ]]; then
 		echo "${red}[ERROR] Invalid HSTS header value!${end}"
-		exit 1
-	elif [[ $header_hsts =~ ^[0-9]+$ && $header_hsts -gt 31536000 ]]; then
+		return 1
+	elif [[ ${header_data,,} =~ ^[0-9]+$ && $(conf_read header-hsts) -gt 31536000 ]]; then
 		echo "${red}[ERROR] HSTS max-age greater than 1 year not allowed without preload (2 years).${end}"
-		exit 1
+		return 1
+	fi
+
+	if [[ ${header_data,,} == "off" ]]; then
+		sudo sed -i '/^add_header Strict-Transport-Security /s/^/#/' /etc/nginx/common/headers-https.conf
+		echo "${gre}${dim}HSTS Header successfully disabled!${end}"
+	else
+		[[ ${header_data,,} == "preload" ]] && local set_hsts="63072000; includeSubDomains; preload" || local set_hsts="${header_data}; includeSubDomains"
+		sudo sed -Ei "/^#?add_header Strict-Transport-Security/d" /etc/nginx/common/headers-https.conf
+		sudo echo "add_header Strict-Transport-Security \"max-age=${set_hsts}\";" >> /etc/nginx/common/headers-https.conf
+		echo "${gre}${dim}HSTS Header successfully configured!${end}"
+	fi
+}
+
+
+http_header_xfo() {
+	[[ -z $(conf_read header-xfo) ]] && local header_data="SAMEORIGIN" || local header_data="$(conf_read header-xfo)"
+	local header_data="${header_data^^}" # Uppercase
+	
+	if ! [[ $header_data =~ ^(OFF|DENY|SAMEORIGIN|ALLOW-FROM)$ ]]; then
+		echo "${red}[ERROR] Please, enter a valid option for X-Frame-Options header!${end}"
+		return 1
 	fi
 	
-	if [[ $(conf_read nginx) == "true" ]]; then
-		if [[ $header_hsts == "off" ]]; then
-			sudo sed -i '/^add_header Strict-Transport-Security /s/^/#/' /etc/nginx/common/headers-https.conf
+	if [[ $header_data == "ALLOW-FROM" ]]; then
+		if [[ -z $(conf_read header-xfo-url) ]] || ! [[ $(is_url $(conf_read header-xfo-url)) =~ ^(http|https|ip|true)$ ]]; then
+			echo "${red}[ERROR] Invalid URL for X-Frame-Options header!${end}"
+			return 1
+		fi
+		local header_data="\"${header_data} $(conf_read header-xfo-url)\""
+	fi
+
+	if [[ $header_data == "OFF" ]]; then
+		sudo sed -i '/^add_header X-Frame-Options/s/^/#/' /etc/nginx/common/headers-http.conf
+		echo "${gre}${dim}X-Frame-Options Header successfully disabled!${end}"
+	else
+		sudo sed -Ei "/^#?add_header X-Frame-Options/d" /etc/nginx/common/headers-http.conf			
+		sudo echo "add_header X-Frame-Options ${header_data};" >> /etc/nginx/common/headers-http.conf
+		echo "${gre}${dim}X-Frame-Options Header successfully configured!${end}"
+	fi
+}
+
+
+http_header_xcto() {	
+	if [[ $(conf_read header-xcto) == "false" ]]; then
+		sudo sed -i '/^add_header X-Content-Type-Options/s/^/#/' /etc/nginx/common/headers-http.conf
+		echo "${gre}${dim}X-Content-Type-Options Header successfully disabled!${end}"
+	else
+		sudo sed -Ei "/^#?add_header X-Content-Type-Options/d" /etc/nginx/common/headers-http.conf			
+		sudo echo "add_header X-Content-Type-Options nosniff;" >> /etc/nginx/common/headers-http.conf
+		
+		if [[ -z $(conf_read header-xcto) || $(conf_read header-xcto) == "true" ]]; then
+			echo "${gre}${dim}X-Content-Type-Options Header successfully configured!${end}"
 		else
-			local set_hsts="$header_hsts; includeSubDomains"
-			[[ $header_hsts == "default" ]] && set_hsts="31536000"
-			[[ $header_hsts == "preload" ]] && set_hsts="63072000; includeSubDomains; preload"
-			sudo sed -Ei "/^#?add_header Strict-Transport-Security /c\add_header Strict-Transport-Security \"max-age=${set_hsts}\";" /etc/nginx/common/headers-https.conf
-		fi
-	fi
-	
-	conf_write header-hsts $header_hsts
-	[[ $header_hsts == "off" ]] && echo "${gre}HSTS Header successfully disabled!${end}" || echo "${gre}HSTS Header successfully configured!${end}"
-}
-
-
-http_header_csp() {
-	if ! [[ $header_csp =~ ^(true|on|off|reset)$ ]]; then
-		echo "${red}[ERROR] Please, enter a valid option for CSP header!${end}"
-		exit 1
-	elif [[ $header_csp =~ ^(on|true)$ && -z $(conf_read header-csp) ]]; then
-		read -p "${blu}CSP header value: ${end}" csp_data
-		
-		if [[ -n $csp_data ]]; then
-			conf_write header-csp "$csp_data"
-			echo "${blu}${dim}CSP Header... saving data!${end}"
-		fi
-	elif [[ $header_csp =~ ^(true|on)$ && -n $(conf_read header-csp) ]]; then
-		echo "${blu}${dim}Recovering existing saved data for CSP!${end}"
-		csp_data=$(conf_read header-csp)
-	fi
-	
-	if [[ $header_csp =~ ^(true|on)$ && -z $csp_data ]]; then
-		echo "${red}[ERROR] Invalid CSP header value!${end}"
-		exit 1
-	elif [[ $header_csp == "reset" ]]; then
-		sudo sed -i '/^add_header Content-Security-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
-		conf_delete header-csp -commented
-		echo "${gre}CSP Header disabled and saved data successfully removed!${end}"
-	elif [[ $(conf_read nginx) == "true" ]]; then
-		if [[ $header_csp == "off" ]]; then
-			sudo sed -i '/^add_header Content-Security-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
-			echo "${gre}CSP Header successfully disabled!${end}"
-		elif [[ $header_csp =~ ^(true|on)$ ]]; then
-			[[ $csp_report_only == "on" ]] && local cspro="-Report-Only"
-			sudo sed -Ei "/^#?add_header Content-Security-Policy/d" /etc/nginx/common/headers-html.conf			
-			sudo echo "add_header Content-Security-Policy${cspro} \"${csp_data}\";" >> /etc/nginx/common/headers-html.conf
-			echo "${gre}CSP Header successfully configured!${end}"
-		fi
-	elif [[ $(conf_read nginx) != "true" ]]; then	
-		if [[ $header_csp == "off" ]]; then
-			echo "${red}[ERROR] NGINX is not installed!${end}"
-			exit 1
-		elif [[ $header_csp =~ ^(true|on)$ ]]; then
-			echo "${gre}CSP Header successfully configured and it will be used next time NGINX is installed!${end}"
-		fi
-	fi
-}
-
-
-http_header_permissions_policy() {
-	if ! [[ $header_permissions_policy =~ ^(true|on|off|reset|floc)$ ]]; then
-		echo "${red}[ERROR] Please, enter a valid option for Permissions Policy header!${end}"
-		exit 1
-	elif [[ $header_permissions_policy =~ ^(on|true|floc)$ && -z $(conf_read header-permissions) ]]; then
-		[[ $header_permissions_policy != "floc" ]] && read -p "${blu}Permissions Policy header value: ${end}" pph_data
-		
-		if [[ -n $pph_data ]]; then
-			conf_write header-permissions "$pph_data"
-			echo "${blu}${dim}Permissions Policy Header... saving data!${end}"
-		fi
-	elif [[ $header_permissions_policy =~ ^(true|on|floc)$ && -n $(conf_read header-permissions) ]]; then
-		echo "${blu}${dim}Recovering existing saved data for Permissions Policy!${end}"
-		local pph_data=$(conf_read header-permissions)
-	fi
-	
-	if [[ $header_permissions_policy =~ ^(true|on|floc)$ && -z $pph_data ]]; then
-		echo "${red}[ERROR] Invalid Permissions Policy header value!${end}"
-		exit 1
-	elif [[ $header_permissions_policy == "reset" ]]; then
-		sudo sed -Ei '/^add_header Permission[s]?-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
-		conf_delete header-permissions -commented
-		echo "${gre}Permissions Policy Header disabled and saved data successfully removed!${end}"
-	elif [[ $(conf_read nginx) == "true" ]]; then
-		if [[ $header_permissions_policy == "off" ]]; then
-			sudo sed -Ei '/^add_header Permission[s]?-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
-			echo "${gre}Permissions Policy Header successfully disabled!${end}"
-		elif [[ $header_permissions_policy =~ ^(true|on|floc)$ ]]; then
-			sudo sed -Ei "/^#?add_header Permission[s]?-Policy/d" /etc/nginx/common/headers-html.conf			
-			[[ ${pph_data,,} == "floc" ]] && local pph_data="interest-cohort=()"
-			sudo echo "add_header Permissions-Policy \"${pph_data}\";" >> /etc/nginx/common/headers-html.conf
-			echo "${gre}Permissions Policy Header successfully configured!${end}"
-		fi
-	elif [[ $(conf_read nginx) != "true" ]]; then	
-		if [[ $header_permissions_policy == "off" ]]; then
-			echo "${red}[ERROR] NGINX is not installed!${end}"
-			exit 1
-		elif [[ $header_permissions_policy =~ ^(true|on|floc)$ ]]; then
-			echo "${gre}Permissions Policy Header successfully configured and it will be used next time NGINX is installed!${end}"
-		fi
-	fi
-}
-
-
-http_header_cache_control() {
-	if ! [[ $header_cache_control =~ ^(true|on|off|reset)$ ]]; then
-		echo "${red}[ERROR] Please, enter a valid option for Cache Control header!${end}"
-		exit 1
-	elif [[ $header_cache_control =~ ^(on|true)$ && -z $(conf_read header-cache-control) ]]; then
-		read -p "${blu}Cache Control header value: ${end}" cch_data
-		
-		if [[ -n $cch_data ]]; then
-			conf_write header-cache-control "$cch_data"
-			echo "${blu}${dim}Cache Control Header... saving data!${end}"
-		fi
-	elif [[ $header_cache_control =~ ^(true|on)$ && -n $(conf_read header-cache-control) ]]; then
-		echo "${blu}${dim}Recovering existing saved data for Cache Control!${end}"
-		cch_data=$(conf_read header-cache-control)
-	fi
-	
-	if [[ $header_cache_control =~ ^(true|on)$ && -z $cch_data ]]; then
-		echo "${red}[ERROR] Invalid Cache Control header value!${end}"
-		exit 1
-	elif [[ $header_cache_control == "reset" ]]; then
-		sudo sed -i '/^add_header Cache-Control/s/^/#/' /etc/nginx/common/headers-html.conf
-		conf_delete header-cache-control -commented
-		echo "${gre}Cache Control Header disabled and saved data successfully removed!${end}"
-	elif [[ $(conf_read nginx) == "true" ]]; then
-		if [[ $header_cache_control == "off" ]]; then
-			sudo sed -i '/^add_header Cache-Control/s/^/#/' /etc/nginx/common/headers-html.conf
-			echo "${gre}Cache Control Header successfully disabled!${end}"
-		elif [[ $header_cache_control =~ ^(true|on)$ ]]; then
-			sudo sed -Ei "/^#?add_header Cache-Control/d" /etc/nginx/common/headers-html.conf			
-			sudo echo "add_header Cache-Control \"${cch_data}\";" >> /etc/nginx/common/headers-html.conf
-			echo "${gre}Cache Control Header successfully configured!${end}"
-		fi
-	elif [[ $(conf_read nginx) != "true" ]]; then	
-		if [[ $header_cache_control == "off" ]]; then
-			echo "${red}[ERROR] NGINX is not installed!${end}"
-			exit 1
-		elif [[ $header_cache_control =~ ^(true|on)$ ]]; then
-			echo "${gre}Cache Control Header successfully configured and it will be used next time NGINX is installed!${end}"
-		fi
-	fi
-}
-
-
-http_header_robots() {
-	if ! [[ $header_robots =~ ^(true|on|off|reset)$ ]]; then
-		echo "${red}[ERROR] Please, enter a valid option for X-Robots-Tag header!${end}"
-		exit 1
-	elif [[ $header_robots =~ ^(on|true)$ && -z $(conf_read header-robots) ]]; then
-		read -p "${blu}X-Robots-Tag header value: ${end}" rob_data
-		
-		if [[ -n $rob_data ]]; then
-			conf_write header-robots "$rob_data"
-			echo "${blu}${dim}X-Robots-Tag Header... saving data!${end}"
-		fi
-	elif [[ $header_robots =~ ^(true|on)$ && -n $(conf_read header-robots) ]]; then
-		echo "${blu}${dim}Recovering existing saved data for X-Robots-Tag!${end}"
-		rob_data=$(conf_read header-robots)
-	fi
-	
-	if [[ $header_robots =~ ^(true|on)$ && -z $rob_data ]]; then
-		echo "${red}[ERROR] Invalid X-Robots-Tag header value!${end}"
-		exit 1
-	elif [[ $header_robots == "reset" ]]; then
-		sudo sed -i '/^add_header X-Robots-Tag/s/^/#/' /etc/nginx/common/headers-http.conf
-		conf_delete header-robots -commented
-		echo "${gre}X-Robots-Tag Header disabled and saved data successfully removed!${end}"
-	elif [[ $(conf_read nginx) == "true" ]]; then
-		if [[ $header_robots == "off" ]]; then
-			sudo sed -i '/^add_header X-Robots-Tag/s/^/#/' /etc/nginx/common/headers-http.conf
-			echo "${gre}X-Robots-Tag Header successfully disabled!${end}"
-		elif [[ $header_robots =~ ^(true|on)$ ]]; then
-			sudo sed -Ei "/^#?add_header X-Robots-Tag/d" /etc/nginx/common/headers-http.conf			
-			
-			# Check for multiple values
-			if [[ -n $(echo $rob_data | cut -d'|' -f 2 -s) ]]; then
-				local c=1
-				while [[ -n $(echo $rob_data | cut -d'|' -f $c -s) ]]
-				do  
-					sudo echo "add_header X-Robots-Tag \"$(echo $rob_data | cut -d'|' -f $c -s)\";" >> /etc/nginx/common/headers-http.conf
-					local c=$(($c+1))
-				done
-			else
-				sudo echo "add_header X-Robots-Tag \"${rob_data}\";" >> /etc/nginx/common/headers-http.conf
-			fi
-			
-			echo "${gre}X-Robots-Tag Header successfully configured!${end}"
-		fi
-	elif [[ $(conf_read nginx) != "true" ]]; then	
-		if [[ $header_robots == "off" ]]; then
-			echo "${red}[ERROR] NGINX is not installed!${end}"
-			exit 1
-		elif [[ $header_robots =~ ^(true|on)$ ]]; then
-			echo "${gre}X-Robots-Tag Header successfully configured and it will be used next time NGINX is installed!${end}"
+			echo "${red}[ERROR] Please, enter a valid option for X-Content-Type-Options header!${end}"
+			return 1
 		fi
 	fi
 }
 
 
 http_header_xssp() {
-	if ! [[ $header_xssp =~ ^(on|off)$ ]]; then
-		echo "${red}[ERROR] Please, enter a valid option for X-XSS-Protection header!${end}"
-		exit 1
-	fi
-	
-	if [[ $(conf_read nginx) == "true" ]]; then
-		if [[ $header_xssp == "off" ]]; then
-			conf_write header-xssp false
-			sudo sed -i '/^add_header X-XSS-Protection/s/^/#/' /etc/nginx/common/headers-http.conf
-			echo "${gre}X-XSS-Protection Header successfully disabled!${end}"
-		elif [[ $header_xssp == "on" ]]; then
-			conf_write header-xssp true
-			sudo sed -Ei "/^#?add_header X-XSS-Protection/d" /etc/nginx/common/headers-http.conf			
-			sudo echo "add_header X-XSS-Protection \"1; mode=block\";" >> /etc/nginx/common/headers-http.conf
-			echo "${gre}X-XSS-Protection Header successfully configured!${end}"
-		fi
-	elif [[ $(conf_read nginx) != "true" ]]; then	
-		if [[ $header_xssp == "off" ]]; then
-			conf_write header-xssp false
-			echo "${gre}X-XSS-Protection Header successfully configured and it will be disabled next time NGINX is installed!${end}"
-		elif [[ $header_xssp == "on" ]]; then
-			conf_write header-xssp true
-			echo "${gre}X-XSS-Protection Header successfully configured and it will be used next time NGINX is installed!${end}"
-		fi
-	fi
-}
-
-
-http_header_xcto() {
-	if ! [[ $header_xcto =~ ^(on|off)$ ]]; then
-		echo "${red}[ERROR] Please, enter a valid option for X-Content-Type-Options header!${end}"
-		exit 1
-	fi
-	
-	if [[ $(conf_read nginx) == "true" ]]; then
-		if [[ $header_xcto == "off" ]]; then
-			conf_write header-xcto false
-			sudo sed -i '/^add_header X-Content-Type-Options/s/^/#/' /etc/nginx/common/headers-http.conf
-			echo "${gre}X-Content-Type-Options Header successfully disabled!${end}"
-		elif [[ $header_xcto == "on" ]]; then
-			conf_write header-xcto true
-			sudo sed -Ei "/^#?add_header X-Content-Type-Options/d" /etc/nginx/common/headers-http.conf			
-			sudo echo "add_header X-Content-Type-Options nosniff;" >> /etc/nginx/common/headers-http.conf
-			echo "${gre}X-Content-Type-Options Header successfully configured!${end}"
-		fi
-	elif [[ $(conf_read nginx) != "true" ]]; then	
-		if [[ $header_xcto == "off" ]]; then
-			conf_write header-xcto false
-			echo "${gre}X-Content-Type-Options Header successfully configured and it will be disabled next time NGINX is installed!${end}"
-		elif [[ $header_xcto == "on" ]]; then
-			conf_write header-xcto true
-			echo "${gre}X-Content-Type-Options Header successfully configured and it will be used next time NGINX is installed!${end}"
-		fi
-	fi
-}
-
-
-http_header_xfo() {
-	if ! [[ $header_xfo =~ ^(off|deny|sameorigin|allow-from)$ ]]; then
-		echo "${red}[ERROR] Please, enter a valid option for X-Frame-Options header!${end}"
-		exit 1
-	fi
-	
-	local param="${header_xfo^^}"
-	if [[ $header_xfo == "allow-from" ]]; then
-		[[ -z $url ]] && read -p "${blu}Allow-From URL: ${end}" url
-		if [[ -z $url ]] || ! [[ $(is_url $url) =~ ^(http|https|ip|true)$ ]]; then
-			echo "${red}[ERROR] Invalid URL!${end}"
-			exit 1
-		fi
-		local param="\"${header_xfo^^} $url\""
-		conf_write header-xfo-url $url
-	fi
-	conf_write header-xfo $header_xfo
-	
-	if [[ $(conf_read nginx) == "true" ]]; then
-		if [[ $header_xfo == "off" ]]; then
-			sudo sed -i '/^add_header X-Frame-Options/s/^/#/' /etc/nginx/common/headers-http.conf
-			echo "${gre}X-Frame-Options Header successfully disabled!${end}"
-		elif [[ $header_xfo =~ ^(deny|sameorigin|allow-from)$ ]]; then
-			sudo sed -Ei "/^#?add_header X-Frame-Options/d" /etc/nginx/common/headers-http.conf			
-			sudo echo "add_header X-Frame-Options ${param};" >> /etc/nginx/common/headers-http.conf
-			echo "${gre}X-Frame-Options Header successfully configured!${end}"
-		fi
-	elif [[ $(conf_read nginx) != "true" ]]; then	
-		if [[ $header_xfo == "off" ]]; then
-			echo "${gre}X-Frame-Options Header successfully configured and it will be disabled next time NGINX is installed!${end}"
-		elif [[ $header_xfo =~ ^(deny|sameorigin|allow-from)$ ]]; then
-			echo "${gre}X-Frame-Options Header successfully configured and it will be used next time NGINX is installed!${end}"
-		fi
-	fi
-}
-
-
-http_header_custom() {
-	if ! [[ $custom_headers =~ ^(reload|remove)$ ]]; then
-		echo "${red}[ERROR] Please, enter a valid option Custom Headers!${end}"
-		exit 1
-	fi
-	
-	if [[ $(conf_read nginx) == "true" ]]; then
-		sudo sed -i '/WebinolyCustomHeaders/,/WebinolyCustomHeadersEnd/{/.*/d}' /etc/nginx/common/headers-http.conf
-		sudo sed -i '/WebinolyCustomHeaders/,/WebinolyCustomHeadersEnd/{/.*/d}' /etc/nginx/common/headers-https.conf
-		sudo sed -i '/WebinolyCustomHeaders/,/WebinolyCustomHeadersEnd/{/.*/d}' /etc/nginx/common/headers-html.conf
-	fi
-	
-	if [[ $custom_headers == "reload" && $(conf_read nginx) == "true" ]]; then
-		if [[ -s /opt/webinoly/templates/source/custom_header_http_webinoly.data ]]; then
-			local http="$(sudo grep -E "^add_header .*;$" /opt/webinoly/templates/source/custom_header_http_webinoly.data)"
-			if [[ -n $http ]]; then
-				echo "# WebinolyCustomHeaders
-$http
-# WebinolyCustomHeadersEnd" >> /etc/nginx/common/headers-http.conf
-			fi
-		fi
-		
-		if [[ -s /opt/webinoly/templates/source/custom_header_https_webinoly.data ]]; then
-			local https="$(sudo grep -E "^add_header .*;$" /opt/webinoly/templates/source/custom_header_https_webinoly.data)"
-			if [[ -n $https ]]; then
-				echo "# WebinolyCustomHeaders
-$https
-# WebinolyCustomHeadersEnd" >> /etc/nginx/common/headers-https.conf
-			fi
-		fi
-		
-		if [[ -s /opt/webinoly/templates/source/custom_header_html_webinoly.data ]]; then
-			local html="$(sudo grep -E "^add_header .*;$" /opt/webinoly/templates/source/custom_header_html_webinoly.data)"
-			if [[ -n $html ]]; then
-				echo "# WebinolyCustomHeaders
-$html
-# WebinolyCustomHeadersEnd" >> /etc/nginx/common/headers-html.conf
-			fi
-		fi
-		
-		conf_write header-custom true
-		echo "${gre}Custom Headers successfully configured!${end}"
-	elif [[ $custom_headers == "reload" ]]; then
-		conf_write header-custom true
-		echo "${gre}Custom Headers successfully configured and it will be used next time NGINX is installed!${end}"
+	if [[ $(conf_read header-xssp) == "false" ]]; then
+		sudo sed -i '/^add_header X-XSS-Protection/s/^/#/' /etc/nginx/common/headers-http.conf
+		echo "${gre}${dim}X-XSS-Protection Header successfully disabled!${end}"
 	else
-		conf_write header-custom false
-		echo "${gre}Custom Headers successfully removed!${end}"
+		sudo sed -Ei "/^#?add_header X-XSS-Protection/d" /etc/nginx/common/headers-http.conf			
+		sudo echo "add_header X-XSS-Protection \"1; mode=block\";" >> /etc/nginx/common/headers-http.conf
+	
+		if [[ -z $(conf_read header-xssp) || $(conf_read header-xssp) == "true" ]]; then	
+			echo "${gre}${dim}X-XSS-Protection Header successfully configured!${end}"
+		else
+			echo "${red}[ERROR] Please, enter a valid option for X-XSS-Protection header!${end}"
+			return 1
+		fi
+	fi
+}
+
+
+
+
+#################
+# If empty these headers are removed
+######################################
+
+http_header_csp() {
+	if [[ -n $(conf_read header-csp) ]]; then
+		[[ $(conf_read header-csp-report-only) == "on" ]] && local cspro="-Report-Only"
+		sudo sed -Ei "/^#?add_header Content-Security-Policy/d" /etc/nginx/common/headers-html.conf			
+		sudo echo "add_header Content-Security-Policy${cspro} \"$(conf_read header-csp)\";" >> /etc/nginx/common/headers-html.conf
+		echo "${gre}${dim}CSP Header successfully configured!${end}"
+	else
+		sudo sed -i '/^add_header Content-Security-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
+		echo "${gre}${dim}CSP Header successfully disabled!${end}"
+	fi
+}
+
+
+http_header_permissions_policy() {
+	if [[ -n $(conf_read header-permissions) ]]; then
+		sudo sed -Ei "/^#?add_header Permission[s]?-Policy/d" /etc/nginx/common/headers-html.conf			
+		[[ $(conf_read header-permissions) == "floc" ]] && local header_data="interest-cohort=()" || local header_data="$(conf_read header-permissions)"
+		sudo echo "add_header Permissions-Policy \"${header_data}\";" >> /etc/nginx/common/headers-html.conf
+		echo "${gre}${dim}Permissions Policy Header successfully configured!${end}"
+	else
+		sudo sed -Ei '/^add_header Permission[s]?-Policy/s/^/#/' /etc/nginx/common/headers-html.conf
+		echo "${gre}${dim}Permissions Policy Header successfully disabled!${end}"
+	fi
+}
+
+
+http_header_robots() {
+	if [[ -n $(conf_read header-robots) ]]; then
+		sudo sed -Ei "/^#?add_header X-Robots-Tag/d" /etc/nginx/common/headers-http.conf			
+		
+		# Check for multiple values
+		local rob_data="$(conf_read header-robots)"
+		if [[ -n $(echo $rob_data | cut -d'|' -f 2 -s) ]]; then
+			local c=1
+			while [[ -n $(echo $rob_data | cut -d'|' -f $c -s) ]]
+			do  
+				sudo echo "add_header X-Robots-Tag \"$(echo $rob_data | cut -d'|' -f $c -s)\";" >> /etc/nginx/common/headers-http.conf
+				local c=$(($c+1))
+			done
+		else
+			sudo echo "add_header X-Robots-Tag \"${rob_data}\";" >> /etc/nginx/common/headers-http.conf
+		fi
+		
+		echo "${gre}${dim}X-Robots-Tag Header successfully configured!${end}"
+		
+	else
+		sudo sed -i '/^add_header X-Robots-Tag/s/^/#/' /etc/nginx/common/headers-http.conf
+		echo "${gre}${dim}X-Robots-Tag Header successfully disabled!${end}"
 	fi
 }

@@ -1085,3 +1085,54 @@ ext_db_save() {
 	fi
 }
 
+
+http_header_custom() {
+	if ! [[ $custom_headers =~ ^(reload|remove)$ ]]; then
+		echo "${red}[ERROR] Please, enter a valid option Custom Headers!${end}"
+		exit 1
+	fi
+	
+	if [[ $(conf_read nginx) == "true" ]]; then
+		sudo sed -i '/WebinolyCustomHeaders/,/WebinolyCustomHeadersEnd/{/.*/d}' /etc/nginx/common/headers-http.conf
+		sudo sed -i '/WebinolyCustomHeaders/,/WebinolyCustomHeadersEnd/{/.*/d}' /etc/nginx/common/headers-https.conf
+		sudo sed -i '/WebinolyCustomHeaders/,/WebinolyCustomHeadersEnd/{/.*/d}' /etc/nginx/common/headers-html.conf
+	fi
+	
+	if [[ $custom_headers == "reload" && $(conf_read nginx) == "true" ]]; then
+		if [[ -s /opt/webinoly/templates/source/custom_header_http_webinoly.data ]]; then
+			local http="$(sudo grep -E "^add_header .*;$" /opt/webinoly/templates/source/custom_header_http_webinoly.data)"
+			if [[ -n $http ]]; then
+				echo "# WebinolyCustomHeaders
+$http
+# WebinolyCustomHeadersEnd" >> /etc/nginx/common/headers-http.conf
+			fi
+		fi
+		
+		if [[ -s /opt/webinoly/templates/source/custom_header_https_webinoly.data ]]; then
+			local https="$(sudo grep -E "^add_header .*;$" /opt/webinoly/templates/source/custom_header_https_webinoly.data)"
+			if [[ -n $https ]]; then
+				echo "# WebinolyCustomHeaders
+$https
+# WebinolyCustomHeadersEnd" >> /etc/nginx/common/headers-https.conf
+			fi
+		fi
+		
+		if [[ -s /opt/webinoly/templates/source/custom_header_html_webinoly.data ]]; then
+			local html="$(sudo grep -E "^add_header .*;$" /opt/webinoly/templates/source/custom_header_html_webinoly.data)"
+			if [[ -n $html ]]; then
+				echo "# WebinolyCustomHeaders
+$html
+# WebinolyCustomHeadersEnd" >> /etc/nginx/common/headers-html.conf
+			fi
+		fi
+		
+		conf_write header-custom true
+		echo "${gre}Custom Headers successfully configured!${end}"
+	elif [[ $custom_headers == "reload" ]]; then
+		conf_write header-custom true
+		echo "${gre}Custom Headers successfully configured and it will be used next time NGINX is installed!${end}"
+	else
+		conf_write header-custom false
+		echo "${gre}Custom Headers successfully removed!${end}"
+	fi
+}

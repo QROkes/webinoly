@@ -2,12 +2,11 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
-# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -cache-valid, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -header-referrer, -header-hsts, -header-csp, -header-permissions-policy, -header-cache-control, -header-robots, -header-xfo, -header-xcto, -header-xssp, -custom-headers, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -email, -external-db-save, -export, -import, -db-role-default, -mysql-public-access
+# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -cache-valid, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -conf-value_, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -custom-headers, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -email, -external-db-save, -export, -import, -db-role-default, -mysql-public-access
 # Arguments: -raw, -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre, -no-recovery, -recalculate, -dbname, -skip-db, -filename, -overwrite
 
 source /opt/webinoly/lib/webin
 source /opt/webinoly/lib/datadog
-source /opt/webinoly/lib/headers
 source /opt/webinoly/lib/verify
 source /opt/webinoly/lib/bkp
 check_for_parameters $@
@@ -257,24 +256,6 @@ elif [[ -n $info ]]; then
 	nginx_not="true" # Nginx-Reload not-needed.
 
 
-elif [[ -n $header_referrer ]]; then
-	http_header_referrer
-elif [[ -n $header_hsts ]]; then
-	http_header_hsts
-elif [[ -n $header_csp ]]; then
-	http_header_csp
-elif [[ -n $header_permissions_policy ]]; then
-	http_header_permissions_policy
-elif [[ -n $header_cache_control ]]; then
-	http_header_cache_control
-elif [[ -n $header_robots ]]; then
-	http_header_robots
-elif [[ -n $header_xfo ]]; then
-	http_header_xfo
-elif [[ -n $header_xcto ]]; then
-	http_header_xcto
-elif [[ -n $header_xssp ]]; then
-	http_header_xssp
 elif [[ -n $custom_headers ]]; then
 	http_header_custom
 

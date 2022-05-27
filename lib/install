@@ -1,5 +1,6 @@
 #!/bin/bash
 source /opt/webinoly/lib/general
+source /opt/webinoly/lib/headers
 
 readonly cores=$(grep ^processor /proc/cpuinfo | wc -l)
 readonly swapm=$(($(grep SwapTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')/1024))
@@ -322,16 +323,15 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	[[ $(conf_read sftp-www-data) == "true" ]] && sudo webinoly -login-www-data=on
 	[[ $(conf_read sftp-www-data) == "false" ]] && sudo webinoly -login-www-data=off
 	
-	[[ -n $(conf_read header-referrer) ]] && sudo webinoly -header-referrer=$(conf_read header-referrer)
-	[[ -n $(conf_read header-hsts) ]] && sudo webinoly -header-hsts=$(conf_read header-hsts)
-	[[ -n $(conf_read header-cache-control) ]] && sudo webinoly -header-cache-control=on
-	[[ -n $(conf_read header-csp) ]] && sudo webinoly -header-csp=on
-	[[ -n $(conf_read header-permissions) ]] && sudo webinoly -header-permissions-policy=on
-	[[ -n $(conf_read header-robots) ]] && sudo webinoly -header-robots=on
-	[[ $(conf_read header-xssp) == "false" ]] && sudo webinoly -header-xssp=off
-	[[ $(conf_read header-xcto) == "false" ]] && sudo webinoly -header-xcto=off
-	[[ $(conf_read header-xfo) == "allow-from" && -n $(conf_read header-xfo-url) ]] && sudo webinoly -header-xfo=allow-from -url=$(conf_read header-xfo-url)
-	[[ $(conf_read header-xfo) =~ ^(off|deny|sameorigin)$ ]] && sudo webinoly -header-xfo=$(conf_read header-xfo)
+	http_header_referrer
+	http_header_hsts
+	http_header_cache_control
+	http_header_csp
+	http_header_permissions_policy
+	http_header_robots
+	http_header_xssp
+	http_header_xcto
+	http_header_xfo
 	[[ $(conf_read header-custom) == "true" ]] && sudo webinoly -custom-headers=reload
 	
 	if [[ $(conf_read xmlrpc) =~ ^(blocked|limited|open)$ ]]; then

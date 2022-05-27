@@ -191,6 +191,7 @@
 # HTTP Header: Cache Control
 # Values: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
 # Default: no-cache
+# Note: Use 'off' value to disable this header.
 ###########################
 #header-cache-control:public, max-age=604800, immutable
 
@@ -200,6 +201,7 @@
 # Default: <empty>
 ###########################
 #header-csp:default-src https: 'unsafe-eval' 'unsafe-inline'; object-src 'none'
+#header-csp-report-only:off
 
 
 # HTTP Header: HTTP Strict Transport Security (HSTS)
@@ -220,7 +222,7 @@
 
 
 # HTTP Header: Referrer Policy
-# Values: no-referrer | no-referrer-when-downgrade | origin | origin-when-cross-origin | same-origin | strict-origin | strict-origin-when-cross-origin | unsafe-url
+# Values: no-referrer | no-referrer-when-downgrade | origin | origin-when-cross-origin | same-origin | strict-origin | strict-origin-when-cross-origin | unsafe-url | off
 # Default: no-referrer-when-downgrade
 # Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy
 ###########################
@@ -236,7 +238,7 @@
 
 
 # HTTP Header: X-Frame-Options
-# Values: deny | sameorigin | allow-from
+# Values: deny | sameorigin | allow-from | off
 # Default: sameorigin
 # Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
 ###########################
