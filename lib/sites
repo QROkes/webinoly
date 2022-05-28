@@ -185,7 +185,6 @@ wpinstall() {
 			
 			# Check for MySQL Connection
 			if [[ $setupmysql == [yY] ]]; then
-				check_for_mysql_client
 				echo "${blu}"
 				
 				if [[ $dbhost != "localhost" && ( $type == [135] && ( -z $dburoot || -z $dbproot )) ]]; then
@@ -488,7 +487,6 @@ db_delete() {
 	# Example: db_delete $domain $subfolder
 	wp_conf_retrieve $1 true false $2
 	[[ -z $wp_config ]] && return
-	[[ $wp_dbhost != "localhost" ]] && check_for_mysql_client
 	
 	if [[ -z $wp_dbhost || -z $wp_dbname || -z $wp_dbuser ]]; then
 		echo "${red}[ERROR] Database${blu} ${1}${2} ${red}cannot be deleted! ${dim}(WP configuration corrupted)${end}"

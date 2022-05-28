@@ -83,7 +83,7 @@ bkp_local_db() {
 				exit 1
 			else
 				wp_conf_retrieve $wp true true $subfolder
-				[[ $wp_dbhost == "localhost" ]] && check_for_mysql || check_for_mysql_client
+				[[ $wp_dbhost == "localhost" ]] && check_for_mysql
 				[[ -n $subfolder ]] && local subname=$(echo $subfolder | sed "s/\//_/g")
 			fi
 			
@@ -121,7 +121,6 @@ bkp_local_db() {
 				local checkdbname=$(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $dbname)
 			else
 				external_db_parse
-				check_for_mysql_client
 				if [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ]]; then
 					echo "${red}[ERROR] Cannot connect with your External Database!${end}"
 					exit 1

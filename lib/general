@@ -368,7 +368,6 @@ external_db_parse() {
 			return
 		fi
 		
-		check_for_mysql_client
 		if [[ $(check_mysql_connection $url $port $user $pass) != "true" ]]; then
 			echo "${red}[ERROR] Cannot connect with your External Database!${end}"
 			return
