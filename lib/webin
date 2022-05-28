@@ -1033,59 +1033,6 @@ database_import() {
 }
 
 
-ext_db_save() {
-	if [[ $external_db_save == "purge" || -n $purge ]]; then
-		conf_delete external-dbu -commented
-		conf_delete external-dbp -commented
-		conf_delete external-dbh -commented
-		conf_delete external-dbx -commented
-		echo "${gre}External DB data successfully removed!${end}"
-	else
-		if [[ $external_db_save == "true" ]]; then
-			read -p "${blu} Host: ${end}" host
-			read -p "${blu} User: ${end}" user
-			read -p "${blu} Password: ${end}" pass
-			
-			if [[ -z $host || -z $user || -z $pass || $user =~ [:]+ || $pass =~ [:]+ ]]; then
-				echo "${red}[ERROR] Invalid data for External Database!${end}"
-				exit 1
-			fi
-		else
-			# Prevent errors
-			if [[ ${#external_db_save} -lt 2 ]]; then
-				echo "${red}[ERROR] Invalid data for External Database!${end}"
-				exit 1
-			fi
-			
-			local dbdata=${external_db_save:1:-1}
-			local user=$(echo "${dbdata}" | cut -d',' -f 1 -s)
-			local pass=$(echo "${dbdata}" | cut -d',' -f 2 -s)
-			local host=$(echo "${dbdata}" | cut -d',' -f 3 -s)
-			
-			if [[ $(echo "${external_db_save}" | cut -c-1) != "[" || $(echo "${external_db_save}" | rev | cut -c-1) != "]" || -z $host || -z $user || -z $pass || $user =~ [:]+ || $pass =~ [:]+ ]]; then
-				echo "${red}[ERROR] Invalid data for External Database!${end}"
-				exit 1
-			fi
-		fi
-		
-		
-		is_url $host -split
-		if [[ -z $url_path && $(is_url $host) =~ ^(http|https|ip|true)$ && -n $url_host && -n $url_port ]]; then
-			conf_write external-dbh $url_host
-			conf_write external-dbx $url_port
-		else
-			echo "${red}[ERROR] Invalid database host/port!${end}"
-			exit 1
-		fi
-		
-		conf_write external-dbu $user
-		conf_write external-dbp $pass
-		
-		echo "${gre}External DB data successfully saved!${end}"
-	fi
-}
-
-
 http_header_custom() {
 	if ! [[ $custom_headers =~ ^(reload|remove)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid option Custom Headers!${end}"

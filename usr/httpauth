@@ -131,14 +131,6 @@ elif [[ -n $wp_admin ]]; then
 			echo "${gre}WordPress Admin HTTP Authentication for${blu} $domain$subfolder ${gre}is already disabled! ${end}"
 			nginx_not="true" # Nginx-Reload not-needed.
 		fi
-	elif [[ $wp_admin == "on" ]]; then
-		conf_write wp-admin-auth true
-		echo "${gre}WordPress Admin HTTP Authentication has been enabled! (global)${end}"
-		nginx_not="true" # Nginx-Reload not-needed.
-	elif [[ $wp_admin == "off" ]]; then
-		conf_write wp-admin-auth false
-		echo "${gre}WordPress Admin HTTP Authentication has been disabled! (global)${end}"
-		nginx_not="true" # Nginx-Reload not-needed.
 	else
 		echo "${red}[ERROR] Invalid value for wp-admin! ${end}"
 		exit 1
