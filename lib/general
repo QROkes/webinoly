@@ -1316,7 +1316,6 @@ config_fastcgi_cache() {
 	else
 		local timefile="/etc/nginx/conf.d/fastcgi.conf"
 		local mainfile="/etc/nginx/conf.d/fastcgi.conf"
-		[[ -n $config_cache && -z $cache_valid ]] && cache_valid=$config_cache  # Will be removed!
 	fi
 	
 

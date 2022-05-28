@@ -57,7 +57,7 @@ elif [[ -n $login_www_data ]]; then
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 	
-elif [[ -n $cache_valid || -n $config_cache ]]; then
+elif [[ -n $cache_valid ]]; then
 	config_fastcgi_cache
 
 	
