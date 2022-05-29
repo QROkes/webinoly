@@ -1001,7 +1001,7 @@ import_server() {
 	[[ $import == "full" && $(conf_read_exported smtp) == "true" && -s /var/www/webinoly_backup_smtp ]] && smtp_backup_recovery
 	
 	# Default-Site and Tools Site Settings! - should be here after sites are extracted and only if sites are imported.
-	if [[ $import =~ ^(stack|full)$ ]]; then
+	if [[ $import =~ ^(sites|stack|full)$ ]]; then
 		if [[ -f /etc/nginx/sites-available/$(conf_read_exported default-site) ]]; then
 			remove_nginx_default_server $(conf_read_exported default-site)
 			sudo webinoly -default-site=$(conf_read_exported default-site)
