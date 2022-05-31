@@ -9,7 +9,7 @@
 #  changed from ftplicity to duply.                                            #
 #  See http://duply.net or http://ftplicity.sourceforge.net/ for more info.    #
 #  (c) 2006 Christiane Ruetten, Heise Zeitschriften Verlag, Germany            #
-#  (c) 2008-2020 Edgar Soldin (changes since version 1.3)                      #
+#  (c) 2008-2022 Edgar Soldin (changes since version 1.3)                      #
 ################################################################################
 #  LICENSE:                                                                    #
 #  This program is licensed under GPLv2.                                       #
@@ -29,10 +29,21 @@
 #                              --old-filenames
 #  - add 'exclude_<command>' list usage e.g. exclude_verify
 #  - featreq 25: a download/install duplicity option
-#  - hint on install software if a piece is missing
 #  - import/export profile from/to .tgz function !!!
+#  - remove url_encode, test for invalid chars n throw error instead
 #
 #  CHANGELOG:
+#  2.4 (6.4.2022)
+#  - bugfix #127: date_from_nsecs ignores format string
+#  - bugfix #116: separators print date now too
+#  - featreq #48: add purgeAuto command (see man page)
+#  - replaced tab indents with 2spaces everywhere
+#  - bugfix #129,131,132: duply stumbles over 'python -s' shebang,
+#      python interpreter parse failed if duplicity is a snap app
+#  - bugfix #130: duplicity version check failed "gpg: WARNING: ..."
+#  - version output, always print PYTHONPATH, if interpreter was determined
+#  - update python references to python3
+#
 #  2.3.1 (11.2.2021)
 #  - bugfix 123: symmetric encryption errs out, asks for '' private key
 #
@@ -511,27 +522,13 @@ function lookup {
   ( [ "${bin##*/}" == "$bin" ] && hash "$bin" 2>/dev/null ) || [ -x "$bin" ]
 }
 
-# the python binary to use, exit code 0 when configured, else 1
-function python_binary {
-  # if unset, parse from duplicity shebang
-  if ! var_isset 'PYTHON'; then
-    duplicity_python_binary_parse;
-    echo $DUPL_PYTHON_BIN;
-    return 1;
-  else
-    # tell if PYTHON was configured manually
-    echo $PYTHON;
-    return 0
-  fi
-}
-
 # important definitions #######################################################
 
 ME_LONG="$0"
 ME="$(basename $0)"
 ME_NAME="${ME%%.*}"
-ME_VERSION="2.3.1"
-ME_WEBSITE="http://duply.net"
+ME_VERSION="2.4"
+ME_WEBSITE="https://duply.net"
 
 # default config values
 DEFAULT_SOURCE='/path/of/source'
@@ -541,8 +538,6 @@ DEFAULT_TARGET_PASS='_backend_password_'
 DEFAULT_GPG='gpg'
 DEFAULT_GPG_KEY='_KEY_ID_'
 DEFAULT_GPG_PW='_GPG_PASSWORD_'
-DEFAULT_PYTHON='python3'
-DUPL_PYTHON_BIN="$DEFAULT_PYTHON"
 
 # function definitions ##########################
 
@@ -604,19 +599,35 @@ END
 
 function using_info {
   # init needed vars into global name space
-  lookup duplicity && { duplicity_python_binary_parse; duplicity_version_get; }
+  lookup duplicity && { duplicity_version_get; }
   local NOTFOUND="INVALID"
-  local AWK_VERSION GREP_VERSION PYTHON_RUNNER
+  local AWK_VERSION GREP_VERSION PYTHON_RUNNER \
+    PYTHON_RUNNER_RESOLVED PYTHON_VERSION PYTHON_PATH
   # freebsd awk (--version only), debian mawk (-W version only), deliver '' so awk does not wait for input
   AWK_VERSION=$( lookup awk && (awk --version 2>/dev/null || awk -W version 2>&1) | awk 'NR<=2&&tolower($0)~/(busybox|awk)/{success=1;print;exit} END{if(success<1) print "unknown"}' || echo "$NOTFOUND" )
   GREP_VERSION=$( lookup grep && grep --version 2>&1 | awk 'NR<=2&&tolower($0)~/(busybox|grep.*[0-9]+\.[0-9]+)/{success=1;print;exit} END{if(success<1) print "unknown"}' || echo "$NOTFOUND" )
-  PYTHON_RUNNER=$(python_binary)
-  local PYTHON_VERSION=$(lookup "$PYTHON_RUNNER" && "$PYTHON_RUNNER" -V 2>&1| awk '{print tolower($0);exit}' || echo "'$PYTHON_RUNNER' $NOTFOUND" )
+
+  if [ -n "$PYTHON" ]; then
+    PYTHON_RUNNER=$PYTHON
+  else
+    PYTHON_RUNNER="$(duplicity_python_binary_parse)"
+  fi
+  # fetch version and resolve python
+  [ -n "$PYTHON_RUNNER" ] && {
+    PYTHON_VERSION=$($PYTHON_RUNNER -V 2>&1| awk '{print tolower($0);exit}' || echo "'$PYTHON_RUNNER' $NOTFOUND" )
+    local PYTHON_RUNNER_ARRAY=( $PYTHON_RUNNER )
+    PYTHON_RUNNER_RESOLVED="$(which ${PYTHON_RUNNER_ARRAY[0]})"
+    # readd params if there were
+    [ ${#PYTHON_RUNNER_ARRAY[@]} -gt 1 ] && \
+      PYTHON_RUNNER_RESOLVED="${PYTHON_RUNNER_RESOLVED} ${PYTHON_RUNNER_ARRAY[@]:1}"
+      PYTHON_PATH="$($PYTHON_RUNNER -c "import sys;print(':'.join(sys.path));")"
+  }
+
   local GPG_INFO=$(gpg_avail && gpg --version 2>&1| awk '/^gpg.*[0-9\.]+$/&&length(v)<1{v=$1" "$3}/^Home:/{h=" ("$0")"}END{print v""h}' || echo "gpg $NOTFOUND")
   local BASH_VERSION=$(bash --version | awk 'NR==1{IGNORECASE=1;sub(/GNU bash, version[ ]+/,"",$0);print $0}')
   # print out
   echo -e "Using installed duplicity version ${DUPL_VERSION:-$NOTFOUND}\
-${PYTHON_VERSION+, $PYTHON_VERSION ${PYTHON_RUNNER:+($(which "$PYTHON_RUNNER"))}${PYTHONPATH:+ 'PYTHONPATH=$PYTHONPATH'}}\
+${PYTHON_VERSION+, $PYTHON_VERSION ${PYTHON_RUNNER:+($PYTHON_RUNNER_RESOLVED)}${PYTHON_PATH:+ 'PYTHONPATH=$PYTHON_PATH'}}\
 ${GPG_INFO:+, $GPG_INFO}${AWK_VERSION:+, awk '${AWK_VERSION}'}${GREP_VERSION:+, grep '${GREP_VERSION}'}\
 ${BASH_VERSION:+, bash '${BASH_VERSION}'}."
 }
@@ -732,6 +743,14 @@ COMMANDS:
              the number of full backups which associated incrementals will be
              kept, counting in reverse chronological order) 
               [use --force to actually delete these files]
+  purgeAuto [--force]  
+             convenience batch wrapper for all purge commands above.
+             purge, purgeFull, purgeIncr are added if their conf vars were set. e.g.
+              MAX_AGE=1Y
+              MAX_FULL_BACKUPS=6
+              MAX_FULLS_WITH_INCR=3
+             in profile conf file would result in
+              [purge_purgeFull_purgeIncr]
   cleanup [--force]  
              list broken backup chain files archives (e.g. after unfinished run)
               [use --force to actually delete these files]
@@ -890,6 +909,7 @@ GPG_PW='${DEFAULT_GPG_PW}'
 #   if you define the credentials as TARGET_USER, TARGET_PASS below $ME
 #   will try to url_encode them for you if the need arises.
 TARGET='${DEFAULT_TARGET}'
+
 # optionally the username/password can be defined as extra variables
 # setting them here _and_ in TARGET results in an error
 # ATTENTION:
@@ -920,9 +940,8 @@ SOURCE='${DEFAULT_SOURCE}'
 #  "trickle -s -u 640 -d 5120" # 5Mb up, 40Mb down"
 #DUPL_PRECMD=""
 
-# override the used python interpreter, defaults to
-#  - parsed result of duplicity's shebang or 'python2'
-#   e.g. "python2" or "/usr/bin/python2.7"
+# override the python interpreter to execute duplicity, unset by default
+#  e.g. "python3" or "/usr/bin/python3.8"
 #PYTHON="python"
 
 # exclude folders containing exclusion file (since duplicity 0.5.14)
@@ -1126,20 +1145,20 @@ PATH='$PATH'
 }
 
 function error_to_string {
-	[ -n "$1" ] && [ "$1" -eq 0 ] && echo "OK" || echo "FAILED 'code $1'"
+  [ -n "$1" ] && [ "$1" -eq 0 ] && echo "OK" || echo "FAILED 'code $1'"
 }
 
 function duplicity_version_get {
-  # nothing to do, just print
+  # use cached value, just print
   var_isset DUPL_VERSION && return
-  
+
   local DUPL_VERSION_OUT DUPL_VERSION_AWK PYTHON_BIN CMD='duplicity'
   # only run with a user specific python if configured (running by default
   # breaks homebrew as they place a shell wrapper for duplicity in path)
-  PYTHON_BIN="$(python_binary)" &&\
-    CMD="$(qw "$PYTHON_BIN") $(which $CMD)"
-  CMD="$CMD --version 2>&1"
-  DUPL_VERSION_OUT=$(eval "$CMD" | grep -E "^duplicity ")
+  [ -n "$PYTHON" ] &&\
+    CMD="$PYTHON $(qw "$(which duplicity)")"
+
+  DUPL_VERSION_OUT=$($CMD --version)
   DUPL_VERSION=`echo $DUPL_VERSION_OUT | awk '/^duplicity /{print $2; exit;}'`
   #DUPL_VERSION='0.7.03' #'0.6.08b' #,0.4.4.RC4,0.6.08b
   DUPL_VERSION_VALUE=0
@@ -1181,23 +1200,40 @@ function duplicity_version_lt {
 
 # parse interpreter from duplicity shebang
 function duplicity_python_binary_parse {
-  # cached result
-  ( var_isset 'PYTHON' || var_isset 'DUPL_PYTHON_BIN' ) && return
+  # reuse cached result
+  var_isset 'DUPL_PYTHON_BIN' && {
+    [ -n "$DUPL_PYTHON_BIN" ] && {
+      echo $DUPL_PYTHON_BIN
+      return
+    } || return 1
+  }
+
+  local DUPL_BIN=$(which duplicity)
+  # test for shebang
+  IFS= LC_ALL=C read -rN2 shebang < "$DUPL_BIN" && [ "$shebang" != '#!' ] && {
+    DUPL_PYTHON_BIN=""
+    return 1
+  }
 
   # parse it or warn
-  local DUPL_BIN=$(which duplicity)
   DUPL_PYTHON_BIN=$(awk 'NR==1&&/^#!/{sub(/^#!( *\/usr\/bin\/env *)?/,""); print}' < "$DUPL_BIN")
   if ! echo "$DUPL_PYTHON_BIN" | grep -q -i 'python'; then
-    warning "Could not parse the python interpreter used from duplicity ($DUPL_BIN). Result was '$DUPL_PYTHON_BIN'.
-Will assume it is '$DEFAULT_PYTHON'."
-    DUPL_PYTHON_BIN="$DEFAULT_PYTHON"
+    warning "Could not parse the python interpreter used from duplicity ($DUPL_BIN). Result was 
+'$DUPL_PYTHON_BIN'.
+"
+    DUPL_PYTHON_BIN=""
+    return 1
   fi
+  
+  # success
+  echo $DUPL_PYTHON_BIN
+  return
 }
 
 function run_script { # run pre/post scripts
   local ERR=0
   local SCRIPT="$1"
-  if [ ! -z "$PREVIEW" ] ; then	
+  if [ ! -z "$PREVIEW" ] ; then
     echo "$([ ! -x "$SCRIPT" ] && echo ". ")$SCRIPT"
   elif [ -r "$SCRIPT" ] ; then 
     echo -n "Running '$SCRIPT' "
@@ -1353,94 +1389,93 @@ function duplify { # the actual wrapper function
   # init global duplicity parameters same for all tasks
   duplicity_params_global
 
-  local RUN=eval BIN=duplicity DUPL_BIN PYTHON_BIN
+  local RUN=eval CMD=duplicity
   # run in cmd line preview mode if requested
   var_isset 'PREVIEW' && RUN=echo
-  # try to resolve duplicity path for usage with python interpreter
-  DUPL_BIN=$(which "$BIN") || DUPL_BIN="$BIN"
   # only run with a user specific python if configured (running by default
   # breaks homebrew as they place a shell wrapper for duplicity in path)
-  PYTHON_BIN="$(python_binary)" &&\
-    BIN="$(qw "$PYTHON_BIN") $(qw "$DUPL_BIN")"
+  # resolve duplicity path for usage with python interpreter
+  [ -n "$PYTHON" ] &&\
+    CMD="$PYTHON $(qw "$(which duplicity)")"
 
 $RUN "${DUPL_VARS_GLOBAL} ${BACKEND_PARAMS}\
- ${DUPL_PRECMD} $BIN $DUPL_CMD $DUPL_PARAMS_GLOBAL $(duplicity_params_conf)\
- $GPG_USEAGENT $(gpg_custom_binary) $DUPL_CMD_PARAMS"
+  ${DUPL_PRECMD} $CMD $DUPL_CMD $DUPL_PARAMS_GLOBAL $(duplicity_params_conf)\
+  $GPG_USEAGENT $(gpg_custom_binary) $DUPL_CMD_PARAMS"
 
   local ERR=$?
   return $ERR
 }
 
 function secureconf { # secure the configuration dir
-	#PERMS=$(ls -la $(dirname $CONFDIR) | grep -e " $(basename $CONFDIR)\$" | awk '{print $1}')
-	local PERMS="$(ls -la "$CONFDIR/." | awk 'NR==2{print $1}')"
-	if [ "${PERMS/#drwx------*/OK}" != 'OK' ] ; then
-		chmod u+rwX,go= "$CONFDIR"; local ERR=$?
-		warning "The profile's folder 
+  #PERMS=$(ls -la $(dirname $CONFDIR) | grep -e " $(basename $CONFDIR)\$" | awk '{print $1}')
+  local PERMS="$(ls -la "$CONFDIR/." | awk 'NR==2{print $1}')"
+  if [ "${PERMS/#drwx------*/OK}" != 'OK' ] ; then
+    chmod u+rwX,go= "$CONFDIR"; local ERR=$?
+    warning "The profile's folder 
 '$CONFDIR'
 permissions are not safe ($PERMS). Secure them now. - ($(error_to_string $ERR))"
-	fi
+  fi
 }
 
 # params are $1=timeformatstring (default like date output), $2=epoch seconds since 1.1.1970 (default now)
 function date_fix {
-	local DEFAULTFORMAT='%a %b %d %H:%M:%S %Z %Y'
-	local date
-	#[ "$1" == "%N" ] && return #test the no nsec test below
-	# gnu date with -d @epoch
-	date=$(date ${2:+-d @$2} ${1:++"$1"} 2> /dev/null) && \
-		echo $date && return
-	# date bsd,osx with -r epoch
-	date=$(date ${2:+-r $2} ${1:++"$1"} 2> /dev/null) && \
-		echo $date && return	
-	# date busybox with -d epoch -D %s
-	date=$(date ${2:+-d $2 -D %s} ${1:++"$1"} 2> /dev/null) && \
-		echo $date && return
-	## some date commands do not support giving a time w/o setting it systemwide (irix,solaris,others?)
-	# python fallback
-	date=$("$(python_binary)" -c "import time;print time.strftime('${1:-$DEFAULTFORMAT}',time.localtime(${2}))" 2> /dev/null) && \
-		echo $date && return
-	# awk fallback
-	date=$(awk "BEGIN{print strftime(\"${1:-$DEFAULTFORMAT}\"${2:+,$2})}" 2> /dev/null) && \
-		echo $date && return
-	# perl fallback
-	date=$(perl  -e "use POSIX qw(strftime);\$date = strftime(\"${1:-$DEFAULTFORMAT}\",localtime(${2}));print \"\$date\n\";" 2> /dev/null) && \
-		echo $date && return
-	# error
-	echo "ERROR"
-	return 1
+  local DEFAULTFORMAT='%a %b %d %H:%M:%S %Z %Y'
+  local date
+  #[ "$1" == "%N" ] && return #test the no nsec test below
+  # gnu date with -d @epoch
+  date=$(date ${2:+-d @$2} ${1:++"$1"} 2> /dev/null) && \
+    echo $date && return
+  # date bsd,osx with -r epoch
+  date=$(date ${2:+-r $2} ${1:++"$1"} 2> /dev/null) && \
+    echo $date && return
+  # date busybox with -d epoch -D %s
+  date=$(date ${2:+-d $2 -D %s} ${1:++"$1"} 2> /dev/null) && \
+    echo $date && return
+  ## some date commands do not support giving a time w/o setting it systemwide (irix,solaris,others?)
+  # python fallback
+  #date=$("$(python_binary)" -c "import time;print time.strftime('${1:-$DEFAULTFORMAT}',time.localtime(${2}))" 2> /dev/null) && \
+  #  echo $date && return
+  # awk fallback
+  date=$(awk "BEGIN{print strftime(\"${1:-$DEFAULTFORMAT}\"${2:+,$2})}" 2> /dev/null) && \
+    echo $date && return
+  # perl fallback
+  date=$(perl  -e "use POSIX qw(strftime);\$date = strftime(\"${1:-$DEFAULTFORMAT}\",localtime(${2}));print \"\$date\n\";" 2> /dev/null) && \
+    echo $date && return
+  # error
+  echo "ERROR"
+  return 1
 }
 
 function nsecs {
-	local NSECS
-	# test if date supports nanosecond output
-	if ! var_isset NSECS_DISABLED; then
-		NSECS=$(date_fix %N 2> /dev/null | head -1 |grep -e "^[[:digit:]]\{9\}$")
-		[ -n "$NSECS" ] && NSECS_DISABLED=0 || NSECS_DISABLED=1
-	fi
+  local NSECS
+  # test if date supports nanosecond output
+  if ! var_isset NSECS_DISABLED; then
+    NSECS=$(date_fix %N 2> /dev/null | head -1 |grep -e "^[[:digit:]]\{9\}$")
+    [ -n "$NSECS" ] && NSECS_DISABLED=0 || NSECS_DISABLED=1
+  fi
 
-	# add 9 digits, not all date(s) deliver nsecs e.g. busybox date
-	if [ "$NSECS_DISABLED" == "1" ]; then
-		date_fix %s000000000
-	else
-		date_fix %s%N
-	fi
+  # add 9 digits, not all date(s) deliver nsecs e.g. busybox date
+  if [ "$NSECS_DISABLED" == "1" ]; then
+    date_fix %s000000000
+  else
+    date_fix %s%N
+  fi
 }
 
 function nsecs_to_sec {
-	echo $(($1/1000000000)).$(printf "%03d" $(($1/1000000%1000)) )
+  echo $(($1/1000000000)).$(printf "%03d" $(($1/1000000%1000)) )
 }
 
 function datefull_from_nsecs {
-	date_from_nsecs $1 '%F %T'
+  date_from_nsecs $1 '%F %T'
 }
 
 function date_from_nsecs {
-	local FORMAT=${2:-%T}
-	local TIME=$(nsecs_to_sec $1)
-	local SECS=${TIME%.*}
-	local DATE=$(date_fix "%T" ${SECS:-0})
-	echo $DATE.${TIME#*.}
+  local FORMAT=${2:-%T}
+  local TIME=$(nsecs_to_sec $1)
+  local SECS=${TIME%.*}
+  local DATE=$(date_fix "${FORMAT}" ${SECS:-0})
+  echo $DATE.${TIME#*.}
 }
 
 function var_isset {
@@ -1469,7 +1504,10 @@ function is_command {
 
 function url_encode {
   # utilize python, silently do nothing on error - because no python no duplicity
-  OUT=$("$(python_binary)" -c "
+  local PYTHON_RUNNER
+  PYTHON_RUNNER="$(duplicity_python_binary_parse)" ||\
+  PYTHON_RUNNER="python" &&\
+    OUT=$($PYTHON_RUNNER -c "
 try: import urllib.request as urllib
 except ImportError: import urllib
 print(urllib.${2}quote('$1'));
@@ -1885,11 +1923,11 @@ echo "Start $ME v$ME_VERSION, time is $(date_fix '%F %T')."
 # is duplicity avail
 lookup duplicity || error_path "duplicity missing. installed und available in path?"
 # init, exec duplicity version check info
-duplicity_python_binary_parse
 duplicity_version_get
 
 # check for certain important helper programs
-for f in awk grep "$(python_binary)"; do
+# TODO: we should probably check for duplicity and $PYTHON (if set) here too
+for f in awk grep ; do
   lookup "$f" || \
     error_path "$f missing. installed und available in path?"
 done
@@ -2376,9 +2414,6 @@ EXCLUDE="$EXCLUDE"
 # since 0.7.03 --exclude-globbing-filelist is deprecated
 EXCLUDE_PARAM="--exclude$(duplicity_version_lt 703 && echo -globbing)-filelist" 
 
-# translate backup to batch command 
-cmds=${cmds//backup/groupIn_pre_bkp_post_groupOut}
-
 # replace magic separators to command equivalents (+=and,-=or,[=groupIn,]=groupOut)
 cmds=$(awk -v cmds="$cmds" "BEGIN{ \
   gsub(/\+/,\"_and_\",cmds);\
@@ -2386,14 +2421,37 @@ cmds=$(awk -v cmds="$cmds" "BEGIN{ \
   gsub(/\[/,\"_groupIn_\",cmds);\
   gsub(/\]/,\"_groupOut_\",cmds);\
   print cmds}")
-# convert cmds to array, lowercase for safety
+
+# split commands by '_', preserve spaces even if not allowed :)
+IFS='_' read -ra CMDS_IN <<< "$(tolower $cmds)"
+
+# convert cmds to array, 
+# post process, translate batch commands
+# ATTENTION: commands are lowercase from here on out
 declare -a CMDS
-CMDS=( $(awk "BEGIN{ cmds=tolower(\"$cmds\"); gsub(/_/,\" \",cmds); print cmds }") )
+for cmd in "${CMDS_IN[@]}"; do
+  case "$cmd" in
+    # backup -> [pre_bkp_post]
+    'backup')
+      CMDS=("${CMDS[@]}" groupin pre bkp post groupout)
+    ;;
+    # purgeAuto -> [purge purgeFull purgeIncr] depending on set conf vars 
+    'purgeauto')
+      purgeAuto=${MAX_AGE:+ purge}${MAX_FULL_BACKUPS:+ purgefull}${MAX_FULLS_WITH_INCRS:+ purgeincr}
+      [[ -z "$purgeAuto" ]] && error "Command 'fullAuto' was given but neither of the purge conf vars configured."
+      CMDS=("${CMDS[@]}" groupin $purgeAuto groupout)
+    ;;
+    *)
+      CMDS=("${CMDS[@]}" "$cmd")
+    ;;
+  esac
+done
+#echo $(IFS=',';echo "${CMDS[*]}")
 
 unset FTPL_ERR
 
-# run cmds
-for cmd in ${CMDS[*]};
+# run CMDS
+for cmd in "${CMDS[@]}";
 do
 
 ## init
@@ -2514,7 +2572,7 @@ export PROFILE CONFDIR SOURCE TARGET_URL_PROT TARGET_URL_HOSTPATH \
        RUN_START
 
 # user info
-echo; separator "Start running command $(toupper $cmd) at $(date_from_nsecs $RUN_START)"
+echo; separator "Start running command $(toupper $cmd) at $(datefull_from_nsecs $RUN_START)"
 
 case "$(tolower $cmd)" in
   'pre'|'post')
@@ -2621,11 +2679,11 @@ RUNTIME=$(( $RUN_END - $RUN_START ))
 
 # print message on error; set error code
 if [ "$CMD_ERR" -ne 0 ]; then
-	error_print "$(datefull_from_nsecs $RUN_END) Task '$(echo $cmd|awk '$0=toupper($0)')' failed with exit code '$CMD_ERR'."
-	FTPL_ERR=1
+  error_print "$(datefull_from_nsecs $RUN_END) Task '$(echo $cmd|awk '$0=toupper($0)')' failed with exit code '$CMD_ERR'."
+  FTPL_ERR=1
 fi
 
-separator "Finished state $(error_to_string $CMD_ERR) at $(date_from_nsecs $RUN_END) - \
+separator "Finished state $(error_to_string $CMD_ERR) at $(datefull_from_nsecs $RUN_END) - \
 Runtime $(printf "%02d:%02d:%02d.%03d" $((RUNTIME/1000000000/60/60)) $((RUNTIME/1000000000/60%60)) $((RUNTIME/1000000000%60)) $((RUNTIME/1000000%1000)) )"
 
 done

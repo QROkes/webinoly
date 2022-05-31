@@ -200,7 +200,7 @@ if [[ -z $(conf_read stack-build-error-flag) ]]; then
 
 	if [[ -z $update ]]; then
 		echo ""
-		echo "${blu}${bol}Don't like our defaults? Every part of Webinoly is overrideable!${end}"
+		echo "${blu}${bol}Don't like our defaults? Every part of Webinoly is overridable!${end}"
 		echo "${blu}- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - "
 		echo "${blu}Please, read the documentation:${end}${dim} https://webinoly.com/documentation/${end}"
 		echo "${blu}Be sure your firewall ports are correctly set:${end}${dim} https://webinoly.com/install/${end}"
