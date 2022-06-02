@@ -1236,7 +1236,7 @@ reverse_proxy() {
 		read -p "${blu}URL address: ${end}" proxydata
 	fi
 	
-	if ! [[ -n $proxydata && $(is_url $proxydata) =~ ^(http|https|ip|true)$ ]]; then
+	if ! [[ -n $proxydata && $(is_url $proxydata) =~ ^(http|https|ip|unix|true)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid host and port!${end}"
 		exit 1
 	elif [[ -f /etc/nginx/sites-available/$domain && -z $subfolder && (($(is_empty_root_site $domain) == "full" && $(is_proxy $domain) != "false") || $(is_empty_root_site $domain) == "false") ]]; then
@@ -1254,14 +1254,12 @@ reverse_proxy() {
 	fi
 	
 	is_url $proxydata -split
-	[[ -n $url_scheme ]] && url_scheme="$url_scheme://" || url_scheme="http://"
-	[[ -n $url_port ]] && url_port=":$url_port"
-	rpurl="$url_host$url_port$url_path"
+	[[ -z $url_scheme ]] && proxydata="http://${proxydata}"
 	
 	# URI part (subfolders) are not allowed because the proxy configuration we are using includes the static files location
 	# This location block is using regex which is not allowed, dedicated reverse proxy are not affected because they don't have static file location block.
 	# nginx: [emerg] "proxy_pass" cannot have URI part in location given by regular expression, or inside named location, or inside "if" statement, or inside "limit_except" block in /etc/nginx/apps.d/testa.qrokes.com-proxy.conf:31
-	if [[ -z $dedicated_reverse_proxy && -n $url_path ]]; then
+	if [[ -z $dedicated_reverse_proxy && -n $url_path && $url_path != "/" ]]; then
 		echo "${red}[ERROR] Subfolders in your endpoint are not allowed in Reverse Proxy sites configured as websites!${end}"
 		exit 1
 	fi
@@ -1286,7 +1284,7 @@ reverse_proxy() {
 		sudo sed -i '/BasicLocationRootFiles/,/BasicLocEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
 		sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	fi
-	sudo sed -i "s#http://localhost:8080#${url_scheme}${rpurl}#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
+	sudo sed -i "s#http://localhost:8080#${proxydata}#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	
 	[[ $(is_ssl $domain) != "true" ]] && sudo sed -i '/CacheStaticFiles/,/expires max;/{/headers-https.conf;/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
 	

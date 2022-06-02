@@ -670,7 +670,7 @@ is_url_path() {
 
 
 is_url() {
-	# Output: http,https,ip,true,false  Example: $(is_url $domain)
+	# Output: http,https,ip,unix,true,false  Example: $(is_url $domain)
 	# Global variables when -split is set: url_scheme, url_host, url_path, url_port    Example: is_url $domain -split
 	
 	local scheme=$(echo "${1,,}" | cut -d':' -f 1 -s)
@@ -684,7 +684,12 @@ is_url() {
 	# In case of no-scheme have port included
 	[[ $(echo $hosted | cut -d':' -f 2 -s) =~ ^[0-9]+$ ]] && hosted=$(echo $hosted | cut -d':' -f 1)
 	
-	if [[ $scheme =~ ^(http|https)$ ]]; then	
+	if [[ $1 =~ ^((http|https)+\:\/\/)?unix:(.+):(\/.*)?$ ]]; then
+		out="unix"
+		[[ $scheme == "unix" ]] && local host=$(echo "${1,,}" | cut -d':' -f 2 -s) || local host=$(echo "${1,,}" | cut -d':' -f 3 -s)
+		local path=$(echo "${1,,}" | rev | cut -d':' -f 1 -s | rev | cut -d '/' -f 2- -s)
+		local port=""
+	elif [[ $scheme =~ ^(http|https)$ ]]; then	
 		if [[ $(is_domain $host) != "true" && $(is_ip $host) != "true" ]]; then
 			out="false"
 		elif [[ -n $path && $(is_url_path /$path) != "true" ]]; then
