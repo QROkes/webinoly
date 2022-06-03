@@ -1254,12 +1254,12 @@ reverse_proxy() {
 	fi
 	
 	is_url $proxydata -split
-	[[ -z $url_scheme ]] && proxydata="http://${proxydata}"
+	[[ -z $url_scheme || ${url_scheme,,} == "unix" ]] && proxydata="http://${proxydata}"
 	
 	# URI part (subfolders) are not allowed because the proxy configuration we are using includes the static files location
 	# This location block is using regex which is not allowed, dedicated reverse proxy are not affected because they don't have static file location block.
 	# nginx: [emerg] "proxy_pass" cannot have URI part in location given by regular expression, or inside named location, or inside "if" statement, or inside "limit_except" block in /etc/nginx/apps.d/testa.qrokes.com-proxy.conf:31
-	if [[ -z $dedicated_reverse_proxy && -n $url_path && $url_path != "/" ]]; then
+	if [[ -z $dedicated_reverse_proxy && -n $url_path ]]; then
 		echo "${red}[ERROR] Subfolders in your endpoint are not allowed in Reverse Proxy sites configured as websites!${end}"
 		exit 1
 	fi
@@ -1289,13 +1289,13 @@ reverse_proxy() {
 	[[ $(is_ssl $domain) != "true" ]] && sudo sed -i '/CacheStaticFiles/,/expires max;/{/headers-https.conf;/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
 	
 	# Suggest / at the end of the url to pass
-	if [[ -n $dedicated_reverse_proxy && $(echo "${rpurl}" | rev | cut -c-1) != "/" ]]; then
+	if [[ -n $dedicated_reverse_proxy && $(echo "${proxydata}" | rev | cut -c-1) != "/" ]]; then
 		echo "${dim}[INFO] Your endpoint URL doesn't have a / at the end! You should note that it can have a different behavior."
 		echo "Read: http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass ${end}"
 	fi
 	
 	# Check host and port
-	local code=$(wget -t 1 --timeout=5 --server-response --spider $rpurl 2>&1 | awk '/^  HTTP/{print $2}')
+	local code=$(wget -t 1 --timeout=5 --server-response --spider $proxydata 2>&1 | awk '/^  HTTP/{print $2}')
 	code="${code##*$'\n'}"
 	[[ -n $code ]] && local mes="(Code: ${code})"
 	[[ $code =~ ^(2|3|4)[0-9][0-9]$ ]] || echo "${red}[WARNING] Seems like your Reverse Proxy host is not responding! ${mes}${end}"

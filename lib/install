@@ -368,6 +368,7 @@ location = /xmlrpc.php {
 	
 	conf_write server-version $svr_version
 	conf_write nginx-optim true
+	sudo systemctl reload nginx
 	api-events_update in10
 	echo "${gre}Nginx has been successfully Optimized by Webinoly! ${end}"
 }
