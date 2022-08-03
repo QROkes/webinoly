@@ -784,6 +784,12 @@ stack_builder() {
 	# Example: stack_builder false false mysql-client
 	# Example: stack_builder <empty> - just update and install pre-packs
 	
+	# Prevent asking for restaring services when installing packages.
+	if [[ -f /etc/needrestart/needrestart.conf && ! -f /etc/needrestart/conf.d/webinoly.conf ]]; then
+		sudo touch /etc/needrestart/conf.d/webinoly.conf
+		echo "\$nrconf{restart} = 'a';" >> /etc/needrestart/conf.d/webinoly.conf
+	fi
+	
 	# Backups can be installed alone...
 	[[ $4 == "letsencrypt" || $4 == "pma" ]] && check_for_nginx -ask
 	[[ $4 == "postfix" || $4 == "redis" || $4 == "memcached" || $4 == "pma" ]] && check_for_php -ask
@@ -822,11 +828,21 @@ stack_builder() {
 	
 	# PPA's
 	if [[ $1 == "nginx" && $(conf_read nginx) != "true" ]]; then
-		sudo apt-key adv --fetch-keys 'https://nginx.org/keys/nginx_signing.key'
-		if [[ $(conf_read nginx-ppa) == "mainline" ]]; then
-			echo | sudo add-apt-repository "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx"
+		if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+			sudo apt-key adv --fetch-keys 'https://nginx.org/keys/nginx_signing.key'
+			if [[ $(conf_read nginx-ppa) == "mainline" ]]; then
+				echo | sudo add-apt-repository "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx"
+			else
+				echo | sudo add-apt-repository "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
+			fi
 		else
-			echo | sudo add-apt-repository "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
+			[[ ! -s /usr/share/keyrings/nginx-archive-keyring.gpg ]] && sudo rm -rf /usr/share/keyrings/nginx-archive-keyring.gpg # Prevent issues!
+			[[ ! -f /usr/share/keyrings/nginx-archive-keyring.gpg ]] && wget -nv -O- https://nginx.org/keys/nginx_signing.key | sudo gpg --dearmor -o /usr/share/keyrings/nginx-archive-keyring.gpg
+			if [[ $(conf_read nginx-ppa) == "mainline" ]]; then
+				echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/mainline/ubuntu/ $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
+			else
+				echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/ubuntu/ $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
+			fi
 		fi
 		local code="run"
 	elif [[ $1 == "nginx" ]]; then
@@ -844,9 +860,16 @@ stack_builder() {
 		[[ $code != "run" ]] && local code=0
 	fi
 	if [[ ( $2 == "php" || $4 == "redis" ) && $(conf_read php-tool-redis) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]]; then
-		# Now there is an Official PPA: https://github.com/redis/redis-debian - https://launchpad.net/~redislabs/+archive/ubuntu/redis
-		# Snap is available but it has no support for ARM architecture: https://snapcraft.io/redis
-		echo | sudo add-apt-repository ppa:redislabs/redis
+		if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+			# Now there is an Official PPA: https://github.com/redis/redis-debian - https://launchpad.net/~redislabs/+archive/ubuntu/redis
+			# Snap is available but it has no support for ARM architecture: https://snapcraft.io/redis
+			echo | sudo add-apt-repository ppa:redislabs/redis
+		else
+			[[ ! -s /usr/share/keyrings/redis-archive-keyring.gpg ]] && sudo rm -rf /usr/share/keyrings/redis-archive-keyring.gpg # Prevent issues!
+			[[ ! -f /usr/share/keyrings/redis-archive-keyring.gpg ]] && wget -nv -O- https://packages.redis.io/gpg | sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
+			echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/redis.list
+		fi
+		
 		local code="run"
 	fi
 	

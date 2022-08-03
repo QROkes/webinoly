@@ -4,13 +4,12 @@
 # Check OS support
 distr=`echo $(lsb_release -i | cut -d':' -f 2)`
 osver=`echo $(lsb_release -c | cut -d':' -f 2)`
-if ! [[ $distr == "Ubuntu" && $osver =~ ^(bionic|focal)$ ]]; then
+if ! [[ $distr == "Ubuntu" && $osver =~ ^(bionic|focal|jammy)$ ]]; then
 	echo "$(tput setaf 1)"
-	echo "****************************************************************************"
-	echo "****  This OS is not supported by Webinoly and could not work properly  ****"
-	echo "****************************************************************************"
+	echo "[ERROR] This OS is not supported by Webinoly and could not work properly. $(tput dim)(${distr} '${osver}')"
 	echo "$(tput sgr0)"
-	read -p "Press [Enter] key to Continue or [Ctrl+C] to Cancel..."
+	sudo rm weby
+	exit 1
 fi
 
 # Check for BASH Shell

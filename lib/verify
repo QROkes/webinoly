@@ -274,18 +274,24 @@ if [[ $(conf_read nginx) == "true" ]]; then
 		local ver_two_err="1"
 	fi
 	
-	
-	if [[ ! -f /etc/apt/trusted.gpg || -z $(grep -Foia "nginx signing key" /etc/apt/trusted.gpg) ]]; then
+	# 18.04 - /etc/apt/trusted.gpg
+	# 20.04 - /etc/apt/trusted.gpg
+	# 22.04 - /usr/share/keyrings/nginx-archive-keyring.gpg
+	if [[ ( ! -f /etc/apt/trusted.gpg || -z $(grep -Foia "nginx signing key" /etc/apt/trusted.gpg) ) && ( ! -f /usr/share/keyrings/nginx-archive-keyring.gpg || ! -s /usr/share/keyrings/nginx-archive-keyring.gpg ) ]]; then
 		echo "- [ERROR] Nginx Apt Key not found!"
 		local ver_two_err="1"
 	fi
+	
+	# 18.04 - /etc/apt/sources.list
+	# 20.04 - /etc/apt/sources.list
+	# 22.04 - /etc/apt/sources.list.d/nginx.list
 	if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
 		if [[ ! -f /etc/apt/sources.list || -z $(grep -Fo "nginx.org/packages/" /etc/apt/sources.list) ]]; then
 			echo "- [ERROR] Nginx PPA not found in sources list!"
 			local ver_two_err="1"
 		fi
 	else
-		if [[ ! -f /etc/apt/sources.list.d/archive_uri-https_nginx_org_packages_ubuntu_-jammy.list || -z $(grep -Fo "nginx.org/packages/" /etc/apt/sources.list.d/archive_uri-https_nginx_org_packages_ubuntu_-jammy.list) ]]; then
+		if [[ ! -f /etc/apt/sources.list.d/nginx.list || ! -s /etc/apt/sources.list.d/nginx.list ]]; then
 			echo "- [ERROR] Nginx PPA not found in sources list!"
 			local ver_two_err="1"
 		fi
@@ -751,7 +757,7 @@ elif [[ $(check_ubuntu_release) != "true" ]]; then
 	echo "- [ERROR] This Ubuntu version is not supported!"
 	local ver_six_err="1"
 elif [[ $(lsb_release -c | cut -d':' -f 2 | xargs) == "bionic" ]]; then
-	#echo "${blu}${dim}- [INFO] You should start considering moving to Ubuntu 20.04 ${end}${red}"
+	#echo "${blu}${dim}- [INFO] You should start considering moving to Ubuntu 22.04 or 20.04 ${end}${red}"
 	echo "${dim}- [WARNING] Support for Ubuntu 18.04 will be removed very soon! ${end}${red}"
 	local ver_six_war="1"
 fi
@@ -827,11 +833,17 @@ if [[ $(conf_read php-tool-redis) == "true" ]]; then
 		echo "- [ERROR] Folder: /etc/redis not found!"
 		local ver_seven_err="1"
 	fi
-	if [[ ( ! -f /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg || ! -s /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg ) && ( ! -f /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg || ! -s /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg ) ]]; then
+	# 18.04 - /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg
+	# 20.04 - /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg
+	# 22.04 - /usr/share/keyrings/redis-archive-keyring.gpg
+	if [[ ( ! -f /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg || ! -s /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg ) && ( ! -f /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg || ! -s /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg ) && ( ! -f /usr/share/keyrings/redis-archive-keyring.gpg || ! -s /usr/share/keyrings/redis-archive-keyring.gpg ) ]]; then
 		echo "- [ERROR] Redis Apt Key not found!"
 		local ver_seven_err="1"
 	fi
-	if [[ ! -f /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list || ! -s /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list ]]; then
+	# 18.04 - /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list
+	# 20.04 - /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list
+	# 22.04 - /etc/apt/sources.list.d/redis.list
+	if [[ ( ! -f /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list || ! -s /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list ) && ( ! -f /etc/apt/sources.list.d/redis.list || ! -s /etc/apt/sources.list.d/redis.list ) ]]; then
 		echo "- [ERROR] Redis PPA not found in sources list!"
 		local ver_seven_err="1"
 	fi

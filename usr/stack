@@ -82,12 +82,18 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			sudo systemctl stop nginx
 			sudo apt -y purge nginx nginx-common # Common package is no longer installed, but we purge it in case of old stacks built before 1.14.0.
 			
-			if [[ $(conf_read nginx-ppa) == "mainline" ]]; then
-				echo | sudo add-apt-repository --remove "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx"
+			# APT-KEY deprecated in 22.04
+			if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+				if [[ $(conf_read nginx-ppa) == "mainline" ]]; then
+					echo | sudo add-apt-repository --remove "deb https://nginx.org/packages/mainline/ubuntu/ $(check_osname) nginx"
+				else
+					echo | sudo add-apt-repository --remove "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
+				fi
+				sudo apt-key del 7BD9BF62
 			else
-				echo | sudo add-apt-repository --remove "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
+				sudo rm -rf /usr/share/keyrings/nginx-archive-keyring.gpg
+				sudo rm -rf /etc/apt/sources.list.d/nginx.list
 			fi
-			sudo apt-key del 7BD9BF62
 			
 			# Remove SSL Cron
 			if [[ -f /var/spool/cron/crontabs/root ]]; then
@@ -154,12 +160,18 @@ elif [[ -n $purge && -n $php ]]; then
 			
 			# For old packages - before ondrej split modules
 			sudo apt -y purge php-imagick php-msgpack
-			
-			echo | sudo add-apt-repository --remove 'ppa:ondrej/php'
-			sudo apt-key del E5267A6C #ondrej
-			sudo rm -rf /etc/php
+
+			# APT-KEY deprecated in 22.04
+			if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+				echo | sudo add-apt-repository --remove 'ppa:ondrej/php'
+				sudo apt-key del E5267A6C #ondrej
+			else
+				sudo rm -rf /etc/apt/trusted.gpg.d/ondrej-ubuntu-php.gpg*
+				sudo rm -rf /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list*
+			fi
 
 			# Remove sources
+			sudo rm -rf /etc/php
 			sudo rm -rf /opt/webinoly/templates/source/php.ini
 			sudo rm -rf /opt/webinoly/templates/source/www.conf
 			sudo rm -rf /opt/webinoly/templates/source/php-fpm.conf
@@ -393,8 +405,14 @@ elif [[ -n $purge && -n $redis ]]; then
 			# For old packages - before ondrej split modules
 			sudo apt -y purge php-redis
 			
-			echo | sudo add-apt-repository --remove 'ppa:redislabs/redis'
-			sudo apt-key del 3FA6E3CA
+			# APT-KEY deprecated in 22.04
+			if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+				echo | sudo add-apt-repository --remove 'ppa:redislabs/redis'
+				sudo apt-key del 3FA6E3CA
+			else
+				sudo rm -rf /usr/share/keyrings/redis-archive-keyring.gpg
+				sudo rm -rf /etc/apt/sources.list.d/redis.list
+			fi
 			
 			sudo systemctl restart php${ver}-fpm
 			conf_write php-tool-redis purged
@@ -531,6 +549,7 @@ elif [[ -n $purge_server_all ]]; then
 		[[ -f /etc/ssl/private/webinoly-blackhole.key.pem ]] && sudo rm -rf /etc/ssl/private/webinoly-blackhole.key.pem
 		[[ -f /etc/ssl/dhparam.pem ]] && sudo rm -rf /etc/ssl/dhparam.pem
 		[[ -f $HOME/.aws/credentials ]] && sudo rm -rf $HOME/.aws/credentials
+		[[ -f /etc/needrestart/conf.d/webinoly.conf ]] && sudo rm -rf /etc/needrestart/conf.d/webinoly.conf
 		
 		if [[ $(conf_read pre-packs) == true ]]; then
 			# Usually comes by default with Ubuntu. Not removed: software-properties-common, zip

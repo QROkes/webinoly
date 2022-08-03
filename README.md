@@ -19,7 +19,7 @@ Webinoly provides a set of tools and commands that facilitate web server adminis
 - Unique commands to create, delete, disable sites.
 - Free SSL certificates for your sites with Let’s Encrypt and automatic server configuration.
 - HTTP/2 dramatically increases the speed of serving your content.
-- PHP v8.0 and support for earlier versions if needed (7.4) and the newest v8.1.
+- PHP v8.1 and support for earlier versions if needed (8.0 and 7.4).
 - FastCGI Cache and Redis Object Cache for your WordPress sites.
 - Install WP in any subfolder and support for external databases, multisite and domain mapping.
 - Reverse Proxy for any app (Java, React, Node, Angular, Vue, etc) or to use your own domain with any external file repo like S3.
@@ -46,7 +46,7 @@ sudo httpauth -add
 ```
 
 ### Requirements
-* Ubuntu 20.04 or 18.04
+* Ubuntu 22.04 or 20.04
 
 
 ### Documentation
