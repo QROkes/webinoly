@@ -278,13 +278,6 @@ elif [[ -n $on && ! -L /etc/nginx/sites-enabled/$domain && -f /etc/nginx/sites-a
 elif [[ -n $redirection && -f /etc/nginx/sites-available/$domain ]]; then
 	check_for_nginx
 	redirection_manager
-
-
-# WordPress Environment Type
-elif [[ -n $env && -f /etc/nginx/sites-available/$domain ]]; then
-	wp_env_type
-	nginx_not="true" # Nginx-Reload not-needed.
-	# ENV should be always before cache
 	
 	
 # FastCGI Cache
@@ -428,6 +421,13 @@ elif [[ -n $replace_content && -f /etc/nginx/sites-available/$domain ]]; then
 	else
 		wp_replace_content
 	fi
+
+
+# WordPress Environment Type (should be here after cloning site for precedence)
+elif [[ -n $env && -f /etc/nginx/sites-available/$domain ]]; then
+	wp_env_type
+	nginx_not="true" # Nginx-Reload not-needed.
+	# ENV should be always before cache
 	
 
 # List Sites

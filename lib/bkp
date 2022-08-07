@@ -183,7 +183,8 @@ bkp_local_db() {
 	
 	if [[ -s $destination/$filename ]]; then
 		echo "${gre}Database local backup successfully done!${end}${dim} ($destination/$filename)${end}"
-		[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket
+		[[ -n $s3_compatible_endpoint ]] && local param="-s3-compatible-endpoint=$s3_compatible_endpoint "
+		[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket $param
 		[[ -n $max && $max =~ ^[0-9]+$ ]] && sudo ls -1t $destination | tail -n +$((max+1)) | xargs -d '\n' -I '%' sudo rm -f $destination/%
 	else
 		echo "${red}[ERROR] Database backup failed!${end}"
@@ -304,7 +305,7 @@ bkp_s3_profile() {
 		fi
 		
 		if [[ $(wp_config_read $add_db_pre DB_HOST $subfolder) != "localhost" && -z $(conf_read external-dbu) && -z $(conf_read external-dbp) ]]; then
-			echo "${red}[ERROR] Database host is not localhost!${dim} (External databases are supported with -external-db-save)${end}"
+			echo "${red}[ERROR] Database host is not localhost!${dim} (External databases are supported only when credentials are saved in Webinoly Configuration file)${end}"
 			exit 1
 		fi
 		
@@ -312,6 +313,7 @@ bkp_s3_profile() {
 		[[ -z $max && $destination == "default" ]] && max="5"
 		[[ -n $max && $max =~ ^[0-9]+$ ]] && local param="-max=$max "
 		[[ -n $bucket && $bucket != "true" ]] && local param="${param}-bucket=$bucket "
+		[[ -n $s3_compatible_endpoint ]] && local param="${param}-s3-compatible-endpoint=$s3_compatible_endpoint "
 		[[ -n $subfolder ]] && local param="${param}-subfolder=$subfolder"
 		
 		[[ ! -f $HOME/.duply/$profile/pre ]] && sudo touch $HOME/.duply/$profile/pre
