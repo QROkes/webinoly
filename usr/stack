@@ -16,7 +16,7 @@ api-events_update sts
 clear_force_flag() {
 	[[ $(conf_read force-flag) == "true" ]] && conf_delete force-flag
 }
-if [[ $purge == "force" || $purge_server_all == "force" || $php == "force" ]]; then
+if [[ ${purge,,} == "force" || ${purge_server_all,,} == "force" || ${php,,} == "force" ]]; then
 	conf_write force-flag true
 	force="1"
 fi

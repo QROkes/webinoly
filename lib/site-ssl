@@ -207,7 +207,7 @@ ssl_revoke() {
 	else
 		echo "${red}[ERROR] Cert cannot be revoked!${dim} (A common cause is that expired certs cannot be revoked)${end}"
 		
-		if [[ $revoke == "force" ]]; then
+		if [[ ${revoke,,} == "force" ]]; then
 			ans="Y"
 		else
 			echo "${blu}Do you want to delete this cert [y/N]? ${end}"

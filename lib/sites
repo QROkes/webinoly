@@ -166,7 +166,7 @@ wpinstall() {
 					url_path=""
 					done="0"
 					[[ $type == [2345] ]] && exit 1 || continue 1
-				elif [[ $(is_url $dbhost) =~ ^(http|https|ip|true)$ ]]; then
+				elif [[ $(is_url $dbhost) =~ ^(http|https|ip|unix|true)$ ]]; then
 					local dburl=$url_host
 					local dbport=$url_port
 				else
@@ -512,21 +512,21 @@ db_delete() {
 
 
 deletesite() {
-	if [[ $domain == $(conf_read tools-site) && -z $delete_all && $delete != "force" ]]; then
+	if [[ $domain == $(conf_read tools-site) && -z $delete_all && ${delete,,} != "force" ]]; then
 		echo "${red}[ERROR] Can not delete a site that is assigned to access your server tools (Tools-Site)!${end}"
 		exit 1
-	elif [[ $domain == $(conf_read default-site) && -z $delete_all && $delete != "force" ]]; then
+	elif [[ $domain == $(conf_read default-site) && -z $delete_all && ${delete,,} != "force" ]]; then
 		echo "${red}[ERROR] Can not delete a site that is set as default site!${end}"
 		exit 1
 	fi
 	if [[ $(conf_read smtp) == "true" && -s /etc/mailname && $domain == $(sudo cat /etc/mailname | head -n 1) ]]; then
 		echo "${red}[WARNING] This site is set to be used as main site in your SMTP configuration."
 	fi
-	if [[ $domain == $(conf_read tools-site) && ( -n $delete_all || $delete == "force" ) ]]; then
+	if [[ $domain == $(conf_read tools-site) && ( -n $delete_all || ${delete,,} == "force" ) ]]; then
 		echo "${red}[WARNING] This site is set to be used to access your server tools. Deleting this site can cause unexpected behaviour in your server."
 		sudo webinoly -tools-site=default
 	fi
-	if [[ $domain == $(conf_read default-site) && ( -n $delete_all || $delete == "force" ) ]]; then
+	if [[ $domain == $(conf_read default-site) && ( -n $delete_all || ${delete,,} == "force" ) ]]; then
 		echo "${red}[WARNING] This site is set as default site. Deleting this site can cause unexpected behaviour in your server."
 		sudo webinoly -default-site=default
 	fi
@@ -534,8 +534,8 @@ deletesite() {
 		echo "${dim}This site is a parked site and main site data will not be removed.${end}"
 	fi
 	
-	[[ $delete == "force" ]] && local dbdel="Y"
-	[[ $delete == "keep-db" ]] && local dbdel="N"
+	[[ ${delete,,} == "force" ]] && local dbdel="Y"
+	[[ ${delete,,} == "keep-db" ]] && local dbdel="N"
 
 	# Check if site contains WP in subfolders.
 	if [[ -z $dbdel || $dbdel = [Yy] ]]; then
@@ -569,7 +569,7 @@ deletesite() {
 	fi
 	
 	# Revoke SSL Cert
-	if [[ -d /etc/letsencrypt/live/$domain && -z $revoke && $delete != "force" ]]; then
+	if [[ -d /etc/letsencrypt/live/$domain && -z $revoke && ${delete,,} != "force" ]]; then
 		echo "${blu}Revoke SSL Cert [Y/n]?${end}"
 		while read -r -n 1 -s revoke; do
 		  local revoke=${revoke:-y}
@@ -602,8 +602,8 @@ deletesite_subfolder() {
 		exit 1
 	fi
 	
-	[[ $delete == "force" ]] && local dbdel="Y"
-	[[ $delete == "keep-db" ]] && local dbdel="N"
+	[[ ${delete,,} == "force" ]] && local dbdel="Y"
+	[[ ${delete,,} == "keep-db" ]] && local dbdel="N"
 	
 	# Check if site contains WP in subfolders.
 	if [[ -z $dbdel || $dbdel = [Yy] ]]; then
