@@ -22,10 +22,17 @@ if [[ ${purge,,} == "force" || ${purge_server_all,,} == "force" || ${php,,} == "
 fi
 
 purge_mysql_client() {
-	local mysqlver=$(conf_read mysql-ver)
 	sudo apt -y purge mariadb-client
-	echo | sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
-	sudo apt-key del 0xF1656F24C74CD1D8
+	
+	# APT-KEY deprecated in 22.04
+	if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+		echo | sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu"
+		sudo apt-key del 0xF1656F24C74CD1D8
+	else
+		sudo rm -rf /etc/apt/trusted.gpg.d/mariadb_release_signing_key.asc
+		sudo rm -rf /etc/apt/sources.list.d/mariadb.list
+	fi
+	
 	conf_write mysql-client purged
 }
 
@@ -80,7 +87,7 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			purge_autoremove="true"
 			
 			sudo systemctl stop nginx
-			sudo apt -y purge nginx nginx-common # Common package is no longer installed, but we purge it in case of old stacks built before 1.14.0.
+			sudo apt -y purge nginx
 			
 			# APT-KEY deprecated in 22.04
 			if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
@@ -166,8 +173,8 @@ elif [[ -n $purge && -n $php ]]; then
 				echo | sudo add-apt-repository --remove 'ppa:ondrej/php'
 				sudo apt-key del E5267A6C #ondrej
 			else
-				sudo rm -rf /etc/apt/trusted.gpg.d/ondrej-ubuntu-php.gpg*
-				sudo rm -rf /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list*
+				sudo rm -rf /usr/share/keyrings/php-archive-keyring.gpg
+				sudo rm -rf /etc/apt/sources.list.d/php.list
 			fi
 
 			# Remove sources
@@ -237,8 +244,15 @@ elif [[ -n $purge && -n $mysql ]]; then
 			# Purge is better, instead of remove even when keep-data is enabled, it prevents warnings during reinstallation.
 			sudo apt -y purge mariadb-server mariadb-common mysql-common
 			purge_mysql_client
-			echo | sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
 			purge_autoremove="true"
+			
+			# APT-KEY deprecated in 22.04
+			if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+				echo | sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/${mysqlver}/ubuntu"
+			else
+				sudo rm -rf /usr/share/keyrings/mariadb-archive-keyring.gpg
+				sudo rm -rf /etc/apt/sources.list.d/mariadb.list
+			fi
 			
 			if [[ $mysql != "keep-data" ]]; then
 				sudo rm -rf /etc/mysql
@@ -667,6 +681,12 @@ elif [[ -n $php_ver ]]; then
 
 elif [[ -n $mysql_ver ]]; then
 	api-events_update st4
+	
+	# REMOVE: when a new LTS is released and jammy supports more than one version.
+	if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) == "jammy" ]]; then
+		echo "${red}[Disabled] MariaDB 10.6 is the only LTS version supported in Ubuntu 22.04!${end}"
+		exit 1
+	fi
 	
 	if [[ $mysql_ver != true && $(check_mysql_version $mysql_ver) == "true" ]]; then
 		echo "${blu}New MySQL (MariaDB) version: '$mysql_ver' ${end}"

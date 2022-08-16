@@ -199,9 +199,6 @@ mysql_install() {
 	
 	# debconf-utils for unattended scripts
 	# debconf-get-selections | grep phpmyadmin   <<-- list conf variables
-
-	sudo apt -y -qq install apt-transport-https
-	sudo apt -y -qq install dirmngr
 		
 	# Generate mysql user passwords
 	if [[ -z $(conf_read mysql-root) && -z $(conf_read mysql-admin) ]]; then
@@ -222,7 +219,7 @@ mysql_install() {
 	local ver=$(conf_read mysql-ver)
 	echo "mariadb-server-${ver} mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections
 	echo "mariadb-server-${ver} mysql-server/root_password_again password $AUTOGENPASS_ROOT" | debconf-set-selections
-	sudo apt -y install mariadb-server
+	sudo apt -y install apt-transport-https dirmngr mariadb-server
 	
 	conf_write mysql true
 	
@@ -526,10 +523,10 @@ nginx_tool_bkp() {
 	# https://gitlab.com/duplicity/duplicity/-/issues
 	
 	# Minimum required, most of them are already installed by default, but we need to be sure: https://gitlab.com/duplicity/duplicity/-/blob/master/debian/control
-	sudo apt install -y debhelper dh-python python3 gnupg librsync-dev par2 pep8 pylint python3-pytest python3-pytest-cov python3-pytest-runner python3-dev python3-fasteners python3-future python3-mock python3-pexpect python3-setuptools python3-setuptools-scm rdiff rename rsync
-	sudo apt install -y python3-pip
-	# Backend for S3
-	sudo apt -y install python3-boto3
+	# Also needed: python3-pip
+	# Backend for S3: python3-boto3
+	sudo apt install -y debhelper dh-python python3 gnupg librsync-dev par2 pep8 pylint python3-pytest python3-pytest-cov python3-pytest-runner python3-dev python3-fasteners python3-future python3-mock python3-pexpect python3-setuptools python3-setuptools-scm rdiff rename rsync python3-pip python3-boto3
+	
 	# Duplicity installation directly from source
 	# Temporal fix to remove warning - wait for: https://github.com/pypa/pip/issues/10556 - remove from stack purge too!
 	sudo pip3 install duplicity 2>&1 | grep -v "pip as the 'root' user"
@@ -806,17 +803,10 @@ stack_builder() {
 		api-events_update i1
 		sudo apt -qq update
 		
-		# Usually comes by default with Ubuntu. Ensure we have it always!
-		sudo apt -y -qq install software-properties-common
-		sudo apt -y -qq install debconf-utils
-		sudo apt -y -qq install zip
-		
-		# Webinoly tools
-		sudo apt -y -qq install pwgen
-		sudo apt -y -qq install unzip
-		
-		# Fix issue installing in some Digital Ocean droplets
-		sudo apt -y -qq install dialog
+		# Usually comes by default with Ubuntu. Ensure we have it always! (software-properties-common debconf-utils zip)
+		# Webinoly tools (pwgen unzip)
+		# Fix issue installing in some Digital Ocean droplets (dialog)
+		sudo apt -y -qq install software-properties-common debconf-utils zip pwgen unzip dialog
 		
 		# Snap is installed by default since 16.04, but better be sure!
 		sudo snap install core
@@ -851,9 +841,16 @@ stack_builder() {
 	fi
 	
 	if [[ $2 == "php" && $(conf_read php) != "true" ]]; then
-		# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
-		#sudo apt install -y language-pack-en-base
-		sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
+		if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+			# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
+			#sudo apt install -y language-pack-en-base
+			sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
+		else
+			[[ ! -s /usr/share/keyrings/php-archive-keyring.gpg ]] && sudo rm -rf /usr/share/keyrings/php-archive-keyring.gpg # Prevent issues!
+			[[ ! -f /usr/share/keyrings/php-archive-keyring.gpg ]] && wget -nv -O- 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x14aa40ec0831756756d7f66c4f4ea0aae5267a6c' | sudo gpg --dearmor -o /usr/share/keyrings/php-archive-keyring.gpg
+			echo "deb [signed-by=/usr/share/keyrings/php-archive-keyring.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
+		fi
+		
 		local code="run"
 	elif [[ $2 == "php" ]]; then
 		echo "${dim}PHP is already installed!${end}"
@@ -876,9 +873,21 @@ stack_builder() {
 	if [[ $3 =~ ^(mysql|mysql-client)$ && $(conf_read mysql-client) != "true" ]]; then
 		[[ -n $(conf_read mysql-ver) && $(check_mysql_version $(conf_read mysql-ver)) == "true" ]] || conf_write mysql-ver $mysql_default
 		
+		# REMOVE: when a new LTS is released and jammy supports more than one version.
+		if [[ $(conf_read mysql-ver) != "10.6" && $(lsb_release -c | cut -d':' -f 2 | xargs) == "jammy" ]]; then
+			conf_write mysql-ver 10.6
+			echo "${gre}Force MariaDB 10.6 because is the only LTS version supported in Ubuntu 22.04!${end}"
+		fi
+		
 		# https://mariadb.org/download/?t=repo-config
-		sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
-		echo | sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main"
+		if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+			sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
+			echo | sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main"
+		else
+			[[ ! -s /usr/share/keyrings/mariadb-archive-keyring.gpg ]] && sudo rm -rf /usr/share/keyrings/mariadb-archive-keyring.gpg # Prevent issues!
+			[[ ! -f /usr/share/keyrings/mariadb-archive-keyring.gpg ]] && wget -nv -O- 'https://mariadb.org/mariadb_release_signing_key.asc' | sudo gpg --dearmor -o /usr/share/keyrings/mariadb-archive-keyring.gpg
+			echo "deb [signed-by=/usr/share/keyrings/mariadb-archive-keyring.gpg] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main" | sudo tee /etc/apt/sources.list.d/mariadb.list
+		fi
 		local code="run"
 	elif [[ $3 == "mysql-client" && $(conf_read mysql-client) == "true" ]]; then
 		echo "${dim}MySQL Client is already installed!${end}"

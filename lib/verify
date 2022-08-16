@@ -274,23 +274,20 @@ if [[ $(conf_read nginx) == "true" ]]; then
 		local ver_two_err="1"
 	fi
 	
-	# 18.04 - /etc/apt/trusted.gpg
-	# 20.04 - /etc/apt/trusted.gpg
-	# 22.04 - /usr/share/keyrings/nginx-archive-keyring.gpg
-	if [[ ( ! -f /etc/apt/trusted.gpg || -z $(grep -Foia "nginx signing key" /etc/apt/trusted.gpg) ) && ( ! -f /usr/share/keyrings/nginx-archive-keyring.gpg || ! -s /usr/share/keyrings/nginx-archive-keyring.gpg ) ]]; then
-		echo "- [ERROR] Nginx Apt Key not found!"
-		local ver_two_err="1"
-	fi
-	
-	# 18.04 - /etc/apt/sources.list
-	# 20.04 - /etc/apt/sources.list
-	# 22.04 - /etc/apt/sources.list.d/nginx.list
 	if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+		if [[ ! -f /etc/apt/trusted.gpg || -z $(grep -Foia "nginx signing key" /etc/apt/trusted.gpg) ]]; then
+			echo "- [ERROR] Nginx Apt Key not found!"
+			local ver_two_err="1"
+		fi
 		if [[ ! -f /etc/apt/sources.list || -z $(grep -Fo "nginx.org/packages/" /etc/apt/sources.list) ]]; then
 			echo "- [ERROR] Nginx PPA not found in sources list!"
 			local ver_two_err="1"
 		fi
 	else
+		if [[ ! -f /usr/share/keyrings/nginx-archive-keyring.gpg || ! -s /usr/share/keyrings/nginx-archive-keyring.gpg ]]; then
+			echo "- [ERROR] Nginx Apt Key not found!"
+			local ver_two_err="1"
+		fi
 		if [[ ! -f /etc/apt/sources.list.d/nginx.list || ! -s /etc/apt/sources.list.d/nginx.list ]]; then
 			echo "- [ERROR] Nginx PPA not found in sources list!"
 			local ver_two_err="1"
@@ -470,14 +467,25 @@ if [[ $(conf_read php) == "true" ]]; then
 		echo "- [ERROR] File: /etc/php/$(conf_read php-ver)/fpm/php.ini not found!"
 		local ver_three_err="1"
 	fi
-	# First check is used before 22.04
-	if [[ ( ! -f /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg || ! -s /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg ) && ( ! -f /etc/apt/trusted.gpg.d/ondrej-ubuntu-php.gpg || ! -s /etc/apt/trusted.gpg.d/ondrej-ubuntu-php.gpg ) ]]; then
-		echo "- [ERROR] PHP Apt Key not found!"
-		local ver_three_err="1"
-	fi
-	if [[ ! -f /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list || ! -s /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list ]]; then
-		echo "- [ERROR] PHP PPA not found in sources list!"
-		local ver_three_err="1"
+	
+	if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+		if [[ ! -f /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg || ! -s /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg ]]; then
+			echo "- [ERROR] PHP Apt Key not found!"
+			local ver_three_err="1"
+		fi
+		if [[ ! -f /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list || ! -s /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list ]]; then
+			echo "- [ERROR] PHP PPA not found in sources list!"
+			local ver_three_err="1"
+		fi
+	else
+		if [[ ! -f /usr/share/keyrings/php-archive-keyring.gpg || ! -s /usr/share/keyrings/php-archive-keyring.gpg ]]; then
+			echo "- [ERROR] PHP Apt Key not found!"
+			local ver_three_err="1"
+		fi
+		if [[ ! -f /etc/apt/sources.list.d/php.list || ! -s /etc/apt/sources.list.d/php.list ]]; then
+			echo "- [ERROR] PHP PPA not found in sources list!"
+			local ver_three_err="1"
+		fi
 	fi
 fi
 
@@ -593,17 +601,22 @@ if [[ $(conf_read mysql) == "true" ]]; then
 		echo "- [ERROR] Folder: /etc/mysql not found!"
 		local ver_four_err="1"
 	fi
-	if [[ ! -f /etc/apt/trusted.gpg || -z $(grep -Foia "mariadb signing key" /etc/apt/trusted.gpg) ]]; then
-		echo "- [ERROR] MariaDB Apt Key not found!"
-		local ver_four_err="1"
-	fi
+	
 	if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+		if [[ ! -f /etc/apt/trusted.gpg || -z $(grep -Foia "mariadb signing key" /etc/apt/trusted.gpg) ]]; then
+			echo "- [ERROR] MariaDB Apt Key not found!"
+			local ver_four_err="1"
+		fi
 		if [[ ! -f /etc/apt/sources.list || -z $(grep -Fo "mirrors.syringanetworks.net/mariadb/repo" /etc/apt/sources.list) ]]; then
-		echo "- [ERROR] MariaDB PPA not found in sources list!"
-		local ver_four_err="1"
-	fi
+			echo "- [ERROR] MariaDB PPA not found in sources list!"
+			local ver_four_err="1"
+		fi
 	else
-		if [[ ! -f /etc/apt/sources.list.d/archive_uri-http_mirrors_syringanetworks_net_mariadb_repo_$(echo $ver_mysql_ver | sed 's/\./_/')_ubuntu-jammy.list || -z $(grep -Fo "mirrors.syringanetworks.net/mariadb/repo" /etc/apt/sources.list.d/archive_uri-http_mirrors_syringanetworks_net_mariadb_repo_$(echo $ver_mysql_ver | sed 's/\./_/')_ubuntu-jammy.list) ]]; then
+		if [[ ! -f /usr/share/keyrings/mariadb-archive-keyring.gpg || ! -s /usr/share/keyrings/mariadb-archive-keyring.gpg ]]; then
+			echo "- [ERROR] MariaDB Apt Key not found!"
+			local ver_four_err="1"
+		fi
+		if [[ ! -f /etc/apt/sources.list.d/mariadb.list || ! -s /etc/apt/sources.list.d/mariadb.list ]]; then
 			echo "- [ERROR] MariaDB PPA not found in sources list!"
 			local ver_four_err="1"
 		fi
