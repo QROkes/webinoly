@@ -473,7 +473,7 @@ server_reset() {
 show_db_data() {
 	if [[ -n $(conf_read external-dbu) && -n $(conf_read external-dbp) ]]; then
 		local extu=$(conf_read external-dbu)
-		local extp=$( echo $(conf_read external-dbp) | openssl enc -d -a -salt )
+		local extp=$(conf_read external-dbp)
 		
 		if [[ -n $(conf_read external-dbh) && -n $(conf_read external-dbx) ]]; then
 			local exth="$(conf_read external-dbh):$(conf_read external-dbx)"

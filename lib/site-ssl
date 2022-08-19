@@ -23,6 +23,7 @@ ssl_nginx() {
 	
 	# Headers
 	sudo sed -i '/header.conf;/c \	include common/headers.conf;' /etc/nginx/sites-available/$domain
+	sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$domain # In case of Force-Redirect!
 	[[ -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && sudo sed -i '/header.conf;/c \	include common/headers.conf;' /etc/nginx/sites-available/$(conf_read tools-port)
 	for pxy in "/etc/nginx/apps.d/${domain}"*-proxy.conf
 	do
@@ -240,6 +241,7 @@ site_ssl_off() {
 	
 	# Headers
 	sudo sed -i '/headers.conf;/c \	include common/header.conf;' /etc/nginx/sites-available/$domain
+	sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/headers-https.conf;/d}' /etc/nginx/sites-available/$domain # In case of Force-Redirect
 	[[ -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && sudo sed -i '/headers.conf;/c \	include common/header.conf;' /etc/nginx/sites-available/$(conf_read tools-port)
 	for pxy in "/etc/nginx/apps.d/${domain}"*-proxy.conf
 	do

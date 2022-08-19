@@ -818,6 +818,9 @@ stack_builder() {
 	
 	# PPA's
 	if [[ $1 == "nginx" && $(conf_read nginx) != "true" ]]; then
+		[[ $nginx =~ ^(stable|mainline)$ ]] && conf_write nginx-ppa $nginx
+		[[ $lemp =~ ^(stable|mainline)$ ]] && conf_write nginx-ppa $lemp
+		
 		if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
 			sudo apt-key adv --fetch-keys 'https://nginx.org/keys/nginx_signing.key'
 			if [[ $(conf_read nginx-ppa) == "mainline" ]]; then

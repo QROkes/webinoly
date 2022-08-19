@@ -103,7 +103,8 @@ if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; the
 elif [[ -n $subfolder && -z $delete && -z $cache && -z $multisite_convert && -z $clone_from && -z $replace_content && -z $wp && -z $html && -z $php && -z $mysql && -z $proxy && -z $env && -z $info ]]; then
 	echo "${red}[ERROR] Subfolder option not supported!${end}"
 	exit 1
-elif [[ -n $subfolder && ( $cache == "on" || -n $multisite_convert || -n $replace_content ) && $(is_subfolder $domain $subfolder) != "wp" ]]; then
+# Clone-from empty is here to allow -cache=on when cloning a site
+elif [[ -n $subfolder && ( $cache == "on" || -n $multisite_convert || -n $replace_content ) && $(is_subfolder $domain $subfolder) != "wp" && -z $clone_from ]]; then
 	echo "${red}[ERROR] Subfolder not found or is not a WP site!${end}"
 	exit 1
 else
@@ -278,24 +279,6 @@ elif [[ -n $on && ! -L /etc/nginx/sites-enabled/$domain && -f /etc/nginx/sites-a
 elif [[ -n $redirection && -f /etc/nginx/sites-available/$domain ]]; then
 	check_for_nginx
 	redirection_manager
-	
-	
-# FastCGI Cache
-elif [[ -n $cache && -f /etc/nginx/sites-available/$domain ]]; then
-	wp_cache
-
-	
-# Delete site	
-elif [[ -n $delete && -f /etc/nginx/sites-available/$domain ]]; then
-	api-events_update si6
-	if [[ $domain == "default" || $domain == $(conf_read tools-port) ]]; then
-		echo "${red}[ERROR] System sites can not be removed!${end}"
-		exit 1
-	elif [[ -n $subfolder ]]; then
-		deletesite_subfolder
-	else
-		deletesite
-	fi
 
 
 # SSL (Letsencrypt)
@@ -400,6 +383,9 @@ elif [[ -n $clone_from ]]; then
 		elif [[ $(is_wp_installed $clone_from $subfolder) != "true" ]]; then
 			echo "${dim}[INFO] WordPress is empty and still not configured in ${clone_from}${subfolder} site!${end}"
 		fi
+	elif [[ -n $subfolder && $(is_subfolder $clone_from $subfolder) == "false" ]]; then
+		echo "${red}[ERROR] Subfolder not found!${end}"
+		exit 1
 	fi
 	
 	cloning_site
@@ -427,7 +413,25 @@ elif [[ -n $replace_content && -f /etc/nginx/sites-available/$domain ]]; then
 elif [[ -n $env && -f /etc/nginx/sites-available/$domain ]]; then
 	wp_env_type
 	nginx_not="true" # Nginx-Reload not-needed.
-	# ENV should be always before cache
+# ENV should be always before cache for precedence
+
+
+# FastCGI Cache
+elif [[ -n $cache && -f /etc/nginx/sites-available/$domain ]]; then
+	wp_cache
+
+
+# Delete site (should be here after cache for precedence)
+elif [[ -n $delete && -f /etc/nginx/sites-available/$domain ]]; then
+	api-events_update si6
+	if [[ $domain == "default" || $domain == $(conf_read tools-port) ]]; then
+		echo "${red}[ERROR] System sites can not be removed!${end}"
+		exit 1
+	elif [[ -n $subfolder ]]; then
+		deletesite_subfolder
+	else
+		deletesite
+	fi
 	
 
 # List Sites

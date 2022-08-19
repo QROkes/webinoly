@@ -592,7 +592,6 @@ elif [[ -n $purge_server_all ]]; then
 ##################################################
 
 elif [[ -n $html || -n $nginx ]]; then
-	[[ $nginx == "mainline" ]] && conf_write nginx-ppa mainline
 	stack_builder nginx false false $build
 	
 elif [[ -n $php ]]; then
