@@ -1179,6 +1179,7 @@ parked_domain() {
 	elif [[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ && $(is_wp_multisite $parked) =~ ^(subdomain|subdirectory)$ ]]; then
 		edit_wp_db_url_multisite $parked $domain $domain_mapping_wp_id
 		if [[ $? != 1 ]]; then
+			# No need of force-redirect check because this is a new and different site.
 			edit_wp_db_url $domain "http://${domain}"
 			echo "${gre}${dim}Domain Mapping successfully configured! ${end}"
 		else
@@ -1588,6 +1589,8 @@ cloning_site() {
 				exit 1
 			fi
 		fi
+	else
+		echo "${blu}Cloning your site! ${dim} Wait...${end}"
 	fi
 	
 	if [[ -n $subfolder ]]; then
@@ -1690,10 +1693,14 @@ cloning_site() {
 		if [[ $wp_dbhost == "localhost" ]]; then
 			site -mysql=[localhost,$dom,$usr,$AUTOGENPASS_WPDB] > /dev/null 2>&1
 			mysqldump -u admin -p$ADMIN_PASS $wp_dbname | mysql -u admin -p$ADMIN_PASS $dom
+			
+			# No need of force-redirect check because this is a new and different site.
 			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
 		else
 			site -mysql=[$wp_dbhost,$dom,$usr,$AUTOGENPASS_WPDB,$extdb_user,$extdb_pass] > /dev/null 2>&1
 			mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $wp_dbname | mysql -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $dom
+			
+			# No need of force-redirect check because this is a new and different site.
 			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
 		fi
 		

@@ -46,7 +46,12 @@ ssl_nginx() {
 		sudo chown -R root:root $(dirname -- $ssl_crt)
 		
 		# Not duplicate: Custom cert function does not run the same way as LE requests.
-		ssl_wp_db_update "https://${domain}"
+		# For some unknown reason this condition doesn't work in oneline as we usually do!
+		if [[ $(is_force_redirect $domain) == "www" ]]; then
+			ssl_wp_db_update "https://www.${domain}"
+		else
+			ssl_wp_db_update "https://${domain}"
+		fi
 		
 		if [[ -n $ssl_ocsp && -f $ssl_ocsp ]]; then
 			sudo sed -i "/ssl_trusted_certificate/c \	ssl_trusted_certificate $ssl_ocsp;" /etc/nginx/sites-available/$domain
@@ -183,7 +188,12 @@ site_ssl_on() {
 		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
 		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
 
-		ssl_wp_db_update "https://${domain}"
+		# For some unknown reason this condition doesn't work in oneline as we usually do!
+		if [[ $(is_force_redirect $domain) == "www" ]]; then
+			ssl_wp_db_update "https://www.${domain}"
+		else
+			ssl_wp_db_update "https://${domain}"
+		fi
 		
 		echo "${gre}SSL have been successfully enabled for your site${blu} $domain${end}"
 	elif [[ -f /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
@@ -260,7 +270,8 @@ site_ssl_off() {
 		echo "${gre}${dim}Tools Site updated with SSL!${end}"
 	fi
 	
-	[[ -z $no_db_update ]] && ssl_wp_db_update "http://${domain}"
+	[[ -z $no_db_update && $(is_force_redirect $domain) != "www" ]] && ssl_wp_db_update "http://${domain}"
+	[[ -z $no_db_update && $(is_force_redirect $domain) == "www" ]] && ssl_wp_db_update "http://www.${domain}"
 	
 	# Check if exist to not try to revoke a cert that don't exist, for example a site with a cert added to a wildcard! (-add-to-wildcard)
 	if [[ -f /etc/letsencrypt/renewal/${domain}.conf ]]; then
