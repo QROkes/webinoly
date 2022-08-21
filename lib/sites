@@ -544,7 +544,7 @@ deletesite() {
 			subfolder="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 			if [[ -n $subfolder && -f /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
 				if ! [[ $delete =~ ^(force|keep-db)$ ]]; then
-					echo "${blu}Delete Database [Y/n]?${end}"
+					echo "${blu}Delete Database [Y/n]? ${dim}(${domain}${subfolder}) ${end}"
 					while read -r -n 1 -s dbsubdel; do
 					  local dbsubdel=${dbsubdel:-y}
 					  [[ $dbsubdel = [YyNn] ]] && break
@@ -559,7 +559,7 @@ deletesite() {
 	# Determine if main site is WP, so you should delete the DB too.
 	if [[ ( -z $dbdel || $dbdel = [Yy] ) && ( -f /var/www/$domain/wp-config.php || -f /var/www/$domain/htdocs/wp-config.php ) ]]; then
 		if ! [[ $delete =~ ^(force|keep-db)$ ]]; then
-			echo "${blu}Delete Database [Y/n]?${end}"
+			echo "${blu}Delete Database [Y/n]? ${dim}(${domain}${subfolder}) ${end}"
 			while read -r -n 1 -s dbdel; do
 			  local dbdel=${dbdel:-y}
 			  [[ $dbdel = [YyNn] ]] && break
@@ -606,16 +606,17 @@ deletesite_subfolder() {
 	[[ ${delete,,} == "keep-db" ]] && local dbdel="N"
 	
 	# Check if site contains WP in subfolders.
-	if [[ -z $dbdel || $dbdel = [Yy] ]]; then
-		local subfolder_original=$subfolder
+	local subfolder_original=$subfolder
+	
+	for site in "/etc/nginx/apps.d/${domain}${subname}"*-wpcommon.conf
+	do 
+		local subfolder="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+		local subname=$(echo $subfolder | sed "s/\//_/g")
 		
-		for site in "/etc/nginx/apps.d/${domain}${subname}"*-wpcommon.conf
-		do 
-			subfolder="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
-			local subname=$(echo $subfolder | sed "s/\//_/g")
+		if [[ -z $dbdel || $dbdel = [Yy] ]]; then
 			if [[ -n $subfolder && -f /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
 				if ! [[ $delete =~ ^(force|keep-db)$ ]]; then
-					echo "${blu}Delete Database [Y/n]?${end}"
+					echo "${blu}Delete Database [Y/n]? ${dim}(${domain}${subfolder}) ${end}"
 					while read -r -n 1 -s dbsubdel; do
 					  local dbsubdel=${dbsubdel:-y}
 					  [[ $dbsubdel = [YyNn] ]] && break
@@ -623,25 +624,27 @@ deletesite_subfolder() {
 				fi
 				[[ $dbsubdel == [yY] || $dbdel == [yY] ]] && db_delete $domain $subfolder
 			fi
-			
-			sudo rm -rf /etc/nginx/apps.d/$domain$subnames-*.conf
-			sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-php.conf/d}" /etc/nginx/sites-available/$domain
-			sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-phpx.conf/d}" /etc/nginx/sites-available/$domain
-			sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-wpfc.conf/d}" /etc/nginx/sites-available/$domain
-			sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-proxy.conf/d}" /etc/nginx/sites-available/$domain
-			sudo sed -i "/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/{\|location $subfolder/ |d}" /etc/nginx/sites-available/$domain
-			
-			# In case of custom cache
-			if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
-				sudo sed -i "/^fastcgi_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')${subname} .*/d" /etc/nginx/conf.d/webinoly.conf
-				[[ ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
-			fi
-			
-			echo "${gre}${dim}Subfolder${blu} $subfolder ${gre}from${blu} $domain ${gre}has been successfully deleted!${end}"
-		done
+		fi
 		
-		subfolder=$subfolder_original
-	fi
+		sudo rm -rf /etc/nginx/apps.d/$domain$subname-*.conf
+		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-php.conf/d}" /etc/nginx/sites-available/$domain
+		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-phpx.conf/d}" /etc/nginx/sites-available/$domain
+		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-wpfc.conf/d}" /etc/nginx/sites-available/$domain
+		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-proxy.conf/d}" /etc/nginx/sites-available/$domain
+		sudo sed -i "/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/{\|location $subfolder/ |d}" /etc/nginx/sites-available/$domain
+			
+		# In case of custom cache
+		if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
+			sudo sed -i "/^fastcgi_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')${subname} .*/d" /etc/nginx/conf.d/webinoly.conf
+			[[ ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
+		fi
+			
+		echo "${gre}${dim}Subfolder${blu} $subfolder ${gre}from${blu} $domain ${gre}has been successfully deleted!${end}"
+	done
+		
+	# Restore original values
+	subfolder=$subfolder_original
+	subname=$(echo $subfolder | sed "s/\//_/g")
 	
 	sudo rm -rf /var/www/$domain/htdocs$subfolder
 	echo "${gre}Subfolder successfully removed!${end}"
@@ -1597,7 +1600,8 @@ cloning_site() {
 		local subtype=$(is_subfolder $clone_from $subfolder)
 		[[ ! -f /etc/nginx/sites-available/$domain ]] && create_empty_site
 		
-		if [[ $subtype == "wp" ]]; then
+		# WordPress only runs when is called in a recursive way below!
+		if [[ $subtype == "wp" && -n $child ]]; then
 			echo "${blu}${dim}Cloning WP subfolder...${end}"
 			sudo cp /etc/nginx/apps.d/$clone_from$subname-php.conf /etc/nginx/apps.d/$domain$subname-php.conf
 			sudo cp /etc/nginx/apps.d/$clone_from$subname-wpfc.conf /etc/nginx/apps.d/$domain$subname-wpfc.conf
@@ -1606,6 +1610,10 @@ cloning_site() {
 			sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-php.conf
 			sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 			sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
+		fi
+		
+		if [[ $subtype == "wp" ]]; then
+			echo "${blu}${dim}Cloning WP subfolder...${end}"
 		elif [[ $subtype == "php" ]]; then
 			echo "${blu}${dim}Cloning PHP subfolder...${end}"
 			if [[ -f /etc/nginx/apps.d/$clone_from$subname-php.conf ]]; then
@@ -1626,7 +1634,8 @@ cloning_site() {
 		elif [[ $subtype == "true" ]]; then
 			echo "${blu}${dim}Cloning subfolder data only...${end}"
 		else
-			echo "${red}${dim}[ERROR] Unexpected error, subfolder type is undetermined!${end}"
+			# Don't show this message when WP recursive!
+			[[ -z $child ]] && echo "${red}${dim}[ERROR] Unexpected error, subfolder type is undetermined!${end}"
 		fi
 		
 		if [[ -d /var/www/$clone_from/htdocs$subfolder ]]; then
@@ -1648,9 +1657,12 @@ cloning_site() {
 		# Fix server_name according to new domain/site.
 		[[ $subdomain == "true" ]] && local sername="server_name $domain;" || local sername="server_name $domain www.$domain;"
 		sudo sed -i "/server_name /c \	$sername" /etc/nginx/sites-available/$domain
-		
-		# Clone Subfolder conf files from apps.d
+	fi
+	
+	# Clone Subfolder conf files from apps.d
+	if [[ -z $child ]]; then
 		conf_write nginx-reload false
+		
 		for appfile in /etc/nginx/apps.d/${clone_from}*.conf
 		do
 			if [[ -s $appfile ]]; then
@@ -1658,23 +1670,27 @@ cloning_site() {
 				sudo cp $appfile $newfile
 				
 				# Check if site contains WP in subfolders.
-				if [[ $appfile == "/etc/nginx/apps.d/${domain}_"*-wpcommon.conf ]]; then
+				if [[ $appfile == "/etc/nginx/apps.d/${clone_from}${subname}"*-wpcommon.conf ]]; then
 					local wpsub="/$(echo $appfile | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 					if [[ -n $wpsub && -f /var/www/$domain/htdocs$wpsub/wp-config.php ]]; then
 						echo "${gre}${dim}WordPress installed in a subfolder${blu} '${wpsub}' ${gre}was found, we will clone it too...${end}"
 						# Silenced because some times files are still not all copied and this commands reload nginx causing unexpected errors.
 						# At the end when all the files are copied everything is fine and nothing to worry!
 						sudo site $domain -subfolder=$wpsub -delete=keep-db > /dev/null 2>&1
-						sudo site $domain -clone-from=$clone_from -subfolder=$wpsub > /dev/null 2>&1
-						[[ -n $env ]] && sudo site $domain -env=$env -subfolder=$wpsub > /dev/null 2>&1
+						[[ -n $env ]] && local pars="-env=$env "
+						[[ -n $cache ]] && local pars="$pars -cache=$cache -wp-cache-plugins=on"
+						sudo site $domain -clone-from=$clone_from -subfolder=$wpsub -child $pars > /dev/null 2>&1
 					fi
 				fi
 			fi
 		done
+		
+		conf_delete nginx-reload
 	fi
 
 	# Only for WP sites
-	if [[ $iswpclone == "true" ]]; then
+	# Main process runs always for WP - Child WP process only run when recursive and skip main if main is subfolder.
+	if [[ ( $iswpclone == "true" && -z $subfolder ) || ( $iswpclone == "true" && -n $subfolder && -n $child ) ]]; then
 		local dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
 		local usr=$dom
 		local AUTOGENPASS_WPDB=`pwgen -s -1 16`
@@ -1712,15 +1728,16 @@ cloning_site() {
 			replace_content="[https://www.$clone_from,https://$domain]" && wp_replace_content > /dev/null 2>&1
 		fi
 		
-		[[ -n $env && -z $subfolder ]] && sudo site $domain -env=$env
-		[[ -n $env && -n $subfolder ]] && sudo site $domain -env=$env -subfolder=$subfolder
+		# Set WP Environment variable
+		[[ -n $env && -n $subfolder ]] && local envpar="-subfolder=$subfolder "
+		[[ -n $env && -n $cache ]] && local envpar="$envpar -cache=$cache -wp-cache-plugins=on"
+		[[ -n $env ]] && sudo site $domain -env=$env $envpar
 	fi
 	
 	# Remove custom settings from cloned site
 	sudo site $domain -subdomain=false -force-redirect=off > /dev/null 2>&1
 	[[ $(is_ssl $clone_from) == "true" ]] && sudo site $domain -ssl=off -revoke=off -no-db-update > /dev/null 2>&1
 	[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
-	conf_delete nginx-reload
 	
 	echo "${gre}Site${blu} $domain$subfolder ${gre}is now a successfull clone of${blu} $clone_from$subfolder ${end}"
 }
