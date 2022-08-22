@@ -166,7 +166,7 @@ wpinstall() {
 					url_path=""
 					done="0"
 					[[ $type == [2345] ]] && exit 1 || continue 1
-				elif [[ $(is_url $dbhost) =~ ^(http|https|ip|unix|true)$ ]]; then
+				elif [[ $(is_url $dbhost) =~ ^(http|https|ip|true)$ ]]; then
 					local dburl=$url_host
 					local dbport=$url_port
 				else
@@ -543,7 +543,7 @@ deletesite() {
 		do
 			subfolder="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 			if [[ -n $subfolder && -f /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
-				if ! [[ $delete =~ ^(force|keep-db)$ ]]; then
+				if ! [[ ${delete,,} =~ ^(force|keep-db)$ ]]; then
 					echo "${blu}Delete Database [Y/n]? ${dim}(${domain}${subfolder}) ${end}"
 					while read -r -n 1 -s dbsubdel; do
 					  local dbsubdel=${dbsubdel:-y}
@@ -558,7 +558,7 @@ deletesite() {
 	
 	# Determine if main site is WP, so you should delete the DB too.
 	if [[ ( -z $dbdel || $dbdel = [Yy] ) && ( -f /var/www/$domain/wp-config.php || -f /var/www/$domain/htdocs/wp-config.php ) ]]; then
-		if ! [[ $delete =~ ^(force|keep-db)$ ]]; then
+		if ! [[ ${delete,,} =~ ^(force|keep-db)$ ]]; then
 			echo "${blu}Delete Database [Y/n]? ${dim}(${domain}${subfolder}) ${end}"
 			while read -r -n 1 -s dbdel; do
 			  local dbdel=${dbdel:-y}
@@ -615,7 +615,7 @@ deletesite_subfolder() {
 		
 		if [[ -z $dbdel || $dbdel = [Yy] ]]; then
 			if [[ -n $subfolder && -f /var/www/$domain/htdocs$subfolder/wp-config.php ]]; then
-				if ! [[ $delete =~ ^(force|keep-db)$ ]]; then
+				if ! [[ ${delete,,} =~ ^(force|keep-db)$ ]]; then
 					echo "${blu}Delete Database [Y/n]? ${dim}(${domain}${subfolder}) ${end}"
 					while read -r -n 1 -s dbsubdel; do
 					  local dbsubdel=${dbsubdel:-y}
@@ -656,7 +656,7 @@ delete_all_sites() {
 	echo "All your sites files will be removed."
 	echo "This action will only delete Databases attached to a WordPress site, any other Database will not be deleted. ${end}"
 	
-	if ! [[ $delete_all =~ ^(force|keep-db)$ ]]; then
+	if ! [[ ${delete_all,,} =~ ^(force|keep-db)$ ]]; then
 		echo "${blu}"
 		echo "Are you sure [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
@@ -673,7 +673,7 @@ delete_all_sites() {
 	
 	for site in "/etc/nginx/sites-available"/*
 	do
-		[[ $delete_all == "keep-db" ]] && delete="keep-db" || delete="force"
+		[[ ${delete_all,,} == "keep-db" ]] && delete="keep-db" || delete="force"
 		domain=$(echo $site | cut -f 5 -d "/")
 		[[ $domain != "default" && $domain != $(conf_read tools-port) && $domi != *".dpkg-"* ]] && deletesite
 	done
