@@ -374,7 +374,8 @@ webinoly_update() {
 	if [[ $? == 0 ]]; then
 		echo "${gre}Webinoly App has been updated successfully!${dim} (Updated to: v$(conf_read app-version))${end}"
 	else
-		sudo rm weby
+		# Check if exist, because it can be deleted before if an error is triggered in the installer, for instance.
+		[[ -f weby ]] && sudo rm weby
 		echo "${red}[ERROR] Update process has failed!${end}"
 		exit 1
 	fi
