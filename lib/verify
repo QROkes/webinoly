@@ -791,14 +791,15 @@ if [[ -z $critical_mode ]]; then
 	# Check for BASH Shell
 	# This is a very "shity" method, but checking if file exists is very reliable
 	# If modified: this same script is in installer, general lib and verify
-	if [[ -n $(echo $(tty) | grep -Eo "pts/[0-9]+") && -n $(logname) ]]; then
-		local ver_shell_pid=$(ps -au | grep -E "^$(logname).*pts/[0-9]+[ ]+S[s]?[ ]+" | tail -n 1 | awk '{print $2}')
+	if [[ $(conf_read shell-check) != "false" && -n $(echo $(tty) | grep -Eo "pts/[0-9]+") && -n $(logname) ]]; then
+		local ver_pre_pid=$(ps -au | grep -E "pts/[0-9]+[ ]+S[s]?[ ]+" | sed '/sudo/d' | tail -n 1)
+		[[ -n $ver_pre_pid ]] && local ver_shell_pid=$(echo $ver_pre_pid | awk '{print $2}')
 		[[ -n $ver_shell_pid && -f /proc/$ver_shell_pid/cmdline ]] && local ver_shell_current=$(tr -d '\000' < /proc/$ver_shell_pid/cmdline)
-		[[ -n $ver_shell_pid && -f /proc/$ver_shell_pid/status ]] && ver_shell_status=$(grep -Eo '^Name:.*bash.*' /proc/$ver_shell_pid/status) # Double check!!!
+		[[ -n $ver_shell_pid && -f /proc/$ver_shell_pid/status ]] && local ver_shell_status=$(grep -Eo '^Name:.*bash.*' /proc/$ver_shell_pid/status) # Double check!!!
 		
 		if [[ -n $ver_shell_current && $ver_shell_current != *"bash"* && -z $ver_shell_status ]]; then
 			# Should never be displayed because is blocked in general lib, but who knows!
-			echo "${dim}- [WARNING] BASH Shell is required! ${dim}(${ver_shell_current}) ${end}${red}"
+			echo "${dim}- [WARNING] Seems like you are using an interactive shell different than BASH! ${dim}($(echo $ver_pre_pid | awk '{print $1}'):${ver_shell_current}) ${end}${red}"
 			local ver_six_war="1"
 		elif [[ -z $ver_shell_current ]]; then
 			echo "${blu}${dim}- [INFO] Shell check fails to retrieve data! ${end}${red}"
