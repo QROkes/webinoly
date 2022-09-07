@@ -324,7 +324,7 @@ elif [[ -n $ssl ]]; then
 				ssl_nginx
 				
 				# No need of force-redirect check because this site is always subdomain and subdomains are not supported in force-redirect.
-				[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain "https://${domain}"
+				[[ $(is_wp $domain) == "true" ]] && wp_db_update $domain "https://${domain}"
 				
 				echo "${gre}Your site${blu} $domain ${gre}have been successfully added to the${blu} $add_to_wildcard ${gre}wildcard cert.${end}"
 			else

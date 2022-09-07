@@ -803,7 +803,7 @@ force_redirect() {
 	case $force_redirect in
 		"www")
 			[[ -n $rediron ]] && sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
-			edit_wp_db_url $domain "${scheme}://www.${domain}"
+			wp_db_update $domain "${scheme}://www.${domain}"
 			edit_wp_db_url_multisite $domain "www.${domain}"
 			
 			sudo sed -i "/#server_name;/c \	server_name $domain;" /tmp/template-site-wwwredirect
@@ -814,7 +814,7 @@ force_redirect() {
 		;;
 		"root")
 			[[ -n $rediron ]] && sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
-			edit_wp_db_url $domain "${scheme}://${domain}"
+			wp_db_update $domain "${scheme}://${domain}"
 			edit_wp_db_url_multisite $domain $domain
 			
 			sudo sed -i "/#server_name;/c \	server_name www.$domain;" /tmp/template-site-wwwredirect
@@ -824,7 +824,7 @@ force_redirect() {
 		;;
 		"off")
 			if [[ -n $rediron ]]; then
-				edit_wp_db_url $domain "${scheme}://${domain}"
+				wp_db_update $domain "${scheme}://${domain}"
 				edit_wp_db_url_multisite $domain $domain
 			
 				sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain

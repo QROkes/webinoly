@@ -509,7 +509,8 @@ wp_conf_retrieve() {
 	
 	
 	# In case of parked sites with WP domain mapping
-	if [[ $3 != "false" && $(is_parked $1) == "true" ]]; then
+	#if [[ $3 != "false" && $(is_parked $1) == "true" ]]; then # Modified recently, not sure the impact!
+	if [[ $3 != "false" ]]; then
 		# If domain doesn't exist, check if it's a subsite of a subdomain Multisite network.
 		if [[ ! -f /etc/nginx/sites-available/$1 && -f /etc/nginx/sites-available/$(echo $1 | cut -d "." -f 2- -s) ]]; then
 			local maindom=$(echo $1 | cut -d "." -f 2- -s)
@@ -531,6 +532,8 @@ wp_conf_retrieve() {
 			if [[ $wp_blogid =~ ^[0-9]+$  && $wp_blogid -gt 1 ]]; then
 				wp_dbpref="${wp_dbpref}${wp_blogid}_"
 				echo "${blu}${dim}Site${end}${dim} ${1}${4} ${blu}is a subsite (${wp_dbpref}) in a WP Multisite Network!${end}" >&2
+			elif [[ $wp_blogid == 1 ]]; then
+				echo "${blu}${dim}Site${end}${dim} ${1}${4} ${blu}is the main site in a WP Multisite Network!${end}" >&2
 			else
 				[[ $wp_blogid != 1 ]] && wp_blogid=""
 			fi
@@ -1057,23 +1060,26 @@ email_update() {
 edit_wp_db_url_multisite() {
 	#Subfolder is not allowed here because is not needed, parked and force-www are not allowed in subfolders.
 	#Example: edit_wp_db_url_multisite olddomain.com newdomain.com 2
-	# $3 - WP BlogID to force
+	# $3 - WP BlogID to force (optional)
 	
-	if [[ -n $1 && -n $2 && -n $3 && $3 =~ ^[0-9]+$ && $(is_wp_multisite $1) =~ ^(subdomain|subdirectory)$ ]]; then
-		wp_conf_retrieve $1 true false $subfolder
+	if [[ -n $1 && -n $2 && $(is_wp_multisite $1) =~ ^(subdomain|subdirectory)$ ]]; then
+		wp_conf_retrieve $1 true true $subfolder
 		
 		# Force WP blogID
-		local wp_dbpref="${wp_dbpref}${3}_"
-		local wp_blogid=$3
-		local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
-		if [[ $wp_dbhost == "localhost" && -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup") ]]; then
-			echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
-		elif [[ $wp_dbhost != "localhost" && -n $(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup") ]]; then
-			echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
-		else
-			echo "${red}${dim}[ERROR] WordPress blog ID (${wp_dbpref}) not found!${end}" >&2
-			wp_dbpref=""
-			wp_blogid=""
+		if [[ -n $3 && $3 =~ ^[0-9]+$ ]]; then
+			local wp_dbpref="${wp_dbpref}${3}_"
+			local wp_blogid=$3		
+			local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
+			
+			if [[ $wp_dbhost == "localhost" && -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup") ]]; then
+				echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
+			elif [[ $wp_dbhost != "localhost" && -n $(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup") ]]; then
+				echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
+			else
+				echo "${red}${dim}[ERROR] WordPress blog ID (${wp_dbpref}) not found!${end}" >&2
+				wp_dbpref=""
+				wp_blogid=""
+			fi
 		fi
 		
 		if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref_main && -n $wp_blogid ]]; then
@@ -1136,6 +1142,21 @@ _EOF_
 			echo "${red}${dim}[ERROR] WordPress database cannot be updated!${end}" >&2
 		fi
 	fi
+}
+
+
+wp_db_update() {
+	# Same as edit_wp_db_url, but it also check and includes WP in subfolders.
+
+	# if main site is WP.
+	[[ $(is_wp $1) == "true" ]] && edit_wp_db_url $1 $2
+	
+	# Check if site contains WP in subfolders.
+	for site in "/etc/nginx/apps.d/${1}_"*-wpcommon.conf
+	do
+		local subwp="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+		[[ -n $subwp && -f /var/www/${1}/htdocs$subwp/wp-config.php ]] && edit_wp_db_url $1 ${2}${subwp} $subwp
+	done
 }
 
 

@@ -4,18 +4,6 @@
 # Functions for SSL On/Off
 
 
-ssl_wp_db_update() {
-	# if main site is WP.
-	[[ $(is_wp $domain) == "true" ]] && edit_wp_db_url $domain $1
-	
-	# Check if site contains WP in subfolders.
-	for site in "/etc/nginx/apps.d/${domain}_"*-wpcommon.conf
-	do
-		local subwp="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
-		[[ -n $subwp && -f /var/www/$domain/htdocs$subwp/wp-config.php ]] && edit_wp_db_url $domain ${1}${subwp} $subwp
-	done
-}
-
 ssl_nginx() {
 	sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /etc/nginx/sites-available/$domain
@@ -48,9 +36,9 @@ ssl_nginx() {
 		# Not duplicate: Custom cert function does not run the same way as LE requests.
 		# For some unknown reason this condition doesn't work in oneline as we usually do!
 		if [[ $(is_force_redirect $domain) == "www" ]]; then
-			ssl_wp_db_update "https://www.${domain}"
+			wp_db_update $domain "https://www.${domain}"
 		else
-			ssl_wp_db_update "https://${domain}"
+			wp_db_update $domain "https://${domain}"
 		fi
 		
 		if [[ -n $ssl_ocsp && -f $ssl_ocsp ]]; then
@@ -190,9 +178,9 @@ site_ssl_on() {
 
 		# For some unknown reason this condition doesn't work in oneline as we usually do!
 		if [[ $(is_force_redirect $domain) == "www" ]]; then
-			ssl_wp_db_update "https://www.${domain}"
+			wp_db_update $domain "https://www.${domain}"
 		else
-			ssl_wp_db_update "https://${domain}"
+			wp_db_update $domain "https://${domain}"
 		fi
 		
 		echo "${gre}SSL have been successfully enabled for your site${blu} $domain${end}"
@@ -270,8 +258,8 @@ site_ssl_off() {
 		echo "${gre}${dim}Tools Site updated with SSL!${end}"
 	fi
 	
-	[[ -z $no_db_update && $(is_force_redirect $domain) != "www" ]] && ssl_wp_db_update "http://${domain}"
-	[[ -z $no_db_update && $(is_force_redirect $domain) == "www" ]] && ssl_wp_db_update "http://www.${domain}"
+	[[ -z $no_db_update && $(is_force_redirect $domain) != "www" ]] && wp_db_update $domain "http://${domain}"
+	[[ -z $no_db_update && $(is_force_redirect $domain) == "www" ]] && wp_db_update $domain "http://www.${domain}"
 	
 	# Check if exist to not try to revoke a cert that don't exist, for example a site with a cert added to a wildcard! (-add-to-wildcard)
 	if [[ -f /etc/letsencrypt/renewal/${domain}.conf ]]; then
