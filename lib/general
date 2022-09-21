@@ -4,8 +4,8 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.16.7"
-readonly svr_version="1.7"
+readonly app_version="1.17.0"
+readonly svr_version="1.8"
 readonly os_ubuntu_supported=(bionic focal jammy) # https://ubuntu.com/about/release-cycle
 readonly php_supported=(7.4 8.0 8.1) # https://www.php.net/supported-versions.php
 readonly php_default="8.1"

@@ -622,7 +622,7 @@ set_tools_site() {
 		echo "${gre}Domain${blu} ${tools_site}:$(conf_read tools-port) ${gre}was successfully assigned to access your server tools!${end}"
 	elif [[ $tools_site == "default" ]]; then
 		sudo rm -rf /etc/nginx/sites-available/$(conf_read tools-port)
-		sudo cp /opt/webinoly/templates/nginx/admin_tools.conf /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo cp /opt/webinoly/templates/general/admin_tools.conf /etc/nginx/sites-available/$(conf_read tools-port)
 		sudo sed -i "s/<port>/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
 		conf_write tools-site default
 		echo "${gre}Tools Site settings has been reset successfully!${end}"

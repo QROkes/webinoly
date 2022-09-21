@@ -1022,13 +1022,13 @@ php_subfolder() {
 
 wp_subfolder() {
 	php_subfolder
-	sudo sed -i "/^# DO NOT MODIFY, /a include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
+	sudo sed -i "/^# Not remove these comments/a include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
 	
 	sudo cp /etc/nginx/common/wpfc.conf /etc/nginx/apps.d/$domain$subname-wpfc.conf
 	sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 	sudo sed -i "/^location ~\* /c location ~* $subfolder/\.*\\\.php\$ {" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 	sudo sed -i "s#/index.php#$subfolder/index.php#" /etc/nginx/apps.d/$domain$subname-wpfc.conf
-	sudo sed -i "/^# DO NOT MODIFY, /a include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+	sudo sed -i "/^# Not remove these comments/a include apps.d/$domain$subname-wpcommon.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 	
 	sudo cp /etc/nginx/common/wpcommon.conf /etc/nginx/apps.d/$domain$subname-wpcommon.conf
 	sed -ri "s/location(.*) \/(.*) \{$/location\1 subfolder\/\2 \{/" /etc/nginx/apps.d/$domain$subname-wpcommon.conf
@@ -1109,8 +1109,8 @@ wp_multisite_convertion() {
 				sudo sed -i '/locations.conf/i \	include common/wpsubdir.conf;' /etc/nginx/sites-available/$domain
 			else
 				sudo cp /etc/nginx/common/wpsubdir.conf /etc/nginx/apps.d/$domain$subname-wpsubdir.conf
-				sudo sed -i "/DO NOT MODIFY/a \include apps.d\/$domain$subname-wpsubdir.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
-				sudo sed -i "/DO NOT MODIFY/a \include apps.d\/$domain$subname-wpsubdir.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
+				sudo sed -i "/Not remove these comments/a \include apps.d\/$domain$subname-wpsubdir.conf;" /etc/nginx/apps.d/$domain$subname-php.conf
+				sudo sed -i "/Not remove these comments/a \include apps.d\/$domain$subname-wpsubdir.conf;" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 				sed -i "s#\^(#\^$subfolder\(#" /etc/nginx/apps.d/$domain$subname-wpsubdir.conf
 				sed -i "s#\$2#$subfolder\$2#" /etc/nginx/apps.d/$domain$subname-wpsubdir.conf
 			fi
@@ -1526,12 +1526,12 @@ wp_cache() {
 					sudo cat /etc/nginx/common/php.conf >> /etc/nginx/apps.d/$domain$subname-${fn}.conf
 				fi
 				
-				sudo sed -i '/# PHP NGINX CONFIGURATION/,/# DO NOT MODIFY, ALL/{/.*/d}' /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i '/This configuration file is only for internal use/,/# Not remove these comments/{/.*/d}' /etc/nginx/apps.d/$domain$subname-${fn}.conf
 				sudo sed -i "/fastcgi_pass php;/a	fastcgi_cache WORDPRESS;" /etc/nginx/apps.d/$domain$subname-${fn}.conf
 				sudo sed -i "/fastcgi_pass php;/a	fastcgi_no_cache \$skip_cache;" /etc/nginx/apps.d/$domain$subname-${fn}.conf
 				sudo sed -i "/fastcgi_pass php;/a	fastcgi_cache_bypass \$skip_cache;" /etc/nginx/apps.d/$domain$subname-${fn}.conf
 				sudo sed -i '/fastcgi_cache WORDPRESS;/r /etc/nginx/conf.d/fastcgi.conf' /etc/nginx/apps.d/$domain$subname-${fn}.conf
-				sudo sed -i '/# FastCGI cache settings/,/fastcgi_cache_path /{/.*/d}' /etc/nginx/apps.d/$domain$subname-${fn}.conf
+				sudo sed -i '/This configuration file is only for internal use/,/fastcgi_cache_path /{/.*/d}' /etc/nginx/apps.d/$domain$subname-${fn}.conf
 				sudo sed -i "/fastcgi_cache WORDPRESS;/c \	fastcgi_cache ${dom}${subname};" /etc/nginx/apps.d/$domain$subname-${fn}.conf
 				sudo sed -i "s/ \$skip_cache/ \$skip_cache_${dom}${subname}/g" /etc/nginx/apps.d/$domain$subname-${fn}.conf
 				sudo sed -i '/^fastcgi_/s/^/	/' /etc/nginx/apps.d/$domain$subname-${fn}.conf

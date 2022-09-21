@@ -104,10 +104,6 @@ if [[ ! -f /opt/webinoly/templates/nginx/nginx.conf ]]; then
 	echo "- [ERROR] File: /opt/webinoly/templates/nginx/nginx.conf not found!"
 	local ver_one_err="1"
 fi
-if [[ ! -f /opt/webinoly/templates/nginx/admin_tools.conf ]]; then
-	echo "- [ERROR] File: /opt/webinoly/templates/nginx/admin_tools.conf not found!"
-	local ver_one_err="1"
-fi
 if [[ ! -f /opt/webinoly/templates/nginx/conf.d/fastcgi.conf ]]; then
 	echo "- [ERROR] File: /opt/webinoly/templates/nginx/conf.d/fastcgi.conf not found!"
 	local ver_one_err="1"
@@ -170,6 +166,10 @@ if [[ ! -f /opt/webinoly/templates/nginx/common/wpfc.conf ]]; then
 fi
 if [[ ! -f /opt/webinoly/templates/nginx/common/wpsubdir.conf ]]; then
 	echo "- [ERROR] File: /opt/webinoly/templates/nginx/common/wpsubdir.conf not found!"
+	local ver_one_err="1"
+fi
+if [[ ! -f /opt/webinoly/templates/general/admin_tools.conf ]]; then
+	echo "- [ERROR] File: /opt/webinoly/templates/general/admin_tools.conf not found!"
 	local ver_one_err="1"
 fi
 if [[ ! -f /opt/webinoly/templates/general/conf ]]; then
