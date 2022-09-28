@@ -7,7 +7,7 @@
 readonly app_version="1.17.0"
 readonly svr_version="1.8"
 readonly os_ubuntu_supported=(bionic focal jammy) # https://ubuntu.com/about/release-cycle
-readonly php_supported=(7.4 8.0 8.1) # https://www.php.net/supported-versions.php
+readonly php_supported=(7.4 8.0 8.1 8.2) # https://www.php.net/supported-versions.php
 readonly php_default="8.1"
 readonly mysql_supported=(10.4 10.5 10.6) # https://mariadb.com/kb/en/mariadb-server-release-dates/
 readonly mysql_default="10.6"
@@ -1287,6 +1287,10 @@ check_var() {
 		else
 			[[ $((3*$cores)) =~ ^[0-9]+ && $((3*$cores)) -ge 6 ]] && local out=$((3*$cores)) || local out=6
 		fi
+	
+	# PHP max input vars
+	elif [[ $1 == "php-max-input-vars" ]]; then
+		[[ -n $(conf_read php-max-input-vars) && $(conf_read php-max-input-vars) =~ ^[0-9]+$ && $(conf_read php-max-input-vars) -gt 0 ]] && local out=$(conf_read php-max-input-vars) || local out=5000
 	
 	# Redis Memory
 	elif [[ $1 == "redis-max-mem" ]]; then

@@ -267,6 +267,16 @@ onesix_to_oneseven() {
 }
 
 
+# v1.17.0
+oneseven_to_oneight() {
+	# We are doing here, not before, just because is now mandatory, WP health is giving messages!!
+	if [[ $(conf_read php) == "true" ]]; then
+		sudo apt update
+		sudo apt -y install php$(conf_read php-ver)-intl
+	fi
+}
+
+
 # Version numbers without point
 [[ ${oldver//.} -lt 11 ]] && onezero_to_oneone
 [[ ${oldver//.} -lt 12 ]] && oneone_to_onetwo
@@ -275,7 +285,7 @@ onesix_to_oneseven() {
 [[ ${oldver//.} -lt 15 ]] && onefour_to_onefive
 [[ ${oldver//.} -lt 16 ]] && onefive_to_onesix
 [[ ${oldver//.} -lt 17 ]] && onesix_to_oneseven
-
+[[ ${oldver//.} -lt 18 ]] && oneseven_to_oneight
 
 sudo webinoly -server-reset
 echo "${gre}Your server-configuration has been successfully updated!${end}"

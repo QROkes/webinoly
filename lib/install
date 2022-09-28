@@ -393,6 +393,7 @@ php_optim() {
 	sudo sed -i -r "/^[;]?max_file_uploads =/c\max_file_uploads = $(check_var php-max-files)" /etc/php/$ver/fpm/php.ini
 	[[ $(check_var php-max-mem) -gt $(($(check_var max-mb-uploads)+1)) ]] && local phpmem=$(check_var php-max-mem) || local phpmem=$(($(check_var max-mb-uploads)+10))
 	sudo sed -i -r "/^[;]?memory_limit =/c\memory_limit = ${phpmem}M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r "/^[;]?max_input_vars =/c\max_input_vars = $(check_var php-max-input-vars)" /etc/php/$ver/fpm/php.ini
 	
 	sudo sed -i -r "/^[;]?opcache.memory_consumption=/c\opcache.memory_consumption=$(check_var php-max-mem)" /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.interned_strings_buffer=/c\opcache.interned_strings_buffer=8' /etc/php/$ver/fpm/php.ini

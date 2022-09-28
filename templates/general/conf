@@ -320,6 +320,12 @@
 ###########################
 #php-max-files:20
 
+# PHP How many input variables may be accepted
+# Values: numeric int
+# Default: 5000
+# Note: Limit is applied to $_GET, $_POST and $_COOKIE superglobal separately.
+###########################
+#php-max-input-vars:5000
 
 # PHP Path_Info
 # Values: boolean (true/false)
