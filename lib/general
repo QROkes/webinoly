@@ -681,7 +681,12 @@ is_url() {
 	
 	if [[ $1 =~ ^((http|https)+\:\/\/)?unix:(.+):(\/.*)?$ ]]; then
 		out="unix"
-		[[ $scheme == "unix" ]] && local host=$(echo "${1,,}" | cut -d':' -f 2 -s) || local host=$(echo "${1,,}" | cut -d':' -f 3 -s)
+		if [[ $scheme == "unix" ]]; then
+			local host="$(echo "${1,,}" | cut -d':' -f 1-2 -s):"
+		else
+			local host="$(echo "${1,,}" | cut -d':' -f 2-3 -s):"
+			local host=${host:2}
+		fi
 		local path=$(echo "${1,,}" | rev | cut -d':' -f 1 -s | rev | cut -d '/' -f 2- -s)
 		local port=""
 	elif [[ $scheme =~ ^(http|https)$ ]]; then	

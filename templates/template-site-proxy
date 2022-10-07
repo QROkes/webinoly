@@ -1,6 +1,10 @@
 # REVERSE PROXY NGINX CONFIGURATION by Webinoly
 
 location / {
+	# Set the Host header to $host in case you want to preserve the original host value. (proxy_set_header Host $host;)
+	# Set the Host header to match the destination server (may be needed) to connect with external resources. (proxy_set_header Host 'your.s3.us-east-1.amazonaws.com';)
+	# The latest can't be used with multiple destinations or load-balancing, which is one of the main features of nginx upstreams.
+	# The purpose of the Host header in to indicate to the remote server which website you are trying to access and is critical if an IP address is being shared with multiple sites.
 	#proxy_set_header Host $host;
 	#proxy_set_header X-Forwarded-Host $host;
 	#proxy_set_header X-Forwarded-Server $host;
@@ -8,8 +12,12 @@ location / {
 	#proxy_set_header X-Forwarded-Proto $scheme;
 	#proxy_set_header X-Real-IP $remote_addr;
 	
-	proxy_set_header Upgrade $http_upgrade;
-	proxy_set_header Connection "upgrade";
+	# https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Upgrade
+	# It can be used by a client to upgrade a connection from HTTP 1.1 to HTTP 2.0, or an HTTP or HTTPS connection into a WebSocket.
+	# We prefer 1.1 and keepalive because nginx don't have support for 2.0 in proxy/upstream - https://trac.nginx.org/nginx/ticket/923
+	# For Upgrade, should be set Connection "upgrade" below and keepalive disabled in the upstream.
+	#proxy_set_header Upgrade $http_upgrade;
+	proxy_set_header Connection "";
 	proxy_http_version 1.1;
 
 	proxy_connect_timeout 300;
@@ -17,8 +25,10 @@ location / {
 	proxy_read_timeout    300;
 	proxy_ignore_headers   Set-Cookie;
 	proxy_intercept_errors on;
+	#proxy_next_upstream error timeout http_500;
 	
-	proxy_pass http://localhost:8080;
+	# Upstream defined here: conf.d/upstream_proxy.conf
+	proxy_pass <upstream_name>;
 		
 	# CacheStaticFiles
 	location ~* \.(ogg|ogv|svg|svgz|eot|otf|woff|mp4|ttf|css|rss|atom|js|jpg|jpeg|gif|png|ico|zip|tgz|gz|rar|bz2|doc|xls|exe|ppt|tar|mid|midi|wav|bmp|rtf|swf|woff2|m4a|cur|heic|tiff|webm|mp3|aac|webp)$ {
@@ -29,7 +39,7 @@ location / {
 		log_not_found off;
 		expires max;
 		
-		proxy_pass http://localhost:8080;
+		proxy_pass <upstream_name>;
 	}
 	
 	# BasicLocationRootFiles
@@ -37,7 +47,7 @@ location / {
 		access_log off;
 		log_not_found off;
 		
-		proxy_pass http://localhost:8080;
+		proxy_pass <upstream_name>;
 	}
 	# BasicLocEnd
 }

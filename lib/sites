@@ -592,6 +592,13 @@ deletesite() {
 		[[ ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
 	fi
 	
+	# Check for Reverse Proxy upstreams
+	if [[ -f /etc/nginx/conf.d/upstream_proxy.conf ]]; then
+		local domvar=$(echo "$domain" | sed "s/[^0-9A-Za-z]/_/g")
+		sudo sed -i "/upstream ${domvar}/,/} #End/{/.*/d}" /etc/nginx/conf.d/upstream_proxy.conf
+		[[ ! -s /etc/nginx/conf.d/upstream_proxy.conf ]] && sudo rm /etc/nginx/conf.d/upstream_proxy.conf
+	fi
+	
 	echo "${gre}Site${blu} $domain ${gre}has been successfully deleted!${end}"
 }
 
@@ -632,7 +639,7 @@ deletesite_subfolder() {
 		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-wpfc.conf/d}" /etc/nginx/sites-available/$domain
 		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-proxy.conf/d}" /etc/nginx/sites-available/$domain
 		sudo sed -i "/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/{\|location $subfolder/ |d}" /etc/nginx/sites-available/$domain
-			
+
 		# In case of custom cache
 		if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
 			sudo sed -i "/^fastcgi_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')${subname} .*/d" /etc/nginx/conf.d/webinoly.conf
@@ -645,6 +652,13 @@ deletesite_subfolder() {
 	# Restore original values
 	subfolder=$subfolder_original
 	subname=$(echo $subfolder | sed "s/\//_/g")
+	
+	# Check for Reverse Proxy upstreams
+	if [[ -f /etc/nginx/conf.d/upstream_proxy.conf ]]; then
+		local domvar=$(echo "$domain$subfolder" | sed "s/[^0-9A-Za-z]/_/g")
+		sudo sed -i "/upstream ${domvar}/,/} #End/{/.*/d}" /etc/nginx/conf.d/upstream_proxy.conf
+		[[ ! -s /etc/nginx/conf.d/upstream_proxy.conf ]] && sudo rm /etc/nginx/conf.d/upstream_proxy.conf
+	fi
 	
 	sudo rm -rf /var/www/$domain/htdocs$subfolder
 	echo "${gre}Subfolder successfully removed!${end}"
@@ -683,6 +697,7 @@ delete_all_sites() {
 	sudo rm -rf /etc/nginx/sites-available/!(default|$(conf_read tools-port)|*".dpkg-"*)
 	sudo rm -rf /etc/nginx/sites-enabled/!(default|$(conf_read tools-port))
 	sudo rm -rf /var/www/!(html|$(conf_read tools-port))
+	sudo rm -rf /etc/nginx/conf.d/upstream_proxy.conf
 	echo ""
 	echo "${gre}All sites and data has been deleted successfully!${end}"
 }
@@ -1258,13 +1273,22 @@ reverse_proxy() {
 	fi
 	
 	is_url $proxydata -split
-	[[ -z $url_scheme || ${url_scheme,,} == "unix" ]] && proxydata="http://${proxydata}"
-	
-	# URI part (subfolders) are not allowed because the proxy configuration we are using includes the static files location
-	# This location block is using regex which is not allowed, dedicated reverse proxy are not affected because they don't have static file location block.
-	# nginx: [emerg] "proxy_pass" cannot have URI part in location given by regular expression, or inside named location, or inside "if" statement, or inside "limit_except" block in /etc/nginx/apps.d/testa.qrokes.com-proxy.conf:31
-	if [[ -z $dedicated_reverse_proxy && -n $url_path ]]; then
-		echo "${red}[ERROR] Subfolders in your endpoint are not allowed in Reverse Proxy sites configured as websites!${end}"
+	# URL Scheme correction... Just in case of empty scheme, http is default!
+	if [[ -z $url_scheme || ${url_scheme,,} == "unix" ]]; then
+		local proxydata="http://${proxydata}"
+		url_scheme="http"
+	fi
+
+	# Fix slash at the end when is alone, no real URI path!
+	if [[ $dedicated_reverse_proxy != "simple" && $url_path == "/" ]]; then
+		local proxydata=${proxydata:0:-1}
+		unset url_path
+	fi
+
+	# URI part (subfolders) are not allowed because the proxy configuration we are using includes the static files location, this location block is using regex which is not allowed!
+	# Dedicated reverse proxy are also affected (don't have static file location block), but subfolders are not allowed in upstream servers.
+	if [[ $dedicated_reverse_proxy != "simple" && -n $url_path ]]; then
+		echo "${red}[ERROR] Subfolder in your endpoint or upstream server is not supported!${dim} (URI: $url_path)${end}"
 		exit 1
 	fi
 	
@@ -1288,21 +1312,55 @@ reverse_proxy() {
 		sudo sed -i '/BasicLocationRootFiles/,/BasicLocEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
 		sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	fi
-	sudo sed -i "s#http://localhost:8080#${proxydata}#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	
+	if [[ $dedicated_reverse_proxy == "simple" ]]; then
+		# Force / at the end of the url for subfolders
+		[[ -n $url_path && $url_path != "/" && $(echo "${proxydata}" | rev | cut -c-1) != "/" ]] && proxydata="${proxydata}/"
+		sudo sed -i "s#<upstream_name>#${proxydata}#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
+	else
+		[[ -n $url_scheme ]] && sudo sed -i "s#proxy_pass <upstream_name>#proxy_pass ${url_scheme,,}://<upstream_name>#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
+		sudo sed -i "s#<upstream_name>#$(echo "$domain$subfolder" | sed "s/[^0-9A-Za-z]/_/g")#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
+		
+		# Create the upstream
+		if [[ ! -f /etc/nginx/conf.d/upstream_proxy.conf ]]; then
+			sudo touch /etc/nginx/conf.d/upstream_proxy.conf
+			sudo chmod 644 /etc/nginx/conf.d/upstream_proxy.conf
+			sudo chown -R root:root /etc/nginx/conf.d/upstream_proxy.conf
+		fi
+
+		# Upstream server needs port, if empty, default is 80, so we need to fix it in case of https.
+		[[ -z $url_port && ${url_scheme,,} == "https" ]] && local fixport=":443"
+
+		local upsvr="$(echo "${proxydata}${fixport}" | sed "s#${url_scheme}://##g")"
+		
+		echo "upstream $(echo "$domain$subfolder" | sed "s/[^0-9A-Za-z]/_/g") {
+	zone upstreams;
+	server ${upsvr};
+	#server ${upsvr} backup;
+	# When multiple servers are defined be sure the Host header is not set to one specific destination server.
+	
+	# We recommend setting the 'keepalive' parameter to twice the number of servers listed in the upstream block.
+	# The proxy_http_version directive should be set to “1.1” and the “Connection” header field should be cleared.
+	# Note also that when you specify a load-balancing algorithm in the upstream block – with the hash, ip_hash, least_conn, least_time, or random directive – the directive must appear above the keepalive directive.
+	keepalive 2;
+} #End" >> /etc/nginx/conf.d/upstream_proxy.conf
+	fi
+	
+	echo "${blu}${dim}Configuration: /etc/nginx/apps.d/$domain$subname-proxy.conf ${end}"
 	[[ $(is_ssl $domain) != "true" ]] && sudo sed -i '/CacheStaticFiles/,/expires max;/{/headers-https.conf;/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
 	
-	# Suggest / at the end of the url to pass
-	if [[ -n $dedicated_reverse_proxy && $(echo "${proxydata}" | rev | cut -c-1) != "/" ]]; then
-		echo "${dim}[INFO] Your endpoint URL doesn't have a / at the end! You should note that it can have a different behavior."
-		echo "Read: http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass ${end}"
+	# Set Host header for external sources, except when IP or Unix socket is used!
+	# Simple dedicated is also excluded because proxy_pass seems to not need it.
+	if [[ -n $upsvr && -n $proxydata && ${url_host} != "localhost" && $(is_url $url_host) != "ip" && $(is_url $url_host) != "unix" ]]; then
+		sudo sed -i "/#proxy_set_header Host /c\	proxy_set_header Host '${upsvr}';" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	fi
 	
 	# Check host and port
+	echo "${blu}${dim}Checking connection with your endpoint or upstream server...${end}"
 	local code=$(wget -t 1 --timeout=5 --server-response --spider $proxydata 2>&1 | awk '/^  HTTP/{print $2}')
 	code="${code##*$'\n'}"
 	[[ -n $code ]] && local mes="(Code: ${code})"
-	[[ $code =~ ^(2|3|4)[0-9][0-9]$ ]] || echo "${red}[WARNING] Seems like your Reverse Proxy host is not responding! ${mes}${end}"
+	[[ $code =~ ^(2|3|4)[0-9][0-9]$ ]] && echo "${gre}Successful!${end}" || echo "${red}[WARNING] Seems like your Reverse Proxy host is not responding! ${mes}${end}"
 	
 	[[ -n $subfolder ]] && echo "${gre}Reverse proxy${blu} $subfolder ${gre}subfolder successfully created!${end}"
 }

@@ -412,6 +412,7 @@ server_reset() {
 		# Backup files will be restored in nginx_optim function
 		[[ -f /etc/nginx/conf.d/blockips.conf ]] && sudo cp -p /etc/nginx/conf.d/blockips.conf /tmp/webinoly_blockips_backup
 		[[ -f /etc/nginx/conf.d/webinoly.conf ]] && sudo cp -p /etc/nginx/conf.d/webinoly.conf /tmp/webinoly_backup
+		[[ -f /etc/nginx/conf.d/upstream_proxy.conf ]] && sudo cp -p /etc/nginx/conf.d/upstream_proxy.conf /tmp/webinoly_upstreamproxy_backup
 		
 		linux_purge
 		sudo sed -i '/WebinolyCustom/,/WebinolyCustomEnd/{/.*/d}' /etc/nginx/fastcgi_params
