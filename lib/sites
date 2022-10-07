@@ -612,11 +612,12 @@ deletesite_subfolder() {
 	[[ ${delete,,} == "force" ]] && local dbdel="Y"
 	[[ ${delete,,} == "keep-db" ]] && local dbdel="N"
 	
-	# Check if site contains WP in subfolders.
+	# Check if site contains configured subfolders.
 	local subfolder_original=$subfolder
 	
-	for site in "/etc/nginx/apps.d/${domain}${subname}"*-wpcommon.conf
-	do 
+	for site in /etc/nginx/apps.d/${domain}${subname}*
+	do
+		[[ ! -f $site ]] && continue # Double check needed! (Seems like for loop runs first and then run the loop with previous results)
 		local subfolder="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 		local subname=$(echo $subfolder | sed "s/\//_/g")
 		
@@ -633,11 +634,8 @@ deletesite_subfolder() {
 			fi
 		fi
 		
-		sudo rm -rf /etc/nginx/apps.d/$domain$subname-*.conf
-		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-php.conf/d}" /etc/nginx/sites-available/$domain
-		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-phpx.conf/d}" /etc/nginx/sites-available/$domain
-		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-wpfc.conf/d}" /etc/nginx/sites-available/$domain
-		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/$domain$subname-proxy.conf/d}" /etc/nginx/sites-available/$domain
+		sudo rm -rf /etc/nginx/apps.d/${domain}${subname}-*.conf
+		sudo sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/{/${domain}${subname}-.*.conf;/d}" /etc/nginx/sites-available/$domain
 		sudo sed -i "/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/{\|location $subfolder/ |d}" /etc/nginx/sites-available/$domain
 
 		# In case of custom cache
