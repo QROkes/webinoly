@@ -6,7 +6,7 @@
 #        Don't like our defaults? Every part of Webinoly is overrideable!         #
 #                                                                                 # 
 # You should NEVER modify this file if you are not sure about what you are doing. #
-# We have made a very detailed and extensive documentation just for you!
+# We have made a very detailed and extensive documentation just for you!          #
 # Please, read: https://webinoly.com/documentation/                               #
 #                                                                                 #
 # 1 - Uncomment the variable (Remove the '#' at the beggining)                    #
@@ -72,6 +72,7 @@
 # Maximum Upload file size
 # Values: numeric int (MB)
 # Default: 100
+# Note: PHP is also affected by this setting (max file/post size)
 ###########################
 #max-mb-uploads:100
 
@@ -326,6 +327,15 @@
 # Note: Limit is applied to $_GET, $_POST and $_COOKIE superglobal separately.
 ###########################
 #php-max-input-vars:5000
+
+# PHP OpCache Revalidate Frequency
+# Values: numeric int (seconds)
+# Default: 4
+# Note: Raising this variable can be confusing, causing developers to notice that changes in PHP code not taking effect.
+# Note: For high traffic sites with uncached content and heavy PHP loads, this variable should be raised for better performance.
+# Note: A good value (10-15), production servers with not frequent changes in code (60).
+###########################
+#php-opcache-reval:4
 
 # PHP Path_Info
 # Values: boolean (true/false)

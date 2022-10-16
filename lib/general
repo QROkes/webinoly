@@ -1297,6 +1297,10 @@ check_var() {
 	elif [[ $1 == "php-max-input-vars" ]]; then
 		[[ -n $(conf_read php-max-input-vars) && $(conf_read php-max-input-vars) =~ ^[0-9]+$ && $(conf_read php-max-input-vars) -gt 0 ]] && local out=$(conf_read php-max-input-vars) || local out=5000
 	
+	# PHP opcache revalidate frequency
+	elif [[ $1 == "php-opcache-reval" ]]; then
+		[[ -n $(conf_read php-opcache-reval) && $(conf_read php-opcache-reval) =~ ^[0-9]+$ && $(conf_read php-opcache-reval) -ge 0 ]] && local out=$(conf_read php-opcache-reval) || local out=4
+	
 	# Redis Memory
 	elif [[ $1 == "redis-max-mem" ]]; then
 		[[ -n $(conf_read redis-max-mem) && $(conf_read redis-max-mem) =~ ^[0-9]+$ && $(conf_read redis-max-mem) -le 100 ]] && local out=$(conf_read redis-max-mem) || local out=10

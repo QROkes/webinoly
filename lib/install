@@ -384,7 +384,6 @@ php_optim() {
 	[[ ! -f /opt/webinoly/templates/source/php-fpm.conf ]] && sudo cp -p /etc/php/${ver}/fpm/php-fpm.conf /opt/webinoly/templates/source/
 	
 	sudo sed -i -r "/^[;]?max_execution_time =/c\max_execution_time = $(check_var php-max-time)" /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r "/^[;]?max_input_vars =/c\max_input_vars = 3000" /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?session.cookie_httponly =/c\session.cookie_httponly = 1' /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?expose_php =/c\expose_php = Off' /etc/php/$ver/fpm/php.ini
 	
@@ -397,8 +396,10 @@ php_optim() {
 	sudo sed -i -r "/^[;]?max_input_vars =/c\max_input_vars = $(check_var php-max-input-vars)" /etc/php/$ver/fpm/php.ini
 	
 	sudo sed -i -r "/^[;]?opcache.memory_consumption=/c\opcache.memory_consumption=$(check_var php-max-mem)" /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r '/^[;]?opcache.interned_strings_buffer=/c\opcache.interned_strings_buffer=8' /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r '/^[;]?opcache.max_accelerated_files=/c\opcache.max_accelerated_files=50000' /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r '/^[;]?opcache.interned_strings_buffer=/c\opcache.interned_strings_buffer=16' /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r '/^[;]?opcache.max_accelerated_files=/c\opcache.max_accelerated_files=100000' /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r '/^[;]?opcache.max_wasted_percentage=/c\opcache.max_wasted_percentage=10' /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r "/^[;]?opcache.revalidate_freq=/c\opcache.revalidate_freq=$(check_var php-opcache-reval)" /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.enable_cli=/c\opcache.enable_cli=1' /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.enable=/c\opcache.enable=1' /etc/php/$ver/fpm/php.ini
 	
@@ -414,6 +415,7 @@ php_optim() {
 	sudo sed -i -r '/^[;]?pm.status_path =/c\pm.status_path = /status' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i -r '/^[;]?ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i -r '/^[;]?listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i -r '/^[;]?listen.allowed_clients = /c\listen.allowed_clients = 127.0.0.1' /etc/php/$ver/fpm/pool.d/www.conf
 	
 	[[ $(conf_read php-tool-redis) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
 	conf_write php-optim true
