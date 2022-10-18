@@ -276,11 +276,6 @@ nginx_optim() {
 	sudo cp -R /opt/webinoly/templates/nginx/common /etc/nginx/common
 	sudo cp -R /opt/webinoly/templates/nginx/conf.d/* /etc/nginx/conf.d/
 	sudo cat /opt/webinoly/templates/nginx/nginx.conf > /etc/nginx/nginx.conf
-	
-	# These  files are backedup by server-reset (needs to be here to avoid nginx errors)
-	[[ -f /tmp/webinoly_blockips_backup ]] && sudo mv /tmp/webinoly_blockips_backup /etc/nginx/conf.d/blockips.conf
-	[[ -f /tmp/webinoly_backup ]] && sudo mv /tmp/webinoly_backup /etc/nginx/conf.d/webinoly.conf
-	[[ -f /tmp/webinoly_upstreamproxy_backup ]] && sudo mv /tmp/webinoly_upstreamproxy_backup /etc/nginx/conf.d/upstream_proxy.conf
 
 	sudo sed -i "/client_max_body_size /c \	client_max_body_size $(check_var max-mb-uploads)m;" /etc/nginx/nginx.conf
 	sudo sed -i "/worker_rlimit_core /c \worker_rlimit_core $fd_per_process;" /etc/nginx/nginx.conf

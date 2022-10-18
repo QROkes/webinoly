@@ -409,15 +409,12 @@ fix_permissions() {
 server_reset() {
 	# Regenerate NGINX conf files
 	if [[ $(conf_read nginx-optim) == "true" && $server_reset =~ ^(nginx|all)$ ]]; then		
-		# Backup files will be restored in nginx_optim function
-		[[ -f /etc/nginx/conf.d/blockips.conf ]] && sudo cp -p /etc/nginx/conf.d/blockips.conf /tmp/webinoly_blockips_backup
-		[[ -f /etc/nginx/conf.d/webinoly.conf ]] && sudo cp -p /etc/nginx/conf.d/webinoly.conf /tmp/webinoly_backup
-		[[ -f /etc/nginx/conf.d/upstream_proxy.conf ]] && sudo cp -p /etc/nginx/conf.d/upstream_proxy.conf /tmp/webinoly_upstreamproxy_backup
-		
 		linux_purge
 		sudo sed -i '/WebinolyCustom/,/WebinolyCustomEnd/{/.*/d}' /etc/nginx/fastcgi_params
 		sudo rm -rf /etc/nginx/common
-		sudo rm -rf /etc/nginx/conf.d/*
+		#sudo rm -rf /etc/nginx/conf.d/* - Some custom files can be in this folder, so don't remove it, just the core files!
+		[[ -f /etc/nginx/conf.d/upstream.conf ]] && sudo rm -rf /etc/nginx/conf.d/upstream.conf
+		[[ -f /etc/nginx/conf.d/fastcgi.conf ]] && sudo rm -rf /etc/nginx/conf.d/fastcgi.conf
 		nginx_optim
 		echo "${gre}Nginx settings has been updated successfully!${end}"
 		fix_permissions
