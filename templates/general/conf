@@ -330,12 +330,11 @@
 
 # PHP OpCache Revalidate Frequency
 # Values: numeric int (seconds)
-# Default: 4
-# Note: Raising this variable can be confusing, causing developers to notice that changes in PHP code not taking effect.
-# Note: For high traffic sites with uncached content and heavy PHP loads, this variable should be raised for better performance.
+# Default: 2
+# Note: Raising this variable can cause developers to notice that changes in PHP code not taking effect.
 # Note: A good value (10-15), production servers with not frequent changes in code (60).
 ###########################
-#php-opcache-reval:4
+#php-opcache-reval:2
 
 # PHP Path_Info
 # Values: boolean (true/false)
