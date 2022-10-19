@@ -394,9 +394,17 @@ php_optim() {
 	sudo sed -i -r '/^[;]?opcache.interned_strings_buffer=/c\opcache.interned_strings_buffer=16' /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.max_accelerated_files=/c\opcache.max_accelerated_files=100000' /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.max_wasted_percentage=/c\opcache.max_wasted_percentage=10' /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r "/^[;]?opcache.revalidate_freq=/c\opcache.revalidate_freq=$(check_var php-opcache-reval)" /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.enable_cli=/c\opcache.enable_cli=1' /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.enable=/c\opcache.enable=1' /etc/php/$ver/fpm/php.ini
+	
+	# Not set, unless non-empty! (hidden dynvars)
+	if [[ $(check_var php-opcache-timestamps) != "false" ]]; then
+		sudo sed -i -r "/^[;]?opcache.validate_timestamps=/c\opcache.validate_timestamps=$(check_var php-opcache-timestamps)" /etc/php/$ver/fpm/php.ini
+	fi
+	if [[ $(check_var php-opcache-reval) != "false" ]]; then
+		sudo sed -i -r "/^[;]?opcache.revalidate_freq=/c\opcache.revalidate_freq=$(check_var php-opcache-reval)" /etc/php/$ver/fpm/php.ini
+	fi
+	
 	
 	[[ -n $(conf_read timezone) ]] && set_timezone
 	

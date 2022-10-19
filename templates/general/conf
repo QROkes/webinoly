@@ -182,13 +182,6 @@
 #xmlrpc:limited
 
 
-# Number of lines shown when log command is used (tail)
-# Values: numeric int
-# Default: 10
-###########################
-#log-lines:10
-
-
 # HTTP Header: Cache Control
 # Values: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
 # Default: no-cache
@@ -292,6 +285,7 @@
 ###########################
 #php-pm:dynamic
 
+
 # PHP number of child processes to be created
 # Values: numeric int
 # Default: <variable> (calculated based on your server resources)
@@ -321,6 +315,7 @@
 ###########################
 #php-max-files:20
 
+
 # PHP How many input variables may be accepted
 # Values: numeric int
 # Default: 5000
@@ -328,13 +323,6 @@
 ###########################
 #php-max-input-vars:5000
 
-# PHP OpCache Revalidate Frequency
-# Values: numeric int (seconds)
-# Default: 2
-# Note: Raising this variable can cause developers to notice that changes in PHP code not taking effect.
-# Note: A good value (10-15), production servers with not frequent changes in code (60).
-###########################
-#php-opcache-reval:2
 
 # PHP Path_Info
 # Values: boolean (true/false)
