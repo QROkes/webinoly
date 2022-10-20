@@ -1315,6 +1315,15 @@ check_var() {
 	# FastCGI Cache size
 	elif [[ $1 == "run-folder-size" ]]; then
 		[[ -n $(conf_read run-folder-size) && $(conf_read run-folder-size) =~ ^[0-9]+$ && $(conf_read run-folder-size) -gt 10 && $(conf_read run-folder-size) -le "70" ]] && local out=$(conf_read run-folder-size) || local out=25
+	
+	# Nginx Error Log Level
+	elif [[ $1 == "nginx-error-log-level" ]]; then
+		[[ -n $(conf_read nginx-error-log-level) && $(conf_read nginx-error-log-level) =~ ^(info|notice|warn|error|crit|alert|emerg)$ ]] && local out=$(conf_read nginx-error-log-level) || local out="false"
+	# Nginx Log Format
+	elif [[ $1 == "nginx-log-format" ]]; then
+		local out="we_log" # Basic is fallback!
+		[[ $(conf_read nginx-log-format) == "extended" ]] && local out="we_log_ext"
+		[[ $(conf_read nginx-log-format) == "custom" ]] && local out="we_log_custom"
 		
 	else
 		local out="false"

@@ -113,6 +113,25 @@
 #global-access-log-off:true
 
 
+# Nginx Log Format
+# Values: basic | extended | custom
+# Default: basic
+# With server reset only the global setting is applied.
+# Note: This setting will be applied to new sites, or for existing sites 'access log' needs to be reenabled (same for global).
+# Note: https://webinoly.com/documentation/logs/#format
+###########################
+#nginx-log-format:basic
+
+
+# Nginx Error Log Level
+# Values: info | notice | warn | error | crit | alert | emerg
+# Default: error
+# With server reset only the global setting is applied.
+# Note: This setting will be applied to new sites, or for existing sites 'access log' needs to be reenabled (same for global).
+###########################
+#nginx-error-log-level:error
+
+
 # Nginx Default Response
 # Values: default | blackhole | <example.com>
 # Default: default (Nginx Welcome Page)

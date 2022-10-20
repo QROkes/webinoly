@@ -788,7 +788,11 @@ createsite() {
 	fi
 	
 	# Check if only-error log is enabled
-	[[ $(conf_read global-access-log-off) == "true" && $domain != $(conf_read tools-port) ]] && sudo log $domain -only-error=on > /dev/null 2>&1
+	if [[ $(conf_read global-access-log-off) == "true" && $domain != $(conf_read tools-port) ]]; then
+		sudo log $domain -only-error=on > /dev/null 2>&1
+	else
+		sudo log $domain -only-error=off > /dev/null 2>&1
+	fi
 	
 	sudo chown -R www-data:www-data /var/www
 	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
