@@ -1310,11 +1310,35 @@ check_var() {
 		
 	# client_max_body_size,upload_max_filesize,post_max_size
 	elif [[ $1 == "max-mb-uploads" ]]; then
-		[[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ && $(conf_read max-mb-uploads) -gt 0 ]] && local out=$(conf_read max-mb-uploads) || local out=100
+		[[ -n $(conf_read max-mb-uploads) && $(conf_read max-mb-uploads) =~ ^[0-9]+$ && $(conf_read max-mb-uploads) -gt 0 ]] && local out=$(conf_read max-mb-uploads) || local out=100	
 	
 	# FastCGI Cache size
 	elif [[ $1 == "run-folder-size" ]]; then
 		[[ -n $(conf_read run-folder-size) && $(conf_read run-folder-size) =~ ^[0-9]+$ && $(conf_read run-folder-size) -gt 10 && $(conf_read run-folder-size) -le "70" ]] && local out=$(conf_read run-folder-size) || local out=25
+	
+	# FastCGI Cache: Query Strings
+	elif [[ $1 == "wpcache-query-strings" ]]; then
+		if [[ $(conf_read wpcache-query-strings) =~ ^(all|never)$ ]]; then
+			local out=$(conf_read wpcache-query-strings)
+		else
+			local out="false"
+		fi
+	
+	# FastCGI Cache: Exclude URL
+	elif [[ $1 == "wpcache-exclude-url" ]]; then
+		if [[ -z $(conf_read wpcache-exclude-url) ]]; then
+			local out="/wp-admin/|/xmlrpc.php|wp-.*.php|index.php|/feed/|.*sitemap.*\.xml|/feed/|/account/|/add_to_cart/|/cart/|/my-account/|/checkout/|/logout/"
+		else
+			local out=$(conf_read wpcache-exclude-url)
+		fi
+	
+	# FastCGI Cache: Exclude Cookie
+	elif [[ $1 == "wpcache-exclude-cookie" ]]; then
+		if [[ -z $(conf_read wpcache-exclude-cookie) ]]; then
+			local out="comment_author|wordpress_[a-f0-9]+|wp-postpass|wordpress_no_cache|wordpress_logged_in|[a-z0-9]+_items_in_cart|[a-z0-9]+_cart_hash"
+		else
+			local out=$(conf_read wpcache-exclude-cookie)
+		fi
 	
 	# Nginx Error Log Level
 	elif [[ $1 == "nginx-error-log-level" ]]; then

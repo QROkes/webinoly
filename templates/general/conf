@@ -96,15 +96,6 @@
 #sftp-www-data:false
 
 
-# FastCGI Cache
-# Values: <time> (s,m,h,d,w,M,y)
-# Default: 30d,7d,1m (Success,Inactive,Redirects)
-# Note: https://webinoly.com/documentation/webinolys/#cache
-# Same as: sudo webinoly -cache-valid
-###########################
-#fastcgi-conf:30d,7d,1m
-
-
 # Nginx Access Logs Disabled
 # Values: boolean (true/false)
 # Default: true
@@ -181,6 +172,28 @@
 # Same as: sudo webinoly -aws-s3-credentials=awsiamrole
 ###########################
 #awsiamrole:false
+
+
+# FastCGI Cache
+# Values: <time> (s,m,h,d,w,M,y)
+# Default: 30d,7d,1m (Success,Inactive,Redirects)
+# Note: https://webinoly.com/documentation/webinolys/#cache
+# Same as: sudo webinoly -cache-valid
+###########################
+#fastcgi-conf:30d,7d,1m
+
+
+# WordPress FastCGI Cache Defaults
+# Values: all | never (query strings)
+# Values:  <uri>|<uri>... (url)
+# Values:  <cookie>|<cookie>... (cookie)
+# Note: To revert any changes and set the original Webinoly defaults, just #comment these three variables and then server-reset.
+# Note: Also, you can add further rules via command line using the proper commands described in the docs.
+# Note: https://webinoly.com/documentation/webinolys/#cache
+###########################
+#wpcache-query-strings:never
+#wpcache-exclude-url:/wp-admin/|/xmlrpc.php|wp-.*.php|index.php|/feed/|.*sitemap.*\.xml|/feed/|/account/|/add_to_cart/|/cart/|/my-account/|/checkout/|/logout/
+#wpcache-exclude-cookie:comment_author|wordpress_[a-f0-9]+|wp-postpass|wordpress_no_cache|wordpress_logged_in|[a-z0-9]+_items_in_cart|[a-z0-9]+_cart_hash
 
 
 # WordPress Login Basic Authentication

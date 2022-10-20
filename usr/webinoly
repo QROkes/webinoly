@@ -263,6 +263,10 @@ elif [[ -n $custom_headers ]]; then
 elif [[ -n $query_string_cache || -n $query_string_never_cache || -n $skip_cache || -n $skip_cookie_cache ]]; then
 	check_for_nginx
 	custom_cache_global
+elif [[ -n $query_string_cache_default ]]; then
+	echo "${red}[ERROR] This option (-query-string-cache-default) is only enabled for specific sites using Custom Cache!"
+	echo "${blu}${dim}The option you are looking for is only available in the Webinoly configuration file. (wpcache-query-strings)${end}"
+	exit 1
 
 
 elif [[ -n $email ]]; then
