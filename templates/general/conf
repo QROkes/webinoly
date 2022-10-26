@@ -283,10 +283,12 @@
 
 # HTTP Header: X-XSS-Protection
 # Values: boolean (true/false)
-# Default: true (X-XSS-Protection: 1; mode=block)
+# Default: false
+# Note: This header is no longer recommended and support will be removed very soon from Webinoly.
 # Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
+# Note: When true is set: (X-XSS-Protection: 1; mode=block)
 ###########################
-#header-xssp:true
+#header-xssp:false
 
 
 # HTTP Header: Add any other Custom Header
@@ -354,6 +356,24 @@
 # Note: Limit is applied to $_GET, $_POST and $_COOKIE superglobal separately.
 ###########################
 #php-max-input-vars:5000
+
+
+# PHP OpCache Validate Timestamps
+# Values: boolean (true/false)
+# Default: true
+# Note: When this directive is disabled, you must reset OPcache manually or by restarting the Web server for changes to the filesystem to take effect.
+###########################
+#php-opcache-timestamps:true
+
+
+# PHP OpCache Revalidate Frequency
+# Values: numeric int (seconds)
+# Default: 2
+# Note: Raising this value can cause developers to notice that changes in PHP code not taking effect. (similar to validate timestamps)
+# Note: This configuration directive is ignored if opcache.validate_timestamps is disabled.
+# Note: A good value (10-15), production servers with not frequent changes in code (60).
+###########################
+#php-opcache-reval:2
 
 
 # PHP Path_Info

@@ -110,10 +110,7 @@ http_header_xcto() {
 
 
 http_header_xssp() {
-	if [[ $(conf_read header-xssp) == "false" ]]; then
-		sudo sed -i '/^add_header X-XSS-Protection/s/^/#/' /etc/nginx/common/headers-http.conf
-		echo "${gre}${dim}X-XSS-Protection Header successfully disabled!${end}"
-	else
+	if [[ $(conf_read header-xssp) == "true" ]]; then
 		sudo sed -Ei "/^#?add_header X-XSS-Protection/d" /etc/nginx/common/headers-http.conf			
 		sudo echo "add_header X-XSS-Protection \"1; mode=block\";" >> /etc/nginx/common/headers-http.conf
 	
@@ -123,6 +120,9 @@ http_header_xssp() {
 			echo "${red}[ERROR] Please, enter a valid option for X-XSS-Protection header!${end}"
 			return 1
 		fi
+	else
+		sudo sed -i '/^add_header X-XSS-Protection/s/^/#/' /etc/nginx/common/headers-http.conf
+		echo "${gre}${dim}X-XSS-Protection Header successfully disabled!${end}"
 	fi
 }
 

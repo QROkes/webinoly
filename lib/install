@@ -402,7 +402,7 @@ php_optim() {
 	sudo sed -i -r '/^[;]?opcache.enable_cli=/c\opcache.enable_cli=1' /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.enable=/c\opcache.enable=1' /etc/php/$ver/fpm/php.ini
 	
-	# Not set, unless non-empty! (hidden dynvars)
+	# Not set, unless non-empty!
 	if [[ $(check_var php-opcache-timestamps) != "false" ]]; then
 		sudo sed -i -r "/^[;]?opcache.validate_timestamps=/c\opcache.validate_timestamps=$(check_var php-opcache-timestamps)" /etc/php/$ver/fpm/php.ini
 	fi

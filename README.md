@@ -11,7 +11,7 @@
 </div>
 
 ## Overview
-A complete LEMP stack _– Linux Ubuntu + Nginx + MariaDB (MySQL) + PHP –_ or install individual packages according to your needs.
+A complete LEMP stack _– Linux Ubuntu + Nginx + MariaDB (or MySQL, you can choose) + PHP –_ or install individual packages according to your needs.
 
 **One of the most reliable configurations to host your websites and with Webinoly you can do it in just one step.**
 
@@ -19,7 +19,7 @@ Webinoly provides a set of tools and commands that facilitate web server adminis
 - Unique commands to create, delete, disable sites.
 - Free SSL certificates for your sites with Let’s Encrypt and automatic server configuration.
 - HTTP/2 dramatically increases the speed of serving your content.
-- PHP v8.1 and support for earlier versions if needed (8.0 and 7.4).
+- PHP v8.1 and support for earlier versions if needed (8.0 and 7.4) or the newest 8.2.
 - FastCGI Cache and Redis Object Cache for your WordPress sites.
 - Install WP in any subfolder and support for external databases, multisite and domain mapping.
 - Reverse Proxy for any app (Java, React, Node, Angular, Vue, etc) or to use your own domain with any external file repo like S3.
@@ -35,7 +35,7 @@ Webinoly provides a set of tools and commands that facilitate web server adminis
 ## Usage
 
 ```bash
-# Install Webinoly and LEMP
+# Install Webinoly and build the stack
 wget -qO weby qrok.es/wy && sudo bash weby
 
 # Create your first site.
