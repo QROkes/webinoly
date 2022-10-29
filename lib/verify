@@ -594,15 +594,28 @@ local ver_four_war="0"
 
 # MySQL
 if [[ $(conf_read mysql) == "true" ]]; then
-	# To check supported versions: https://mariadb.com/kb/en/mariadb-server/
-	local ver_mysql_ver=$(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.')
+	if [[ $(conf_read db-engine) == "mysql" ]]; then
+		local ver_mysql_ver=$(sudo mysql --version | grep -Eo "Ver [0-9\.]+" | cut -f 2 -d' ' | cut -f 1-2 -d'.')
+	else
+		# To check supported versions: https://mariadb.com/kb/en/mariadb-server/
+		local ver_mysql_ver=$(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.')
+	fi
 
 	if [[ ! -d /etc/mysql ]]; then
 		echo "- [ERROR] Folder: /etc/mysql not found!"
 		local ver_four_err="1"
 	fi
 	
-	if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+	if [[ $(conf_read db-engine) == "mysql" ]]; then
+		if [[ ! -f /usr/share/keyrings/mysql-archive-keyring.gpg || ! -s /usr/share/keyrings/mysql-archive-keyring.gpg ]]; then
+			echo "- [ERROR] MySQL Apt Key not found!"
+			local ver_four_err="1"
+		fi
+		if [[ ! -f /etc/apt/sources.list.d/mysql.list || ! -s /etc/apt/sources.list.d/mysql.list ]]; then
+			echo "- [ERROR] MySQL PPA not found in sources list!"
+			local ver_four_err="1"
+		fi
+	elif [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
 		if [[ ! -f /etc/apt/trusted.gpg || -z $(grep -Foia "mariadb signing key" /etc/apt/trusted.gpg) ]]; then
 			echo "- [ERROR] MariaDB Apt Key not found!"
 			local ver_four_err="1"
@@ -649,8 +662,9 @@ if [[ -z $critical_mode ]]; then
 			local ver_four_war="1"
 		fi
 		
-		if ! [[ $ver_mysql_ver =~ ^(10.0|10.1|10.2|10.3|10.4|10.5|10.6)$ ]]; then
-			echo "${dim}- [WARNING] Unknown MariaDB (MySQL) version!${end}${red}"
+		# MySQL and MariaDB can be mixed, don't worry!
+		if ! [[ $ver_mysql_ver =~ ^(8.0|10.0|10.1|10.2|10.3|10.4|10.5|10.6)$ ]]; then
+			echo "${dim}- [WARNING] Unknown MySQL/MariaDB version!${end}${red}"
 			local ver_four_war="1"
 		elif [[ $ver_mysql_ver =~ ^(10.0|10.1)$ ]]; then
 			echo "${dim}- [WARNING] You have an obsolete MariaDB version (${ver_mysql_ver}) installed that not even receive security updates!${end}${red}"

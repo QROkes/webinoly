@@ -215,11 +215,18 @@ mysql_install() {
 		local reinstall="true"
 	fi
 	
-	# MariaDB Installation
-	local ver=$(conf_read mysql-ver)
-	echo "mariadb-server-${ver} mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections
-	echo "mariadb-server-${ver} mysql-server/root_password_again password $AUTOGENPASS_ROOT" | debconf-set-selections
-	sudo apt -y install apt-transport-https dirmngr mariadb-server
+	# MySQL Installation
+	if [[ $(conf_read db-engine) == "mysql" ]]; then
+		echo "mysql-community-server mysql-community-server/root-pass password $AUTOGENPASS_ROOT" | debconf-set-selections
+		echo "mysql-community-server mysql-community-server/re-root-pass password $AUTOGENPASS_ROOT" | debconf-set-selections
+		echo "mysql-community-server mysql-server/default-auth-override select Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
+		sudo apt -y install mysql-server
+	else
+		local ver=$(conf_read mysql-ver)
+		echo "mariadb-server-${ver} mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections
+		echo "mariadb-server-${ver} mysql-server/root_password_again password $AUTOGENPASS_ROOT" | debconf-set-selections
+		sudo apt -y install apt-transport-https dirmngr mariadb-server
+	fi
 	
 	conf_write mysql true
 	
@@ -250,7 +257,7 @@ _EOF_
 
 mysql_client_install() {
 	api-events_update im2
-	sudo apt -y install mariadb-client
+	[[ $(conf_read db-engine) != "mysql" ]] && sudo apt -y install mariadb-client || sudo apt -y install mysql-client
 	conf_write mysql-client true
 	api-events_update im3
 	echo "${gre}MySQL Client has been successfully installed!${end}"
@@ -887,16 +894,26 @@ stack_builder() {
 	fi
 	
 	if [[ $3 =~ ^(mysql|mysql-client)$ && $(conf_read mysql-client) != "true" ]]; then
-		[[ -n $(conf_read mysql-ver) && $(check_mysql_version $(conf_read mysql-ver)) == "true" ]] || conf_write mysql-ver $mysql_default
+		if [[ -n $(conf_read mysql-ver) && $(check_mysql_version $(conf_read mysql-ver)) == "true" ]]; then
+			echo "${blu}Retrieving a saved MySQL/MariaDB version configured before...${dim}${end}"
+		else
+			echo "${blu}Setting the default MySQL/MariaDB version...${dim}${end}"
+			[[ $(conf_read db-engine) == "mysql" ]] && conf_write mysql-ver $mysql_default || conf_write mysql-ver $mariadb_default
+		fi
 		
 		# REMOVE: when a new LTS is released and jammy supports more than one version.
-		if [[ $(conf_read mysql-ver) != "10.6" && $(lsb_release -c | cut -d':' -f 2 | xargs) == "jammy" ]]; then
+		if [[ $(conf_read db-engine) != "mysql" && $(conf_read mysql-ver) != "10.6" && $(lsb_release -c | cut -d':' -f 2 | xargs) == "jammy" ]]; then
 			conf_write mysql-ver 10.6
 			echo "${gre}Force MariaDB 10.6 because is the only LTS version supported in Ubuntu 22.04!${end}"
 		fi
 		
+		if [[ $(conf_read db-engine) == "mysql" ]]; then
+			[[ ! -s /usr/share/keyrings/mysql-archive-keyring.gpg ]] && sudo rm -rf /usr/share/keyrings/mysql-archive-keyring.gpg # Prevent issues!
+			[[ ! -f /usr/share/keyrings/mysql-archive-keyring.gpg ]] && wget -nv -O- 'https://repo.mysql.com/RPM-GPG-KEY-mysql-2022' | sudo gpg --dearmor -o /usr/share/keyrings/mysql-archive-keyring.gpg
+			echo "deb [signed-by=/usr/share/keyrings/mysql-archive-keyring.gpg] http://repo.mysql.com/apt/ubuntu $(lsb_release -cs) mysql-8.0" | sudo tee /etc/apt/sources.list.d/mysql.list
+		
 		# https://mariadb.org/download/?t=repo-config
-		if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+		elif [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
 			sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
 			echo | sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main"
 		else

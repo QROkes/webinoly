@@ -9,8 +9,10 @@ readonly svr_version="1.8"
 readonly os_ubuntu_supported=(bionic focal jammy) # https://ubuntu.com/about/release-cycle
 readonly php_supported=(7.4 8.0 8.1 8.2) # https://www.php.net/supported-versions.php
 readonly php_default="8.1"
-readonly mysql_supported=(10.4 10.5 10.6) # https://mariadb.com/kb/en/mariadb-server-release-dates/
-readonly mysql_default="10.6"
+readonly mariadb_supported=(10.4 10.5 10.6) # https://mariadb.com/kb/en/mariadb-server-release-dates/
+readonly mariadb_default="10.6"
+readonly mysql_supported=(8.0)
+readonly mysql_default="8.0"
 readonly datadog_agent_ver="7"
 readonly tools_port_default="22222"
 
@@ -71,6 +73,9 @@ conf_write() {
 ADMIN_PASS=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 [[ -z $ADMIN_PASS ]] && readonly ADMIN_PASS="dUmb" || readonly ADMIN_PASS=$ADMIN_PASS # Never empty, prevent asking password!
 
+# MySQL folder
+[[ $(conf_read db-engine) == "mysql" ]] && readonly MYSQL_CONF_PATH="/etc/mysql/mysql.conf.d" || readonly MYSQL_CONF_PATH="/etc/mysql/mariadb.conf.d"
+
 # Current original user HOME even with sudo (root) - This script always run with sudo, so $HOME is always /root
 # https://askubuntu.com/questions/1186999/how-does-sudo-handle-home-differently-since-19-10
 readonly CURRENT_HOME=$(eval echo ~${SUDO_USER:-${USER}})
@@ -120,10 +125,19 @@ check_php_version() {
 }
 check_mysql_version() {
 	local check="false"
-	for val in "${mysql_supported[@]}"
-	do 
-		[[ $val == $1 ]] && check="true"
-	done
+	
+	# It works for both MySQL and MariaDB!
+	if [[ $(conf_read db-engine) == "mysql" ]]; then
+		for val in "${mysql_supported[@]}"
+		do 
+			[[ $val == $1 ]] && check="true"
+		done
+	else
+		for val in "${mariadb_supported[@]}"
+		do 
+			[[ $val == $1 ]] && check="true"
+		done
+	fi
 	echo $check
 }
 
@@ -1238,28 +1252,28 @@ dbword_check() {
 
 cnf_delete() {
 	#Example: cnf_delete error_log
-	[[ -f /etc/mysql/mariadb.conf.d/90-webinoly.cnf ]] && sudo sed -i "/^$1 /d" /etc/mysql/mariadb.conf.d/90-webinoly.cnf
+	[[ -f $MYSQL_CONF_PATH/90-webinoly.cnf ]] && sudo sed -i "/^$1 /d" $MYSQL_CONF_PATH/90-webinoly.cnf
 }
 cnf_write() {
 	#Example: cnf_write error_log /var/log/mysql/error.log
 	cnf_delete $1
 	[[ -n $2 ]] && local value="= $2"
-	echo "$1 $value" >> /etc/mysql/mariadb.conf.d/90-webinoly.cnf
+	echo "$1 $value" >> $MYSQL_CONF_PATH/90-webinoly.cnf
 }
 cnf_read() {
 	#Example: cnf_read error_log
-	echo $( grep -P "^$1 = " /etc/mysql/mariadb.conf.d/90-webinoly.cnf | cut -f 2 -d "=" -s | sed 's/ //g' )
+	echo $( grep -P "^$1 = " $MYSQL_CONF_PATH/90-webinoly.cnf | cut -f 2 -d "=" -s | sed 's/ //g' )
 }
 mysql_default_cnf() {
 	# Creates the default Webinoly Configuration File (.cnf) for mysql if not exists.
-	if [[ ! -f /etc/mysql/mariadb.conf.d/90-webinoly.cnf ]]; then
-		sudo touch /etc/mysql/mariadb.conf.d/90-webinoly.cnf
-		sudo chmod 644 /etc/mysql/mariadb.conf.d/90-webinoly.cnf
-		sudo chown -R root:root /etc/mysql/mariadb.conf.d/90-webinoly.cnf
+	if [[ ! -f $MYSQL_CONF_PATH/90-webinoly.cnf ]]; then
+		sudo touch $MYSQL_CONF_PATH/90-webinoly.cnf
+		sudo chmod 644 $MYSQL_CONF_PATH/90-webinoly.cnf
+		sudo chown -R root:root $MYSQL_CONF_PATH/90-webinoly.cnf
 		
 		echo "# Webinoly MySQL Configuration File
 [mysqld]
-log_error = /var/log/mysql/error.log" >> /etc/mysql/mariadb.conf.d/90-webinoly.cnf
+log_error = /var/log/mysql/error.log" >> $MYSQL_CONF_PATH/90-webinoly.cnf
 	fi
 }
 

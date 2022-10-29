@@ -396,14 +396,24 @@
 
 
 
-###########################
-#####      MySQL      #####
-###########################
+#####################################
+#####      MySQL / MariaDB      #####
+#####################################
 
-# MariaDB Version
+# Database Engine
+# Values: mariadb | mysql
+# Default: mariadb
+# Note: (set before installing, server-reset not needed)
+# Note: NEVER change this value here when MySQL/MariaDB package is already installed.
+###########################
+#db-engine:mariadb
+
+
+# MySQL/MariaDB Version
 # Values: https://mariadb.com/kb/en/mariadb-server-release-dates/ (at least latest three stable)
 # Default: <latest-stable>
 # Note: (set before installing, server-reset not needed)
+# Note: In case of MySQL, 8.0 is the only supported version.
 # Note: NEVER change this value here when MySQL (MariaDB) package is already installed, use the proper command instead.
 # Same as: sudo stack -mysql-ver=10.6 (<-This is the proper command to change the MarianDB version even when is already installed)
 ###########################
@@ -431,7 +441,7 @@
 #dbrole:full
 
 
-# MySQL General Log
+# MySQL/MariaDB General Log
 # Values: boolean (true/false)
 # Default: false
 # Note: When enabled, you can see this log in real-time using 'sudo log -mysql=general'
@@ -439,7 +449,7 @@
 #mysql-log-general:false
 
 
-# MySQL Binary Log
+# MySQL/MariaDB Binary Log
 # Values: boolean (true/false)
 # Default: false
 # Note: When enabled, you can see this log in real-time using 'sudo log -mysql=binary'
@@ -447,7 +457,7 @@
 #mysql-log-binary:false
 
 
-# MySQL Slow Query Log
+# MySQL/MariaDB Slow Query Log
 # Values: boolean (true/false)
 # Default: false
 # Note: When enabled, you can see this log in real-time using 'sudo log -mysql=slow'
@@ -455,7 +465,7 @@
 #mysql-log-slow:false
 
 
-# MySQL Long Query Time
+# MySQL/MariaDB Long Query Time
 # Values: number int (seconds)
 # Default: 10
 # Note: If a query takes longer than this many seconds to execute, the query is logged to the slow query log.
@@ -463,7 +473,7 @@
 #mysql-long-query-time:3
 
 
-# MySQL Public/External Access
+# MySQL/MariaDB Public/External Access
 # Values: boolean (true/false)
 # Default: false
 # Same as: sudo webinoly -mysql-public-access=on
