@@ -23,7 +23,7 @@ elif [[ -n $server_reset ]]; then
 	api-events_update wy2
 	if [[ $server_reset == true ]]; then
 		server_reset="all"
-	elif ! [[ $server_reset =~ ^(all|nginx|php|mysql|permissions)$ ]]; then
+	elif ! [[ $server_reset =~ ^(all|os|nginx|php|mysql|permissions)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid option to update/reset your server configuration!${end}"
 		exit 1
 	fi

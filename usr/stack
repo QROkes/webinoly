@@ -120,8 +120,6 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			sudo rm -rf /opt/webinoly/templates/source/nginx.conf
 			
 			api-events_update pn6
-			linux_purge
-			
 			conf_write nginx purged
 			conf_write nginx-optim purged
 			conf_delete server-version
@@ -574,6 +572,7 @@ elif [[ -n $purge_server_all ]]; then
 		if [[ $(conf_read pre-packs) == true ]]; then
 			# Usually comes by default with Ubuntu. Not removed: software-properties-common, zip
 			sudo apt -y purge pwgen unzip
+			linux_purge
 			conf_write pre-packs purged
 		fi	
 		

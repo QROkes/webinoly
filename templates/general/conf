@@ -13,8 +13,7 @@
 # 2 - Set your custom value (var:value)                                           #
 # 3 - And then 'sudo webinoly -server-reset' to changes take effect.              #
 #                                                                                 #
-# * Reset only one package is allowed: -server-reset=php (nginx,php,mysql)        #
-# ** Operating System settings are loaded with Nginx.                             #
+# * Reset only one package is allowed: -server-reset=php (os,nginx,php,mysql)     #
 ###################################################################################
 
 

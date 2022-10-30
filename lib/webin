@@ -407,9 +407,18 @@ fix_permissions() {
 
 
 server_reset() {
+	# Operating System - Linux Optim
+	if [[ $(conf_read pre-packs) == true && $server_reset =~ ^(os|all)$ ]]; then		
+		linux_purge
+		linux_optim
+		echo "${gre}Operating System optimization settings has been updated successfully!${end}"
+	elif [[ $(conf_read pre-packs) != true && $server_reset == "os" ]]; then
+		echo "${red}[ERROR] Operating System settings couldn't been updated, seems like the stack not still built!${end}"
+		err_cont=true
+	fi
+	
 	# Regenerate NGINX conf files
 	if [[ $(conf_read nginx-optim) == "true" && $server_reset =~ ^(nginx|all)$ ]]; then		
-		linux_purge
 		sudo sed -i '/WebinolyCustom/,/WebinolyCustomEnd/{/.*/d}' /etc/nginx/fastcgi_params
 		sudo rm -rf /etc/nginx/common
 		#sudo rm -rf /etc/nginx/conf.d/* - Some custom files can be in this folder, so don't remove it, just the core files!

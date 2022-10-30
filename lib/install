@@ -27,6 +27,7 @@ linux_optim() {
 	
 	# Kernel Optimization
 	if [[ $(conf_read kernel-optim) != "false" ]]; then
+		echo "${gre}Wait while Webinoly optimize your Ubuntu Operating System...${end}"
 		api-events_update in5
 		sudo cat /opt/webinoly/templates/general/sysctl >> /etc/sysctl.conf
 		sudo modprobe tcp_bbr
@@ -122,7 +123,7 @@ WantedBy=multi-user.target" >> /etc/systemd/system/webinoly-disable-thp.service
 	[[ -n $(conf_read timezone) ]] && set_timezone
 	
 	sudo systemctl daemon-reload
-	sudo systemctl restart nginx # We need to kill the process, don't use reload
+	[[ $(conf_read nginx) == "true" ]] && sudo systemctl restart nginx # We need to kill the process, don't use reload
 	conf_write linux-optim true
 	api-events_update in9
 }
@@ -315,11 +316,8 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=$(((9*$ramb*$(check_var run-folder-size))/1000))m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
 	sudo sed -i "/fastcgi_read_timeout/c \fastcgi_read_timeout $(check_var php-max-time)s;" /etc/nginx/conf.d/fastcgi.conf
 	
-	echo "${gre}Wait while Webinoly optimize your Ubuntu Operating System...${end}"
-	
 	# www-data sftp default uploads permissions 755 and 644, instead of 775 and 664.
 	sudo sed -i '/USERGROUPS_ENAB/c \USERGROUPS_ENAB no' /etc/login.defs
-	linux_optim
 
 	# Check for dynamic variables.
 	[[ -n $(conf_read default-response) ]] && sudo webinoly -default-site=$(conf_read default-response)
@@ -378,7 +376,7 @@ location = /xmlrpc.php {
 	
 	conf_write server-version $svr_version
 	conf_write nginx-optim true
-	sudo systemctl reload nginx
+	sudo systemctl restart nginx # We need to kill the process, don't use reload
 	api-events_update in10
 	echo "${gre}Nginx has been successfully Optimized by Webinoly! ${end}"
 }
@@ -837,6 +835,7 @@ stack_builder() {
 		sudo snap install core
 		sudo snap refresh core
 		
+		linux_optim
 		conf_write pre-packs true
 		api-events_update i2
 	fi
