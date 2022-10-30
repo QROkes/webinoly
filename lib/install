@@ -14,6 +14,11 @@ readonly ramb=$(($ramk/1000))
 [[ $cores =~ ^[0-9]+$ ]] || echo "${red}[ERROR] System info (cores) retrieve corrupted!${end}"
 [[ $swapm =~ ^[0-9]+$ ]] || echo "${red}[ERROR] System info (swap) retrieve corrupted!${end}"
 [[ $ramk =~ ^[0-9]+$ ]] || echo "${red}[ERROR] System info (ram) retrieve corrupted!${end}"
+if [[ $(conf_read db-engine) == "mysql" && $ram -lt 1 ]]; then
+	echo "${red}[ERROR] MySQL is set as database engine!${dim} (Not enough RAM: ${ramb}MB)"
+	echo "You should consider MariaDB instead for small servers under 2GB.${end}"
+	exit 1
+fi
 
 
 linux_optim() {

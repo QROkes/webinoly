@@ -655,10 +655,16 @@ if [[ $(conf_read mysql) == "true" ]]; then
 fi
 
 if [[ -z $critical_mode ]]; then
+	# MySQL RAM requirements!
+	if [[ $(conf_read db-engine) == "mysql" && $ram -lt 2 ]]; then
+		echo "${dim}- [WARNING] You have MySQL set as database engine, you should not use it in production with less than 2GB RAM. (4GB recommended) ${end}${red}"
+		local ver_four_war="1"
+	fi
+	
 	# Check for MySQL version
 	if [[ $(conf_read mysql) == "true" ]]; then		
 		if [[ $(conf_read mysql-ver) != $ver_mysql_ver ]]; then
-			echo "${dim}- [WARNING] MariaDB (MySQL) Version corrupted in Configuration file! (Installed: $ver_mysql_ver != Conf: $(conf_read mysql-ver)) ${end}${red}"
+			echo "${dim}- [WARNING] MySQL/MariaDB Version corrupted in Configuration file! (Installed: $ver_mysql_ver != Conf: $(conf_read mysql-ver)) ${end}${red}"
 			local ver_four_war="1"
 		fi
 		
@@ -731,7 +737,7 @@ if ! systemctl is-active --quiet php$(conf_read php-ver)-fpm && [[ $(conf_read p
 	local ver_five_err="1"
 fi
 if ! systemctl is-active --quiet mysql && [[ $(conf_read mysql) == "true" ]]; then
-	echo "- [ERROR] MySQL (MariaDB) service not running!"
+	echo "- [ERROR] MySQL service not running!"
 	local ver_five_err="1"
 fi
 if ! systemctl is-active --quiet redis-server && [[ $(conf_read php-tool-redis) == "true" ]]; then
