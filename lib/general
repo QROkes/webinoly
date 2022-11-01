@@ -74,7 +74,13 @@ ADMIN_PASS=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 [[ -z $ADMIN_PASS ]] && readonly ADMIN_PASS="dUmb" || readonly ADMIN_PASS=$ADMIN_PASS # Never empty, prevent asking password!
 
 # MySQL folder
-[[ $(conf_read db-engine) == "mysql" ]] && readonly MYSQL_CONF_PATH="/etc/mysql/mysql.conf.d" || readonly MYSQL_CONF_PATH="/etc/mysql/mariadb.conf.d"
+if [[ $(conf_read db-engine) == "mysql" ]]; then
+	readonly MYSQL_CONF_PATH="/etc/mysql/mysql.conf.d"
+	readonly MYSQL_CONF_PREF="xx"
+else
+	readonly MYSQL_CONF_PATH="/etc/mysql/mariadb.conf.d"
+	readonly MYSQL_CONF_PREF="90"
+fi
 
 # Current original user HOME even with sudo (root) - This script always run with sudo, so $HOME is always /root
 # https://askubuntu.com/questions/1186999/how-does-sudo-handle-home-differently-since-19-10
@@ -324,20 +330,19 @@ check_mysql_connection() {
 			local dbu=$2
 			local dbp=$3
 			[[ -n $4 ]] && local query="use $4"
+			sudo mysql --connect-timeout=10 --user=$dbu -p$dbp -e "$query" 2>/dev/null
+			[[ $? != "0" ]] && echo "false" || echo "true"
 		else
-			local dbu="admin"
-			local dbp=$ADMIN_PASS
-		fi
-		
-		sudo mysql --connect-timeout=10 --user=$dbu -p$dbp -e "$query"
-		if [[ $? != "0" ]]; then
-			echo "${red}============================================" >&2
-			echo "    [Error]  Database conection failed." >&2
-			echo "============================================${end}" >&2
-			echo "" >&2
-			echo "false"
-		else
-			echo "true"
+			sudo mysql --connect-timeout=10 --user=$dbu -e "$query"
+			if [[ $? != "0" ]]; then
+				echo "${red}============================================" >&2
+				echo "    [Error]  Database conection failed." >&2
+				echo "============================================${end}" >&2
+				echo "" >&2
+				echo "false"
+			else
+				echo "true"
+			fi
 		fi
 	else
 		echo "${red}============================================" >&2
@@ -536,7 +541,7 @@ wp_conf_retrieve() {
 			local dbq="USE $wp_dbname; SELECT blog_id FROM ${wp_dbpref}blogs WHERE domain='$1' OR domain='www.$1';"
 			
 			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-				local bid=$(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbq")
+				local bid=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbq")
 			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
 				local bid=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbq")
 			fi
@@ -861,8 +866,8 @@ is_wp_multisite() {
 			local dbsetuc="USE $wp_dbname; SELECT meta_value FROM ${wp_dbpref}sitemeta where meta_key='subdomain_install';"
 			
 			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-				wpmu=$(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup")
-				[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetuc")
+				wpmu=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup")
+				[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetuc")
 			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
 				wpmu=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup")
 				[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetuc")
@@ -900,7 +905,7 @@ is_wp_installed() {
 			local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
 			
 			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-				[[ -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup") ]] && echo "true" || echo "false"
+				[[ -n $(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup") ]] && echo "true" || echo "false"
 			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
 				[[ -n $(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup") ]] && echo "true" || echo "false"
 			else
@@ -1090,7 +1095,7 @@ edit_wp_db_url_multisite() {
 			local wp_blogid=$3		
 			local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
 			
-			if [[ $wp_dbhost == "localhost" && -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup") ]]; then
+			if [[ $wp_dbhost == "localhost" && -n $(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup") ]]; then
 				echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
 			elif [[ $wp_dbhost != "localhost" && -n $(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup") ]]; then
 				echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
@@ -1103,7 +1108,7 @@ edit_wp_db_url_multisite() {
 		
 		if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref_main && -n $wp_blogid ]]; then
 			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-				sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+				sudo mysql --connect-timeout=10 --user=admin <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref_main}blogs SET domain='$2' WHERE blog_id='${wp_blogid}';
 UPDATE ${wp_dbpref_main}blogs SET path='/' WHERE blog_id='${wp_blogid}';
@@ -1137,7 +1142,7 @@ edit_wp_db_url() {
 		wp_conf_retrieve $1 true true $3
 		if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
 			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-				sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+				sudo mysql --connect-timeout=10 --user=admin <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
@@ -1252,28 +1257,40 @@ dbword_check() {
 
 cnf_delete() {
 	#Example: cnf_delete error_log
-	[[ -f $MYSQL_CONF_PATH/90-webinoly.cnf ]] && sudo sed -i "/^$1 /d" $MYSQL_CONF_PATH/90-webinoly.cnf
+	[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf ]] && sudo sed -i "/^$1 /d" $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
 }
 cnf_write() {
 	#Example: cnf_write error_log /var/log/mysql/error.log
 	cnf_delete $1
 	[[ -n $2 ]] && local value="= $2"
-	echo "$1 $value" >> $MYSQL_CONF_PATH/90-webinoly.cnf
+	echo "$1 $value" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
 }
 cnf_read() {
 	#Example: cnf_read error_log
-	echo $( grep -P "^$1 = " $MYSQL_CONF_PATH/90-webinoly.cnf | cut -f 2 -d "=" -s | sed 's/ //g' )
+	echo $( grep -P "^$1 = " $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf | cut -f 2 -d "=" -s | sed 's/ //g' )
 }
 mysql_default_cnf() {
 	# Creates the default Webinoly Configuration File (.cnf) for mysql if not exists.
-	if [[ ! -f $MYSQL_CONF_PATH/90-webinoly.cnf ]]; then
-		sudo touch $MYSQL_CONF_PATH/90-webinoly.cnf
-		sudo chmod 644 $MYSQL_CONF_PATH/90-webinoly.cnf
-		sudo chown -R root:root $MYSQL_CONF_PATH/90-webinoly.cnf
+	if [[ ! -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf ]]; then
+		sudo touch $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
+		sudo chmod 644 $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
+		sudo chown -R root:root $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
 		
 		echo "# Webinoly MySQL Configuration File
 [mysqld]
-log_error = /var/log/mysql/error.log" >> $MYSQL_CONF_PATH/90-webinoly.cnf
+log_error = /var/log/mysql/error.log" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
+	fi
+}
+mysql_login_cnf() {
+	# MySQL login data
+	if [[ ! -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf ]]; then
+		sudo touch $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+		sudo chmod 644 $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+		sudo chown -R root:root $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+		
+		echo "# Webinoly MySQL Login Configuration File
+# You can use the 'mysql-config-editor' and then remove this file.
+" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	fi
 }
 

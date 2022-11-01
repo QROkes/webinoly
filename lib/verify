@@ -645,10 +645,7 @@ if [[ $(conf_read mysql) == "true" ]]; then
 		local ver_four_err="1"
 	fi
 	
-	# Cannot use the global var because is still not defined in critical check in first installation
-	local ADMIN_PASS_local=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
-	[[ -z $ADMIN_PASS_local ]] && local ADMIN_PASS_local="dUmb"
-	if ! sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS_local -e "quit" 2>/dev/null; then
+	if ! sudo mysql --connect-timeout=10 --user=admin -e "quit" 2>/dev/null; then
 		echo "- [ERROR] MySQL Connection to localhost failed! (admin)"
 		local ver_four_err="1"
 	fi
@@ -1062,7 +1059,7 @@ if [[ -z $critical_mode ]]; then
 				fi
 				
 				wp_conf_retrieve $ver_domi false > /dev/null
-				if [[ $wp_dbhost == "localhost" && -n $wp_dbuser && -n $wp_dbpass && -n $wp_dbname && $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname 2>/dev/null) != "true" ]]; then
+				if [[ $wp_dbhost == "localhost" && -n $wp_dbuser && -n $wp_dbpass && -n $wp_dbname && $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname) != "true" ]]; then
 					echo "${dim}- [WARNING] Database connection failed for your WP site $ver_domi (localhost) ${end}${red}"
 					local ver_nine_war="1"
 				elif [[ -n $wp_dbhost && $wp_dbhost != "localhost" && -n $extdb_url && -n $extdb_port && -n $wp_dbuser && -n $wp_dbpass && -n $wp_dbname && $(check_mysql_connection $extdb_url $extdb_port $wp_dbuser $wp_dbpass $wp_dbname 2>/dev/null) != "true" ]]; then

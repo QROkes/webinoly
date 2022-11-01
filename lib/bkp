@@ -118,7 +118,7 @@ bkp_local_db() {
 					echo "${red}[ERROR] Cannot connect with your database (localhost)!${end}"
 					exit 1
 				fi
-				local checkdbname=$(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $dbname)
+				local checkdbname=$(sudo mysqlshow --user=admin | grep -ow $dbname)
 			else
 				external_db_parse
 				if [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ]]; then
@@ -173,7 +173,7 @@ bkp_local_db() {
 
 	
 	if [[ ( $wp_dbhost == "localhost" || -z $external_db ) && $(check_mysql_connection localhost) == "true" ]]; then
-		sudo mysqldump --user=admin --password=$ADMIN_PASS --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
+		sudo mysqldump --user=admin --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
 	elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
 		sudo mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
 	else
@@ -580,8 +580,8 @@ check_exported_conf() {
 			tar -C / -xf $file $HOME/.aws/credentials --absolute-names
 		fi
 		if [[ $(conf_read mysql) == "true" ]]; then
-			if tar -tvf $file --absolute-names | grep -oq "$MYSQL_CONF_PATH/90-webinoly.cnf"; then
-				tar -C / -xf $file $MYSQL_CONF_PATH/90-webinoly.cnf --absolute-names
+			if tar -tvf $file --absolute-names | grep -oq "$MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf"; then
+				tar -C / -xf $file $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf --absolute-names
 				sudo systemctl restart mysql
 			fi
 		fi
@@ -639,7 +639,7 @@ export_server() {
 	[[ -f /opt/webinoly/templates/source/custom_header_http_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_http_webinoly.data"
 	[[ -f /opt/webinoly/templates/source/custom_header_https_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_https_webinoly.data"
 	[[ -f /opt/webinoly/templates/source/custom_header_html_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_html_webinoly.data"
-	[[ -f $MYSQL_CONF_PATH/90-webinoly.cnf ]] && local include="$include /etc/mysql/mariadb.conf.d/90-webinoly.cnf"
+	[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf ]] && local include="$include $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf"
 	[[ -d /etc/nginx/certs ]] && local include="$include /etc/nginx/certs"
 	
 	sudo tar $exclude -Pcf $destination/$filename $include
@@ -879,17 +879,17 @@ import_site() {
 		if [[ -n $db_create_users && $overwrite != "on" && $(is_wp $domain) == "true" ]]; then
 			wp_conf_retrieve $domain true false
 				
-			if [[ $wp_dbhost == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $wp_dbname) ]]; then
+			if [[ $wp_dbhost == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin | grep -ow $wp_dbname) ]]; then
 				echo "${blu}${dim}Restoring database for${end}${dim} $domain ${blu}${dim}site!${end}"
 				
 				# Check if user exists
-				if [[ -z $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "SELECT User FROM mysql.user;" | grep -ow $wp_dbuser) ]]; then
-					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+				if [[ -z $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" | grep -ow $wp_dbuser) ]]; then
+					sudo mysql --connect-timeout=10 --user=admin <<_EOF_
 CREATE USER '${wp_dbuser}'@'localhost' IDENTIFIED BY '${wp_dbpass}';
 GRANT $(db_user_role) on ${wp_dbname}.* to '${wp_dbuser}'@'localhost';
 FLUSH PRIVILEGES;
 _EOF_
-				elif [[ $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname 2>/dev/null) != "true" ]]; then
+				elif [[ $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname) != "true" ]]; then
 					echo "${red}${dim}[ERROR] Database cannot be restored, seems like a user with the same name already exists.${end}"
 				else
 					echo "${blu}${dim}DB user already exists and a successful connection can be established, so we will use it.${end}"
@@ -905,17 +905,17 @@ _EOF_
 				if [[ -n $suby && -f /var/www/$domain/htdocs$suby/wp-config.php ]]; then
 					wp_conf_retrieve $domain true false $suby
 				
-					if [[ $wp_dbhost == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $wp_dbname) ]]; then
+					if [[ $wp_dbhost == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin | grep -ow $wp_dbname) ]]; then
 						echo "${blu}${dim}Restoring database for${end}${dim} ${domain}${suby} ${blu}${dim}site!${end}"
 						
 						# Check if user exists
-						if [[ -z $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "SELECT User FROM mysql.user;" | grep -ow $wp_dbuser) ]]; then
-							sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+						if [[ -z $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" | grep -ow $wp_dbuser) ]]; then
+							sudo mysql --connect-timeout=10 --user=admin <<_EOF_
 CREATE USER '${wp_dbuser}'@'localhost' IDENTIFIED BY '${wp_dbpass}';
 GRANT $(db_user_role) on ${wp_dbname}.* to '${wp_dbuser}'@'localhost';
 FLUSH PRIVILEGES;
 _EOF_
-						elif [[ $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname 2>/dev/null) != "true" ]]; then
+						elif [[ $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname) != "true" ]]; then
 							echo "${red}${dim}[ERROR] Database cannot be restored, seems like a user with the same name already exists.${end}"
 						else
 							echo "${blu}${dim}DB user already exists and a successful connection can be established, so we will use it.${end}"

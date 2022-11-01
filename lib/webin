@@ -216,11 +216,6 @@ smtp_setup() {
 
 
 mysql_change_password() {
-	if ! sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "quit" 2>/dev/null; then
-		echo "${red}[ERROR] MySQL Connection to localhost failed! ${dim}(admin)${end}"
-		exit 1
-	fi
-	
 	if [[ $mysql_password == true ]]; then
 		echo ""
 		read -p "${blu}MySQL User: ${end}" user
@@ -240,15 +235,15 @@ mysql_change_password() {
 		echo "${red}[ERROR] Please, enter a valid username and password!"
 		echo "Password can not contain a 'single quote' and must be at least 8 characters long.${end}"
 		exit 1
-	elif [[ -z $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "SELECT User FROM mysql.user;" | grep -ow $user) ]]; then
+	elif [[ -z $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" | grep -ow $user) ]]; then
 			echo "${red}[ERROR] User ${blu}$user ${red}doesn't exists!${end}"
 			exit 1
 	fi
 	
 	# First get the User host: 'localhost' or '%'
-	local userhost=$(sudo mysql -ss --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "SELECT Host FROM mysql.user WHERE User='${user}' LIMIT 1;")
+	local userhost=$(sudo mysql -ss --connect-timeout=10 --user=admin -e "SELECT Host FROM mysql.user WHERE User='${user}' LIMIT 1;")
 	
-	sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "ALTER USER '${user}'@'${userhost}' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
+	sudo mysql --connect-timeout=10 --user=admin -e "ALTER USER '${user}'@'${userhost}' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
 	if [[ $? == 0 ]]; then
 		[[ $user =~ ^(root|admin)$ ]] && conf_write mysql-${user} $( echo $pass | openssl enc -a -salt )
 		echo "${gre}MySQL Password successfully changed! ${dim}('${user}'@'${userhost}')${end}"
@@ -303,13 +298,13 @@ mysql_public_access() {
 		elif [[ $user != $(dbword_check $user user) ]]; then
 			echo "${red}[ERROR] The DB Name can not be a reserved word or should only contain allowed characters!${blu}"
 			exit 1
-		elif [[ -n $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "SELECT User FROM mysql.user;" | grep -ow $user) ]]; then
+		elif [[ -n $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" | grep -ow $user) ]]; then
 			echo "${red}[ERROR] User ${blu}$user ${red}already exists!${end}"
 			exit 1
 		else
 			[[ -n $replication_slave ]] && local priv="replication slave" || local priv="ALL PRIVILEGES"
 			[[ -n $replication_slave ]] && local grant="" || local grant="WITH GRANT OPTION"
-			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+			sudo mysql --connect-timeout=10 --user=admin <<_EOF_
 CREATE USER '${user}'@'%' IDENTIFIED BY '${pass}';
 GRANT ${priv} ON *.* TO '${user}'@'%' ${grant};
 FLUSH PRIVILEGES;
@@ -1031,8 +1026,8 @@ database_import() {
 		echo "${gre}Database successfully imported!${end}"
 	elif [[ -z $external_db && $(check_mysql_connection localhost) == "true" ]]; then
 		check_for_mysql -ask
-		sudo mysql -u admin -p$ADMIN_PASS < $file
-		sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "FLUSH PRIVILEGES;"
+		sudo mysql -u admin < $file
+		sudo mysql --connect-timeout=10 --user=admin -e "FLUSH PRIVILEGES;"
 		echo "${gre}Database successfully imported!${end}"
 	else
 		echo "${red}[ERROR] A connection can not be established with MySQL localhost!${end}"

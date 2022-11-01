@@ -213,6 +213,7 @@ wpinstall() {
 					echo "${blu}"
 					continue 1
 				fi
+				echo "${blu}" # after check mysql conection color is ended!
 			fi
 			
 			# ************* Ask for DB Name and validate data *************** #
@@ -226,7 +227,7 @@ wpinstall() {
 				while [[ $dbname == $newdbname && $dbreuse != [yY] ]]; do
 					if [[ $dbhost == "localhost" ]]; then
 						# https://stackoverflow.com/questions/7364709/bash-script-check-if-mysql-database-exists-perform-action-based-on-result
-						local newdbname=$(sudo mysqlshow --user=admin -p$ADMIN_PASS | grep -ow $dbname)
+						local newdbname=$(sudo mysqlshow --user=admin | grep -ow $dbname)
 					else
 						local newdbname=$(sudo mysqlshow -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" | grep -ow $dbname)
 					fi
@@ -275,7 +276,7 @@ wpinstall() {
 				while [[ $dbuser == $newdbuser && $dbureuse != [yY] ]]; do
 					if [[ $dbhost == "localhost" ]]; then
 						# https://stackoverflow.com/questions/7364709/bash-script-check-if-mysql-database-exists-perform-action-based-on-result
-						[[ -z $(sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "SELECT User FROM mysql.user;" | grep -ow $dbuser) ]] && newdbuser=""
+						[[ -z $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" | grep -ow $dbuser) ]] && newdbuser=""
 					else
 						[[ -z $(sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" -e "SELECT User FROM mysql.user;" | grep -ow $dbuser) ]] && newdbuser=""
 					fi
@@ -339,6 +340,7 @@ wpinstall() {
 				dbreuse=""
 				dbureuse=""
 				setupmysql="Y"
+				echo "${red}[ERROR]  Database conection failed!${end}"
 				continue 1
 			elif [[ $dbureuse == [yY] ]]; then
 				echo "${gre}${dim}DB name and user successfully validated!${end}"
@@ -357,7 +359,7 @@ wpinstall() {
 			if [[ $setupmysql == [yY] || -n $dbreassign ]] ; then
 				if [[ $dbhost == "localhost" && -z $dbreassign ]]; then
 					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
-					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+					sudo mysql --connect-timeout=10 --user=admin <<_EOF_
 CREATE DATABASE $dbname;
 CREATE USER '${dbuser}'@'localhost' IDENTIFIED BY '${dbpass}';
 GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'localhost';
@@ -377,7 +379,7 @@ _EOF_
 				# Reuse Database
 				elif [[ $dbhost == "localhost" && $dbreassign == "db" ]]; then
 					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
-					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+					sudo mysql --connect-timeout=10 --user=admin <<_EOF_
 CREATE USER '${dbuser}'@'localhost' IDENTIFIED BY '${dbpass}';
 GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'localhost';
 FLUSH PRIVILEGES;
@@ -395,7 +397,7 @@ _EOF_
 				# Reuse User
 				elif [[ $dbhost == "localhost" && $dbreassign == "dbuser" ]]; then
 					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
-					sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+					sudo mysql --connect-timeout=10 --user=admin <<_EOF_
 CREATE DATABASE ${dbname};
 GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'localhost';
 FLUSH PRIVILEGES;
@@ -498,7 +500,7 @@ db_delete() {
 	
 	dbsetup="DELETE FROM mysql.user WHERE User='$wp_dbuser';DROP DATABASE IF EXISTS $wp_dbname;DELETE FROM mysql.db WHERE Db='$wp_dbname' OR Db='$wp_dbname\\_%';FLUSH PRIVILEGES;"
 	if [[ $wp_dbhost == "localhost" ]]; then
-		sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$dbsetup"
+		sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup"
 		echo "${gre}${dim}Database of your site ${blu}${1}${2}${gre} has been successfully deleted! ${end}"
 	else
 		if [[ $extdb_user == "root" && -z $extdb_pass ]]; then
@@ -1768,7 +1770,7 @@ cloning_site() {
 		
 		if [[ $wp_dbhost == "localhost" ]]; then
 			site -mysql=[localhost,$dom,$usr,$AUTOGENPASS_WPDB] > /dev/null 2>&1
-			mysqldump -u admin -p$ADMIN_PASS $wp_dbname | mysql -u admin -p$ADMIN_PASS $dom
+			mysqldump -u admin $wp_dbname | mysql -u admin $dom
 			
 			# No need of force-redirect check because this is a new and different site.
 			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
@@ -1834,7 +1836,7 @@ wp_replace_content() {
 		query="USE $wp_dbname; UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'$search','$replace'); FLUSH PRIVILEGES;"
 		
 		if [[ $wp_dbhost == "localhost" ]]; then
-			sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS -e "$query"
+			sudo mysql --connect-timeout=10 --user=admin -e "$query"
 		else
 			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$query"
 		fi
@@ -2111,7 +2113,7 @@ wp_env_type() {
 	elif [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
 		if [[ $(is_wp_installed $domain $subfolder) == "true" ]]; then
 			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-				sudo mysql --connect-timeout=10 --user=admin -p$ADMIN_PASS <<_EOF_
+				sudo mysql --connect-timeout=10 --user=admin <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$index' WHERE option_name='blog_public';
 FLUSH PRIVILEGES;

@@ -236,18 +236,21 @@ mysql_install() {
 	
 	conf_write mysql true
 	
+	# MySQL login data (tmp)
+	mysql_login_cnf
+	echo "[client]
+user = root
+password = $AUTOGENPASS_ROOT
+host = localhost" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+	
 	# https://mariadb.com/kb/en/mysql_upgrade/
 	if [[ $reinstall == "true" ]]; then
 		echo "${blu}${dim}Seems like you are reinstalling MySQL... Upgrading your old tables!${end}"
-		sudo mysql_upgrade --user=root --password=${AUTOGENPASS_ROOT} --force --silent
+		sudo mysql_upgrade --user=root --force --silent
 	fi
-	
-	# Binaly logs disabled by default and Error logging not in syslog (syslog is default).
-	mysql_default_cnf
-	sudo log -mysql=binary -disable > /dev/null 2>&1
 
 	#Instead of mysql_secure_installation we do this: (same but manually, because not acept unattended)
-	sudo mysql --user=root -p$AUTOGENPASS_ROOT <<_EOF_
+	sudo mysql --user=root <<_EOF_
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
@@ -257,6 +260,7 @@ GRANT ALL PRIVILEGES ON *.* TO 'admin'@'localhost' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 _EOF_
 	
+	sudo rm -rf $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	api-events_update im4
 	echo "${gre}MySQL has been installed successfully! ${end}"
 }
@@ -447,12 +451,19 @@ php_optim() {
 mysql_optim() {
 	api-events_update im5
 	
+	# MySQL login data
+	mysql_login_cnf	
+	echo "[client]
+user = admin
+password = $( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+host = localhost" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+	
+	# Disabled by default!
+	[[ $(conf_read mysql-log-binary) != "true" ]] && sudo log -mysql=binary -disable || sudo log -mysql=binary -enable
+	
 	# If value is empty we will respect any other previous action done via commmand.
 	[[ $(conf_read mysql-log-general) == "true" ]] && sudo log -mysql=general -enable
 	[[ $(conf_read mysql-log-general) == "false" ]] && sudo log -mysql=general -disable
-	
-	[[ $(conf_read mysql-log-binary) == "true" ]] && sudo log -mysql=binary -enable
-	[[ $(conf_read mysql-log-binary) == "false" ]] && sudo log -mysql=binary -disable
 	
 	[[ $(conf_read mysql-log-slow) == "true" && -z $(conf_read mysql-long-query-time) ]] && sudo log -mysql=slow -enable
 	[[ $(conf_read mysql-log-slow) == "true" && -n $(conf_read mysql-long-query-time) ]] && sudo log -mysql=slow -enable -long-query-time=$(conf_read mysql-long-query-time)
@@ -463,7 +474,7 @@ mysql_optim() {
 	
 	conf_write mysql-optim true
 	api-events_update im6
-	echo "${gre}MySQL (MariaDB) has been successfully Optimized by Webinoly! ${end}"
+	echo "${gre}MySQL/MariaDB has been successfully Optimized by Webinoly! ${end}"
 }
 
 nginx_tool_site() {
