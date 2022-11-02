@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Note: We use $HOME here, because it matches the duply/duplicity profile creation folder.
+# The profile folder will be stored under '~/.duply/<profile>' (where ~ is the current users home directory).
+# Hint: If the folder '/etc/duply' exists, the profiles for the super user root will be searched & created there.
+
 
 bucket_validation() {
 	local bucketname=$(echo $1 | cut -d "/" -f 1)

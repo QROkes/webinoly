@@ -344,7 +344,7 @@ dd_mysql() {
 instances:
 - server: 127.0.0.1
   user: admin
-  pass: '$ADMIN_PASS'
+  pass: '$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )'
   port: \"3306\"
   options:
     replication: false

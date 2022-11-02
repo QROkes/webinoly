@@ -324,6 +324,7 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	sudo sed -i '/USERGROUPS_ENAB/c \USERGROUPS_ENAB no' /etc/login.defs
 
 	# Check for dynamic variables.
+	sudo systemctl restart nginx # We need to kill the process, don't use reload (I don't know why here, but it's needed!)
 	[[ -n $(conf_read default-response) ]] && sudo webinoly -default-site=$(conf_read default-response)
 	[[ -n $(conf_read tools-port-set) ]] && sudo webinoly -tools-port=$(conf_read tools-port-set)
 	[[ -n $(conf_read tools-site) ]] && sudo webinoly -tools-site=$(conf_read tools-site)
@@ -380,7 +381,7 @@ location = /xmlrpc.php {
 	
 	conf_write server-version $svr_version
 	conf_write nginx-optim true
-	sudo systemctl restart nginx # We need to kill the process, don't use reload
+	sudo systemctl reload nginx
 	api-events_update in10
 	echo "${gre}Nginx has been successfully Optimized by Webinoly! ${end}"
 }
