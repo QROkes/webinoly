@@ -454,10 +454,12 @@ mysql_optim() {
 	
 	# MySQL login data
 	mysql_login_cnf	
+	sudo sed -i '/\[client\]/,/# ClientEnd/{/.*/d}' $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	echo "[client]
 user = admin
 password = $( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
-host = localhost" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+host = localhost
+# ClientEnd" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	
 	# Disabled by default!
 	[[ $(conf_read mysql-log-binary) != "true" ]] && sudo log -mysql=binary -disable || sudo log -mysql=binary -enable
@@ -564,11 +566,7 @@ nginx_tool_bkp() {
 	# Duplicity installation directly from source
 	# Temporal fix to remove warning - wait for: https://github.com/pypa/pip/issues/10556 - remove from stack purge too!
 	sudo pip3 install duplicity 2>&1 | grep -v "pip as the 'root' user"
-	
-	# Temporal dynvar - in the next stack update we will update all the old snap installations
-	# Be sure to remove it from "stack" command too.
-	conf_write bkp-source-tmp true
-	
+		
 	# https://sourceforge.net/projects/ftplicity/files/duply%20%28simple%20duplicity%29/
 	sudo cp /opt/webinoly/templates/general/duply /usr/bin/
 	sudo chmod 755 /usr/bin/duply

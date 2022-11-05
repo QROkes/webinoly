@@ -353,7 +353,7 @@ bkp_s3_profile() {
 		sudo sed -i -E "/^[#]?MAX_AGE=/c MAX_AGE=$max_age" $HOME/.duply/$profile/conf
 		sudo sed -i '/^#MAX_FULLBKP_AGE=/s/#//' $HOME/.duply/$profile/conf
 		sudo sed -i '/^#DUPL_PARAMS="\$DUPL_PARAMS --full-if-older-than \$MAX_FULLBKP_AGE "/s/#//' $HOME/.duply/$profile/conf
-		sudo sed -i -E "/^[#]?TARGET=/c TARGET='boto3+s3://${bucket}'" $HOME/.duply/$profile/conf
+		sudo sed -i -E "/^[#]?TARGET=/c TARGET='s3://${bucket}'" $HOME/.duply/$profile/conf
 		
 		if [[ -n $s3_compatible_endpoint ]]; then
 			sudo echo "DUPL_PARAMS=\"\$DUPL_PARAMS --s3-endpoint-url $s3_compatible_endpoint \"" >> $HOME/.duply/$profile/conf

@@ -342,7 +342,7 @@ elif [[ -n $purge && -n $backups ]]; then
 				echo "${gre}${dim}Backup (duply) profiles deleted!${end}"
 			fi
 			
-			[[ -z $(conf_read bkp-source-tmp) ]] && sudo snap remove duplicity || sudo pip3 uninstall -y duplicity 2>&1 | grep -v "pip as the 'root' user"
+			sudo pip3 uninstall -y duplicity 2>&1 | grep -v "pip as the 'root' user"
 			sudo apt -y purge python3-boto3
 			sudo rm -rf /usr/bin/duply
 			

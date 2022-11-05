@@ -448,10 +448,11 @@ server_reset() {
 	fi
 	
 	# Check MySQL Conf
-	if [[ $(conf_read mysql-optim) == "true" && $server_reset =~ ^(mysql|all)$ ]]; then
+	# Here we don't check for optim variable because in very old installations don't exist and it breaks the update process!
+	if [[ $(conf_read mysql) == "true" && $server_reset =~ ^(mysql|all)$ ]]; then
 		mysql_optim
 		echo "${gre}MySQL settings has been updated successfully!${end}"
-	elif [[ $(conf_read mysql-optim) != "true" && $server_reset == "mysql" ]]; then
+	elif [[ $(conf_read mysql) != "true" && $server_reset == "mysql" ]]; then
 		echo "${red}[ERROR] MySQL settings couldn't been updated, seems like is not installed in your server!${end}"
 		err_cont=true
 	fi
