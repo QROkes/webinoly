@@ -299,6 +299,10 @@ nginx_optim() {
 	sudo sed -i "/worker_rlimit_nofile /c \worker_rlimit_nofile $fd_per_process;" /etc/nginx/nginx.conf
 	sudo sed -i "/open_file_cache max /c \	open_file_cache max=$(($fd_per_process/3)) inactive=5m;" /etc/nginx/nginx.conf
 	
+	# Locations
+	sudo sed -i "s&<locations-deny-extensions>&$(check_var locations-deny-extensions)&" /etc/nginx/common/locations.conf
+	sudo sed -i "s#<locations-deny-files>#$(check_var locations-deny-files)#" /etc/nginx/common/locations.conf
+	
 	# WP Cache
 	[[ $(check_var wpcache-query-strings) == "all" ]] && sudo sed -i '/# URL with a query string should always go to php/,/\} #End/{/.*/d}' /etc/nginx/common/wpfc.conf
 	sudo sed -i "s#<wpcache-exclude-url>#$(check_var wpcache-exclude-url)#" /etc/nginx/common/wpfc.conf

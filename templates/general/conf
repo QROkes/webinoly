@@ -52,6 +52,16 @@
 #swap-mem:1
 
 
+# IAM Role (AWS Credentials)
+# Values: boolean (true/false)
+# Default: false
+# Note: (server-reset not needed)
+# Note: Set to 'true' if your EC2 instance has an IAM Role attached with full access to S3
+# Same as: sudo webinoly -aws-s3-credentials=awsiamrole
+###########################
+#awsiamrole:false
+
+
 
 
 
@@ -163,14 +173,16 @@
 #blockip:1.1.1.1,2.2.2.2
 
 
-# IAM Role (AWS Credentials)
-# Values: boolean (true/false)
-# Default: false
-# Note: (server-reset not needed)
-# Note: Set to 'true' if your EC2 instance has an IAM Role attached with full access to S3
-# Same as: sudo webinoly -aws-s3-credentials=awsiamrole
+# Block/Deny files and extensions
+# Values:  <filename>|<filename>... (files txt|html|htm|md)
+# Values:  <ext>|<ext>... (extensions)
+# Note: This is a security feature, please don't modify unless you are sure about it.
+# Note: For example, any request to 'readme.txt' or 'name.log' will be blocked (case insensitive).
+# Note: To revert any changes and set the original Webinoly defaults, just #comment these two variables and then server-reset.
+# Note: You can remove some extensions like 'exe' if you are distributing installers, for instance, or you can add any of your preference.
 ###########################
-#awsiamrole:false
+#locations-deny-files:readme|license|example|legalnotice|installation|changelog|wp-config
+#locations-deny-extensions:old|orig|original|php#|php~|php_bak|save|swo|asp|aspx|tpl|sh|bash|ba|bak|cfg|cgi|dll|git|hg|ini|jsp|log|mdb|out|sql|svn|swp|rdf|pem|ppk|asc|conf|dump|exe|msi|tar|gz|zip|bz2|7z
 
 
 # FastCGI Cache

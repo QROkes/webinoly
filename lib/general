@@ -1359,6 +1359,22 @@ check_var() {
 			local out="false"
 		fi
 	
+	# Locations: Deny Extensions
+	elif [[ $1 == "locations-deny-extensions" ]]; then
+		if [[ -z $(conf_read locations-deny-extensions) ]]; then
+			local out="old|orig|original|php#|php~|php_bak|save|swo|asp|aspx|tpl|sh|bash|ba|bak|cfg|cgi|dll|git|hg|ini|jsp|log|mdb|out|sql|svn|swp|rdf|pem|ppk|asc|conf|dump|exe|msi|tar|gz|zip|bz2|7z"
+		else
+			local out=$(conf_read locations-deny-extensions)
+		fi
+	
+	# Locations: Deny Files
+	elif [[ $1 == "locations-deny-files" ]]; then
+		if [[ -z $(conf_read locations-deny-files) ]]; then
+			local out="readme|license|example|legalnotice|installation|changelog|wp-config"
+		else
+			local out=$(conf_read locations-deny-files)
+		fi
+	
 	# FastCGI Cache: Exclude URL
 	elif [[ $1 == "wpcache-exclude-url" ]]; then
 		if [[ -z $(conf_read wpcache-exclude-url) ]]; then
