@@ -67,7 +67,11 @@ linux_optim() {
 			local msgmni=1024
 		fi
 		
-		# https://www.ibm.com/docs/es/db2/11.1?topic=unix-modifying-kernel-parameters-linux
+		# Although you can apply values larger than 32768 by using the boot parameter ipcmni_extend, the values are still capped to 32768 internally.
+		[[ $shmmni -gt 32768 ]] && local shmmni=32768
+		[[ $msgmni -gt 32768 ]] && local msgmni=32768
+		
+		# https://www.ibm.com/docs/en/db2/11.1?topic=unix-modifying-kernel-parameters-linux
 		sudo sed -i "/kernel.shmmni =/c \kernel.shmmni = $shmmni" /etc/sysctl.conf
 		sudo sed -i "/kernel.shmmax =/c \kernel.shmmax = $(($ramk*800))" /etc/sysctl.conf # Less than 80% of total ram
 		sudo sed -i "/kernel.shmall =/c \kernel.shmall = $(($(getconf PAGE_SIZE)*2))" /etc/sysctl.conf
