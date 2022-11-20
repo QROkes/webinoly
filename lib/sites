@@ -1174,8 +1174,9 @@ parked_domain() {
 	[[ $(conf_read default-site) == $parked ]] && remove_nginx_default_server $domain
 	
 	sudo sed -i "/include apps.d\/$parked-nginx.conf/d" /etc/nginx/sites-available/$domain
+	sudo sed -i "/include \/var\/www\/${parked}\/\*-$(echo $parked | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;/d" /etc/nginx/sites-available/$domain
 	sudo sed -i "/server_name/c \	$sername" /etc/nginx/sites-available/$domain
-	sudo sed -i "s/$parked/$domain/g"  /etc/nginx/sites-available/$domain
+	sudo sed -i "s/$(escaped_string $parked)/$domain/g"  /etc/nginx/sites-available/$domain
 	sudo sed -i "/include apps.d\/.*-proxy.conf;/{s/$domain/$parked/g}"  /etc/nginx/sites-available/$domain
 	sudo sed -i "/root/c \	root /var/www/$parked/htdocs;" /etc/nginx/sites-available/$domain
 	
@@ -1188,9 +1189,13 @@ parked_domain() {
 	[[ $(conf_read php-info) != "false" ]] && sudo sed -i "/include apps.d\/${domain}-phpcache.conf;/c \	include common\/phpx.conf;" /etc/nginx/sites-available/$domain
 	[[ $(conf_read php-info) == "false" ]] && sudo sed -i "/include apps.d\/${domain}-phpcache.conf;/c \	include common\/php.conf;" /etc/nginx/sites-available/$domain
 	
-	cusconl=$( grep -o "include /var/www/$domain/.*" /etc/nginx/sites-available/$domain | sed "s/$domain/$parked/" )
-	sed -i "/include \/var\/www\/$domain/c \	${cusconl}" /etc/nginx/sites-available/$domain
-	sed -i "/include \/var\/www\/$parked/a \	include \/var\/www\/${parked}/*-$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;" /etc/nginx/sites-available/$domain
+	cusconl=$( grep -o "include /var/www/$domain/\*-nginx.conf;" /etc/nginx/sites-available/$domain | sed "s/$domain/$parked/" )
+	sed -i "/include \/var\/www\/$domain\/\*-nginx.conf;/c \	${cusconl}" /etc/nginx/sites-available/$domain
+	
+	# Shared Nginx Conf
+	sed -i "/include \/var\/www\/${parked}\/\*-$(echo $parked | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;/d" /etc/nginx/sites-available/$parked
+	sed -i "/include \/var\/www\/$parked\/\*-nginx.conf;/a \	include \/var\/www\/${parked}\/\*-$(echo $parked | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;" /etc/nginx/sites-available/$parked
+	sed -i "/include \/var\/www\/$parked\/\*-nginx.conf;/a \	include \/var\/www\/${parked}/*-$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;" /etc/nginx/sites-available/$domain
 	
 	# Prevent asking multiple times in case of external DB.
 	[[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ && $(is_wp $parked) == "true" ]] && wp_conf_retrieve $parked true false $subfolder

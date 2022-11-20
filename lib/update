@@ -294,10 +294,30 @@ oneseven_to_oneight() {
 		conf_delete bkp-source-tmp
 	fi
 	
+	# Loop All Sites
+	for site in "/etc/nginx/sites-available"/*
+	do
+		local domi=$(echo $site | cut -f 5 -d "/")
+		if [[ $domi != "html" && $domi != $(conf_read tools-port) && -f /etc/nginx/sites-available/$domi ]]; then
+			# All sites
+			sed -i "/include \/var\/www\/$domi\/\*-nginx.conf;/a \	include \/etc\/nginx\/conf.d\/\*.conf.svr;" /etc/nginx/sites-available/$domi
+			
+			# Parked: Shared Nginx conf for main site
+			if [[ $(is_parked $domi) == "true" ]]; then
+				local main=$(grep -G "root .*;" /etc/nginx/sites-available/$domi | cut -d'/' -f 4)
+				if [[ -f /etc/nginx/sites-available/$main ]]; then
+					sed -i "/include \/var\/www\/$main\/\*-nginx.conf;/a \	include \/etc\/nginx\/conf.d\/\*.conf.svr;" /etc/nginx/sites-available/$domi
+					sed -i "/include \/var\/www\/${main}\/\*-$(echo $main | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;/d" /etc/nginx/sites-available/$main
+					sed -i "/include \/var\/www\/$main\/\*-nginx.conf;/a \	include \/var\/www\/${main}\/\*-$(echo $main | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;" /etc/nginx/sites-available/$main
+				fi
+			fi
+		fi		
+	done
+	
 }
 
 # New MySQL login: here to prevent errors during update process!
-[[ ${oldver//.} -lt 18 ]] && sudo webinoly -server-reset=mysql
+[[ ${oldver//.} -lt 18 && $(conf_read mysql) == "true" ]] && sudo webinoly -server-reset=mysql
 
 # Version numbers without point
 [[ ${oldver//.} -lt 11 ]] && onezero_to_oneone
