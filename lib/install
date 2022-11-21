@@ -29,7 +29,8 @@ linux_optim() {
 	if [[ $(conf_read kernel-optim) != "false" ]]; then
 		echo "${gre}Wait while Webinoly optimize your Ubuntu Operating System...${end}"
 		api-events_update in5
-		sudo cat /opt/webinoly/templates/general/sysctl >> /etc/sysctl.conf
+		[[ -f /etc/sysctl.d/90-webinoly.conf ]] && sudo rm -rf /etc/sysctl.d/90-webinoly.conf
+		sudo cp /opt/webinoly/templates/general/sysctl /etc/sysctl.d/90-webinoly.conf
 		sudo modprobe tcp_bbr
 		
 		# https://github.com/amazonlinux/autotune
@@ -40,23 +41,23 @@ linux_optim() {
 		
 		if [[ $ram -gt 28 ]]; then
 			# https://mariadb.com/kb/en/configuring-swappiness/
-			sudo sed -i "/vm.swappiness =/c \vm.swappiness = 1" /etc/sysctl.conf
+			sudo sed -i "/vm.swappiness =/c \vm.swappiness = 1" /etc/sysctl.d/90-webinoly.conf
 			
-			sudo sed -i "/vm.min_free_kbytes =/c \vm.min_free_kbytes = $(($ramb*20))" /etc/sysctl.conf
-			sudo sed -i "/vm.dirty_ratio =/c \vm.dirty_ratio = 0" /etc/sysctl.conf
-			sudo sed -i "/vm.dirty_background_ratio =/c \vm.dirty_background_ratio = 0" /etc/sysctl.conf
-			sudo sed -i "/vm.dirty_expire_centisecs =/c \vm.dirty_expire_centisecs = 500" /etc/sysctl.conf
-			sudo sed -i "/#vm.dirty_bytes =/c \vm.dirty_bytes = 5505024000" /etc/sysctl.conf
-			sudo sed -i "/#vm.dirty_background_bytes =/c \vm.dirty_background_bytes = 917504000" /etc/sysctl.conf
-			sudo sed -i "/#vm.dirty_writeback_centisecs =/c \vm.dirty_writeback_centisecs = 100" /etc/sysctl.conf
+			sudo sed -i "/vm.min_free_kbytes =/c \vm.min_free_kbytes = $(($ramb*20))" /etc/sysctl.d/90-webinoly.conf
+			sudo sed -i "/vm.dirty_ratio =/c \vm.dirty_ratio = 0" /etc/sysctl.d/90-webinoly.conf
+			sudo sed -i "/vm.dirty_background_ratio =/c \vm.dirty_background_ratio = 0" /etc/sysctl.d/90-webinoly.conf
+			sudo sed -i "/vm.dirty_expire_centisecs =/c \vm.dirty_expire_centisecs = 500" /etc/sysctl.d/90-webinoly.conf
+			sudo sed -i "/#vm.dirty_bytes =/c \vm.dirty_bytes = 5505024000" /etc/sysctl.d/90-webinoly.conf
+			sudo sed -i "/#vm.dirty_background_bytes =/c \vm.dirty_background_bytes = 917504000" /etc/sysctl.d/90-webinoly.conf
+			sudo sed -i "/#vm.dirty_writeback_centisecs =/c \vm.dirty_writeback_centisecs = 100" /etc/sysctl.d/90-webinoly.conf
 		elif [[ $ram -gt 2 ]]; then
 			# Default is 65M, if RAM >= 3Gb take 3%, and > 28Gb only 2%
-			sudo sed -i "/vm.min_free_kbytes =/c \vm.min_free_kbytes = $(($ramb*30))" /etc/sysctl.conf
+			sudo sed -i "/vm.min_free_kbytes =/c \vm.min_free_kbytes = $(($ramb*30))" /etc/sysctl.d/90-webinoly.conf
 			
 			# https://lonesysadmin.net/2013/12/22/better-linux-disk-caching-performance-vm-dirty_ratio/
-			sudo sed -i "/vm.dirty_ratio =/c \vm.dirty_ratio = 30" /etc/sysctl.conf
-			sudo sed -i "/vm.dirty_expire_centisecs =/c \vm.dirty_expire_centisecs = 900" /etc/sysctl.conf
-			sudo sed -i "/vm.swappiness =/c \vm.swappiness = 5" /etc/sysctl.conf
+			sudo sed -i "/vm.dirty_ratio =/c \vm.dirty_ratio = 30" /etc/sysctl.d/90-webinoly.conf
+			sudo sed -i "/vm.dirty_expire_centisecs =/c \vm.dirty_expire_centisecs = 900" /etc/sysctl.d/90-webinoly.conf
+			sudo sed -i "/vm.swappiness =/c \vm.swappiness = 5" /etc/sysctl.d/90-webinoly.conf
 		fi
 		
 		if [[ $ram -gt 1 ]]; then
@@ -72,12 +73,15 @@ linux_optim() {
 		[[ $msgmni -gt 32768 ]] && local msgmni=32768
 		
 		# https://www.ibm.com/docs/en/db2/11.1?topic=unix-modifying-kernel-parameters-linux
-		sudo sed -i "/kernel.shmmni =/c \kernel.shmmni = $shmmni" /etc/sysctl.conf
-		sudo sed -i "/kernel.shmmax =/c \kernel.shmmax = $(($ramk*800))" /etc/sysctl.conf # Less than 80% of total ram
-		sudo sed -i "/kernel.shmall =/c \kernel.shmall = $(($(getconf PAGE_SIZE)*2))" /etc/sysctl.conf
-		sudo sed -i "/kernel.msgmni =/c \kernel.msgmni = $msgmni" /etc/sysctl.conf
-		sudo sed -i "/kernel.sem =/c \kernel.sem = 250 1024000 32 $shmmni" /etc/sysctl.conf
-		sudo sysctl -p -q
+		sudo sed -i "/kernel.shmmni =/c \kernel.shmmni = $shmmni" /etc/sysctl.d/90-webinoly.conf
+		sudo sed -i "/kernel.shmmax =/c \kernel.shmmax = $(($ramk*800))" /etc/sysctl.d/90-webinoly.conf # Less than 80% of total ram
+		sudo sed -i "/kernel.shmall =/c \kernel.shmall = $(($(getconf PAGE_SIZE)*2))" /etc/sysctl.d/90-webinoly.conf
+		sudo sed -i "/kernel.msgmni =/c \kernel.msgmni = $msgmni" /etc/sysctl.d/90-webinoly.conf
+		sudo sed -i "/kernel.sem =/c \kernel.sem = 250 1024000 32 $shmmni" /etc/sysctl.d/90-webinoly.conf
+		
+		# Also: 'sudo service procps force-reload' but we prefer this method to better display errors (just in case)
+		sudo sysctl -p -q /etc/sysctl.d/90-webinoly.conf
+		
 		api-events_update in6
 	fi
 	
@@ -138,9 +142,10 @@ linux_purge() {
 		api-events_update pn7
 		
 		sudo rm -rf /etc/systemd/system/nginx.service.d
+		sudo rm -rf /etc/sysctl.d/90-webinoly.conf
 		sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/security/limits.conf
-		sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/sysctl.conf
-		sudo sysctl -p -q
+		#sudo sysctl -p -q /etc/sysctl.d/90-webinoly.conf - reload all sysctl, webinoly file doesn't exist at this point!
+		sudo service procps force-reload
 		
 		sudo sed -i '/\/run/d' /etc/fstab
 		sudo mount -o remount tmpfs

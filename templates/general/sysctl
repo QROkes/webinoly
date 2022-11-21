@@ -1,4 +1,11 @@
-# WebinolyStart - Don't delete
+# Webinoly (This configuration file is only for internal use)
+#####################################################################################################
+# Please, DO NOT MODIFY this file, all the changes will be lost.                                    #
+# If you need to add/modify any of the existing rules, here: /etc/sysctl.conf                       #
+# Please, read the documentation: https://webinoly.com/documentation/                               #
+#####################################################################################################
+
+
 
 #######################################
 ### GENERAL SYSTEM SECURITY OPTIONS ###
@@ -291,5 +298,3 @@ net.ipv4.tcp_fastopen = 3
 # This will enusre that immediatly subsequent connections use the new values
 net.ipv4.route.flush = 1
 net.ipv6.route.flush = 1
-
-# WebinolyEnd

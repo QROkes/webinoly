@@ -311,8 +311,11 @@ oneseven_to_oneight() {
 					sed -i "/include \/var\/www\/$main\/\*-nginx.conf;/a \	include \/var\/www\/${main}\/\*-$(echo $main | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;" /etc/nginx/sites-available/$main
 				fi
 			fi
-		fi		
+		fi
 	done
+	
+	# Remove the old kernel method
+	sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/sysctl.conf
 	
 }
 
