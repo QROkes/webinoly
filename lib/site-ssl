@@ -174,7 +174,15 @@ site_ssl_on() {
 		local cronmail=$( sudo grep -F "MAILTO=" /var/spool/cron/crontabs/root )
 		local cronrene=$( sudo grep -F "certbot renew" /var/spool/cron/crontabs/root )
 		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
-		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew --post-hook "service nginx restart"' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
+		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
+
+		# We use this script instead of the post-hook in crontab to restart Nginx
+		# Most of the times certs are renewed via the certbot systemctl timer - sudo systemctl list-timers
+		# The cronjob renew is just a double-check, so this solution is better because is covering both scenarios
+		if [[ ! -f /etc/letsencrypt/renewal-hooks/deploy/99-webinoly-deploy ]]; then
+			cp /opt/webinoly/templates/general/certbot-deploy-hook /etc/letsencrypt/renewal-hooks/deploy/99-webinoly-deploy
+			sudo chmod -f 744 /etc/letsencrypt/renewal-hooks/deploy/99-webinoly-deploy
+		fi
 
 		# For some unknown reason this condition doesn't work in oneline as we usually do!
 		if [[ $(is_force_redirect $domain) == "www" ]]; then

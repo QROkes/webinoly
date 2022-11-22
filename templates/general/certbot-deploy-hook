@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# https://eff-certbot.readthedocs.io/en/stable/using.html#renewing-certificates
+# When Certbot detects that a certificate is due for renewal, --pre-hook and --post-hook hooks run before and after each attempt to renew it. If you want your hook to run only after a successful renewal, use --deploy-hook in a command like this. You can also specify hooks by placing files in subdirectories of Certbot’s configuration directory.
+
+# Restart Nginx after successful cert renewal
+sudo systemctl restart nginx
