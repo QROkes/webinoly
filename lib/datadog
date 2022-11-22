@@ -410,6 +410,9 @@ instances:
 dd_purge() {
 	if [[ -d /etc/datadog-agent ]]; then
 		sudo apt-get remove --purge datadog-agent -y
+		sudo rm -rf /usr/share/keyrings/datadog-archive-keyring.gpg*
+		sudo rm -rf /etc/apt/sources.list.d/datadog.list
+		
 		[[ -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && sudo sed -i '/WebinolyLocalhostStart/,/WebinolyLocalhostEnd/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
 		echo "${gre}Datadog Agent has been removed successfully from your server!${end}"
 	else
@@ -434,7 +437,7 @@ dd_install() {
 			echo "${red}[ERROR] Invalid Datadog API key!${end}"
 			exit 1
 		else
-			DD_INSTALL_ONLY=true DD_AGENT_MAJOR_VERSION=$datadog_agent_ver DD_API_KEY=$datadog bash -c "$(curl -L https://raw.githubusercontent.com/DataDog/datadog-agent/master/cmd/agent/install_script.sh)"
+			DD_INSTALL_ONLY=true DD_AGENT_MAJOR_VERSION=$datadog_agent_ver DD_API_KEY=$datadog bash -c "$(curl -L https://s3.amazonaws.com/dd-agent/scripts/install_script_agent7.sh)"
 			
 			if [[ $integrations != "off" ]]; then
 				[[ $(conf_read nginx) == "true" ]] && dd_nginx
