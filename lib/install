@@ -177,10 +177,13 @@ nginx_install() {
 	[[ ! -d /etc/nginx/sites-enabled ]] && sudo mkdir /etc/nginx/sites-enabled
 	[[ ! -d /etc/nginx/apps.d ]] && sudo mkdir /etc/nginx/apps.d
 
-	sudo sed -i 's/listen.*80;/listen 80 default_server;/' /etc/nginx/conf.d/default.conf
-	sudo sed -i 's/listen.*\[::\]:80;/listen [::]:80 default_server;/' /etc/nginx/conf.d/default.conf
-	sudo mv /etc/nginx/conf.d/default.conf /etc/nginx/sites-available/default
-	sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+	# In reinstalation (after purge with keep-data) this file don't exist
+	if [[ -f /etc/nginx/conf.d/default.conf ]]; then
+		sudo sed -i 's/listen.*80;/listen 80 default_server;/' /etc/nginx/conf.d/default.conf
+		sudo sed -i 's/listen.*\[::\]:80;/listen [::]:80 default_server;/' /etc/nginx/conf.d/default.conf
+		sudo mv /etc/nginx/conf.d/default.conf /etc/nginx/sites-available/default
+		sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+	fi
 	
 	sudo nginx -t && sudo systemctl start nginx
 	sudo systemctl enable nginx
@@ -320,6 +323,9 @@ nginx_optim() {
 	# Remove it, then add it again to prevent multiple # for each server-reset
 	sudo sed -i '/ SERVER_NAME /s/#//' /etc/nginx/fastcgi_params
 	sudo sed -i '/ SERVER_NAME /s/^/#/' /etc/nginx/fastcgi_params
+	
+	# Needed to prevent duplicates in server-reset, also in reinstallation (after purge with keep-data)
+	sudo sed -i '/WebinolyCustom/,/WebinolyCustomEnd/{/.*/d}' /etc/nginx/fastcgi_params
 	
 	echo '# WebinolyCustom
 fastcgi_param  SCRIPT_FILENAME    $request_filename;
@@ -497,20 +503,26 @@ nginx_tool_site() {
 	# Tools site creation
 	[[ -z $(conf_read tools-port) ]] && conf_write tools-port $tools_port_default
 	
-	sudo site $(conf_read tools-port) -empty > /dev/null 2>&1
-	sudo cp /opt/webinoly/templates/general/admin_tools.conf /etc/nginx/sites-available/$(conf_read tools-port)
-	sudo sed -i "s/<port>/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
-	sudo nginx -t && sudo systemctl reload nginx
+	# Don't overwrite in case that exist (after purge with keep-data, for instance)
+	if [[ ! -f /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
+		sudo site $(conf_read tools-port) -empty > /dev/null 2>&1
+		sudo cp /opt/webinoly/templates/general/admin_tools.conf /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i "s/<port>/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo nginx -t && sudo systemctl reload nginx
+	fi
 	
-	# Nginx Status Page
-	sudo touch /var/www/$(conf_read tools-port)/htdocs/nginx_status	
-	
-	# Robots.txt file in case someone remove HTTP Auth
-	sudo touch /var/www/$(conf_read tools-port)/htdocs/robots.txt
-	echo '# Just in case someone remove HTTP Auth protection.
-Disallow: /' > /var/www/$(conf_read tools-port)/htdocs/robots.txt
-	sudo chmod 644 /var/www/$(conf_read tools-port)/htdocs/robots.txt
-	sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs
+	# Don't overwrite in case that exist (after purge with keep-data, for instance)
+	if [[ ! -f /var/www/$(conf_read tools-port)/htdocs ]]; then
+		# Nginx Status Page
+		sudo touch /var/www/$(conf_read tools-port)/htdocs/nginx_status	
+		
+		# Robots.txt file in case someone remove HTTP Auth
+		sudo touch /var/www/$(conf_read tools-port)/htdocs/robots.txt
+		echo '# Just in case someone remove HTTP Auth protection.
+	Disallow: /' > /var/www/$(conf_read tools-port)/htdocs/robots.txt
+		sudo chmod 644 /var/www/$(conf_read tools-port)/htdocs/robots.txt
+		sudo chown -R www-data:www-data /var/www/$(conf_read tools-port)/htdocs
+	fi
 	
 	# in case php was installed before nginx
 	[[ $(conf_read php) == "true" && ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]] && php_tool_site

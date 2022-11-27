@@ -40,6 +40,20 @@ purge_mysql_client() {
 	conf_write mysql-client purged
 }
 
+purge_nginx_tools() {
+	# Remove additional tools
+	[[ $(conf_read login-www-data) == "true" ]] && webinoly -login-www-data=off
+	[[ $(conf_read nginx-tool-ssl) == "true" ]] && stack -letsencrypt -purge=force
+	[[ $(conf_read nginx-tool-bkp) == "true" ]] && stack -backups -purge=force
+	[[ $(conf_read mysql-tool-pma) == "true" ]] && stack -pma -purge=force
+	
+	[[ -d /var/www ]] && sudo rm -rf /var/www/*
+	[[ -n $(conf_read tools-site) ]] && conf_delete tools-site -commented
+	[[ -n $(conf_read default-response) ]] && conf_delete default-response -commented
+	[[ -n $(conf_read default-site) ]] && conf_delete default-site
+}
+
+
 #############################################
 ########   Delete/Purge some stack   ########
 #############################################
@@ -48,6 +62,14 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 	api-events_update pn1
 	if [[ $(conf_read nginx) != "true" ]]; then
 		echo "${dim}Nginx is not installed, hence can not be deleted! ${end}"
+		purge_nginx_tools # In case of nginx purged with keep-data before.
+		
+		# Just in case, nginx purged with keep-data before can preserve some remanent data, for instance!
+		if [[ -d /etc/nginx ]]; then
+			sudo apt -y purge nginx
+			echo "${gre}${dim}Nginx remanent data found and removed!${end}"
+		fi
+		
 		clear_force_flag
 	else		
 		if [[ $(conf_read force-flag) != "true" ]]; then
@@ -64,7 +86,9 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 		fi
 		
 		if [[ $answer == [Yy] || $(conf_read force-flag) == "true" ]]; then
-			if [[ $(conf_read force-flag) == "true" && $force == 1 ]]; then
+			if [[ $nginx == "keep-data" ]]; then
+				answer="N"
+			elif [[ $(conf_read force-flag) == "true" && $force == 1 ]]; then
 				answer="Y"
 			else
 				echo ""
@@ -79,19 +103,16 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 				site -delete-all=force
 			fi
 			
-			# Remove tools-site
-			[[ $(conf_read mysql-tool-pma) == "true" ]] && stack -pma -purge=force
-			sudo rm -rf /var/www/html
-			sudo rm -rf /var/www/$(conf_read tools-port)
-			conf_delete tools-site -commented
-			
-			[[ $(conf_read login-www-data) == "true" ]] && webinoly -login-www-data=off
-			[[ $(conf_read nginx-tool-ssl) == "true" ]] && stack -letsencrypt -purge=force
-			[[ $(conf_read nginx-tool-bkp) == "true" ]] && stack -backups -purge=force
 			purge_autoremove="true"
-			
 			sudo systemctl stop nginx
-			sudo apt -y purge nginx
+			
+			if [[ $nginx != "keep-data" ]]; then
+				purge_nginx_tools
+				sudo apt -y purge nginx
+			else
+				sudo apt -y remove nginx
+				echo "${blu}Nginx data (including your sites) and configuration was NOT removed.${end}"
+			fi
 			
 			# APT-KEY deprecated in 22.04
 			if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
@@ -104,12 +125,6 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			else
 				sudo rm -rf /usr/share/keyrings/nginx-archive-keyring.gpg
 				sudo rm -rf /etc/apt/sources.list.d/nginx.list
-			fi
-			
-			# Remove SSL Cron
-			if [[ -f /var/spool/cron/crontabs/root ]]; then
-				sudo sed -i '/MAILTO=/d' /var/spool/cron/crontabs/root
-				sudo sed -i '/certbot renew/d' /var/spool/cron/crontabs/root
 			fi
 			
 			[ -L $CURRENT_HOME/www ] && sudo rm $CURRENT_HOME/www
@@ -301,7 +316,14 @@ elif [[ -n $purge && -n $letsencrypt ]]; then
 		fi
 
 		if [[ $answer == [Yy] || $(conf_read force-flag) == "true" ]]; then
-			sudo snap remove certbot
+			# Remove SSL Cron
+			if [[ -f /var/spool/cron/crontabs/root ]]; then
+				sudo sed -i '/MAILTO=/d' /var/spool/cron/crontabs/root
+				sudo sed -i '/certbot renew/d' /var/spool/cron/crontabs/root
+			fi
+			
+			# To remove a snap without generating a snapshot, use the additional --purge argument
+			sudo snap remove certbot --purge
 			[[ -L /usr/bin/certbot ]] && sudo rm -rf /usr/bin/certbot
 			conf_write nginx-tool-ssl purged
 			echo ""

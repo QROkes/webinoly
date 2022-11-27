@@ -414,7 +414,6 @@ server_reset() {
 	
 	# Regenerate NGINX conf files
 	if [[ $(conf_read nginx-optim) == "true" && $server_reset =~ ^(nginx|all)$ ]]; then		
-		sudo sed -i '/WebinolyCustom/,/WebinolyCustomEnd/{/.*/d}' /etc/nginx/fastcgi_params
 		sudo rm -rf /etc/nginx/common
 		#sudo rm -rf /etc/nginx/conf.d/* - Some custom files can be in this folder, so don't remove it, just the core files!
 		[[ -f /etc/nginx/conf.d/upstream.conf ]] && sudo rm -rf /etc/nginx/conf.d/upstream.conf
