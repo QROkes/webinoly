@@ -11,7 +11,7 @@
 </div>
 
 ## Overview
-A complete LEMP stack _– Linux Ubuntu + Nginx + MariaDB (or MySQL, you can choose) + PHP –_ or install individual packages according to your needs.
+A complete LEMP stack _– Linux Ubuntu + Nginx + MariaDB ~~*(or MySQL, you can choose, soon!)*~~ + PHP –_ or install individual packages according to your needs.
 
 **One of the most reliable configurations to host your websites and with Webinoly you can do it in just one step.**
 
