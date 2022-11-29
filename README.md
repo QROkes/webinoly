@@ -19,7 +19,7 @@ Webinoly provides a set of tools and commands that facilitate web server adminis
 - Unique commands to create, delete, disable sites.
 - Free SSL certificates for your sites with Let’s Encrypt and automatic server configuration.
 - HTTP/2 dramatically increases the speed of serving your content.
-- PHP v8.1 and support for earlier versions if needed (8.0 and 7.4) or the newest 8.2.
+- PHP v8.1 and support for earlier versions if needed (8.0 and 7.4) ~~or the newest 8.2 *(soon)*~~.
 - FastCGI Cache and Redis Object Cache for your WordPress sites.
 - Install WP in any subfolder and support for external databases, multisite and domain mapping.
 - Reverse Proxy for any app (Java, React, Node, Angular, Vue, etc) or to use your own domain with any external file repo like S3.
@@ -57,6 +57,10 @@ For complete documentation, please [visit our site](https://webinoly.com/documen
 Please open an issue first to discuss what you would like to change.
 
 You don't need developer skills to help, visit our site to know [How to Contribute to Webinoly](https://webinoly.com/en/contribute/).
+
+### Sponsors
+
+<p><a href="https://www.eltris.com/" target="_blank" rel="sponsored nofollow noopener"><img width="250px" src="https://cdn.qrokes.com/wp-content/uploads/sites/4/2022/11/Sponsor_Eltris-European-Hosting_Logo.jpg" /></a></p>
 
 ### Donations
 
