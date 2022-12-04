@@ -4,7 +4,7 @@
 dd_nginx_purge() {
 	if [[ -f /etc/datadog-agent/conf.d/nginx.d/conf.yaml ]]; then
 		if [[ ! -f /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml ]]; then
-			sudo sed -i '/WebinolyLocalhostStart/,/WebinolyLocalhostEnd/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/WebinolyLocalhostStart/,/WebinolyLocalhostEnd/{/.*/d}' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		fi
 		
 		sudo rm -rf /etc/datadog-agent/conf.d/nginx.d/conf.yaml
@@ -18,7 +18,7 @@ dd_nginx_purge() {
 dd_fpm_purge() {
 	if [[ -f /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml ]]; then
 		if [[ ! -f /etc/datadog-agent/conf.d/nginx.d/conf.yaml ]]; then
-			sudo sed -i '/WebinolyLocalhostStart/,/WebinolyLocalhostEnd/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/WebinolyLocalhostStart/,/WebinolyLocalhostEnd/{/.*/d}' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		fi
 
 		sudo rm -rf /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml
@@ -262,8 +262,8 @@ logs:
 
 dd_nginx() {
 	if [[ ! -f /etc/datadog-agent/conf.d/nginx.d/conf.yaml ]]; then
-		if [[ -z $(grep -F "WebinolyLocalhostStart" /etc/nginx/sites-available/$(conf_read tools-port)) ]]; then
-			sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-localhost' /etc/nginx/sites-available/$(conf_read tools-port)
+		if [[ -z $(grep -F "WebinolyLocalhostStart" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE) ]]; then
+			sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-localhost' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		fi
 		
 		sudo touch /etc/datadog-agent/conf.d/nginx.d/conf.yaml
@@ -297,8 +297,8 @@ instances:
 
 dd_fpm() {
 	if [[ ! -f /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml ]]; then
-		if [[ -z $(grep -F "WebinolyLocalhostStart" /etc/nginx/sites-available/$(conf_read tools-port)) ]]; then
-			sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-localhost' /etc/nginx/sites-available/$(conf_read tools-port)
+		if [[ -z $(grep -F "WebinolyLocalhostStart" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE) ]]; then
+			sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-localhost' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		fi
 		
 		sudo touch /etc/datadog-agent/conf.d/php_fpm.d/conf.yaml
@@ -413,7 +413,7 @@ dd_purge() {
 		sudo rm -rf /usr/share/keyrings/datadog-archive-keyring.gpg*
 		sudo rm -rf /etc/apt/sources.list.d/datadog.list
 		
-		[[ -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && sudo sed -i '/WebinolyLocalhostStart/,/WebinolyLocalhostEnd/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+		[[ -f /etc/nginx/sites-available/$ADMIN_TOOLS_SITE ]] && sudo sed -i '/WebinolyLocalhostStart/,/WebinolyLocalhostEnd/{/.*/d}' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		echo "${gre}Datadog Agent has been removed successfully from your server!${end}"
 	else
 		echo "${red}[ERROR] Datadog Agent is not installed on your server!${end}"

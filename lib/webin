@@ -75,12 +75,12 @@ system_info() {
 	if [[ $(conf_read mysql) == "true" ]]; then
 		
 		# Check if file exist because in legacy it doesn't!
-		if [[ $(conf_read mysql-tool-pma) == "true" && -f /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Version.php ]]; then
-			local pmaver=$(grep -E "public const VERSION = '[0-9\.]+'.*;" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Version.php | cut -f 2 -d "'")
+		if [[ $(conf_read mysql-tool-pma) == "true" && -f /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/libraries/classes/Version.php ]]; then
+			local pmaver=$(grep -E "public const VERSION = '[0-9\.]+'.*;" /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/libraries/classes/Version.php | cut -f 2 -d "'")
 		
 		# Legacy support: before v5.1.0 (Feb 23, 2021) version is found here:
 		elif [[ $(conf_read mysql-tool-pma) == "true" ]]; then
-			local pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$(conf_read tools-port)/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'")
+			local pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'")
 		
 		elif [[ $(conf_read mysql-tool-pma) != "true" ]]; then
 			local pmaver="Not installed!"
@@ -530,21 +530,28 @@ change_tools_port() {
 	if [[ -z $port || ( -n $oldport && $port == $oldport ) ]]; then
 		echo "${gre}Tools-Port not changed! ${end}"
 	elif [[ $port =~ ^[0-9]+$ && $port -ge 0 && $port -le 65535 ]]; then
-		if [[ -f /etc/nginx/sites-available/$port ]]; then
-			echo "${red}[ERROR] Conflict naming found $tools_port sitename is already in use!${end}"
+		if [[ -n $(conf_read tools-site) && -f /etc/nginx/sites-available/$(conf_read tools-site) ]]; then
+			readonly NEW_ADMIN_TOOLS_SITE="$(conf_read tools-site):${port}"
+		else
+			readonly NEW_ADMIN_TOOLS_SITE="default:${port}"
+		fi
+		
+		if [[ -f /etc/nginx/sites-available/$NEW_ADMIN_TOOLS_SITE ]]; then
+			echo "${red}[ERROR] Conflict naming found $NEW_ADMIN_TOOLS_SITE sitename is already in use!${end}"
 			exit 1
 		fi
 		
-		if [[ $(conf_read nginx) == "true" && -d /var/www/$oldport ]]; then
+		if [[ $(conf_read nginx) == "true" && -d /var/www/$ADMIN_TOOLS_SITE ]]; then
 			# MV in some edge cases fails to rename, specially when so much files are within the directories.
-			sudo mkdir -p /var/www/$port
-			sudo cp -rp /var/www/$oldport/* /var/www/$port
-			sudo rm -rf /var/www/$oldport
+			sudo mkdir -p /var/www/$NEW_ADMIN_TOOLS_SITE
+			sudo cp -rp /var/www/$ADMIN_TOOLS_SITE/* /var/www/$NEW_ADMIN_TOOLS_SITE
+			sudo rm -rf /var/www/$ADMIN_TOOLS_SITE
 			
-			sudo mv /etc/nginx/sites-available/$oldport /etc/nginx/sites-available/$port
-			sudo rm /etc/nginx/sites-enabled/$oldport
-			sudo ln -s /etc/nginx/sites-available/$port /etc/nginx/sites-enabled/$port
-			sudo sed -i "s/${oldport}/${port}/g"  /etc/nginx/sites-available/$port
+			sudo mv /etc/nginx/sites-available/$ADMIN_TOOLS_SITE /etc/nginx/sites-available/$NEW_ADMIN_TOOLS_SITE
+			sudo rm /etc/nginx/sites-enabled/$ADMIN_TOOLS_SITE
+			sudo ln -s /etc/nginx/sites-available/$NEW_ADMIN_TOOLS_SITE /etc/nginx/sites-enabled/$NEW_ADMIN_TOOLS_SITE
+			sudo sed -i "s/${oldport}/${port}/g"  /etc/nginx/sites-available/$NEW_ADMIN_TOOLS_SITE
+			sudo sed -i "s/$ADMIN_TOOLS_SITE/$NEW_ADMIN_TOOLS_SITE/g"  /etc/nginx/sites-available/$NEW_ADMIN_TOOLS_SITE
 		fi
 		
 		conf_write tools-port $port
@@ -567,68 +574,94 @@ set_tools_site() {
 	if [[ -z $tools_site ]]; then
 		echo "${red}[ERROR] Please, enter a valid value!${end}"
 		exit 1
-	elif [[ -f /etc/nginx/sites-available/$tools_site && -f /etc/nginx/sites-available/$(conf_read tools-port) && $tools_site != "default" ]]; then
+	elif [[ $tools_site == $(conf_read tools-site) ]]; then
+		echo "${gre}Tools-Site not changed! ${end}"
+	elif [[ -f /etc/nginx/sites-available/$tools_site && -f /etc/nginx/sites-available/$ADMIN_TOOLS_SITE && $tools_site != "default" ]]; then
 		# Check for previous assigned domain and remove
 		if [[ -n $(conf_read tools-site) ]]; then
-			sudo sed -i '/server_name/d' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/server_name/d' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			# In case SSL is enabled
-			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) default_server deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) default_server;" /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo sed -i '/headers-https.conf/d' /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo sed -i '/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/.*/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) default_server deferred;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) default_server;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i '/headers-https.conf/d' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE # For legacy (old sites) support!
+			sudo sed -i '/headers.conf;/c \	include common/header.conf;' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i '/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/.*/d}' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		fi
 		
 		# Assign new domain/site
 		sername=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$tools_site | grep -F "server_name" | sed -e 's/^[ \t]*//')
-		sudo sed -i "/error_log/a \	${sername}" /etc/nginx/sites-available/$(conf_read tools-port)
-		sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
-		sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port);" /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i "/error_log/a \	${sername}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+		sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) deferred;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+		sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port);" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+		sudo sed -i "s/$ADMIN_TOOLS_SITE/${tools_site}:$(conf_read tools-port)/g"  /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		
 		# If SSL is enabled
 		if [[ $(is_ssl $tools_site) == "true" ]]; then
-			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) ssl http2 deferred;" /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) ssl http2;" /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) ssl http2 deferred;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) ssl http2;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			
 			local ssl_cer=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$tools_site | grep -F "ssl_certificate " | tr -d '\t')
 			local ssl_key=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$tools_site | grep -F "ssl_certificate_key " | tr -d '\t')
 			local ssl_tru=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$tools_site | grep -F "ssl_trusted_certificate " | tr -d '\t')
 			
-			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s#ssl_certificate .*;#$ssl_cer#}" /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s#ssl_certificate_key .*;#$ssl_key#}" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s#ssl_certificate .*;#$ssl_cer#}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s#ssl_certificate_key .*;#$ssl_key#}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			
 			if [[ -z $ssl_tru ]]; then
-				sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/ssl_stapling/d}' /etc/nginx/sites-available/$(conf_read tools-port)
-				sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/ssl_trusted_certificate/d}' /etc/nginx/sites-available/$(conf_read tools-port)
+				sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/ssl_stapling/d}' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+				sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/ssl_trusted_certificate/d}' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			else
-				sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s#ssl_trusted_certificate .*;#$ssl_tru#}" /etc/nginx/sites-available/$(conf_read tools-port)
+				sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s#ssl_trusted_certificate .*;#$ssl_tru#}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			fi
 			
-			sudo sed -i '/locations.conf/a \	include common/headers-https.conf;' /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo sed -i "/WebinolySSLend/i \	error_page 497  https:\/\/\$host:\$server_port\$request_uri;" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i '/header.conf;/c \	include common/headers.conf;' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i "/WebinolySSLend/i \	error_page 497  https:\/\/\$host:\$server_port\$request_uri;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			create_blackhole_cert
 		fi
 		
 		# Default blackhole for requests different from our assigned Tools-Site
-		sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-blackhole' /etc/nginx/sites-available/$(conf_read tools-port)
-		sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/<port>/$(conf_read tools-port)/}" /etc/nginx/sites-available/$(conf_read tools-port)
+		sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-blackhole' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+		sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/<port>/$(conf_read tools-port)/}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		if [[ $(is_ssl $tools_site) == "false" ]]; then
-			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/ssl_certificate/d}" /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/error_page/d}" /etc/nginx/sites-available/$(conf_read tools-port)
-			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/ssl //}" /etc/nginx/sites-available/$(conf_read tools-port)
+			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/ssl_certificate/d}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/error_page/d}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/ssl //}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			echo "${red}It's highly recommended having an SSL Cert enabled on this site. ${end}"
 		fi
+		
+		# MV in some edge cases fails to rename, specially when so much files are within the directories.
+		sudo mkdir -p /var/www/${tools_site}:$(conf_read tools-port)
+		sudo cp -rp /var/www/$ADMIN_TOOLS_SITE/* /var/www/${tools_site}:$(conf_read tools-port)
+		sudo rm -rf /var/www/$ADMIN_TOOLS_SITE
+		sudo mv /etc/nginx/sites-available/$ADMIN_TOOLS_SITE /etc/nginx/sites-available/${tools_site}:$(conf_read tools-port)
+		sudo rm -rf /etc/nginx/sites-enabled/$ADMIN_TOOLS_SITE
+		sudo ln -s /etc/nginx/sites-available/${tools_site}:$(conf_read tools-port) /etc/nginx/sites-enabled/${tools_site}:$(conf_read tools-port)
+		
+		sudo chown -R www-data:www-data /var/www
+		[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
 		
 		conf_write tools-site $tools_site
 		echo "${gre}Domain${blu} ${tools_site}:$(conf_read tools-port) ${gre}was successfully assigned to access your server tools!${end}"
 	elif [[ $tools_site == "default" ]]; then
-		sudo rm -rf /etc/nginx/sites-available/$(conf_read tools-port)
-		sudo cp /opt/webinoly/templates/general/admin_tools.conf /etc/nginx/sites-available/$(conf_read tools-port)
-		sudo sed -i "s/<port>/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$(conf_read tools-port)
+		# MV in some edge cases fails to rename, specially when so much files are within the directories.
+		sudo mkdir -p /var/www/default:$(conf_read tools-port)
+		sudo cp -rp /var/www/$ADMIN_TOOLS_SITE/* /var/www/default:$(conf_read tools-port)
+		sudo rm -rf /var/www/$ADMIN_TOOLS_SITE
+		sudo rm -rf /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+		sudo cp /opt/webinoly/templates/general/admin_tools.conf /etc/nginx/sites-available/default:$(conf_read tools-port)
+		sudo sed -i "s/<port>/$(conf_read tools-port)/g"  /etc/nginx/sites-available/default:$(conf_read tools-port)
+		sudo sed -i "s/<admin_tools_sitename>/default:$(conf_read tools-port)/g"  /etc/nginx/sites-available/default:$(conf_read tools-port)
+		sudo rm -rf /etc/nginx/sites-enabled/$ADMIN_TOOLS_SITE
+		sudo ln -s /etc/nginx/sites-available/default:$(conf_read tools-port) /etc/nginx/sites-enabled/default:$(conf_read tools-port)
+		
+		sudo chown -R www-data:www-data /var/www
+		[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
+		
 		conf_write tools-site default
 		echo "${gre}Tools Site settings has been reset successfully!${end}"
-	elif [[ -f /etc/nginx/sites-available/$tools_site && ! -f /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
+	elif [[ -f /etc/nginx/sites-available/$tools_site && ! -f /etc/nginx/sites-available/$ADMIN_TOOLS_SITE ]]; then
 		echo "${red}[ERROR] Tools Site is not enabled! ${end}"
 		exit 1
 	else

@@ -620,9 +620,9 @@ export_server() {
 	
 	# Create TAR file
 	[[ -d /var/www/html ]] && local exclude="--exclude=/var/www/html" || local exclude=""
-	[[ -d /var/www/$(conf_read tools-port) ]] && local exclude="$exclude --exclude=/var/www/$(conf_read tools-port)"
-	[[ -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && local exclude="$exclude --exclude=/etc/nginx/sites-available/$(conf_read tools-port)"
-	[[ -L /etc/nginx/sites-enabled/$(conf_read tools-port) ]] && local exclude="$exclude --exclude=/etc/nginx/sites-enabled/$(conf_read tools-port)"
+	[[ -d /var/www/$ADMIN_TOOLS_SITE ]] && local exclude="$exclude --exclude=/var/www/$ADMIN_TOOLS_SITE"
+	[[ -f /etc/nginx/sites-available/$ADMIN_TOOLS_SITE ]] && local exclude="$exclude --exclude=/etc/nginx/sites-available/$ADMIN_TOOLS_SITE"
+	[[ -L /etc/nginx/sites-enabled/$ADMIN_TOOLS_SITE ]] && local exclude="$exclude --exclude=/etc/nginx/sites-enabled/$ADMIN_TOOLS_SITE"
 	[[ -f /etc/nginx/sites-available/default ]] && local exclude="$exclude --exclude=/etc/nginx/sites-available/default"
 	[[ -L /etc/nginx/sites-enabled/default ]] && local exclude="$exclude --exclude=/etc/nginx/sites-enabled/default"
 	

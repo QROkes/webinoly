@@ -689,14 +689,15 @@ delete_all_sites() {
 	do
 		[[ ${delete_all,,} == "keep-db" ]] && delete="keep-db" || delete="force"
 		domain=$(echo $site | cut -f 5 -d "/")
-		[[ $domain != "default" && $domain != $(conf_read tools-port) && $domi != *".dpkg-"* ]] && deletesite
+		[[ $domain != "default" && $domain != $ADMIN_TOOLS_SITE && $domi != *".dpkg-"* ]] && deletesite
 	done
 	
 	# Delete all files - double check!
 	# -rf is necessary to not generate an error when is empty.
-	sudo rm -rf /etc/nginx/sites-available/!(default|$(conf_read tools-port)|*".dpkg-"*)
-	sudo rm -rf /etc/nginx/sites-enabled/!(default|$(conf_read tools-port))
-	sudo rm -rf /var/www/!(html|$(conf_read tools-port))
+	# Tools-Site must be always default at this point. (don't use the global var, because this value can change on the fly if tools-site domain/site was deleted)
+	sudo rm -rf /etc/nginx/sites-available/!(default|default:$(conf_read tools-port)|*".dpkg-"*)
+	sudo rm -rf /etc/nginx/sites-enabled/!(default|default:$(conf_read tools-port))
+	sudo rm -rf /var/www/!(html|default:$(conf_read tools-port))
 	sudo rm -rf /etc/nginx/conf.d/upstream_proxy.conf
 	echo ""
 	echo "${gre}All sites and data has been deleted successfully!${end}"
@@ -722,8 +723,19 @@ createsite() {
 	[[ -z $tld ]] && echo "${dim}[WARNING] Domain name is not a valid TLD (Top Level Domain).${end}"
 	
 	# Check domain and then prevent reserved characters for file names.
-	if [[ $(is_domain $domain) != "true" ]]; then
+	is_url $domain -split
+	if [[ -n $url_scheme || -n $url_path ]]; then
+		echo "${red}[ERROR] Domain names should not contain scheme or path. ${dim}(Use example.com instead of https://example.com/path) ${end}"
+		exit 1
+	fi
+	if [[ $(is_domain $domain_name) != "true" ]]; then
 		echo "${red}[ERROR] Domain names can only contain letters, numbers or a hyphen; can not start or end with a hyphen or period or having two periods together, and can be up to 67 characters long.${end}"
+		exit 1
+	fi
+	
+	# Temporal check: sites with custom port not allowed, only for admin tools site.
+	if [[ -n $url_port && $domain != $ADMIN_TOOLS_SITE ]]; then
+		echo "${red}[ERROR] Sites with custom port are not allowed! ${end}"
 		exit 1
 	fi
 	
@@ -790,7 +802,7 @@ createsite() {
 	fi
 	
 	# Check if only-error log is enabled
-	if [[ $(conf_read global-access-log-off) == "true" && $domain != $(conf_read tools-port) ]]; then
+	if [[ $(conf_read global-access-log-off) == "true" && $domain != $ADMIN_TOOLS_SITE ]]; then
 		sudo log $domain -only-error=on > /dev/null 2>&1
 	else
 		sudo log $domain -only-error=off > /dev/null 2>&1
@@ -1864,7 +1876,7 @@ list_sites() {
 	for site in "/etc/nginx/sites-available"/*
 	do
 		local domi=$(echo $site | cut -f 5 -d "/")
-		[[ $domi == "default" || $domi == $(conf_read tools-port) || $domi == *".dpkg-"* ]] && continue
+		[[ $domi == "default" || $domi == $ADMIN_TOOLS_SITE || $domi == *".dpkg-"* ]] && continue
 		
 		if [[ $list != "true" ]]; then
 			[[ ${list,,} == "disabled" && -L /etc/nginx/sites-enabled/$domi ]] && continue

@@ -2,6 +2,11 @@
 
 
 webinoly_verify() {
+# Not run when update stack is running!
+if [[ $(conf_read stack-update) == "running" ]]; then
+	echo "${blu}${dim}Verify skipped because update stack is in process...${end}"
+	return
+fi
 
 # Webinoly Verify command
 echo "${blu}${dim}Verifying integrity of the entire Webinoly system...${end}${red}"
@@ -379,20 +384,28 @@ fi
 
 # NGINX tools site
 if [[ $(conf_read nginx) == "true" ]]; then
-	if [[ ! -f /etc/nginx/sites-available/$(conf_read tools-port) && $(conf_read php) == "true" ]]; then
-		echo "- [ERROR] File: /etc/nginx/sites-available/$(conf_read tools-port) not found!"
+	if [[ -z $ADMIN_TOOLS_SITE ]]; then
+		echo "- [ERROR] ADMIN_TOOLS_SITE variable is corrupted!" # You never know!
 		local ver_two_err="1"
 	fi
-	if [[ ! -d /var/www/$(conf_read tools-port) && $(conf_read php) == "true" ]]; then
-		echo "- [ERROR] Folder: /var/www/$(conf_read tools-port) not found!"
+	if [[ -n $(conf_read tools-port) && -n $(conf_read tools-site) && ( ! -f /etc/nginx/sites-available/$(conf_read tools-site) || ! -f /etc/nginx/sites-enabled/$(conf_read tools-site) ) ]]; then
+		echo "- [ERROR] Tools-Site seems to have a domain configured, but this site does not exist! ($(conf_read tools-site))"
+		local ver_two_err="1"
+	fi
+	if [[ ! -f /etc/nginx/sites-available/$ADMIN_TOOLS_SITE ]]; then
+		echo "- [ERROR] File: /etc/nginx/sites-available/$ADMIN_TOOLS_SITE not found!"
+		local ver_two_err="1"
+	fi
+	if [[ ! -d /var/www/$ADMIN_TOOLS_SITE ]]; then
+		echo "- [ERROR] Folder: /var/www/$ADMIN_TOOLS_SITE not found!"
 		local ver_two_err="1"
 	fi
 	if [[ -z $(conf_read tools-port) ]]; then
 		echo "- [ERROR] Port Tools is not set or not found!"
 		local ver_two_err="1"
 	fi
-	if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/nginx_status && $(conf_read php) == "true" ]]; then
-		echo "- [ERROR] File: /var/www/$(conf_read tools-port)/htdocs/nginx_status not found!"
+	if [[ ! -f /var/www/$ADMIN_TOOLS_SITE/htdocs/nginx_status ]]; then
+		echo "- [ERROR] File: /var/www/$ADMIN_TOOLS_SITE/htdocs/nginx_status not found!"
 		local ver_two_err="1"
 	fi
 fi
@@ -411,7 +424,7 @@ if [[ -z $critical_mode ]]; then
 	fi
 
 	if [[ $(conf_read nginx) != "true" && -n $(conf_read tools-port) ]]; then
-		if [[ -f /etc/nginx/sites-available/$(conf_read tools-port) || -d /var/www/$(conf_read tools-port) ]]; then
+		if [[ -f /etc/nginx/sites-available/$ADMIN_TOOLS_SITE || -d /var/www/$ADMIN_TOOLS_SITE ]]; then
 			echo "${dim}- [WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!${end}${red}"
 			local ver_two_war="1"
 		fi
@@ -515,16 +528,16 @@ fi
 
 # PHP Tools
 if [[ $(conf_read php) == "true" && $(conf_read nginx) == "true" ]]; then
-	if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/ping ]]; then
-		echo "- [ERROR] File: /var/www/$(conf_read tools-port)/htdocs/ping not found!"
+	if [[ ! -f /var/www/$ADMIN_TOOLS_SITE/htdocs/ping ]]; then
+		echo "- [ERROR] File: /var/www/$ADMIN_TOOLS_SITE/htdocs/ping not found!"
 		local ver_three_err="1"
 	fi
-	if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/status ]]; then
-		echo "- [ERROR] File: /var/www/$(conf_read tools-port)/htdocs/status not found!"
+	if [[ ! -f /var/www/$ADMIN_TOOLS_SITE/htdocs/status ]]; then
+		echo "- [ERROR] File: /var/www/$ADMIN_TOOLS_SITE/htdocs/status not found!"
 		local ver_three_err="1"
 	fi
-	if [[ ! -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
-		echo "- [ERROR] File: /var/www/$(conf_read tools-port)/htdocs/php/index.php not found!"
+	if [[ ! -f /var/www/$ADMIN_TOOLS_SITE/htdocs/php/index.php ]]; then
+		echo "- [ERROR] File: /var/www/$ADMIN_TOOLS_SITE/htdocs/php/index.php not found!"
 		local ver_three_err="1"
 	fi
 fi
@@ -536,11 +549,11 @@ if [[ -z $critical_mode ]]; then
 	fi
 
 	if [[ $(conf_read php) != "true" && $(conf_read nginx) == "true" ]]; then
-		if [[ -f /var/www/$(conf_read tools-port)/htdocs/status ]]; then
+		if [[ -f /var/www/$ADMIN_TOOLS_SITE/htdocs/status ]]; then
 			echo "${dim}- [WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!${end}${red}"
 			local ver_three_war="1"
 		fi
-		if [[ -f /var/www/$(conf_read tools-port)/htdocs/php/index.php ]]; then
+		if [[ -f /var/www/$ADMIN_TOOLS_SITE/htdocs/php/index.php ]]; then
 			echo "${dim}- [WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!${end}${red}"
 			local ver_three_war="1"
 		fi
@@ -687,7 +700,7 @@ if [[ -z $critical_mode ]]; then
 		local ver_four_war="1"
 	fi
 
-	if [[ ( -d /var/www/$(conf_read tools-port)/htdocs/pma || -d /usr/share/phpmyadmin ) && $(conf_read mysql-tool-pma) != "true" ]]; then
+	if [[ ( -d /var/www/$ADMIN_TOOLS_SITE/htdocs/pma || -d /usr/share/phpmyadmin ) && $(conf_read mysql-tool-pma) != "true" ]]; then
 		echo "${dim}- [WARNING] Seems like MySQL Tools (PhpMyAdmin) are enabled but Webinoly can not detect it!${end}${red}"
 		local ver_four_war="1"
 	fi
@@ -880,8 +893,8 @@ if [[ $(conf_read php-tool-redis) == "true" ]]; then
 	fi
 fi
 
-if [[ $(conf_read mysql-tool-pma) == "true" && ! -d /var/www/$(conf_read tools-port)/htdocs/pma ]]; then
-	echo "- [ERROR] Folder: /var/www/$(conf_read tools-port)/htdocs/pma not found!"
+if [[ $(conf_read mysql-tool-pma) == "true" && ! -d /var/www/$ADMIN_TOOLS_SITE/htdocs/pma ]]; then
+	echo "- [ERROR] Folder: /var/www/$ADMIN_TOOLS_SITE/htdocs/pma not found!"
 	local ver_seven_err="1"
 fi
 if [[ $(conf_read php-tool-memcached) == "true" && ! -f /usr/bin/memcached ]]; then
@@ -1052,7 +1065,7 @@ if [[ -z $critical_mode ]]; then
 	for ver_site in "/etc/nginx/sites-available"/*
 	do
 		local ver_domi=$(echo $ver_site | cut -f 5 -d "/")
-		if [[ $ver_domi != "html" && $ver_domi != $(conf_read tools-port) ]]; then
+		if [[ $ver_domi != "html" && $ver_domi != $ADMIN_TOOLS_SITE ]]; then
 			if [[ $(is_wp $ver_domi) == "true" ]]; then
 				if [[ ! -s /etc/nginx/.htpasswd && ! -s /etc/nginx/apps.d/.htpasswd-$ver_domi && $(is_wp_auth $ver_domi) == "true" ]]; then
 					echo "${blu}${dim}- [INFO] HTTP Authentication Credentials not found for $ver_domi${end}${red}"

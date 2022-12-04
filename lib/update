@@ -7,6 +7,8 @@ echo "${bol}"
 read -n 1 -s -r -p "Press any key to continue..."
 echo ""
 echo "${end}${dim}This is going to take a little bit of time...${end}"
+conf_write stack-update running
+api-events_update wysus
 sleep 1
 
 
@@ -316,11 +318,24 @@ oneseven_to_oneight() {
 	
 	# Remove the old kernel method
 	sudo sed -i '/WebinolyStart/,/WebinolyEnd/{/.*/d}' /etc/sysctl.conf
+
+	# New Admin Tools site!
+	if [[ -n $(conf_read tools-port) && -d /var/www/$(conf_read tools-port) && -f /etc/nginx/sites-available/$(conf_read tools-port) ]]; then
+		sudo mkdir -p /var/www/$ADMIN_TOOLS_SITE
+		sudo cp -rp /var/www/$(conf_read tools-port)/* /var/www/$ADMIN_TOOLS_SITE
+		sudo rm -rf /var/www/$(conf_read tools-port)
+		sudo mv /etc/nginx/sites-available/$(conf_read tools-port) /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+		sudo rm -rf /etc/nginx/sites-enabled/$(conf_read tools-port)
+		sudo ln -s /etc/nginx/sites-available/$ADMIN_TOOLS_SITE /etc/nginx/sites-enabled/$ADMIN_TOOLS_SITE
+		sudo sed -i "s#www/$(conf_read tools-port)/htdocs#www/$ADMIN_TOOLS_SITE/htdocs#g"  /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+		sudo sed -i "s#$(conf_read tools-port).access.log#${ADMIN_TOOLS_SITE}.access.log#g"  /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+		sudo sed -i "s#$(conf_read tools-port).error.log#${ADMIN_TOOLS_SITE}.error.log#g"  /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+		# Fix permissions not needed - it will be done in server-reset later!
+	fi
 	
 }
 
-# New MySQL login: here to prevent errors during update process!
-[[ ${oldver//.} -lt 18 && $(conf_read mysql) == "true" ]] && sudo webinoly -server-reset=mysql
+
 
 # Version numbers without point
 [[ ${oldver//.} -lt 11 ]] && onezero_to_oneone
@@ -332,5 +347,7 @@ oneseven_to_oneight() {
 [[ ${oldver//.} -lt 17 ]] && onesix_to_oneseven
 [[ ${oldver//.} -lt 18 ]] && oneseven_to_oneight
 
+api-events_update wysue
+conf_delete stack-update
 sudo webinoly -server-reset
 echo "${gre}Your server-configuration has been successfully updated!${end}"

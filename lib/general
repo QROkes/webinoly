@@ -70,6 +70,28 @@ conf_write() {
 # ***********************************************
 # Useful variables   ****************************
 # ***********************************************
+
+
+# STOP and exit if not root or sudo.
+if [[ $(whoami) != "root" ]]; then
+	echo "${red}Please run this script as root or using sudo.${end}"
+	exit 1
+fi
+
+# Check for BASH Shell
+# This is a very "shity" method, but checking if file exists is very reliable
+# If modified: this same script is in installer, general lib and verify
+if [[ $(conf_read shell-check) != "false" && -n $(echo $(tty) | grep -Eo "pts/[0-9]+") && -n $(logname) ]]; then
+	pre_pid=$(ps -au | grep -E "pts/[0-9]+[ ]+S[s]?[ ]+" | sed '/sudo/d' | tail -n 1)	
+	[[ -n $pre_pid ]] && shell_pid=$(echo $pre_pid | awk '{print $2}')
+	[[ -n $shell_pid && -f /proc/$shell_pid/cmdline ]] && shell_current=$(tr -d '\000' < /proc/$shell_pid/cmdline)
+	[[ -n $shell_pid && -f /proc/$shell_pid/status ]] && shell_status=$(grep -Eo '^Name:.*bash.*' /proc/$shell_pid/status) # Double check!!!
+
+	if [[ -n $shell_current && $shell_current != *"bash"* && -z $shell_status ]]; then
+		echo "${red}[WARNING] Seems like you are using an interactive shell different than BASH! ${dim}($(echo $pre_pid | awk '{print $1}'):${shell_current}) ${end}"
+	fi
+fi
+
 # MySQL folder
 if [[ $(conf_read db-engine) == "mysql" ]]; then
 	readonly MYSQL_CONF_PATH="/etc/mysql/mysql.conf.d"
@@ -88,24 +110,16 @@ else
 	readonly CURRENT_USER="root"
 fi
 
-# Check for BASH Shell
-# This is a very "shity" method, but checking if file exists is very reliable
-# If modified: this same script is in installer, general lib and verify
-if [[ $(conf_read shell-check) != "false" && -n $(echo $(tty) | grep -Eo "pts/[0-9]+") && -n $(logname) ]]; then
-	pre_pid=$(ps -au | grep -E "pts/[0-9]+[ ]+S[s]?[ ]+" | sed '/sudo/d' | tail -n 1)	
-	[[ -n $pre_pid ]] && shell_pid=$(echo $pre_pid | awk '{print $2}')
-	[[ -n $shell_pid && -f /proc/$shell_pid/cmdline ]] && shell_current=$(tr -d '\000' < /proc/$shell_pid/cmdline)
-	[[ -n $shell_pid && -f /proc/$shell_pid/status ]] && shell_status=$(grep -Eo '^Name:.*bash.*' /proc/$shell_pid/status) # Double check!!!
-
-	if [[ -n $shell_current && $shell_current != *"bash"* && -z $shell_status ]]; then
-		echo "${red}[WARNING] Seems like you are using an interactive shell different than BASH! ${dim}($(echo $pre_pid | awk '{print $1}'):${shell_current}) ${end}"
+# Admin Tools Path
+if [[ -n $(conf_read tools-port) && -n $(conf_read tools-site) && -f /etc/nginx/sites-available/$(conf_read tools-site) ]]; then
+	readonly ADMIN_TOOLS_SITE="$(conf_read tools-site):$(conf_read tools-port)"
+else
+	if [[ -n $(conf_read tools-port) ]]; then
+		readonly ADMIN_TOOLS_SITE="default:$(conf_read tools-port)"
+	else
+		# Fresh installation, dynvar is empty!
+		readonly ADMIN_TOOLS_SITE="default:${tools_port_default}"
 	fi
-fi
-
-# STOP and exit if not root or sudo.
-if [[ $(whoami) != "root" ]]; then
-	echo "${red}Please run this script as root or using sudo.${end}"
-	exit 1
 fi
 
 
@@ -328,13 +342,11 @@ check_mysql_connection() {
 	elif [[ ${1,,} == "localhost" && $(conf_read mysql) == "true" ]]; then
 		# In case of custom DB user
 		if [[ -n $2 && -n $3 ]]; then
-			local dbu=$2
-			local dbp=$3
 			[[ -n $4 ]] && local query="use $4"
-			sudo mysql --connect-timeout=10 --user=$dbu -p$dbp -e "$query" 2>/dev/null
+			sudo mysql --connect-timeout=10 --user=$2 -p$3 -e "$query" 2>/dev/null
 			[[ $? != "0" ]] && echo "false" || echo "true"
 		else
-			sudo mysql --connect-timeout=10 --user=$dbu -e "$query"
+			sudo mysql --connect-timeout=10 --user=admin -e "$query"
 			if [[ $? != "0" ]]; then
 				echo "${red}============================================" >&2
 				echo "    [Error]  Database conection failed." >&2
@@ -590,16 +602,26 @@ remove_nginx_default_server() {
 
 
 check_for_parameters() {
-	# Global variables: domain, tld, subdomain, main_domain, sub_domain, empty_param
+	# Global variables: domain, domain_name, domain_port, tld, subdomain, main_domain, sub_domain, empty_param
+	# Note: domain and domain_name are the same except when port is present (example.com:22), then port is removed from domain_name (example.com)
 	
 	# Check for domain parameter if is first parameter and have no hyphen at the begining.
 	if [[ -n $1 && $(echo $1 | cut -c-1) != "-" ]]; then
 		domain=$1
+		domain_name=$1
 		shift
+		
+		# Check for port and remove it!
+		domain_port=$(echo $domain | cut -d':' -f 2- -s)
+		if [[ $domain_port =~ ^[0-9]+$ && $domain_port -ge 0 && $domain_port -le 65535 ]]; then
+			domain_name=$(echo $domain | cut -d':' -f 1 -s)
+		else
+			unset domain_port
+		fi
 		
 		local count=1
 		while true; do
-			tld=$(echo $domain | cut -d'.' -f ${count}- -s)
+			tld=$(echo $domain_name | cut -d'.' -f ${count}- -s)
 			if grep -Fxq "$tld" /opt/webinoly/lib/public_suffix_list.dat || [ -z $tld ]; then
 				break
 			fi
@@ -608,8 +630,8 @@ check_for_parameters() {
 		[[ $count -gt 2 ]] && subdomain="true" || subdomain="false"
 		
 		if [[ $subdomain == "true" && -n $tld ]]; then
-			main_domain=$(echo $domain | cut -d'.' -f $[$count-1]- -s)
-			sub_domain=$(echo $domain | cut -d'.' -f -$[$count-2] -s)
+			main_domain=$(echo $domain_name | cut -d'.' -f $[$count-1]- -s)
+			sub_domain=$(echo $domain_name | cut -d'.' -f -$[$count-2] -s)
 		fi
 	fi
 	

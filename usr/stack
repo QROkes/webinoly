@@ -202,10 +202,10 @@ elif [[ -n $purge && -n $php ]]; then
 			sudo rm -rf /opt/webinoly/templates/source/main.cf
 			
 			# Remove tools-site
-			if [[ -d /var/www/$(conf_read tools-port)/htdocs ]]; then
-				sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/status
-				sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/ping
-				sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/php
+			if [[ -d /var/www/$ADMIN_TOOLS_SITE/htdocs ]]; then
+				sudo rm -rf /var/www/$ADMIN_TOOLS_SITE/htdocs/status
+				sudo rm -rf /var/www/$ADMIN_TOOLS_SITE/htdocs/ping
+				sudo rm -rf /var/www/$ADMIN_TOOLS_SITE/htdocs/php
 			fi
 			
 			conf_write php purged
@@ -531,7 +531,7 @@ elif [[ -n $purge && -n $pma ]]; then
 		fi
 
 		if [[ $answer == [Yy] || $(conf_read force-flag) == "true" ]]; then
-			sudo rm -rf /var/www/$(conf_read tools-port)/htdocs/pma
+			sudo rm -rf /var/www/$ADMIN_TOOLS_SITE/htdocs/pma
 			conf_write mysql-tool-pma purged
 			echo ""
 			echo "${gre}phpMyAdmin has been deleted successfully! ${end}"

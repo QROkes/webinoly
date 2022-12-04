@@ -427,7 +427,7 @@ elif [[ -n $cache && -f /etc/nginx/sites-available/$domain ]]; then
 # Delete site (should be here after cache for precedence)
 elif [[ -n $delete && -f /etc/nginx/sites-available/$domain ]]; then
 	api-events_update si6
-	if [[ $domain == "default" || $domain == $(conf_read tools-port) ]]; then
+	if [[ $domain == "default" || $domain == $ADMIN_TOOLS_SITE ]]; then
 		echo "${red}[ERROR] System sites can not be removed!${end}"
 		exit 1
 	elif [[ -n $subfolder ]]; then
