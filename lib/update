@@ -302,13 +302,13 @@ oneseven_to_oneight() {
 		local domi=$(echo $site | cut -f 5 -d "/")
 		if [[ $domi != "html" && $domi != $(conf_read tools-port) && -f /etc/nginx/sites-available/$domi ]]; then
 			# All sites
-			sed -i "/include \/var\/www\/$domi\/\*-nginx.conf;/a \	include \/etc\/nginx\/conf.d\/\*.conf.svr;" /etc/nginx/sites-available/$domi
+			sed -i "/include \/var\/www\/$domi\/\*-nginx.conf;/a \	include \/etc\/nginx\/conf.d\/\*.conf.srv;" /etc/nginx/sites-available/$domi
 			
 			# Parked: Shared Nginx conf for main site
 			if [[ $(is_parked $domi) == "true" ]]; then
 				local main=$(grep -G "root .*;" /etc/nginx/sites-available/$domi | cut -d'/' -f 4)
 				if [[ -f /etc/nginx/sites-available/$main ]]; then
-					sed -i "/include \/var\/www\/$main\/\*-nginx.conf;/a \	include \/etc\/nginx\/conf.d\/\*.conf.svr;" /etc/nginx/sites-available/$domi
+					sed -i "/include \/var\/www\/$main\/\*-nginx.conf;/a \	include \/etc\/nginx\/conf.d\/\*.conf.srv;" /etc/nginx/sites-available/$domi
 					sed -i "/include \/var\/www\/${main}\/\*-$(echo $main | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;/d" /etc/nginx/sites-available/$main
 					sed -i "/include \/var\/www\/$main\/\*-nginx.conf;/a \	include \/var\/www\/${main}\/\*-$(echo $main | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;" /etc/nginx/sites-available/$main
 				fi
@@ -346,6 +346,9 @@ oneseven_to_oneight() {
 [[ ${oldver//.} -lt 16 ]] && onefive_to_onesix
 [[ ${oldver//.} -lt 17 ]] && onesix_to_oneseven
 [[ ${oldver//.} -lt 18 ]] && oneseven_to_oneight
+
+# Update PIP packages!
+sudo pip3 install --upgrade duplicity 2>&1 | grep -v "pip as the 'root' user"
 
 api-events_update wysue
 conf_delete stack-update

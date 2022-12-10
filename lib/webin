@@ -645,20 +645,24 @@ set_tools_site() {
 		conf_write tools-site $tools_site
 		echo "${gre}Domain${blu} ${tools_site}:$(conf_read tools-port) ${gre}was successfully assigned to access your server tools!${end}"
 	elif [[ $tools_site == "default" ]]; then
-		# MV in some edge cases fails to rename, specially when so much files are within the directories.
-		sudo mkdir -p /var/www/default:$(conf_read tools-port)
-		sudo cp -rp /var/www/$ADMIN_TOOLS_SITE/* /var/www/default:$(conf_read tools-port)
-		sudo rm -rf /var/www/$ADMIN_TOOLS_SITE
-		sudo rm -rf /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
-		sudo cp /opt/webinoly/templates/general/admin_tools.conf /etc/nginx/sites-available/default:$(conf_read tools-port)
-		sudo sed -i "s/<port>/$(conf_read tools-port)/g"  /etc/nginx/sites-available/default:$(conf_read tools-port)
-		sudo sed -i "s/<admin_tools_sitename>/default:$(conf_read tools-port)/g"  /etc/nginx/sites-available/default:$(conf_read tools-port)
-		sudo rm -rf /etc/nginx/sites-enabled/$ADMIN_TOOLS_SITE
-		sudo ln -s /etc/nginx/sites-available/default:$(conf_read tools-port) /etc/nginx/sites-enabled/default:$(conf_read tools-port)
-		
-		sudo chown -R www-data:www-data /var/www
-		[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
-		
+		if [[ $ADMIN_TOOLS_SITE != "default:$(conf_read tools-port)" ]]; then
+			# MV in some edge cases fails to rename, specially when so much files are within the directories.
+			sudo mkdir -p /var/www/default:$(conf_read tools-port)
+			sudo cp -rp /var/www/$ADMIN_TOOLS_SITE/* /var/www/default:$(conf_read tools-port)
+			sudo rm -rf /var/www/$ADMIN_TOOLS_SITE
+			sudo rm -rf /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo cp /opt/webinoly/templates/general/admin_tools.conf /etc/nginx/sites-available/default:$(conf_read tools-port)
+			sudo sed -i "s/<port>/$(conf_read tools-port)/g"  /etc/nginx/sites-available/default:$(conf_read tools-port)
+			sudo sed -i "s/<admin_tools_sitename>/default:$(conf_read tools-port)/g"  /etc/nginx/sites-available/default:$(conf_read tools-port)
+			sudo rm -rf /etc/nginx/sites-enabled/$ADMIN_TOOLS_SITE
+			sudo ln -s /etc/nginx/sites-available/default:$(conf_read tools-port) /etc/nginx/sites-enabled/default:$(conf_read tools-port)
+			
+			sudo chown -R www-data:www-data /var/www
+			[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
+		else
+			# This is the case when importing a full site from backup!
+			echo "${blu}${dim}Tools data folder already exist, no need to re-create it!${end}"
+		fi
 		conf_write tools-site default
 		echo "${gre}Tools Site settings has been reset successfully!${end}"
 	elif [[ -f /etc/nginx/sites-available/$tools_site && ! -f /etc/nginx/sites-available/$ADMIN_TOOLS_SITE ]]; then

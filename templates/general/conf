@@ -174,15 +174,15 @@
 
 
 # Block/Deny files and extensions
-# Values:  <filename>|<filename>... (files txt|html|htm|md)
-# Values:  <ext>|<ext>... (extensions)
+# Values:  <filename>|<filename>... (with this extension only: txt|html|htm|md)
+# Values:  <ext>|<ext>... (any file using any of these extensions)
 # Note: This is a security feature, please don't modify unless you are sure about it.
-# Note: For example, any request to 'readme.txt' or 'name.log' will be blocked (case insensitive).
+# Note: For example, any request to 'readme.txt' or 'name.log' will be blocked (case insensitive) by default.
 # Note: To revert any changes and set the original Webinoly defaults, just #comment these two variables and then server-reset.
 # Note: You can remove some extensions like 'exe' if you are distributing installers, for instance, or you can add any of your preference.
 ###########################
-#locations-deny-files:readme|license|example|legalnotice|installation|changelog|wp-config
-#locations-deny-extensions:old|orig|original|php#|php~|php_bak|save|swo|asp|aspx|tpl|sh|bash|ba|bak|cfg|cgi|dll|git|hg|ini|jsp|log|mdb|out|sql|svn|swp|rdf|pem|ppk|asc|conf|dump|exe|msi|tar|gz|zip|bz2|7z
+#locations-deny-files:changelog|example|installation|legalnotice|license|readme|wp-config
+#locations-deny-extensions:7z|asc|asp|aspx|ba|bak|bash|bat|bin|bz2|c|cfg|cgi|class|com|conf|cpp|crt|cs|dat|db|dbf|deb|der|dll|dmg|dmp|dump|ear|exe|git|gz|h|hg|hqx|img|ini|iso|jar|jsp|log|mdb|msi|msm|msp|old|orig|original|out|pem|php#|php_bak|php~|pkg|pl|ppk|py|rar|rdf|rpm|run|save|sh|sql|srv|svn|swo|swp|sys|tar|taz|tcl|tgz|tk|tmp|tpl|tz|vb|war|wsf|z|zip
 
 
 # FastCGI Cache

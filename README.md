@@ -5,13 +5,13 @@
         <img src="https://img.shields.io/github/license/QROkes/webinoly" />
         <img src="https://img.shields.io/github/v/release/QROkes/webinoly?color=orange" />
 	</p>
-    <p><b>Optimized LEMP Web Server</b></br>
+    <p><b>Optimized NGINX Web Server</b></br>
     <i>A powerful set of commands for doing just about anything you could wish.</i></p>
     <p><a href="https://webinoly.com/">Official Website</a> | <a href="https://webinoly.com/documentation/">Documentation</a> | <a href="https://github.com/QROkes/webinoly/releases">Changelog</a></p>
 </div>
 
 ## Overview
-A complete LEMP stack _– Linux Ubuntu + Nginx + MariaDB ~~*(or MySQL, you can choose, soon!)*~~ + PHP –_ or install individual packages according to your needs.
+A complete LEMP stack _– Linux Ubuntu + Nginx + MariaDB (or MySQL, you can choose) + PHP –_ or install individual packages according to your needs.
 
 **One of the most reliable configurations to host your websites and with Webinoly you can do it in just one step.**
 
@@ -19,7 +19,7 @@ Webinoly provides a set of tools and commands that facilitate web server adminis
 - Unique commands to create, delete, disable sites.
 - Free SSL certificates for your sites with Let’s Encrypt and automatic server configuration.
 - HTTP/2 dramatically increases the speed of serving your content.
-- PHP v8.1 and support for earlier versions if needed (8.0 and 7.4) ~~or the newest 8.2 *(soon)*~~.
+- PHP v8.1 and support for earlier versions if needed (8.0 and 7.4) or the newest 8.2.
 - FastCGI Cache and Redis Object Cache for your WordPress sites.
 - Install WP in any subfolder and support for external databases, multisite and domain mapping.
 - Reverse Proxy for any app (Java, React, Node, Angular, Vue, etc) or to use your own domain with any external file repo like S3.

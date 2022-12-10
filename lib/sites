@@ -1300,6 +1300,12 @@ reverse_proxy() {
 		url_scheme="http"
 	fi
 
+	# After create-site this global variable is empty, because running multiple times
+	local local_url_scheme=$url_scheme
+	local local_url_host=$url_host
+	local local_url_port=$url_port
+	local local_url_path=$url_path
+
 	# Fix slash at the end when is alone, no real URI path!
 	if [[ $dedicated_reverse_proxy != "simple" && $url_path == "/" ]]; then
 		local proxydata=${proxydata:0:-1}
@@ -1336,10 +1342,10 @@ reverse_proxy() {
 	
 	if [[ $dedicated_reverse_proxy == "simple" ]]; then
 		# Force / at the end of the url for subfolders
-		[[ -n $url_path && $url_path != "/" && $(echo "${proxydata}" | rev | cut -c-1) != "/" ]] && proxydata="${proxydata}/"
+		[[ -n $local_url_path && $local_url_path != "/" && $(echo "${proxydata}" | rev | cut -c-1) != "/" ]] && proxydata="${proxydata}/"
 		sudo sed -i "s#<upstream_name>#${proxydata}#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	else
-		[[ -n $url_scheme ]] && sudo sed -i "s#proxy_pass <upstream_name>#proxy_pass ${url_scheme,,}://<upstream_name>#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
+		[[ -n $local_url_scheme ]] && sudo sed -i "s#proxy_pass <upstream_name>#proxy_pass ${local_url_scheme,,}://<upstream_name>#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
 		sudo sed -i "s#<upstream_name>#$(echo "$domain$subfolder" | sed "s/[^0-9A-Za-z]/_/g")#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
 		
 		# Create the upstream
@@ -1350,9 +1356,9 @@ reverse_proxy() {
 		fi
 
 		# Upstream server needs port, if empty, default is 80, so we need to fix it in case of https.
-		[[ -z $url_port && ${url_scheme,,} == "https" ]] && local fixport=":443"
+		[[ -z $local_url_port && ${local_url_scheme,,} == "https" ]] && local fixport=":443"
 
-		local upsvr="$(echo "${proxydata}${fixport}" | sed "s#${url_scheme}://##g")"
+		local upsvr="$(echo "${proxydata}${fixport}" | sed "s#${local_url_scheme}://##g")"
 		
 		echo "upstream $(echo "$domain$subfolder" | sed "s/[^0-9A-Za-z]/_/g") {
 	zone upstreams;
@@ -1372,7 +1378,7 @@ reverse_proxy() {
 	
 	# Set Host header for external sources, except when IP or Unix socket is used!
 	# Simple dedicated is also excluded because proxy_pass seems to not need it.
-	if [[ -n $upsvr && -n $proxydata && ${url_host} != "localhost" && $(is_url $url_host) != "ip" && $(is_url $url_host) != "unix" ]]; then
+	if [[ -n $upsvr && -n $proxydata && $local_url_host != "localhost" && $(is_url $local_url_host) != "ip" && $(is_url $local_url_host) != "unix" ]]; then
 		sudo sed -i "/#proxy_set_header Host /c\	proxy_set_header Host '${upsvr}';" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	fi
 	

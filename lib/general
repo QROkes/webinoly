@@ -710,6 +710,12 @@ is_url() {
 	# Output: http,https,ip,unix,true,false  Example: $(is_url $domain)
 	# Global variables when -split is set: url_scheme, url_host, url_path, url_port    Example: is_url $domain -split
 	
+	# Important, because they can have a previous value when runs multiple times.
+	unset url_scheme
+	unset url_host
+	unset url_path
+	unset url_port
+	
 	local scheme=$(echo "${1,,}" | cut -d':' -f 1 -s)
 	local host=$(echo "${1,,}" | cut -d':' -f 2 -s | cut -d'/' -f 3 -s)
 	local path=$(echo "${1,,}" | cut -d':' -f 2- -s | cut -d'/' -f 4- -s)
@@ -1384,7 +1390,7 @@ check_var() {
 	# Locations: Deny Extensions
 	elif [[ $1 == "locations-deny-extensions" ]]; then
 		if [[ -z $(conf_read locations-deny-extensions) ]]; then
-			local out="old|orig|original|php#|php~|php_bak|save|swo|asp|aspx|tpl|sh|bash|ba|bak|cfg|cgi|dll|git|hg|ini|jsp|log|mdb|out|sql|svn|swp|rdf|pem|ppk|asc|conf|dump|exe|msi|tar|gz|zip|bz2|7z"
+			local out="7z|asc|asp|aspx|ba|bak|bash|bat|bin|bz2|c|cfg|cgi|class|com|conf|cpp|crt|cs|dat|db|dbf|deb|der|dll|dmg|dmp|dump|ear|exe|git|gz|h|hg|hqx|img|ini|iso|jar|jsp|log|mdb|msi|msm|msp|old|orig|original|out|pem|php#|php_bak|php~|pkg|pl|ppk|py|rar|rdf|rpm|run|save|sh|sql|srv|svn|swo|swp|sys|tar|taz|tcl|tgz|tk|tmp|tpl|tz|vb|war|wsf|z|zip"
 		else
 			local out=$(conf_read locations-deny-extensions)
 		fi
@@ -1392,7 +1398,7 @@ check_var() {
 	# Locations: Deny Files
 	elif [[ $1 == "locations-deny-files" ]]; then
 		if [[ -z $(conf_read locations-deny-files) ]]; then
-			local out="readme|license|example|legalnotice|installation|changelog|wp-config"
+			local out="changelog|example|installation|legalnotice|license|readme|wp-config"
 		else
 			local out=$(conf_read locations-deny-files)
 		fi

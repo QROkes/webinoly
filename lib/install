@@ -213,7 +213,7 @@ php_install() {
 
 mysql_install() {
 	api-events_update im1
-	echo "${gre}MySQL version '$(conf_read mysql-ver)' is set as default.${end}"
+	echo "${gre}MySQL/MariaDB version '$(conf_read mysql-ver)' is set as default.${end}"
 	
 	# debconf-utils for unattended scripts
 	# debconf-get-selections | grep phpmyadmin   <<-- list conf variables
@@ -590,9 +590,15 @@ nginx_tool_bkp() {
 	sudo apt install -y debhelper dh-python python3 gnupg librsync-dev par2 pep8 pylint python3-pytest python3-pytest-cov python3-pytest-runner python3-dev python3-fasteners python3-future python3-mock python3-pexpect python3-setuptools python3-setuptools-scm rdiff rename rsync python3-pip python3-boto3
 	
 	# Duplicity installation directly from source
-	# Temporal fix to remove warning - wait for: https://github.com/pypa/pip/issues/10556 - remove from stack purge too!
+	# Temporal fix to remove warning - wait for: https://github.com/pypa/pip/issues/10556 - remove from stack purge too! --root-user-action=ignore | Remove from update function also
 	sudo pip3 install duplicity 2>&1 | grep -v "pip as the 'root' user"
-		
+	# In future, we need to do the correct way - using virtual env
+	#sudo apt install python3-venv
+	#sudo python3 -m venv /opt/duplicity/
+	#sudo /opt/duplicity/bin/pip install --upgrade pip
+	#sudo /opt/duplicity/bin/pip install duplicity
+	#sudo ln -s /opt/duplicity/bin/duplicity /usr/bin/duplicity
+	
 	# https://sourceforge.net/projects/ftplicity/files/duply%20%28simple%20duplicity%29/
 	sudo cp /opt/webinoly/templates/general/duply /usr/bin/
 	sudo chmod 755 /usr/bin/duply
