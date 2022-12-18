@@ -577,11 +577,11 @@ if [[ -z $critical_mode ]]; then
 		if ! [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0|8.1|8.2)$ ]]; then
 			echo "${dim}- [WARNING] Unknown PHP version!${end}${red}"
 			local ver_three_war="1"
-		elif [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2|7.3)$ ]]; then
+		elif [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4)$ ]]; then
 			echo "${dim}- [WARNING] You have an obsolete PHP version (${ver_php_ver}) installed that not even receive security updates!${end}${red}"
 			local ver_three_war="1"
-		elif [[ $ver_php_ver == "7.4" ]]; then
-			echo "${blu}${dim}- [INFO] PHP v8.0 or later is recommended to get an optimal perfomance! (Current: ${ver_php_ver}) ${end}${red}"
+		#elif [[ $ver_php_ver == "8.0" ]]; then
+		#	echo "${blu}${dim}- [INFO] PHP v8.1 or later is recommended to get an optimal perfomance! (Current: ${ver_php_ver}) ${end}${red}"
 		fi
 	fi
 

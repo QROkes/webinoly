@@ -829,15 +829,14 @@ clear_caches() {
 	fi
 	if [[ $clear_cache =~ ^(opcache|all)$ ]]; then
 		if [[ $(conf_read nginx) == "true" && $(conf_read php) == "true" ]]; then
-			port=$(conf_read tools-port)
-			if [[ ! -f /var/www/$port/htdocs/php/opcache/index.php ]]; then
-				sudo mkdir /var/www/$port/htdocs/php/opcache
-				sudo touch /var/www/$port/htdocs/php/opcache/index.php
-				echo '<?php opcache_reset(); echo "OK\n";' > /var/www/$port/htdocs/php/opcache/index.php
-				sudo chown -R www-data:www-data /var/www/$port/htdocs/php/opcache
-				sudo chmod 644 /var/www/$port/htdocs/php/opcache/index.php
+			if [[ ! -f /var/www/$ADMIN_TOOLS_SITE/htdocs/php/opcache/index.php ]]; then
+				sudo mkdir /var/www/$ADMIN_TOOLS_SITE/htdocs/php/opcache
+				sudo touch /var/www/$ADMIN_TOOLS_SITE/htdocs/php/opcache/index.php
+				echo '<?php opcache_reset(); echo "OK\n";' > /var/www/$ADMIN_TOOLS_SITE/htdocs/php/opcache/index.php
+				sudo chown -R www-data:www-data /var/www/$ADMIN_TOOLS_SITE/htdocs/php/opcache
+				sudo chmod 644 /var/www/$ADMIN_TOOLS_SITE/htdocs/php/opcache/index.php
 			fi
-			wget --spider --no-check-certificate --timeout=15 -t 1 localhost:$port/php/opcache/  > /dev/null 2>&1 &
+			wget --spider --no-check-certificate --timeout=15 -t 1 localhost:$(conf_read tools-port)/php/opcache/  > /dev/null 2>&1 &
 			echo "${gre}- OpCache has been successfully cleared!${end}"
 		else
 			echo "${red}[ERROR] We can not clear OpCache because PHP or NGINX are not installed!${end}"

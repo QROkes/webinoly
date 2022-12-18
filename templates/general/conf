@@ -108,6 +108,7 @@
 # Nginx Access Logs Disabled
 # Values: boolean (true/false)
 # Default: true
+# Note: This setting will be applied to new sites, or for existing sites 'access log' needs to be reenabled (same for global).
 # Same as: sudo log -only-error=on
 ###########################
 #global-access-log-off:true
