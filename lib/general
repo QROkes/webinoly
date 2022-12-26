@@ -639,7 +639,7 @@ check_for_parameters() {
 		local check=$(echo "${arg}" | cut -c-1)
 		local arg=${arg:1}
 		local par=$(echo "${arg}" | cut -d'=' -f 1 -s)
-		local val=$(echo "${arg}" | cut -d'=' -f 2 -s)
+		local val=$(echo "${arg}" | cut -d'=' -f 2- -s)
 		[[ -z $par ]] && par=$arg
 		[[ -z $val ]] && val=true
 		
