@@ -158,15 +158,17 @@ smtp_setup() {
 	elif [[ ! -f /etc/nginx/sites-available/$mainhost ]]; then
 		echo "${red}[ERROR] Main Host site not found in your server!${end}"
 		exit 1
-	elif [[ $(is_url $host) != "true" ]]; then
-		if [[ $(is_url $host) =~ ^(http|https)$ ]]; then
-			echo "${red}[ERROR] Invalid SMTP host! (HTTP/HTTPS can not be used in conjunction with SMTP protocol)${end}"
+	fi
+	
+	is_url $host -split
+	if [[ $url_type != "true" ]]; then
+		if [[ $url_type =~ ^(http|https)$ ]]; then
+			echo "${red}[ERROR] Invalid SMTP host! (HTTP/HTTPS scheme can not be used in conjunction with SMTP protocol)${end}"
 		else
 			echo "${red}[ERROR] Invalid SMTP host!${end}"
 		fi
 		exit 1
 	else
-		is_url $host -split
 		if [[ -n $url_port ]]; then
 			echo "${red}[ERROR] Invalid SMTP host! (Custom port is not supported)${end}"
 			exit 1

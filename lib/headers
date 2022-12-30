@@ -73,7 +73,7 @@ http_header_xfo() {
 	fi
 	
 	if [[ $header_data == "ALLOW-FROM" ]]; then
-		if [[ -z $(conf_read header-xfo-url) ]] || ! [[ $(is_url $(conf_read header-xfo-url)) =~ ^(http|https|ip|true)$ ]]; then
+		if [[ -z $(conf_read header-xfo-url) ]] || ! [[ $(is_url $(conf_read header-xfo-url)) =~ ^(http|https|true|http\+ip|https\+ip|ip)$ ]]; then
 			echo "${red}[ERROR] Invalid URL for X-Frame-Options header!${end}"
 			return 1
 		fi

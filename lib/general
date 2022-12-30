@@ -698,6 +698,7 @@ is_domain() {
 
 is_url_path() {
 	# Should start with / and after that all should be valid characters.
+	# https://stackoverflow.com/questions/4669692/valid-characters-for-directory-part-of-a-url-for-short-links
 	if [[ -n $1 && $1 =~ ^\/([\]A-Za-z0-9_\/\.:\!\*\'\[\(\)\;@\&\=\+\$\,\?#\~\%\-]+)?$ ]]; then
 		echo "true"
 	else
@@ -707,70 +708,114 @@ is_url_path() {
 
 
 is_url() {
-	# Output: http,https,ip,unix,true,false  Example: $(is_url $domain)
-	# Global variables when -split is set: url_scheme, url_host, url_path, url_port    Example: is_url $domain -split
+	# Output: http,https,true,http+ip,https+ip,ip,http+unix,https+unix,unix,false - Example: $(is_url $domain)
+	# Global variables when -split is set: url_type, url_scheme, url_host, url_path, url_port  -  Example: is_url $domain -split
+	
+	# Examples:
+	# example.com -> true
+	# http://example.com -> http
+	# https://example.com -> https
+	# 1.1.1.1 -> ip
+	# http://1.1.1.1 -> http+ip
+	# https://1.1.1.1 -> https+ip
+	# unix:/tmp/backend.socket:/uri/ -> unix
+	# http://unix:/tmp/backend.socket:/uri/ -> http+unix
+	# https://unix:/tmp/backend.socket:/uri/ -> https+unix
+	
+	# Unix sockets are mainly used in upstream and proxy_pass
+	# http://nginx.org/en/docs/http/ngx_http_upstream_module.html#upstream
+	# http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass
 	
 	# Important, because they can have a previous value when runs multiple times.
 	unset url_scheme
 	unset url_host
 	unset url_path
 	unset url_port
+	unset url_type
 	
+	# Here we are assuming URL with scheme
 	local scheme=$(echo "${1,,}" | cut -d':' -f 1 -s)
-	local host=$(echo "${1,,}" | cut -d':' -f 2 -s | cut -d'/' -f 3 -s)
-	local path=$(echo "${1,,}" | cut -d':' -f 2- -s | cut -d'/' -f 4- -s)
-	local port=$(echo "${1,,}" | cut -d':' -f 3 -s | cut -d'/' -f 1 )
+	local host=$(echo "${1,,}" | cut -d'/' -f 3 -s)
+	[[ $(echo $host | cut -d':' -f 2 -s) =~ ^[0-9]+$ ]] && local host=$(echo $host | cut -d':' -f 1) # We need this 2dn step to prevent http://example.com:/tmp (empty port)
+	local path=$(echo "${1,,}" | cut -d'/' -f 4- -s)
+	local port=$(echo "${1,,}" | cut -d'/' -f 3 -s | cut -d':' -f 2 -s)
 	local out="false"
 	
-	# In case of no-scheme format
+	# In case of URL with no-scheme
 	local hosted=$(echo "${1,,}" | cut -d'/' -f 1)
-	# In case of no-scheme have port included
 	[[ $(echo $hosted | cut -d':' -f 2 -s) =~ ^[0-9]+$ ]] && hosted=$(echo $hosted | cut -d':' -f 1)
 	
-	if [[ $1 =~ ^((http|https)+\:\/\/)?unix:(.+):(\/.*)?$ ]]; then
-		out="unix"
+	if [[ $1 =~ ^((http|https)+\:\/\/)?unix:\/[^\:]+(:\/.*)?$ ]]; then
+		unset port
 		if [[ $scheme == "unix" ]]; then
-			local host="$(echo "${1,,}" | cut -d':' -f 1-2 -s):"
+			local host="$(echo "${1,,}" | cut -d':' -f 1-2 -s)"
+			local path=$(echo "${1,,}" | cut -d':' -f 3- -s)
+			local out="unix"
+			unset scheme
 		else
-			local host="$(echo "${1,,}" | cut -d':' -f 2-3 -s):"
+			local host="$(echo "${1,,}" | cut -d':' -f 2-3 -s)"
 			local host=${host:2}
+			local path=$(echo "${1,,}" | cut -d':' -f 4- -s)
+			local out="${scheme}+unix"
 		fi
-		local path=$(echo "${1,,}" | rev | cut -d':' -f 1 -s | rev | cut -d '/' -f 2- -s)
-		local port=""
 	elif [[ $scheme =~ ^(http|https)$ ]]; then	
 		if [[ $(is_domain $host) != "true" && $(is_ip $host) != "true" ]]; then
-			out="false"
+			local out="false"
 		elif [[ -n $path && $(is_url_path /$path) != "true" ]]; then
-			out="false"
+			local out="false"
 		elif [[ -n $port ]] && ! [[ $port =~ ^[0-9]+$ && $port -ge 0 && $port -le 65535 ]]; then
-			out="false"
+			local out="false"
+		elif [[ $(is_ip $host) == "true" ]]; then
+			local out="${scheme}+ip"
 		else
-			out=$scheme
+			local out="${scheme}"
 		fi
 	elif [[ $(is_domain $hosted) == "true" || $(is_ip $hosted) == "true" ]]; then
-		scheme=""
-		host=$hosted
-		path=$(echo "${1,,}" | cut -d'/' -f 2- -s)
-		port=$(echo "${1,,}" | cut -d'/' -f 1 | cut -d':' -f 2 -s)
+		local scheme=""
+		local host=$hosted
+		local path=$(echo "${1,,}" | cut -d'/' -f 2- -s)
+		local port=$(echo "${1,,}" | cut -d'/' -f 1 | cut -d':' -f 2 -s)
 		
 		if [[ -n $path && $(is_url_path /$path) != "true" ]]; then
-			out="false"
+			local out="false"
 		elif [[ -n $port ]] && ! [[ $port =~ ^[0-9]+$ && $port -ge 0 && $port -le 65535 ]]; then
-			out="false"
+			local out="false"
 		elif [[ $(is_ip $hosted) == "true" ]]; then
-			out="ip"		
+			local out="ip"
 		else
-			out="true"
+			local out="true"
 		fi
 	else
-		out="false"
+		local out="false"
 	fi
 	
+	# If path doesn't begin with /, then add it!
+	# If there is no path, but the url ends with /, then / is a valid path, so show it as path!
+	[[ ( -n $path && $(echo "$path" | cut -c-1) != "/" ) || ( -z $path && $(echo "${1}" | rev | cut -c-1) == "/" ) ]] && local path="/$path"
+	[[ -n $path && $out =~ ^(unix|http\+unix|https\+unix)$ ]] && local path=":${path}"
+	
+	
+	# Final validation, just because we need to be really sure! (double check!!)
+	if [[ -n $scheme && -n $host && -n $port ]]; then
+		local url_final="${scheme}://${host}:${port}${path}"
+	elif [[ -z $scheme && -n $host && -n $port ]]; then
+		local url_final="${host}:${port}${path}"
+	elif [[ -n $scheme && -n $host && -z $port ]]; then
+		local url_final="${scheme}://${host}${path}"
+	elif [[ -z $scheme && -n $host && -z $port ]]; then
+		local url_final="${host}${path}"
+	fi
+	
+	[[ $url_final != ${1,,} ]] && out="false" # SHORT CIRCUIT!!!
+
+
+	# Final output!
 	if [[ $2 == "-split" && $out != "false" ]]; then
-		url_scheme=$scheme
-		url_host=$host
-		[[ -n $path || $(echo "${1}" | rev | cut -c-1) == "/" ]] && url_path="/$path" # Check if / is alone, it's also a valid path!
-		url_port=$port
+		[[ -n $scheme ]] && url_scheme=$scheme
+		[[ -n $path ]] && url_path=$path
+		[[ -n $port ]] && url_port=$port
+		url_host=$host # We are very sure these two vars are never empty! ;)
+		url_type=$out # empty/unset when false
 	elif [[ $2 != "-split" ]]; then
 		echo $out
 	fi

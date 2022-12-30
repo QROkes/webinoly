@@ -166,7 +166,7 @@ wpinstall() {
 					url_path=""
 					done="0"
 					[[ $type == [2345] ]] && exit 1 || continue 1
-				elif [[ $(is_url $dbhost) =~ ^(http|https|ip|true)$ ]]; then
+				elif [[ $url_type =~ ^(http|https|true|http\+ip|https\+ip|ip)$ ]]; then
 					local dburl=$url_host
 					local dbport=$url_port
 				else
@@ -1238,12 +1238,14 @@ parked_domain() {
 
 forward_domain() {
 	[[ -z $forward || $forward == "true" ]] &&	read -p "${gre}Destination domain: ${end}" forward
-	if ! [[ $(is_url $forward) =~ ^(http|https|true)$ ]]; then
+	[[ -n $forward ]] && is_url $forward -split
+	
+	if ! [[ $url_type =~ ^(http|https|true)$ ]]; then
 		echo "${red}[ERROR] Invalid destination domain!${end}"
 		exit 1
-	elif [[ $(is_url $forward) == "true" ]]; then
+	elif [[ $url_type == "true" ]]; then
 		forward="http://${forward}"
-	fi
+	fi 
 	
 	createsite
 	sudo rm -rf /var/www/$domain
@@ -1276,7 +1278,17 @@ reverse_proxy() {
 		read -p "${blu}URL address: ${end}" proxydata
 	fi
 	
-	if ! [[ -n $proxydata && $(is_url $proxydata) =~ ^(http|https|ip|unix|true)$ ]]; then
+	if [[ -n $proxydata ]]; then
+		is_url $proxydata -split
+		[[ -z $url_scheme ]] && local proxydata="http://${proxydata}"
+		# Force / at the end of the url for subfolders
+		[[ $dedicated_reverse_proxy == "simple" && -n $url_path && $url_path != "/" && $(echo "${proxydata}" | rev | cut -c-1) != "/" ]] && local proxydata="${proxydata}/"
+		# Fix slash at the end when is alone, no real URI path!
+		[[ $dedicated_reverse_proxy != "simple" && $url_path == "/" ]] && local proxydata=${proxydata:0:-1}
+		is_url $proxydata -split # Reset in case data has changed!
+	fi	
+	
+	if ! [[ $url_type =~ ^(http|https|true|http\+ip|https\+ip|ip|http\+unix|https\+unix|unix)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid host and port!${end}"
 		exit 1
 	elif [[ -f /etc/nginx/sites-available/$domain && -z $subfolder && (($(is_empty_root_site $domain) == "full" && $(is_proxy $domain) != "false") || $(is_empty_root_site $domain) == "false") ]]; then
@@ -1291,30 +1303,9 @@ reverse_proxy() {
 	elif [[ $(is_empty_root_site $domain) == "full" && $(is_dedicated_proxy_domain $domain) == "false" ]]; then
 		echo "${red}[ERROR] This domain is currently set as Empty (blank), to create a site you need to add your own NGINX configuration. ${dim}(/var/www/example.com/*-nginx.conf)!${end}"
 		exit 1
-	fi
-	
-	is_url $proxydata -split
-	# URL Scheme correction... Just in case of empty scheme, http is default!
-	if [[ -z $url_scheme || ${url_scheme,,} == "unix" ]]; then
-		local proxydata="http://${proxydata}"
-		url_scheme="http"
-	fi
-
-	# After create-site this global variable is empty, because running multiple times
-	local local_url_scheme=$url_scheme
-	local local_url_host=$url_host
-	local local_url_port=$url_port
-	local local_url_path=$url_path
-
-	# Fix slash at the end when is alone, no real URI path!
-	if [[ $dedicated_reverse_proxy != "simple" && $url_path == "/" ]]; then
-		local proxydata=${proxydata:0:-1}
-		unset url_path
-	fi
-
-	# URI part (subfolders) are not allowed because the proxy configuration we are using includes the static files location, this location block is using regex which is not allowed!
-	# Dedicated reverse proxy are also affected (don't have static file location block), but subfolders are not allowed in upstream servers.
-	if [[ $dedicated_reverse_proxy != "simple" && -n $url_path ]]; then
+	elif [[ $dedicated_reverse_proxy != "simple" && -n $url_path ]]; then
+		# URI part (subfolders) are not allowed because the proxy configuration we are using includes the static files location, this location block is using regex which is not allowed!
+		# Dedicated reverse proxy are also affected (don't have static file location block), but subfolders are not allowed in upstream servers.
 		echo "${red}[ERROR] Subfolder in your endpoint or upstream server is not supported!${dim} (URI: $url_path)${end}"
 		exit 1
 	fi
@@ -1340,12 +1331,12 @@ reverse_proxy() {
 		sudo sed -i "/^location \/ {/c location $subfolder/ {" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	fi
 	
+	is_url $proxydata -split # Run again! (after create-site these global variables are empty, because running multiple times)
+	
 	if [[ $dedicated_reverse_proxy == "simple" ]]; then
-		# Force / at the end of the url for subfolders
-		[[ -n $local_url_path && $local_url_path != "/" && $(echo "${proxydata}" | rev | cut -c-1) != "/" ]] && proxydata="${proxydata}/"
 		sudo sed -i "s#<upstream_name>#${proxydata}#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	else
-		[[ -n $local_url_scheme ]] && sudo sed -i "s#proxy_pass <upstream_name>#proxy_pass ${local_url_scheme,,}://<upstream_name>#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
+		[[ -n $url_scheme ]] && sudo sed -i "s#proxy_pass <upstream_name>#proxy_pass ${url_scheme,,}://<upstream_name>#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
 		sudo sed -i "s#<upstream_name>#$(echo "$domain$subfolder" | sed "s/[^0-9A-Za-z]/_/g")#g" /etc/nginx/apps.d/$domain$subname-proxy.conf
 		
 		# Create the upstream
@@ -1356,9 +1347,9 @@ reverse_proxy() {
 		fi
 
 		# Upstream server needs port, if empty, default is 80, so we need to fix it in case of https.
-		[[ -z $local_url_port && ${local_url_scheme,,} == "https" ]] && local fixport=":443"
+		[[ -z $url_port && $url_type =~ ^(https|https\+ip)$ ]] && local fixport=":443"
 
-		local upsvr="$(echo "${proxydata}${fixport}" | sed "s#${local_url_scheme}://##g")"
+		local upsvr="$(echo "${proxydata}${fixport}" | sed "s#${url_scheme}://##g")"
 		
 		echo "upstream $(echo "$domain$subfolder" | sed "s/[^0-9A-Za-z]/_/g") {
 	zone upstreams;
@@ -1378,7 +1369,7 @@ reverse_proxy() {
 	
 	# Set Host header for external sources, except when IP or Unix socket is used!
 	# Simple dedicated is also excluded because proxy_pass seems to not need it.
-	if [[ -n $upsvr && -n $proxydata && $local_url_host != "localhost" && $(is_url $local_url_host) != "ip" && $(is_url $local_url_host) != "unix" ]]; then
+	if [[ -n $upsvr && $url_host != "localhost" && $url_type =~ ^(http|https|true)$ ]]; then
 		sudo sed -i "/#proxy_set_header Host /c\	proxy_set_header Host '${upsvr}';" /etc/nginx/apps.d/$domain$subname-proxy.conf
 	fi
 	

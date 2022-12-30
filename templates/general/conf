@@ -278,6 +278,8 @@
 # HTTP Header: X-Frame-Options
 # Values: deny | sameorigin | allow-from | off
 # Default: sameorigin
+# Note: This header is no longer recommended and support will be removed very soon from Webinoly.
+# Note: The Content-Security-Policy HTTP header has a frame-ancestors directive which obsoletes this header for supporting browsers.
 # Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
 ###########################
 #header-xfo:sameorigin
@@ -297,6 +299,7 @@
 # Values: boolean (true/false)
 # Default: false
 # Note: This header is no longer recommended and support will be removed very soon from Webinoly.
+# Note: These protections are largely unnecessary in modern browsers when sites implement a strong Content-Security-Policy.
 # Note: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
 # Note: When true is set: (X-XSS-Protection: 1; mode=block)
 ###########################
