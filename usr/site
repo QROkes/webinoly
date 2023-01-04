@@ -372,13 +372,13 @@ elif [[ -n $clone_from ]]; then
 	
 	if [[ $(is_wp $clone_from $subfolder) == "true" ]]; then
 		#We need to call this function in the parent shell to preserve variables and avoid asking two times for the same values in case of external db.
-		wp_conf_retrieve $clone_from true false $subfolder 
+		wp_conf_retrieve $clone_from true false $subfolder
 		iswpclone="true"
 		
-		if [[ -z $wp_dbhost || -z $wp_dbname || -z $wp_dbpref ]]; then
+		if [[ -z $wp_dbhost ||-z $wp_dbhost_host || -z $wp_dbname || -z $wp_dbpref ]]; then
 			echo "${red}[ERROR] Can not retrieve WP data ${dim}(WP Configuration corrupted)!${end}"
 			exit 1
-		elif [[ ( $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
+		elif [[ ( $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) != "true" ) || ( $wp_dbhost_host != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
 			exit 1
 		elif [[ $(is_wp_multisite $clone_from $subfolder) != "false" ]]; then
 			echo "${red}[ERROR] WordPress Multisite can not be cloned!${end}"

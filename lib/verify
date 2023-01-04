@@ -1071,12 +1071,16 @@ if [[ -z $critical_mode ]]; then
 					echo "${blu}${dim}- [INFO] HTTP Authentication Credentials not found for $ver_domi${end}${red}"
 				fi
 				
-				wp_conf_retrieve $ver_domi false > /dev/null
-				if [[ $wp_dbhost == "localhost" && -n $wp_dbuser && -n $wp_dbpass && -n $wp_dbname && $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname) != "true" ]]; then
-					echo "${dim}- [WARNING] Database connection failed for your WP site $ver_domi (localhost) ${end}${red}"
+				wp_conf_retrieve $ver_domi false false
+				if [[ $wp_dbhost_host == "localhost" && ( -z $wp_dbuser || -z $wp_dbpass || -z $wp_dbname || $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname $mysql_param) != "true" ) ]]; then
+					echo "${red}${dim}- [WARNING] Database connection failed for your WP site $ver_domi (${wp_dbhost}) ${end}${red}"
 					local ver_nine_war="1"
-				elif [[ -n $wp_dbhost && $wp_dbhost != "localhost" && -n $extdb_url && -n $extdb_port && -n $wp_dbuser && -n $wp_dbpass && -n $wp_dbname && $(check_mysql_connection $extdb_url $extdb_port $wp_dbuser $wp_dbpass $wp_dbname 2>/dev/null) != "true" ]]; then
-					echo "${dim}- [WARNING] Database connection failed for your WP site $ver_domi (${wp_dbhost}) ${end}${red}"
+				
+				elif [[ $wp_dbhost_host == "localhost" && -n $wp_dbhost_port ]]; then
+					echo "${blu}${dim}- [INFO] Localhost with custom port could have a negative impact in performance (Site: $ver_domi | Host: ${wp_dbhost}).${end}${red}"
+					
+				elif [[ $wp_dbhost_host != "localhost" && ( -z $wp_dbhost_host || -z $wp_dbhost_port || -z $wp_dbuser || -z $wp_dbpass || -z $wp_dbname || $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass $wp_dbname) != "true" ) ]]; then
+					echo "${red}${dim}- [WARNING] Database connection failed for your WP site $ver_domi (${wp_dbhost}) ${end}${red}"
 					local ver_nine_war="1"
 				fi
 			fi

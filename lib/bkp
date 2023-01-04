@@ -87,19 +87,19 @@ bkp_local_db() {
 				exit 1
 			else
 				wp_conf_retrieve $wp true true $subfolder
-				[[ $wp_dbhost == "localhost" ]] && check_for_mysql
+				[[ $wp_dbhost_host == "localhost" ]] && check_for_mysql
 				[[ -n $subfolder ]] && local subname=$(echo $subfolder | sed "s/\//_/g")
 			fi
 			
-			if [[ $wp_dbhost != "localhost" && ( -z $extdb_user || -z $extdb_pass || -z $extdb_url || -z $extdb_port ) ]]; then
+			if [[ $wp_dbhost_host != "localhost" && ( -z $extdb_user || -z $extdb_pass || -z $extdb_url || -z $extdb_port ) ]]; then
 				echo "${red}[ERROR] Invalid data for External Database!${end}"
 				exit 1
 			
 			# Duplicate check: we need this only to prevent error in the next is_wp_installed
-			elif [[ $wp_dbhost != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ]]; then
+			elif [[ $wp_dbhost_host != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ]]; then
 				echo "${red}[ERROR] External DB Connection failed!${end}"
 				exit 1
-			elif [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ]]; then
+			elif [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) != "true" ]]; then
 				echo "${red}[ERROR] Localhost DB Connection failed!${end}"
 				exit 1
 				
@@ -176,7 +176,7 @@ bkp_local_db() {
 	[[ -z $filename ]] && local filename="webinoly-backup-db_${fn}_$(date +%F)-$(date +%T).sql"
 
 	
-	if [[ ( $wp_dbhost == "localhost" || -z $external_db ) && $(check_mysql_connection localhost) == "true" ]]; then
+	if [[ ( $wp_dbhost_host == "localhost" || -z $external_db ) && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
 		sudo mysqldump --user=admin --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
 	elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
 		sudo mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
@@ -739,35 +739,41 @@ export_site() {
 
 		# Include database backup for this site!
 		if [[ -z $skip_db ]]; then
-			if [[ $(conf_read mysql) == "true" && $(is_wp $siteto $subfolder) == "true" && $( wp_config_read $siteto DB_HOST $subfolder ) == "localhost" && $(is_wp_installed $siteto $subfolder) == "true" ]]; then
-				# We use dbnames instead of domains because is easier to include subfolders
-				if [[ -z $export_db_list ]]; then
-					local export_db_list="$( wp_config_read $siteto DB_NAME $subfolder )"
-				else
-					local export_db_list="$export_db_list,$( wp_config_read $siteto DB_NAME $subfolder )"
+			if [[ $(is_wp $siteto $subfolder) == "true" ]]; then
+				wp_conf_retrieve $siteto false false $subfolder
+				if [[ $(conf_read mysql) == "true" && $wp_dbhost_host == "localhost" && $(is_wp_installed $siteto $subfolder) == "true" && -n $wp_dbname ]]; then
+					# We use dbnames instead of domains because is easier to include subfolders
+					if [[ -z $export_db_list ]]; then
+						local export_db_list="$wp_dbname"
+					else
+						local export_db_list="$export_db_list,$wp_dbname"
+					fi
+					echo "${blu}${dim}Database included: ${siteto}${subfolder} ${end}"
+				elif [[ $wp_dbhost_host == "localhost" ]]; then
+					echo "${red}${dim}Database not found or empty: ${siteto}${subfolder} ${end}"
+				elif [[ -n $wp_dbhost_host && $wp_dbhost_host != "localhost" ]]; then
+					echo "${red}${dim}External database not included: ${siteto}${subfolder} ${end}"
 				fi
-				echo "${blu}${dim}Database included: ${siteto}${subfolder} ${end}"
-			elif [[ $(is_wp $siteto $subfolder) == "true" && $( wp_config_read $siteto DB_HOST $subfolder ) == "localhost" ]]; then
-				echo "${red}${dim}Database not found or empty: ${siteto}${subfolder} ${end}"
-			elif [[ $(is_wp $siteto $subfolder) == "true" && $( wp_config_read $siteto DB_HOST $subfolder ) != "localhost" ]]; then
-				echo "${red}${dim}External database not included: ${siteto}${subfolder} ${end}"
 			fi
 			
 			# Check if site contains WP in subfolders
 			for sit in "/etc/nginx/apps.d/${siteto}_"*-wpcommon.conf
 			do 
 				local suby="/$(echo $sit | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
-				if [[ -n $suby && $(conf_read mysql) == "true" && -f /var/www/$siteto/htdocs$suby/wp-config.php && $( wp_config_read $siteto DB_HOST $suby ) == "localhost" && $(is_wp_installed $siteto $suby) == "true" ]]; then
-					if [[ -z $export_db_list ]]; then
-						local export_db_list="$( wp_config_read $siteto DB_NAME $suby )"
-					else
-						local export_db_list="$export_db_list,$( wp_config_read $siteto DB_NAME $suby )"
+				if [[ $(is_wp $siteto $suby) == "true" ]]; then
+					wp_conf_retrieve $siteto false false $suby
+					if [[ -n $suby && $(conf_read mysql) == "true" && $wp_dbhost_host == "localhost" && $(is_wp_installed $siteto $suby) == "true" && -n $wp_dbname ]]; then
+						if [[ -z $export_db_list ]]; then
+							local export_db_list="$wp_dbname"
+						else
+							local export_db_list="$export_db_list,$wp_dbname"
+						fi
+						echo "${blu}${dim}Database included: ${siteto}${suby} ${end}"
+					elif [[ -n $suby && $wp_dbhost_host == "localhost" ]]; then
+						echo "${red}${dim}Database not found or empty: ${siteto}${suby} ${end}"
+					elif [[ -n $suby && -n $wp_dbhost_host && $wp_dbhost_host != "localhost" ]]; then
+						echo "${red}${dim}External database not included: ${siteto}${suby} ${end}"
 					fi
-					echo "${blu}${dim}Database included: ${siteto}${suby} ${end}"
-				elif [[ -n $suby && -f /var/www/$siteto/htdocs$suby/wp-config.php && $( wp_config_read $siteto DB_HOST $suby ) == "localhost" ]]; then
-					echo "${red}${dim}Database not found or empty: ${siteto}${suby} ${end}"
-				elif [[ -n $suby && -f /var/www/$siteto/htdocs$suby/wp-config.php && $( wp_config_read $siteto DB_HOST $suby ) != "localhost" ]]; then
-					echo "${red}${dim}External database not included: ${siteto}${suby} ${end}"
 				fi
 				local suby=""
 			done
@@ -882,18 +888,17 @@ import_site() {
 		# Database recovery - create users because they are not imported
 		if [[ -n $db_create_users && $overwrite != "on" && $(is_wp $domain) == "true" ]]; then
 			wp_conf_retrieve $domain true false
-				
-			if [[ $wp_dbhost == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin | grep -ow $wp_dbname) ]]; then
+			if [[ $wp_dbhost_host == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin "${mysql_params[@]}" | grep -ow $wp_dbname) ]]; then
 				echo "${blu}${dim}Restoring database for${end}${dim} $domain ${blu}${dim}site!${end}"
 				
 				# Check if user exists
-				if [[ -z $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" | grep -ow $wp_dbuser) ]]; then
-					sudo mysql --connect-timeout=10 --user=admin <<_EOF_
+				if [[ -z $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" "${mysql_params[@]}" | grep -ow $wp_dbuser) ]]; then
+					sudo mysql --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
 CREATE USER '${wp_dbuser}'@'localhost' IDENTIFIED BY '${wp_dbpass}';
 GRANT $(db_user_role) on ${wp_dbname}.* to '${wp_dbuser}'@'localhost';
 FLUSH PRIVILEGES;
 _EOF_
-				elif [[ $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname) != "true" ]]; then
+				elif [[ $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname $mysql_param) != "true" ]]; then
 					echo "${red}${dim}[ERROR] Database cannot be restored, seems like a user with the same name already exists.${end}"
 				else
 					echo "${blu}${dim}DB user already exists and a successful connection can be established, so we will use it.${end}"
@@ -908,18 +913,17 @@ _EOF_
 				local suby="/$(echo $sit | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 				if [[ -n $suby && -f /var/www/$domain/htdocs$suby/wp-config.php ]]; then
 					wp_conf_retrieve $domain true false $suby
-				
-					if [[ $wp_dbhost == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin | grep -ow $wp_dbname) ]]; then
+					if [[ $wp_dbhost_host == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin "${mysql_params[@]}" | grep -ow $wp_dbname) ]]; then
 						echo "${blu}${dim}Restoring database for${end}${dim} ${domain}${suby} ${blu}${dim}site!${end}"
 						
 						# Check if user exists
-						if [[ -z $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" | grep -ow $wp_dbuser) ]]; then
-							sudo mysql --connect-timeout=10 --user=admin <<_EOF_
+						if [[ -z $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" "${mysql_params[@]}" | grep -ow $wp_dbuser) ]]; then
+							sudo mysql --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
 CREATE USER '${wp_dbuser}'@'localhost' IDENTIFIED BY '${wp_dbpass}';
 GRANT $(db_user_role) on ${wp_dbname}.* to '${wp_dbuser}'@'localhost';
 FLUSH PRIVILEGES;
 _EOF_
-						elif [[ $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname) != "true" ]]; then
+						elif [[ $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname $mysql_param) != "true" ]]; then
 							echo "${red}${dim}[ERROR] Database cannot be restored, seems like a user with the same name already exists.${end}"
 						else
 							echo "${blu}${dim}DB user already exists and a successful connection can be established, so we will use it.${end}"

@@ -324,45 +324,72 @@ check_for_mysql_client() {
 
 
 check_mysql_connection() {
+	# Examples for admin connection:
+	# Localhost: $(check_mysql_connection localhost)
+	# Unix socket: $(check_mysql_connection localhost /var/run/mysqld/mysqld.sock)
+	# Custom port: $(check_mysql_connection localhost 3307)
+	# External DB: $(check_mysql_connection $dburl $dbport $dburoot $dbproot)
+	
+	# Examples for especific User connection:
+	# Localhost: $(check_mysql_connection localhost $wp_dbuser $wp_dbpass)
+	# Unix socket: $(check_mysql_connection localhost $wp_dbuser $wp_dbpass /var/run/mysqld/mysqld.sock)
+	# Custom port: $(check_mysql_connection localhost $wp_dbuser $wp_dbpass 3307)
+	# External DB: $(check_mysql_connection $extdb_url $extdb_port $wp_dbuser $wp_dbpass)
+	
+	# Examples for especific DBname/User connection:
+	# Note: Error message is not displayed!
+	# Localhost: $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname)
+	# Unix socket: $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname /var/run/mysqld/mysqld.sock)
+	# Custom port: $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname 3307)
+	# External DB: $(check_mysql_connection $extdb_url $extdb_port $wp_dbuser $wp_dbpass $wp_dbname)
+	
 	local query="quit"
-
-	if [[ -n $1 && ${1,,} != "localhost" && -n $2 && -n $3 && -n $4 ]]; then
+	local error_display="true"
+	
+	if [[ -n $1 && ${1,,} != "localhost" && $(is_url $1) =~ ^(http|https|true|http\+ip|https\+ip|ip)$ && -n $2 && -n $3 && -n $4 ]]; then
 		check_for_mysql_client
-		[[ -n $5 ]] && local query="use $5"
-		sudo mysql --connect-timeout=10 -h "$1" -P "$2" -u"$3" -p"$4" -e "$query"
-		if [[ $? != "0" ]]; then
-			echo "${red}============================================" >&2
-			echo "    [Error]  Database conection failed." >&2
-			echo "============================================${end}" >&2
-			echo "" >&2
-			echo "false"
-		else
-			echo "true"
+		if [[ -n $5 ]]; then
+			local query="use $5"
+			local error_display="false"
 		fi
+		sudo mysql --connect-timeout=10 -h "$1" -P "$2" -u"$3" -p"$4" -e "$query" 2>/dev/null
+		[[ $? != "0" ]] && local out="false"
 	elif [[ ${1,,} == "localhost" && $(conf_read mysql) == "true" ]]; then
-		# In case of custom DB user
 		if [[ -n $2 && -n $3 ]]; then
-			[[ -n $4 ]] && local query="use $4"
-			sudo mysql --connect-timeout=10 --user=$2 -p$3 -e "$query" 2>/dev/null
-			[[ $? != "0" ]] && echo "false" || echo "true"
-		else
-			sudo mysql --connect-timeout=10 --user=admin -e "$query"
-			if [[ $? != "0" ]]; then
-				echo "${red}============================================" >&2
-				echo "    [Error]  Database conection failed." >&2
-				echo "============================================${end}" >&2
-				echo "" >&2
-				echo "false"
-			else
-				echo "true"
+			if [[ -S $4 ]]; then
+				local mysql_params="-S${4}"
+			elif [[ $4 =~ ^[0-9]+$ && $4 -ge 0 && $4 -le 65535 ]]; then
+				local mysql_params=(-P${4} --protocol=TCP)
+			elif [[ -n $4 ]]; then
+				local query="use $4"
+				[[ -S $5 ]] && local mysql_params="-S${5}"
+				[[ $5 =~ ^[0-9]+$ && $5 -ge 0 && $5 -le 65535 ]] && local mysql_params=(-P${5} --protocol=TCP)
 			fi
+			# We need the protocol socket fixed to prevent warnings when custom port is used.
+			sudo mysql --connect-timeout=10 --user=$2 -p$3 -e "$query" "${mysql_params[@]}" 2>/dev/null
+			[[ $? != "0" ]] && local out="false"
+			local error_display="false"
+		else
+			# In case of Unix socket or localhost with custom port
+			[[ -S $2 ]] && local mysql_params="-S${2}"
+			[[ $2 =~ ^[0-9]+$ && $2 -ge 0 && $2 -le 65535 ]] && local mysql_params=(-P${2} --protocol=TCP)
+			sudo mysql --connect-timeout=10 --user=admin -e "$query" "${mysql_params[@]}" 2>/dev/null
+			[[ $? != "0" ]] && local out="false"
 		fi
 	else
+		local out="false"
+	fi
+	
+	if [[ $out == "false" && $error_display != "false" ]]; then
 		echo "${red}============================================" >&2
 		echo "    [Error]  Database conection failed." >&2
 		echo "============================================${end}" >&2
 		echo "" >&2
 		echo "false"
+	elif [[ $out == "false" ]]; then
+		echo "false"
+	else
+		echo "true"
 	fi
 }
 
@@ -487,6 +514,22 @@ wp_conf_retrieve() {
 	# $3 set to false if you want to disable WP Domain Mapping check (wp_pref will be for the main site when disabled, wp_ instead of wp_3_).
 	# $4 is subfolder
 	
+	# Prevent unwanted values when called multiple times
+	unset wp_config
+	unset wp_dbname
+	unset wp_dbuser
+	unset wp_dbhost
+	unset wp_dbpass
+	unset wp_dbpref
+	unset wp_dbhost_host
+	unset wp_dbhost_port
+	unset wp_dbhost_socket
+	unset wp_dbpref_main
+	unset wp_blogid
+	unset mysql_params
+	unset mysql_param
+	
+	
 	wp_config=$(wp_config_path $1 $4)
 	# Just in case: We should always check is_wp before calling this function
 	# The best error message is the one that never shows up! :)
@@ -500,19 +543,40 @@ wp_conf_retrieve() {
 	wp_dbhost=$( wp_config_read $1 DB_HOST $4 )
 	wp_dbpass=$( wp_config_read $1 DB_PASSWORD $4 )
 	wp_dbpref=$( grep -F "table_prefix" $wp_config | cut -f 2 -d "'" -s)
-	wp_extdb_url=$(echo "$wp_dbhost" | cut -f 1 -d ':')
-	wp_extdb_port=$(echo "$wp_dbhost" | cut -f 2 -d ':' -s)
+	
+	# wp_dbhost - Always contains the complete string
+	# wp_dbhost_host - Only the host part
+	# wp_dbhost_port - Only the port part (default: 3306)
+	# wp_dbhost_socket - Only the socket path if exist (default: empty)
+	
+	# Example: localhost:3307 (host: localhost, port:3307)
+	# Example: localhost:/var/run/mysqld/mysqld.sock (host: localhost, socket:/var/run/mysqld/mysqld.sock)
+	# Example: mysql.example.com:3306 (host: mysql.example.com, port:3307)
+	
+	wp_dbhost_host=$(echo "$wp_dbhost" | cut -f 1 -d ':')
+	local host_pars=$(echo "$wp_dbhost" | cut -f 2 -d ':' -s)
+	if [[ $host_pars =~ ^[0-9]+$ && $host_pars -ge 0 && $host_pars -le 65535 ]]; then
+		wp_dbhost_port=$host_pars
+		mysql_params=(-P${wp_dbhost_port} --protocol=TCP) # Array because it fails to split the args in MySQL http://mywiki.wooledge.org/BashFAQ/050
+		mysql_param="$wp_dbhost_port"
+	elif [[ -S $host_pars ]]; then
+		wp_dbhost_socket=$host_pars
+		mysql_params="-S${wp_dbhost_socket}"
+		mysql_param="$wp_dbhost_socket"
+	else
+		wp_dbhost_host=$wp_dbhost
+	fi
 	
 	wp_dbpref_main=${wp_dbpref} # In case of domain mapping this variable always remains with the main site info
 	
 	[[ ${wp_dbhost,,} == "localhost" ]] && wp_dbhost=${wp_dbhost,,}
-	[[ -z $wp_extdb_port ]] && wp_extdb_port="3306"
+	#[[ -z $wp_dbhost_port ]] && wp_dbhost_port="3306"
 	
 	
-	if [[ $2 != "false" ]]; then
-		if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" && $wp_dbhost == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
+	if [[ $2 != "false" && $wp_dbhost_host != "localhost" && -z $wp_dbhost_socket && $(is_url $wp_dbhost) =~ ^(http|https|true|http\+ip|https\+ip|ip)$ ]]; then
+		if [[ -z $external_db && -n $(conf_read external-dbh) && -n $(conf_read external-dbx) && $wp_dbhost == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
 			check_external_db_saved
-		elif [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" && -n $(conf_read external-dbh) && $wp_dbhost != "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
+		elif [[ -z $external_db && -n $(conf_read external-dbh) ]]; then
 			echo "${dim}[INFO] External Database saved credentials found, but we cannot use it because not the same host!${end}" >&2
 		fi
 		
@@ -527,14 +591,14 @@ wp_conf_retrieve() {
 				unset extdb_port
 			fi
 		fi
-		if [[ -z $external_db && -n $wp_dbhost && $wp_dbhost != "localhost" ]]; then
+		if [[ -z $external_db ]]; then
 			echo "" >&2
 			echo "${gre}External DB${blu} '${wp_dbhost}' ${gre}found in:${blu}${dim} ${1}${4} ${end}" >&2
 			read -p "${blu}External DB username: ${end}" extdb_user
 			read -p "${blu}External DB password: ${end}" extdb_pass
 			extdb_host=$wp_dbhost
-			extdb_url=$wp_extdb_url
-			extdb_port=$wp_extdb_port
+			extdb_url=$wp_dbhost_host
+			extdb_port=$wp_dbhost_port
 			external_db="[${extdb_user},${extdb_pass},${extdb_host}]"
 		fi
 	fi
@@ -552,9 +616,8 @@ wp_conf_retrieve() {
 		
 		if [[ $(is_wp_multisite $maindom $4) =~ ^(subdomain|subdirectory)$ ]]; then
 			local dbq="USE $wp_dbname; SELECT blog_id FROM ${wp_dbpref}blogs WHERE domain='$1' OR domain='www.$1';"
-			
-			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-				local bid=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbq")
+			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
+				local bid=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbq" "${mysql_params[@]}")
 			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
 				local bid=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbq")
 			fi
@@ -935,13 +998,13 @@ is_cache() {
 is_wp_multisite() {
 	if [[ $(is_wp $1 $2) == "true" ]]; then
 		wp_conf_retrieve $1 true false $2 # 3th parameter should always be 'false' to prevent an infinite loop!
-		if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
+		if [[ -n $wp_dbhost_host && -n $wp_dbname && -n $wp_dbpref ]]; then
 			local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}sitemeta' LIMIT 1;"
 			local dbsetuc="USE $wp_dbname; SELECT meta_value FROM ${wp_dbpref}sitemeta where meta_key='subdomain_install';"
 			
-			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-				wpmu=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup")
-				[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetuc")
+			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
+				wpmu=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}")
+				[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetuc" "${mysql_params[@]}")
 			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
 				wpmu=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup")
 				[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetuc")
@@ -975,11 +1038,11 @@ is_wp_installed() {
 		# but that makes no-sense because even if it's not mapped, it will return the main site data
 		# Until now, we don't need a "is_domain_mapped" function, maybe we can change "is_wp_installed" to only be true for main domain sites, not parked (if it's not mapped). This can change in the future!!!
 		
-		if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
+		if [[ -n $wp_dbhost_host && -n $wp_dbname && -n $wp_dbpref ]]; then
 			local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
 			
-			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-				[[ -n $(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup") ]] && echo "true" || echo "false"
+			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
+				[[ -n $(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}") ]] && echo "true" || echo "false"
 			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
 				[[ -n $(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup") ]] && echo "true" || echo "false"
 			else
@@ -1169,9 +1232,9 @@ edit_wp_db_url_multisite() {
 			local wp_blogid=$3		
 			local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
 			
-			if [[ $wp_dbhost == "localhost" && -n $(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup") ]]; then
+			if [[ $wp_dbhost_host == "localhost" && -n $(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}") ]]; then
 				echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
-			elif [[ $wp_dbhost != "localhost" && -n $(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup") ]]; then
+			elif [[ $wp_dbhost_host != "localhost" && -n $(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup") ]]; then
 				echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
 			else
 				echo "${red}${dim}[ERROR] WordPress blog ID (${wp_dbpref}) not found!${end}" >&2
@@ -1180,9 +1243,9 @@ edit_wp_db_url_multisite() {
 			fi
 		fi
 		
-		if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref_main && -n $wp_blogid ]]; then
-			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-				sudo mysql --connect-timeout=10 --user=admin <<_EOF_
+		if [[ -n $wp_dbhost_host && -n $wp_dbname && -n $wp_dbpref_main && -n $wp_blogid ]]; then
+			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
+				sudo mysql --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref_main}blogs SET domain='$2' WHERE blog_id='${wp_blogid}';
 UPDATE ${wp_dbpref_main}blogs SET path='/' WHERE blog_id='${wp_blogid}';
@@ -1214,9 +1277,10 @@ edit_wp_db_url() {
 	
 	if [[ -n $1 && -n $2 && $(is_wp_installed $1 $3) == "true" ]]; then
 		wp_conf_retrieve $1 true true $3
-		if [[ -n $wp_dbhost && -n $wp_dbname && -n $wp_dbpref ]]; then
-			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost) == "true" ]]; then
-				sudo mysql --connect-timeout=10 --user=admin <<_EOF_
+		
+		if [[ -n $wp_dbhost_host && -n $wp_dbname && -n $wp_dbpref ]]; then
+			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
+				sudo mysql --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
