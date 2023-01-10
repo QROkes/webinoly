@@ -58,10 +58,6 @@ Please open an issue first to discuss what you would like to change.
 
 You don't need developer skills to help, visit our site to know [How to Contribute to Webinoly](https://webinoly.com/en/contribute/).
 
-### Sponsors
-
-<p><a href="https://www.eltris.com/" target="_blank" rel="sponsored nofollow noopener"><img width="250px" src="https://cdn.qrokes.com/wp-content/uploads/sites/4/2022/11/Sponsor_Eltris-European-Hosting_Logo.jpg" /></a></p>
-
 ### Donations
 
 [![PayPal Donations](https://cdn.qrokes.com/media/paypal-webinoly-donate.png)](https://www.paypal.me/qrokes)
