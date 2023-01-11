@@ -90,7 +90,7 @@ system_info() {
 		echo "${blu}phpMyAdmin:${end}${dim} $pmaver ${end}"
 		echo ""		
 	else
-		echo "${red}${dim} MySQL is not installed! ${end}"
+		echo "${red}${dim} MySQL/MariaDB is not installed! ${end}"
 		echo ""
 	fi
 	
@@ -220,7 +220,7 @@ smtp_setup() {
 mysql_change_password() {
 	if [[ $mysql_password == true ]]; then
 		echo ""
-		read -p "${blu}MySQL User: ${end}" user
+		read -p "${blu}MySQL/MariaDB User: ${end}" user
 		read -p "${blu}New Password: ${end}" pass
 		echo ""
 	elif [[ $(echo "${mysql_password}" | cut -c-1) == "[" && $(echo "${mysql_password}" | rev | cut -c-1) == "]" ]]; then
@@ -248,7 +248,7 @@ mysql_change_password() {
 	sudo mysql --connect-timeout=10 --user=admin -e "ALTER USER '${user}'@'${userhost}' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
 	if [[ $? == 0 ]]; then
 		[[ $user =~ ^(root|admin)$ ]] && conf_write mysql-${user} $( echo $pass | openssl enc -a -salt )
-		echo "${gre}MySQL Password successfully changed! ${dim}('${user}'@'${userhost}')${end}"
+		echo "${gre}MySQL/MariaDB Password successfully changed! ${dim}('${user}'@'${userhost}')${end}"
 	else
 		echo "${red}[ERROR] Unexpected error!${end}"
 		exit 1
@@ -268,14 +268,14 @@ mysql_public_access() {
 		cnf_write skip-networking 0
 		cnf_write skip-bind-address
 		echo ""
-		echo "${red}[WARNING] Please, be careful and take the proper security actions to protect your server, now that MySQL is open for public access you should at least set your firewall to prevent against any unwanted request.${end}"
+		echo "${red}[WARNING] Please, be careful and take the proper security actions to protect your server, now that MySQL/MariaDB is open for public access you should at least set your firewall to prevent against any unwanted request.${end}"
 		echo ""
-		[[ -z $create_master_user ]] && echo "${dim}[INFO] Be sure you have a MySQL User with public access!${end}"
-		echo "${gre}MySQL public access successfully enabled!${end}"
+		[[ -z $create_master_user ]] && echo "${dim}[INFO] Be sure you have a MySQL/MariaDB User with public access!${end}"
+		echo "${gre}MySQL/MariaDB public access successfully enabled!${end}"
 	elif [[ $mysql_public_access == "off" ]]; then
 		cnf_delete skip-networking
 		cnf_delete skip-bind-address
-		echo "${gre}MySQL public access successfully disabled!${end}"
+		echo "${gre}MySQL/MariaDB public access successfully disabled!${end}"
 	fi
 	
 	sudo systemctl restart mysql
@@ -448,13 +448,13 @@ server_reset() {
 		err_cont=true
 	fi
 	
-	# Check MySQL Conf
+	# Check MySQL/MariaDB Conf
 	# Here we don't check for optim variable because in very old installations don't exist and it breaks the update process!
 	if [[ $(conf_read mysql) == "true" && $server_reset =~ ^(mysql|all)$ ]]; then
 		mysql_optim
-		echo "${gre}MySQL settings has been updated successfully!${end}"
+		echo "${gre}MySQL/MariaDB settings has been updated successfully!${end}"
 	elif [[ $(conf_read mysql) != "true" && $server_reset == "mysql" ]]; then
-		echo "${red}[ERROR] MySQL settings couldn't been updated, seems like is not installed in your server!${end}"
+		echo "${red}[ERROR] MySQL/MariaDB settings couldn't been updated, seems like is not installed in your server!${end}"
 		err_cont=true
 	fi
 	
@@ -470,7 +470,7 @@ server_reset() {
 	
 	# Display message just to show we are alive.
 	if [[ $server_reset == "all" && $(conf_read php-optim) != "true" && $(conf_read nginx-optim) != "true" ]]; then
-		echo "${blu}Nothing to do here! ${dim}(NGINX, PHP or MySQL are not installed yet)${end}"
+		echo "${blu}Nothing to do here! ${dim}(NGINX, PHP or MySQL/MariaDB are not installed yet)${end}"
 	fi
 }
 
@@ -1068,7 +1068,7 @@ database_import() {
 		sudo mysql --connect-timeout=10 --user=admin -e "FLUSH PRIVILEGES;"
 		echo "${gre}Database successfully imported!${end}"
 	else
-		echo "${red}[ERROR] A connection can not be established with MySQL localhost!${end}"
+		echo "${red}[ERROR] A connection can not be established with MySQL/MariaDB localhost!${end}"
 		exit 1
 	fi
 }

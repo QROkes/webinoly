@@ -32,9 +32,9 @@ dd_fpm_purge() {
 dd_mysql_purge() {
 	if [[ -f /etc/datadog-agent/conf.d/mysql.d/conf.yaml ]]; then
 		sudo rm -rf /etc/datadog-agent/conf.d/mysql.d/conf.yaml
-		echo "${gre}Datadog MySQL integration has been successfully removed!${end}"
+		echo "${gre}Datadog MySQL (MariaDB) integration has been successfully removed!${end}"
 	else
-		echo "${gre}Datadog MySQL integration is not installed, so not removed!${end}"
+		echo "${gre}Datadog MySQL (MariaDB) integration is not installed, so not removed!${end}"
 	fi
 }
 
@@ -207,7 +207,7 @@ logs:
 
 dd_mysql_logs() {
 	if [[ $(is_dd_log mysql) == "true" ]]; then
-		echo "${gre}Datadog MySQL Log is already enabled!${end}"
+		echo "${gre}Datadog MySQL (MariaDB) Log is already enabled!${end}"
 	elif [[ -f /etc/datadog-agent/conf.d/mysql.d/conf.yaml ]]; then
 
 		mysql_default_cnf # REMOVE: In case the stack was built with an old configuration
@@ -225,10 +225,10 @@ logs:
 #WebinolyDatadogLogsEnd" >> /etc/datadog-agent/conf.d/mysql.d/conf.yaml
 	
 	dd_logs_enable
-	echo "${gre}Datadog MySQL Logs has been successfully enabled!${end}"
+	echo "${gre}Datadog MySQL (MariaDB) Logs has been successfully enabled!${end}"
 	
 	else
-		echo "${red}[ERROR] Datadog MySQL integration is not enabled!${end}"
+		echo "${red}[ERROR] Datadog MySQL (MariaDB) integration is not enabled!${end}"
 		exit 1
 	fi
 }
@@ -357,7 +357,7 @@ instances:
 " >> /etc/datadog-agent/conf.d/mysql.d/conf.yaml
 
 		[[ $logs != "off" ]] && dd_mysql_logs
-		echo "${gre}Datadog MySQL integration has been successfully configured!${end}"
+		echo "${gre}Datadog MySQL (MariaDB) integration has been successfully configured!${end}"
 		
 	elif [[ $logs == "on" ]]; then
 		dd_mysql_logs
@@ -365,12 +365,12 @@ instances:
 		if [[ $(is_dd_log mysql) == "true" ]]; then
 			sudo sed -i '/WebinolyDatadogLogsStart/,/WebinolyDatadogLogsEnd/{/.*/d}' /etc/datadog-agent/conf.d/mysql.d/conf.yaml
 			dd_logs_disable
-			echo "${gre}Datadog MySQL Logs has been successfully disabled!${end}"
+			echo "${gre}Datadog MySQL (MariaDB) Logs has been successfully disabled!${end}"
 		else
-			echo "${gre}Datadog MySQL Log is already disabled!${end}"
+			echo "${gre}Datadog MySQL (MariaDB) Log is already disabled!${end}"
 		fi
 	else
-		echo "${gre}Datadog MySQL integration is already enabled!${end}"
+		echo "${gre}Datadog MySQL (MariaDB) integration is already enabled!${end}"
 	fi
 }
 

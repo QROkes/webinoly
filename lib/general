@@ -296,7 +296,7 @@ check_for_php_tool_redis() {
 check_for_mysql() {
 	if [[ $(conf_read mysql) != "true" && $1 == "-ask" ]]; then
 		echo "${red}"
-		echo "+ MySQL Not Found!"
+		echo "+ MySQL/MariaDB Not Found!"
 		echo "${blu}Do you want to install it now? [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
 			answer=${answer:-n}
@@ -308,17 +308,17 @@ check_for_mysql() {
 	fi
 	
 	if [[ $(conf_read mysql) != "true" ]]; then
-		echo "${red}[ERROR] MySQL is required and not found! ${end}"
+		echo "${red}[ERROR] MySQL/MariaDB is required and not found! ${end}"
 		exit 1
 	fi
 }
 check_for_mysql_client() {
 	if [[ $(conf_read mysql-client) != "true" ]]; then
-		echo "${gre}${dim}MySQL Client is not installed and we need it to stablish a connection with your external server.${end}" >&2
-		echo "${dim}Wait while we install MySQL Client...${end}" >&2
+		echo "${gre}${dim}MySQL/MariaDB Client is not installed and we need it to stablish a connection with your external server.${end}" >&2
+		echo "${dim}Wait while we install MySQL/MariaDB Client...${end}" >&2
 		sudo stack -mysql=client > /dev/null 2>&1 &
 		wait $!
-		echo "${gre}MySQL Client has been successfully installed!${end}" >&2
+		echo "${gre}MySQL/MariaDB Client has been successfully installed!${end}" >&2
 	fi
 }
 
@@ -1414,7 +1414,7 @@ mysql_default_cnf() {
 		sudo chmod 644 $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
 		sudo chown -R root:root $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
 		
-		echo "# Webinoly MySQL Configuration File
+		echo "# Webinoly MySQL/MariaDB Configuration File
 [mysqld]
 log_error = /var/log/mysql/error.log" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
 	fi
@@ -1426,7 +1426,7 @@ mysql_login_cnf() {
 		sudo chmod 644 $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 		sudo chown -R root:root $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 		
-		echo "# Webinoly MySQL Login Configuration File
+		echo "# Webinoly MySQL/MariaDB Login Configuration File
 # You can use the 'mysql-config-editor' and then remove this file.
 " >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	fi

@@ -137,7 +137,7 @@ elif [[ -n $default_site ]]; then
 	
 elif [[ -n $mysql_password ]]; then
 	if [[ $(conf_read mysql) != "true" ]]; then
-		echo "${red}[ERROR] Seems like MySQL is not installed!${end}"
+		echo "${red}[ERROR] Seems like MySQL/MariaDB is not installed!${end}"
 		exit 1
 	elif [[ $(check_mysql_connection localhost) != "true" ]]; then
 		exit 1

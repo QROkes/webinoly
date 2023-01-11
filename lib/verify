@@ -598,14 +598,14 @@ fi
 
 
 
-################################
-#####  MySQL Verification  #####
-################################
+########################################
+#####  MySQL/MariaDB Verification  #####
+########################################
 
 local ver_four_err="0"
 local ver_four_war="0"
 
-# MySQL
+# MySQL/MariaDB
 if [[ $(conf_read mysql) == "true" ]]; then
 	if [[ $(conf_read db-engine) == "mysql" ]]; then
 		local ver_mysql_ver=$(sudo mysql --version | grep -Eo "Ver [0-9\.]+" | cut -f 2 -d' ' | cut -f 1-2 -d'.')
@@ -649,17 +649,17 @@ if [[ $(conf_read mysql) == "true" ]]; then
 	fi
 fi
 
-# MySQL Connection
+# MySQL/MariaDB Connection
 if [[ $(conf_read mysql) == "true" ]]; then
 	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 	[[ -z $ROOT_PASS ]] && ROOT_PASS="dUmb"
 	if ! sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit" 2>/dev/null; then
-		echo "- [ERROR] MySQL Connection to localhost failed! (root)"
+		echo "- [ERROR] MySQL/MariaDB Connection to localhost failed! (root)"
 		local ver_four_err="1"
 	fi
 	
 	if ! sudo mysql --connect-timeout=10 --user=admin -e "quit" 2>/dev/null; then
-		echo "- [ERROR] MySQL Connection to localhost failed! (admin)"
+		echo "- [ERROR] MySQL/MariaDB Connection to localhost failed! (admin)"
 		local ver_four_err="1"
 	fi
 fi
@@ -701,7 +701,7 @@ if [[ -z $critical_mode ]]; then
 	fi
 
 	if [[ ( -d /var/www/$ADMIN_TOOLS_SITE/htdocs/pma || -d /usr/share/phpmyadmin ) && $(conf_read mysql-tool-pma) != "true" ]]; then
-		echo "${dim}- [WARNING] Seems like MySQL Tools (PhpMyAdmin) are enabled but Webinoly can not detect it!${end}${red}"
+		echo "${dim}- [WARNING] Seems like phpMyAdmin is installed but Webinoly can not detect it!${end}${red}"
 		local ver_four_war="1"
 	fi
 	
@@ -720,11 +720,11 @@ if [[ -z $critical_mode ]]; then
 
 
 	if [[ $ver_four_err == "1" ]]; then
-		echo "(4) MySQL Verification Test has failed!"
+		echo "(4) MySQL/MariaDB Verification Test has failed!"
 	elif [[ $ver_four_war == "1" ]]; then
-		echo "${dim}(4) MySQL Verification Test has some warning messages you should attend!${end}${red}"
+		echo "${dim}(4) MySQL/MariaDB Verification Test has some warning messages you should attend!${end}${red}"
 	else
-		echo "${gre}${dim}(4) MySQL Verification Test successful!${end}${red}"
+		echo "${gre}${dim}(4) MySQL/MariaDB Verification Test successful!${end}${red}"
 	fi
 fi
 
@@ -747,7 +747,7 @@ if ! systemctl is-active --quiet php$(conf_read php-ver)-fpm && [[ $(conf_read p
 	local ver_five_err="1"
 fi
 if ! systemctl is-active --quiet mysql && [[ $(conf_read mysql) == "true" ]]; then
-	echo "- [ERROR] MySQL service not running!"
+	echo "- [ERROR] MySQL/MariaDB service not running!"
 	local ver_five_err="1"
 fi
 if ! systemctl is-active --quiet redis-server && [[ $(conf_read php-tool-redis) == "true" ]]; then

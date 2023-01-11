@@ -111,19 +111,19 @@ elif [[ -n $mysql ]]; then
 			cnf_write general_log 1
 			cnf_write general_log_file /var/log/mysql/mysql.log
 			sudo systemctl restart mysql
-			echo "${gre}MariaDB General log was successfully enabled!${end}"
+			echo "${gre}MySQL/MariaDB General log was successfully enabled!${end}"
 		elif [[ -n $disable ]]; then
 			cnf_write general_log 0
 			sudo systemctl restart mysql
-			echo "${gre}MariaDB General log was successfully disabled!${end}"
+			echo "${gre}MySQL/MariaDB General log was successfully disabled!${end}"
 		elif [[ -f /var/log/mysql/mysql.log && $(cnf_read general_log) == 1 ]]; then
 			[[ ! -s /var/log/mysql/mysql.log ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/mysql/mysql.log
 		elif [[ $(cnf_read general_log) != 1 ]]; then
-			echo "${red}[ERROR] MariaDB General log is not enabled!${end}"
+			echo "${red}[ERROR] MySQL/MariaDB General log is not enabled!${end}"
 			exit 1
 		else
-			echo "${red}[ERROR] MariaDB General log file not found or still empty!${end}"
+			echo "${red}[ERROR] MySQL/MariaDB General log file not found or still empty!${end}"
 			exit 1
 		fi
 	
@@ -133,7 +133,7 @@ elif [[ -n $mysql ]]; then
 			# https://mariadb.com/kb/en/slow-query-log-overview/
 			if [[ -n $long_query_time && $long_query_time =~ ^[0-9]+$ && $long_query_time -gt 1 ]]; then
 				cnf_write long_query_time $long_query_time
-				echo "${gre}${dim}MySQL long query time set to ${long_query_time}s ${end}"
+				echo "${gre}${dim}MySQL/MariaDB long query time set to ${long_query_time}s ${end}"
 			elif [[ -n $long_query_time ]]; then
 				echo "${red}[ERROR] Invalid value for long query time! ${dim}(Should be a number greater than zero)${end}"
 				exit 1
@@ -141,20 +141,20 @@ elif [[ -n $mysql ]]; then
 			
 			cnf_write slow_query_log 1
 			sudo systemctl restart mysql
-			echo "${gre}MariaDB Slow Query log was successfully enabled!${end}"
+			echo "${gre}MySQL/MariaDB Slow Query log was successfully enabled!${end}"
 		elif [[ -n $disable ]]; then
 			# Don't remove long_query_time variable to preserve the value
 			cnf_write slow_query_log 0
 			sudo systemctl restart mysql
-			echo "${gre}MariaDB Slow Query log was successfully disabled!${end}"
+			echo "${gre}MySQL/MariaDB Slow Query log was successfully disabled!${end}"
 		elif [[ -f /var/log/mysql/mariadb-slow.log && $(cnf_read slow_query_log) == 1 ]]; then
 			[[ ! -s /var/log/mysql/mariadb-slow.log ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/mysql/mariadb-slow.log
 		elif [[ $(cnf_read slow_query_log) != 1 ]]; then
-			echo "${red}[ERROR] MariaDB Slow Query log is not enabled!${end}"
+			echo "${red}[ERROR] MySQL/MariaDB Slow Query log is not enabled!${end}"
 			exit 1
 		else
-			echo "${red}[ERROR] MariaDB Slow Query log file not found or still empty!${end}"
+			echo "${red}[ERROR] MySQL/MariaDB Slow Query log file not found or still empty!${end}"
 			exit 1
 		fi
 	
@@ -165,21 +165,21 @@ elif [[ -n $mysql ]]; then
 			cnf_write log_bin /var/log/mysql/mariadb-bin
 			cnf_write log_bin_index /var/log/mysql/mariadb-bin.index
 			sudo systemctl restart mysql
-			echo "${gre}MariaDB Binary log was successfully enabled!${end}"
+			echo "${gre}MySQL/MariaDB Binary log was successfully enabled!${end}"
 		elif [[ -n $disable ]]; then
 			cnf_delete log_bin
 			cnf_delete log_bin_index
 			cnf_write skip-log-bin
 			sudo systemctl restart mysql
-			echo "${gre}MariaDB Binary log was successfully disabled!${end}"
+			echo "${gre}MySQL/MariaDB Binary log was successfully disabled!${end}"
 		elif [[ -f /var/log/mysql/mariadb-bin && -n $(cnf_read log_bin) ]]; then
 			[[ ! -s /var/log/mysql/mariadb-bin ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/mysql/mariadb-bin
 		elif [[ -z $(cnf_read log_bin) ]]; then
-			echo "${red}[ERROR] MariaDB Binary log is not enabled!${end}"
+			echo "${red}[ERROR] MySQL/MariaDB Binary log is not enabled!${end}"
 			exit 1
 		else
-			echo "${red}[ERROR] MariaDB Binary log file not found or still empty!${end}"
+			echo "${red}[ERROR] MySQL/MariaDB Binary log file not found or still empty!${end}"
 			exit 1
 		fi
 		
@@ -189,12 +189,12 @@ elif [[ -n $mysql ]]; then
 			[[ ! -s /var/log/mysql/error.log ]] && waiting_for_log
 			sudo tail -f --lines=$clines /var/log/mysql/error.log
 		else
-			echo "${red}[ERROR] MariaDB Error log file not found or still empty! ${dim}(Older versions sent MySQL error log to syslog, check it!)${end}"
+			echo "${red}[ERROR] MySQL/MariaDB Error log file not found or still empty! ${dim}(Older versions sent the error log to syslog, check it!)${end}"
 			exit 1
 		fi
 		
 	else
-		echo "${red}[ERROR] Invalid value for MySQL Log!${end}"
+		echo "${red}[ERROR] Invalid value for MySQL/MariaDB Log!${end}"
 		exit 1
 	fi
 
@@ -205,7 +205,7 @@ elif [[ -n $syslog ]]; then
 		[[ ! -s /var/log/syslog ]] && waiting_for_log
 		sudo tail -f --lines=$clines /var/log/syslog
 	else
-		echo "${red}[ERROR] MariaDB Error log (syslog) file not found or still empty!${end}"
+		echo "${red}[ERROR] MySQL/MariaDB Error log (syslog) file not found or still empty!${end}"
 		exit 1
 	fi	
 

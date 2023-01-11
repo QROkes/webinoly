@@ -228,15 +228,15 @@ elif [[ -n $purge && -n $mysql ]]; then
 	api-events_update pm1
 	if [[ $(conf_read mysql) != "true" && $(conf_read mysql-client) == "true" ]]; then
 		purge_mysql_client
-		echo "${dim}MySQL is not installed, hence can not be deleted! ${end}"
-		echo "${gre}MySQL-Client has been deleted successfully! ${end}"
+		echo "${dim}MySQL/MariaDB is not installed, hence can not be deleted! ${end}"
+		echo "${gre}MySQL/MariaDB Client has been deleted successfully! ${end}"
 	elif [[ $(conf_read mysql) != "true" ]]; then
-		echo "${dim}MySQL is not installed, hence can not be deleted! ${end}"
+		echo "${dim}MySQL/MariaDB is not installed, hence can not be deleted! ${end}"
 	else
 
 		if [[ $(conf_read force-flag) != "true" ]]; then
 			echo ""
-			echo "${red}¡ C A U T I O N !  You are about to remove MySQL from your server! ${end}"
+			echo "${red}¡ C A U T I O N !  You are about to remove MySQL/MariaDB from your server! ${end}"
 			[[ $mysql == "keep-data" ]] && echo "${blu}${bol}The keep-data option is enabled, it is recommended to make a backup of all the databases before removing and reinstalling MySQL (MariaDB).${end}"
 			echo ""
 
@@ -284,12 +284,12 @@ elif [[ -n $purge && -n $mysql ]]; then
 				conf_delete mysql-root
 				conf_delete mysql-admin
 			else
-				echo "${blu}MySQL data was not removed.${end}"
+				echo "${blu}MySQL/MariaDB data was not removed.${end}"
 			fi
 			
 			conf_write mysql purged
 			echo ""
-			echo "${gre}MySQL has been deleted successfully! ${end}"
+			echo "${gre}MySQL/MariaDB has been deleted successfully! ${end}"
 			echo ""
 		else
 			echo ""
@@ -562,7 +562,7 @@ elif [[ -n $purge_server_all ]]; then
 	api-events_update st2
 	echo ""
 	echo "${red}¡ C A U T I O N !  You are about to remove Webinoly Stack completely from your server!"
-	echo "This action will remove Nginx, PHP, MySQL and all the additional tools."
+	echo "This action will remove Nginx, PHP, MySQL/MariaDB and all the additional tools."
 	echo "${end}"
 	if [[ $(conf_read force-flag) != "true" && $force != 1 ]]; then
 		echo " ${blu}Are you sure [y/N]? ${end}"
@@ -726,7 +726,7 @@ elif [[ -n $mysql_ver ]]; then
 			# Downgrades are not allowed - https://mariadb.com/kb/en/downgrading-between-major-versions-of-mariadb/
 			current_mysql_ver="$(conf_read mysql-ver)"
 			if [[ -n $current_mysql_ver && ${current_mysql_ver//.} -gt ${mysql_ver//.} ]]; then
-				echo "${red}[ERROR] Downgrading MariaDB is not supported!${end}"
+				echo "${red}[ERROR] Downgrading MySQL/MariaDB is not supported!${end}"
 				exit 1
 			fi
 			

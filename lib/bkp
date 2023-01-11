@@ -852,7 +852,7 @@ import_site() {
 		sudo rm -rf /var/www/webinoly_backup_db
 		local db_create_users="true"
 	elif [[ -f /var/www/webinoly_backup_db && ( $(conf_read mysql) != "true" || $(check_mysql_connection localhost) != "true" ) && -z $skip_db ]]; then
-		echo "${red}[ERROR] Database backup found but can not be restored because MySQL is not installed!${end}"
+		echo "${red}[ERROR] Database backup found but can not be restored because MySQL/MariaDB is not installed!${end}"
 	
 	# REMOVE: Just for legacy support, folder with domain is not used anymore!
 	elif [[ -f /var/www/$domain/webinoly_backup_db && -z $skip_db ]]; then
@@ -1002,7 +1002,7 @@ import_server() {
 			sudo rm -rf /var/www/webinoly_backup_dball
 			sudo webinoly -server-reset=mysql
 		elif [[ -s /var/www/webinoly_backup_dball && $(conf_read mysql) != "true" && -z $skip_db ]]; then
-			echo "${red}[ERROR] Database backup found but can not be restored because MySQL is not installed!${end}"
+			echo "${red}[ERROR] Database backup found but can not be restored because MySQL/MariaDB is not installed!${end}"
 		fi
 		
 		[[ $import != "sites" ]] && echo "${gre}Webinoly Full Server Backup imported successfully!${end}" || echo "${gre}Webinoly Backup imported successfully!${end}"

@@ -105,7 +105,7 @@ wpinstall() {
 	
 	echo "${blu}"
 	if [[ $type == 1 ]]; then
-		echo "Do you need to setup new MySQL database? [Y/n]"
+		echo "Do you need to setup new MySQL/MariaDB database? [Y/n]"
 		while read -r -n 1 -s setupmysql; do
 			  setupmysql=${setupmysql:-y}
 			  [[ $setupmysql = [YyNn] ]] && break

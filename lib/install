@@ -233,7 +233,7 @@ mysql_install() {
 		local reinstall="true"
 	fi
 	
-	# MySQL Installation
+	# MySQL/MariaDB Installation
 	if [[ $(conf_read db-engine) == "mysql" ]]; then
 		echo "mysql-community-server mysql-community-server/root-pass password $AUTOGENPASS_ROOT" | debconf-set-selections
 		echo "mysql-community-server mysql-community-server/re-root-pass password $AUTOGENPASS_ROOT" | debconf-set-selections
@@ -248,7 +248,7 @@ mysql_install() {
 	
 	conf_write mysql true
 	
-	# MySQL login data (tmp)
+	# MySQL/MariaDB login data (tmp)
 	mysql_login_cnf
 	echo "[client]
 user = root
@@ -257,7 +257,7 @@ host = localhost" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	
 	# https://mariadb.com/kb/en/mysql_upgrade/
 	if [[ $reinstall == "true" ]]; then
-		echo "${blu}${dim}Seems like you are reinstalling MySQL... Upgrading your old tables!${end}"
+		echo "${blu}${dim}Seems like you are reinstalling MySQL/MariaDB... Upgrading your old tables!${end}"
 		sudo mysql_upgrade --user=root --force --silent
 	fi
 
@@ -274,7 +274,7 @@ _EOF_
 	
 	sudo rm -rf $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	api-events_update im4
-	echo "${gre}MySQL has been installed successfully! ${end}"
+	echo "${gre}MySQL/MariaDB has been installed successfully! ${end}"
 }
 
 mysql_client_install() {
@@ -282,7 +282,7 @@ mysql_client_install() {
 	[[ $(conf_read db-engine) != "mysql" ]] && sudo apt -y install mariadb-client || sudo apt -y install mysql-client
 	conf_write mysql-client true
 	api-events_update im3
-	echo "${gre}MySQL Client has been successfully installed!${end}"
+	echo "${gre}MySQL/MariaDB Client has been successfully installed!${end}"
 }
 
 
@@ -467,11 +467,11 @@ php_optim() {
 }
 
 
-# MySQL OPTIM
+# MySQL/MariaDB OPTIM
 mysql_optim() {
 	api-events_update im5
 	
-	# MySQL login data
+	# MySQL/MariaDB login data
 	mysql_login_cnf	
 	sudo sed -i '/\[client\]/,/# ClientEnd/{/.*/d}' $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	echo "[client]
@@ -831,7 +831,7 @@ message_welcome() {
 	if [[ $1 =~ ^(full|basic|light|partial)$ ]]; then
 		echo "${dim} -    -    -    -    -    -    -    -    -    -    -    - ${end}${blu}"
 		echo ""
-		[[ $1 == "full" ]] && echo "Build Profile: ${dim}Full Stack (Nginx, PHP, MySQL and ALL the additional tools)"
+		[[ $1 == "full" ]] && echo "Build Profile: ${dim}Full Stack (Nginx, PHP, MySQL/MariaDB and ALL the additional tools)"
 		[[ $1 == "basic" ]] && echo "Build Profile: ${dim}Basic Stack (Only the most essential tools)"
 		[[ $1 == "light" ]] && echo "Build Profile: ${dim}Light Stack (Only core packages, NO additional tools will be installed)"
 		[[ $1 == "partial" ]] && echo "Build Profile: ${dim}Partial Stack"
@@ -969,13 +969,13 @@ stack_builder() {
 		fi
 		local code="run"
 	elif [[ $3 == "mysql-client" && $(conf_read mysql-client) == "true" ]]; then
-		echo "${dim}MySQL Client is already installed!${end}"
+		echo "${dim}MySQL/MariaDB Client is already installed!${end}"
 		[[ $code != "run" ]] && local code=0
 	elif [[ $3 == "mysql" && $(conf_read mysql) == "true" ]]; then
-		echo "${dim}MySQL is already installed!${end}"
+		echo "${dim}MySQL/MariaDB is already installed!${end}"
 		[[ $code != "run" ]] && local code=0
 	elif [[ $3 == "mysql" && $(conf_read mysql-client) == "true" ]]; then
-		echo "${dim}MySQL Client is already installed!${end}"
+		echo "${dim}MySQL/MariaDB Client is already installed!${end}"
 		local code="run"
 	fi
 	
