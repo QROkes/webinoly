@@ -256,7 +256,8 @@ password = $AUTOGENPASS_ROOT
 host = localhost" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	
 	# https://mariadb.com/kb/en/mysql_upgrade/
-	if [[ $reinstall == "true" ]]; then
+	# The mysql_upgrade client is deprecated in MySQL 8. (This process is done automatically)
+	if [[ $reinstall == "true" && $(conf_read db-engine) != "mysql" ]]; then
 		echo "${blu}${dim}Seems like you are reinstalling MySQL/MariaDB... Upgrading your old tables!${end}"
 		sudo mysql_upgrade --user=root --force --silent
 	fi
@@ -480,10 +481,10 @@ password = $( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 host = localhost
 # ClientEnd" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	
-	# Disabled by default!
-	[[ $(conf_read mysql-log-binary) != "true" ]] && sudo log -mysql=binary -disable || sudo log -mysql=binary -enable
+	# If value is empty we will do nothing, to prevent undesired things (before 1.17.1 these dynvars were not used via command only conf file, now are both).
+	[[ $(conf_read mysql-log-binary) == "true" ]] && sudo log -mysql=binary -enable
+	[[ $(conf_read mysql-log-binary) == "false" ]] && sudo log -mysql=binary -disable
 	
-	# If value is empty we will respect any other previous action done via commmand.
 	[[ $(conf_read mysql-log-general) == "true" ]] && sudo log -mysql=general -enable
 	[[ $(conf_read mysql-log-general) == "false" ]] && sudo log -mysql=general -disable
 	

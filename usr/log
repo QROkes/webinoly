@@ -110,10 +110,12 @@ elif [[ -n $mysql ]]; then
 		if [[ -n $enable ]]; then
 			cnf_write general_log 1
 			cnf_write general_log_file /var/log/mysql/mysql.log
+			conf_write mysql-log-general true
 			sudo systemctl restart mysql
 			echo "${gre}MySQL/MariaDB General log was successfully enabled!${end}"
 		elif [[ -n $disable ]]; then
 			cnf_write general_log 0
+			conf_write mysql-log-general false
 			sudo systemctl restart mysql
 			echo "${gre}MySQL/MariaDB General log was successfully disabled!${end}"
 		elif [[ -f /var/log/mysql/mysql.log && $(cnf_read general_log) == 1 ]]; then
@@ -140,11 +142,13 @@ elif [[ -n $mysql ]]; then
 			fi
 			
 			cnf_write slow_query_log 1
+			conf_write mysql-log-slow true
 			sudo systemctl restart mysql
 			echo "${gre}MySQL/MariaDB Slow Query log was successfully enabled!${end}"
 		elif [[ -n $disable ]]; then
 			# Don't remove long_query_time variable to preserve the value
 			cnf_write slow_query_log 0
+			conf_write mysql-log-slow false
 			sudo systemctl restart mysql
 			echo "${gre}MySQL/MariaDB Slow Query log was successfully disabled!${end}"
 		elif [[ -f /var/log/mysql/mariadb-slow.log && $(cnf_read slow_query_log) == 1 ]]; then
@@ -164,12 +168,14 @@ elif [[ -n $mysql ]]; then
 			cnf_delete skip-log-bin
 			cnf_write log_bin /var/log/mysql/mariadb-bin
 			cnf_write log_bin_index /var/log/mysql/mariadb-bin.index
+			conf_write mysql-log-binary true
 			sudo systemctl restart mysql
 			echo "${gre}MySQL/MariaDB Binary log was successfully enabled!${end}"
 		elif [[ -n $disable ]]; then
 			cnf_delete log_bin
 			cnf_delete log_bin_index
 			cnf_write skip-log-bin
+			conf_write mysql-log-binary false
 			sudo systemctl restart mysql
 			echo "${gre}MySQL/MariaDB Binary log was successfully disabled!${end}"
 		elif [[ -f /var/log/mysql/mariadb-bin && -n $(cnf_read log_bin) ]]; then

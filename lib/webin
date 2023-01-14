@@ -248,6 +248,18 @@ mysql_change_password() {
 	sudo mysql --connect-timeout=10 --user=admin -e "ALTER USER '${user}'@'${userhost}' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
 	if [[ $? == 0 ]]; then
 		[[ $user =~ ^(root|admin)$ ]] && conf_write mysql-${user} $( echo $pass | openssl enc -a -salt )
+		
+		if [[ $user == "admin" ]]; then
+			# MySQL/MariaDB login data
+			mysql_login_cnf	
+			sudo sed -i '/\[client\]/,/# ClientEnd/{/.*/d}' $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+			echo "[client]
+user = admin
+password = $( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+host = localhost
+# ClientEnd" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+			echo "${blu}${dim}Internal Webinoly login data updated!${end}"
+		fi
 		echo "${gre}MySQL/MariaDB Password successfully changed! ${dim}('${user}'@'${userhost}')${end}"
 	else
 		echo "${red}[ERROR] Unexpected error!${end}"
@@ -271,10 +283,12 @@ mysql_public_access() {
 		echo "${red}[WARNING] Please, be careful and take the proper security actions to protect your server, now that MySQL/MariaDB is open for public access you should at least set your firewall to prevent against any unwanted request.${end}"
 		echo ""
 		[[ -z $create_master_user ]] && echo "${dim}[INFO] Be sure you have a MySQL/MariaDB User with public access!${end}"
+		conf_write mysql-public-access true
 		echo "${gre}MySQL/MariaDB public access successfully enabled!${end}"
 	elif [[ $mysql_public_access == "off" ]]; then
 		cnf_delete skip-networking
 		cnf_delete skip-bind-address
+		conf_write mysql-public-access false
 		echo "${gre}MySQL/MariaDB public access successfully disabled!${end}"
 	fi
 	
