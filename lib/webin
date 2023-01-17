@@ -247,7 +247,8 @@ mysql_change_password() {
 	
 	sudo mysql --connect-timeout=10 --user=admin -e "ALTER USER '${user}'@'${userhost}' IDENTIFIED BY '${pass}';FLUSH PRIVILEGES;"
 	if [[ $? == 0 ]]; then
-		[[ $user =~ ^(root|admin)$ ]] && conf_write mysql-${user} $( echo $pass | openssl enc -a -salt )
+		# Check if dynvar exist, because user can remove it for security, and it's valid!
+		[[ $user =~ ^(root|admin)$ && -n $(conf_read mysql-${user}) ]] && conf_write mysql-${user} $( echo $pass | openssl enc -a -salt )
 		
 		if [[ $user == "admin" ]]; then
 			# MySQL/MariaDB login data
@@ -255,7 +256,7 @@ mysql_change_password() {
 			sudo sed -i '/\[client\]/,/# ClientEnd/{/.*/d}' $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 			echo "[client]
 user = admin
-password = $( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
+password = $pass
 host = localhost
 # ClientEnd" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 			echo "${blu}${dim}Internal Webinoly login data updated!${end}"
@@ -501,19 +502,14 @@ show_db_data() {
 		fi
 	fi
 	
-	if [[ -n $(conf_read mysql-root) || -n $(conf_read mysql-admin) ]]; then
-		local rpass=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-		local apass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
-		echo ""
-		[[ ( $dbpass == "raw" || -n $raw ) || -z $extu ]] || echo "${gre}Localhost Credentials${end}"
-		[[ $dbpass == "raw" || -n $raw ]] && echo "root:$rpass" || echo "${blu}${bol}  root:${end}${blu}${dim} $rpass ${end}"
-		[[ $dbpass == "raw" || -n $raw ]] && echo "admin:$apass" || echo "${blu}${bol}  admin:${end}${blu}${dim} $apass ${end}"
-		echo ""
-	else
-		echo "${blu}"
-		echo "Localhost credentials not found!"
-		echo "${end}"
-	fi
+	
+	[[ -n $(conf_read mysql-root) ]] && local rpass=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt ) || local rpass="Not-Available!"
+	[[ -n $(conf_read mysql-admin) ]] && local apass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt ) || local apass="Not-Available!"
+	echo ""
+	[[ ( $dbpass == "raw" || -n $raw ) || -z $extu ]] || echo "${gre}Localhost Credentials${end}"
+	[[ $dbpass == "raw" || -n $raw ]] && echo "root:$rpass" || echo "${blu}${bol}  root:${end}${blu}${dim} $rpass ${end}"
+	[[ $dbpass == "raw" || -n $raw ]] && echo "admin:$apass" || echo "${blu}${bol}  admin:${end}${blu}${dim} $apass ${end}"
+	echo ""
 	
 	if [[ -n $extu ]]; then
 		echo ""

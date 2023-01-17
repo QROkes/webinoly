@@ -103,7 +103,7 @@ elif [[ -n $ssh ]]; then
 
 # MySQL Logs
 elif [[ -n $mysql ]]; then
-	check_for_mysql && mysql_default_cnf
+	check_for_mysql
 	
 	# General Log
 	if [[ $mysql == "general" ]]; then

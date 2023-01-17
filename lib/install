@@ -219,7 +219,7 @@ mysql_install() {
 	# debconf-get-selections | grep phpmyadmin   <<-- list conf variables
 		
 	# Generate mysql user passwords
-	if [[ -z $(conf_read mysql-root) && -z $(conf_read mysql-admin) ]]; then
+	if [[ -z $(conf_read mysql-root) || -z $(conf_read mysql-admin) ]]; then
 		local AUTOGENPASS_ROOT=`pwgen -s -1 16`
 		local AUTOGENPASS_ADMIN=`pwgen -s -1 16`
 		local enc_pass_root=$( echo $AUTOGENPASS_ROOT | openssl enc -a -salt )
@@ -471,15 +471,18 @@ php_optim() {
 # MySQL/MariaDB OPTIM
 mysql_optim() {
 	api-events_update im5
+	mysql_default_cnf
 	
 	# MySQL/MariaDB login data
-	mysql_login_cnf	
-	sudo sed -i '/\[client\]/,/# ClientEnd/{/.*/d}' $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
-	echo "[client]
+	mysql_login_cnf
+	if [[ -n $(conf_read mysql-admin) ]]; then
+		sudo sed -i '/\[client\]/,/# ClientEnd/{/.*/d}' $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+		echo "[client]
 user = admin
 password = $( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
 host = localhost
 # ClientEnd" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+	fi
 	
 	# If value is empty we will do nothing, to prevent undesired things (before 1.17.1 these dynvars were not used via command only conf file, now are both).
 	[[ $(conf_read mysql-log-binary) == "true" ]] && sudo log -mysql=binary -enable

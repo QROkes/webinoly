@@ -1400,12 +1400,13 @@ cnf_delete() {
 cnf_write() {
 	#Example: cnf_write error_log /var/log/mysql/error.log
 	cnf_delete $1
+	mysql_default_cnf
 	[[ -n $2 ]] && local value="= $2"
 	echo "$1 $value" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
 }
 cnf_read() {
 	#Example: cnf_read error_log
-	echo $( grep -P "^$1 = " $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf | cut -f 2 -d "=" -s | sed 's/ //g' )
+	[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf ]] && echo $( grep -P "^$1 = " $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf | cut -f 2 -d "=" -s | sed 's/ //g' )
 }
 mysql_default_cnf() {
 	# Creates the default Webinoly Configuration File (.cnf) for mysql if not exists.
