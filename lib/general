@@ -621,7 +621,8 @@ wp_conf_retrieve() {
 	# Example: Delete site because its required to drop users.
 	if [[ $2 != "false" && $wp_dbhost_host != "localhost" && -z $wp_dbhost_socket && $(is_url $wp_dbhost) =~ ^(http|https|true|http\+ip|https\+ip|ip)$ ]]; then
 		# Don't needed if already exist a login-file with master-admin privileges!
-		if [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port any -login-file -master-admin) != "true" ]]; then
+		# -external-db have priority, mainly to rewrite or update old/wrong credentials.
+		if [[ -n $external_db || $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port any -login-file -master-admin) != "true" ]]; then
 			if [[ -z $external_db && -n $(conf_read external-dbh) && -n $(conf_read external-dbx) && $wp_dbhost == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
 				check_external_db_saved
 			elif [[ -z $external_db && -n $(conf_read external-dbh) ]]; then
@@ -637,6 +638,7 @@ wp_conf_retrieve() {
 					unset extdb_host
 					unset extdb_url
 					unset extdb_port
+					echo "${red}${dim}[ERROR] External DB credentials cannot be used! (host mismatch)${end}"
 				fi
 			fi
 			if [[ -z $external_db ]]; then
