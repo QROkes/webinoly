@@ -188,16 +188,23 @@ wpinstall() {
 				echo "${blu}"
 				
 				if [[ $dbhost != "localhost" && ( $type == [135] && ( -z $dburoot || -z $dbproot )) ]]; then
-					read -p "External DB username: " dburoot
-					read -p "External DB password: " dbproot
-					echo ""
+					# Don't ask for password if already in file!
+					if [[ $(check_mysql_connection $dburl $dbport any -login-file -master-admin) != "true" ]]; then
+						read -p "${blu}External DB Master Username: " dburoot
+						read -p "External DB password: " dbproot
+						echo ""
+					else
+						local ext_login="true"
+					fi
 				fi
 				
-				if [[ -n $retry && $retry -ge 3 ]]; then
+				if [[ $ext_login == "true" ]]; then
+					echo "${blu}${dim}External DB Credentials found!${end}"
+				elif [[ -n $retry && $retry -ge 3 ]]; then
 					setupmysql="N"
 					local db_error_flag="true"
 					echo "${red}[ERROR] Database creation failed after 3 retries! ${blu}"
-				elif [[ ( $dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dburoot $dbproot) != "true" ) ]]; then
+				elif [[ ( $dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dburoot $dbproot -master-admin) != "true" ) ]]; then
 					# Reset variables
 					local dburl=""
 					local dbport=""
@@ -229,7 +236,7 @@ wpinstall() {
 						# https://stackoverflow.com/questions/7364709/bash-script-check-if-mysql-database-exists-perform-action-based-on-result
 						local newdbname=$(sudo mysqlshow --user=admin | grep -ow $dbname)
 					else
-						local newdbname=$(sudo mysqlshow -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" | grep -ow $dbname)
+						local newdbname=$(sudo mysqlshow --defaults-group-suffix=_${dburl}:${dbport}_default -h "$dburl" -P "$dbport" | grep -ow $dbname)
 					fi
 					
 					if [[ $newdbname == $dbname || $dbname != $(dbword_check $dbname) ]]; then
@@ -278,7 +285,7 @@ wpinstall() {
 						# https://stackoverflow.com/questions/7364709/bash-script-check-if-mysql-database-exists-perform-action-based-on-result
 						[[ -z $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" | grep -ow $dbuser) ]] && newdbuser=""
 					else
-						[[ -z $(sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" -e "SELECT User FROM mysql.user;" | grep -ow $dbuser) ]] && newdbuser=""
+						[[ -z $(sudo mysql --defaults-group-suffix=_${dburl}:${dbport}_default --connect-timeout=10 -h "$dburl" -P "$dbport" -e "SELECT User FROM mysql.user;" | grep -ow $dbuser) ]] && newdbuser=""
 					fi
 					
 					if [[ $newdbuser == $dbuser || $dbuser != $(dbword_check $dbuser user) ]]; then
@@ -368,7 +375,7 @@ _EOF_
 				
 				elif [[ -z $dbreassign ]]; then
 					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
-					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
+					sudo mysql --defaults-group-suffix=_${dburl}:${dbport}_default --connect-timeout=10 -h "$dburl" -P "$dbport" <<_EOF_
 CREATE DATABASE ${dbname};
 CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
 GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'%';
@@ -387,7 +394,7 @@ _EOF_
 				
 				elif [[ $dbreassign == "db" ]]; then
 					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
-					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
+					sudo mysql --defaults-group-suffix=_${dburl}:${dbport}_default --connect-timeout=10 -h "$dburl" -P "$dbport" <<_EOF_
 CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
 GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
@@ -405,7 +412,7 @@ _EOF_
 				
 				elif [[ $dbreassign == "dbuser" ]]; then
 					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
-					sudo mysql --connect-timeout=10 -h "$dburl" -P "$dbport" -u"$dburoot" -p"$dbproot" <<_EOF_
+					sudo mysql --defaults-group-suffix=_${dburl}:${dbport}_default --connect-timeout=10 -h "$dburl" -P "$dbport" <<_EOF_
 CREATE DATABASE ${dbname};
 GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
@@ -493,20 +500,22 @@ db_delete() {
 	if [[ -z $wp_dbhost_host || -z $wp_dbname || -z $wp_dbuser ]]; then
 		echo "${red}[ERROR] Database${blu} ${1}${2} ${red}cannot be deleted! ${dim}(WP configuration corrupted)${end}"
 		return
-	elif [[ ( $wp_dbhost_host == "localhost" &&  ( $(conf_read mysql) != "true" || $(check_mysql_connection localhost $mysql_param) != "true" )) || ( $wp_dbhost_host != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
+	elif [[ ( $wp_dbhost_host == "localhost" &&  ( $(conf_read mysql) != "true" || $(check_mysql_connection localhost $mysql_param) != "true" )) || ( $wp_dbhost_host != "localhost" && $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port any -login-file -master-admin) != "true" ) ]]; then
 		echo "${red}[ERROR] Database${blu} ${1}${2} ${red}cannot be deleted! ${dim}(DB Connection failed)${end}"
 		return
 	fi
 	
+	# We use this instead of 'DROP USER' because we have both 'user'@'%' and 'user'@'localhost' (we changed to localhost in recent versions)
+	# DROP USER use '%' when empty, and wildcard does not match 'localhost' (I don't know why).
 	dbsetup="DELETE FROM mysql.user WHERE User='$wp_dbuser';DROP DATABASE IF EXISTS $wp_dbname;DELETE FROM mysql.db WHERE Db='$wp_dbname' OR Db='$wp_dbname\\_%';FLUSH PRIVILEGES;"
 	if [[ $wp_dbhost_host == "localhost" ]]; then
 		sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}"
 		echo "${gre}${dim}Database of your site ${blu}${1}${2}${gre} has been successfully deleted! ${end}"
 	else
 		if [[ $extdb_user == "root" && -z $extdb_pass ]]; then
-			echo "${red}Action aborted, database not deleted!${end}"
+			echo "${red}Action aborted, database not deleted! ${dim}(root user without password not allowed!)${end}"
 		else
-			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup"
+			sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -e "$dbsetup"
 			echo "${gre}${dim}Database of your site ${blu}${1}${2}${gre} has been successfully deleted! ${end}"
 		fi
 	fi
@@ -1210,7 +1219,7 @@ parked_domain() {
 	sed -i "/include \/var\/www\/$parked\/\*-nginx.conf;/a \	include \/var\/www\/${parked}/*-$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;" /etc/nginx/sites-available/$domain
 	
 	# Prevent asking multiple times in case of external DB.
-	[[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ && $(is_wp $parked) == "true" ]] && wp_conf_retrieve $parked true false $subfolder
+	[[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ && $(is_wp $parked) == "true" ]] && wp_conf_retrieve $parked false false $subfolder
 	
 	# WordPress Domain Mapping
 	if [[ $domain_mapping_wp_id == 1  ]]; then
@@ -1657,15 +1666,10 @@ cloning_site() {
 		if [[ $(echo "$(wp_config_read $domain DB_HOST $subfolder)" | cut -f 1 -d ':' ) == "localhost" ]]; then
 			[[ -z $subfolder ]] && sudo site $domain -delete=force > /dev/null 2>&1 || sudo site $domain -subfolder=$subfolder -delete=force > /dev/null 2>&1
 		else
-			if [[ -n $extdb_user && -n $extdb_pass && -n $extdb_host ]]; then
-				if [[ -z $subfolder ]]; then
-					sudo site $domain -delete=force -external_db=[${extdb_user},${extdb_pass},${extdb_host}] > /dev/null 2>&1
-				else
-					sudo site $domain -subfolder=$subfolder -delete=force -external_db=[${extdb_user},${extdb_pass},${extdb_host}] > /dev/null 2>&1
-				fi
+			if [[ -z $subfolder ]]; then
+				sudo site $domain -delete=force > /dev/null 2>&1
 			else
-				echo "${red}[ERROR] External DB data corrupted!${end}"
-				exit 1
+				sudo site $domain -subfolder=$subfolder -delete=force > /dev/null 2>&1
 			fi
 		fi
 	else
@@ -1790,7 +1794,7 @@ cloning_site() {
 			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
 		else
 			site -mysql=[$wp_dbhost,$dom,$usr,$AUTOGENPASS_WPDB,$extdb_user,$extdb_pass] > /dev/null 2>&1
-			mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $wp_dbname | mysql -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" $dom
+			mysqldump --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default -h "$wp_dbhost_host" -P "$wp_dbhost_port" $wp_dbname | mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default -h "$wp_dbhost_host" -P "$wp_dbhost_port" $dom
 			
 			# No need of force-redirect check because this is a new and different site.
 			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
@@ -1843,16 +1847,16 @@ wp_replace_content() {
 	fi
 	
 	if [[ -n $wp_dbhost_host && -n $wp_dbname && -n $wp_dbpref ]]; then
-		if [[ ( $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) != "true" ) || ( $wp_dbhost_host != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
+		if [[ ( $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) != "true" ) || ( $wp_dbhost_host != "localhost" && $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) != "true" ) ]]; then
 			exit 1
 		fi
 		
-		query="USE $wp_dbname; UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'$search','$replace'); FLUSH PRIVILEGES;"
+		query="USE $wp_dbname; UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'$search','$replace');"
 		
 		if [[ $wp_dbhost_host == "localhost" ]]; then
 			sudo mysql --connect-timeout=10 --user=admin -e "$query" "${mysql_params[@]}"
 		else
-			sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$query"
+			sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$query"
 		fi
 		echo "${gre}Content successfully replaced in your WP site!${end}"
 	else
@@ -1865,7 +1869,7 @@ wp_replace_content() {
 list_sites() {
 	echo ""
 	
-	if ! [[ ${list,,} =~ ^(true|disabled|main|parked|wordpress|php|html|proxy|forward|tools|default|ssl|nossl|sslstaging|accesslog|noaccesslog|cache|nocache|adminauth|noadminauth|debug|nodebug|wpenv)$ ]]; then
+	if ! [[ ${list,,}  =~ ^(true|disabled|main|parked|wordpress|php|html|proxy|forward|tools|default|ssl|nossl|sslstaging|accesslog|noaccesslog|cache|nocache|adminauth|noadminauth|debug|nodebug|wpenv)$ ]]; then
 		echo "${red}[ERROR] Invalid value for list filter! ${end}"
 		exit 1
 	fi
@@ -1974,14 +1978,8 @@ site_info_subfolder() {
 	fi
 	
 	if [[ $typesite == "wp" ]]; then
-		local wph=$(wp_config_read $domain DB_HOST $subfolder)
-		if [[ ${wph,,} == "localhost" || $(echo "${wph,,}" | cut -f 1 -d ':') == "localhost" || -n $external_db || $wph == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
-			local wpmu=$(is_wp_multisite $domain $subfolder)
-			wp_conf_retrieve $domain true true $subfolder
-		else
-			local wpmu="${dim}Not Available${end}"
-			wp_conf_retrieve $domain false false $subfolder
-		fi
+		wp_conf_retrieve $domain false false $subfolder
+		local wpmu=$(is_wp_multisite $domain $subfolder)
 		
 		echo ""
 		echo "${blu}Cache:${end} $cache"
@@ -1992,7 +1990,7 @@ site_info_subfolder() {
 		[[ -n $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder) ]] && echo "${blu}Environment:${end} $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder)"
 		echo ""
 		
-		echo "${blu}Database:${end} $wph"
+		echo "${blu}Database:${end} $wp_dbhost"
 		echo "${blu}DB Name:${end} $wp_dbname"
 		echo "${blu}DB User:${end} $wp_dbuser"
 		echo "${blu}DB Prefix:${end} $wp_dbpref"
@@ -2051,14 +2049,8 @@ site_info() {
 	fi
 	
 	if [[ $typesite == "WordPress" || ( $typesite == "Parked" && $(is_wp $domain) == "true" ) ]]; then
-		local wph=$(wp_config_read $domain DB_HOST)
-		if [[ ${wph,,} == "localhost" || $(echo "${wph,,}" | cut -f 1 -d ':') == "localhost" || -n $external_db || $wph == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
-			local wpmu=$(is_wp_multisite $domain)
-			wp_conf_retrieve $domain true true
-		else
-			local wpmu="${dim}Not Available${end}"
-			wp_conf_retrieve $domain false false
-		fi
+		wp_conf_retrieve $domain false false
+		local wpmu=$(is_wp_multisite $domain)
 		
 		echo ""
 		echo "${blu}Cache:${end} $cache"
@@ -2069,7 +2061,7 @@ site_info() {
 		[[ -n $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder) ]] && echo "${blu}Environment:${end} $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder)"
 		echo ""
 		
-		echo "${blu}Database:${end} $wph"
+		echo "${blu}Database:${end} $wp_dbhost"
 		echo "${blu}DB Name:${end} $wp_dbname"
 		echo "${blu}DB User:${end} $wp_dbuser"
 		echo "${blu}DB Prefix:${end} $wp_dbpref"
@@ -2120,8 +2112,8 @@ wp_env_type() {
 	fi
 	
 	# WordPress Reading Settings: Discourage Search Engines
-	wp_conf_retrieve $domain true true $subfolder		
-	if [[ -n $wp_dbhost_host && $wp_dbhost_host != "localhost" && ( -z $extdb_url || -z $extdb_port || -z $extdb_user || -z $extdb_pass ) ]]; then
+	wp_conf_retrieve $domain false true $subfolder		
+	if [[ -n $wp_dbhost_host && $wp_dbhost_host != "localhost" && ( -z $wp_dbhost_host || -z $wp_dbhost_port || -z $wp_dbuser || -z $wp_dbpass ) ]]; then
 		echo "${red}${dim}[ERROR] Discourage Search Engines WP option not updated! (External DB data not available)${end}"
 	elif [[ -n $wp_dbhost_host && -n $wp_dbname && -n $wp_dbpref ]]; then
 		if [[ $(is_wp_installed $domain $subfolder) == "true" ]]; then
@@ -2129,14 +2121,12 @@ wp_env_type() {
 				sudo mysql --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$index' WHERE option_name='blog_public';
-FLUSH PRIVILEGES;
 _EOF_
 		
-			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
-				sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" <<_EOF_
+			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
+				sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$index' WHERE option_name='blog_public';
-FLUSH PRIVILEGES;
 _EOF_
 		
 			else

@@ -651,11 +651,13 @@ fi
 
 # MySQL/MariaDB Connection
 if [[ $(conf_read mysql) == "true" ]]; then
-	local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-	[[ -z $ROOT_PASS ]] && ROOT_PASS="dUmb"
-	if ! sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit" 2>/dev/null; then
-		echo "- [ERROR] MySQL/MariaDB Connection to localhost failed! (root)"
-		local ver_four_err="1"
+	if [[ -n $(conf_read mysql-root) ]]; then # Dynvar can be removed safely!
+		local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
+		[[ -z $ROOT_PASS ]] && ROOT_PASS="dUmb"
+		if ! sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit" 2>/dev/null; then
+			echo "- [ERROR] MySQL/MariaDB Connection to localhost failed! (root)"
+			local ver_four_err="1"
+		fi
 	fi
 	
 	if ! sudo mysql --connect-timeout=10 --user=admin -e "quit" 2>/dev/null; then

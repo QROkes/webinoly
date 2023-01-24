@@ -217,8 +217,8 @@ elif [[ -n $multisite_convert && -f /etc/nginx/sites-available/$domain ]]; then
 		exit 1
 	fi
 	
-	# We need to call this function in the parent shell to preserve variables and avoid asking two or more times for the same values in case of external db.
-	wp_conf_retrieve $domain true false $subfolder 	
+	# We need to call this function in the parent shell to preserve variables.
+	wp_conf_retrieve $domain false false $subfolder 	
 	
 	if [[ $(is_wp_installed $domain $subfolder) != "true" ]]; then
 		echo "${red}[ERROR] WordPress site${blu} $domain$subfolder ${red}is empty and still not configured!${end}"
@@ -378,7 +378,8 @@ elif [[ -n $clone_from ]]; then
 		if [[ -z $wp_dbhost ||-z $wp_dbhost_host || -z $wp_dbname || -z $wp_dbpref ]]; then
 			echo "${red}[ERROR] Can not retrieve WP data ${dim}(WP Configuration corrupted)!${end}"
 			exit 1
-		elif [[ ( $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) != "true" ) || ( $wp_dbhost_host != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ) ]]; then
+		elif [[ ( $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) != "true" ) || ( $wp_dbhost_host != "localhost" && $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port any -login-file -master-admin) != "true" ) ]]; then
+			echo "${red}[ERROR] Database connection failed! ${dim}($wp_dbhost)${end}"
 			exit 1
 		elif [[ $(is_wp_multisite $clone_from $subfolder) != "false" ]]; then
 			echo "${red}[ERROR] WordPress Multisite can not be cloned!${end}"
@@ -401,8 +402,8 @@ elif [[ -n $replace_content && -f /etc/nginx/sites-available/$domain ]]; then
 		exit 1
 	fi
 	
-	#We need to call this function in the parent shell to preserve variables and avoid asking two times for the same values in case of external db.
-	wp_conf_retrieve $domain true true $subfolder
+	#We need to call this function in the parent shell to preserve variables.
+	wp_conf_retrieve $domain false true $subfolder
 	
 	if [[ $(is_wp_installed $domain $subfolder) != "true" ]]; then
 		echo "${red}[ERROR] WordPress is empty and still not configured in ${domain}${subfolder} site!${end}"

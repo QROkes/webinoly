@@ -91,12 +91,12 @@ bkp_local_db() {
 				[[ -n $subfolder ]] && local subname=$(echo $subfolder | sed "s/\//_/g")
 			fi
 			
-			if [[ $wp_dbhost_host != "localhost" && ( -z $extdb_user || -z $extdb_pass || -z $extdb_url || -z $extdb_port ) ]]; then
+			if [[ $wp_dbhost_host != "localhost" && ( -z $wp_dbhost_host || -z $wp_dbhost_port ) ]]; then
 				echo "${red}[ERROR] Invalid data for External Database!${end}"
 				exit 1
 			
 			# Duplicate check: we need this only to prevent error in the next is_wp_installed
-			elif [[ $wp_dbhost_host != "localhost" && $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ]]; then
+			elif [[ $wp_dbhost_host != "localhost" && $(check_mysql_connection $extdb_url $extdb_port any -login-file -master-admin) != "true" ]]; then
 				echo "${red}[ERROR] External DB Connection failed!${end}"
 				exit 1
 			elif [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) != "true" ]]; then
@@ -125,11 +125,11 @@ bkp_local_db() {
 				local checkdbname=$(sudo mysqlshow --user=admin | grep -ow $dbname)
 			else
 				external_db_parse
-				if [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ]]; then
+				if [[ $(check_mysql_connection $extdb_url $extdb_port any -login-file -master-admin) != "true" ]]; then
 					echo "${red}[ERROR] Cannot connect with your External Database!${end}"
 					exit 1
 				fi
-				local checkdbname=$(sudo mysqlshow -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" | grep -ow $dbname)
+				local checkdbname=$(sudo mysqlshow --defaults-group-suffix=_${extdb_url}:${extdb_port}_default -h "$extdb_url" -P "$extdb_port" | grep -ow $dbname)
 			fi
 			
 			if [[ $checkdbname != $dbname  ]]; then
@@ -176,10 +176,10 @@ bkp_local_db() {
 	[[ -z $filename ]] && local filename="webinoly-backup-db_${fn}_$(date +%F)-$(date +%T).sql"
 
 	
-	if [[ ( $wp_dbhost_host == "localhost" || -z $external_db ) && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
+	if [[ ( $wp_dbhost_host == "localhost" || ( -z $extdb_url && -z $extdb_port )) && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
 		sudo mysqldump --user=admin --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
-	elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
-		sudo mysqldump -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
+	elif [[ $(check_mysql_connection $extdb_url $extdb_port any -login-file -master-admin) == "true" ]]; then
+		sudo mysqldump --defaults-group-suffix=_${extdb_url}:${extdb_port}_default -h "$extdb_url" -P "$extdb_port" --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
 	else
 		echo "${red}[ERROR] DB Connection failed!${end}"
 		exit 1
@@ -584,6 +584,9 @@ check_exported_conf() {
 			tar -C / -xf $file $HOME/.aws/credentials --absolute-names
 		fi
 		if [[ $(conf_read mysql) == "true" ]]; then
+			if tar -tvf $file --absolute-names | grep -oq "$MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf"; then
+				tar -C / -xf $file $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf --absolute-names
+			fi
 			if tar -tvf $file --absolute-names | grep -oq "$MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf"; then
 				tar -C / -xf $file $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf --absolute-names
 				sudo systemctl restart mysql
@@ -643,6 +646,7 @@ export_server() {
 	[[ -f /opt/webinoly/templates/source/custom_header_http_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_http_webinoly.data"
 	[[ -f /opt/webinoly/templates/source/custom_header_https_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_https_webinoly.data"
 	[[ -f /opt/webinoly/templates/source/custom_header_html_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_html_webinoly.data"
+	[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf ]] && local include="$include $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf"
 	[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf ]] && local include="$include $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf"
 	[[ -d /etc/nginx/certs ]] && local include="$include /etc/nginx/certs"
 	
@@ -887,7 +891,7 @@ import_site() {
 		
 		# Database recovery - create users because they are not imported
 		if [[ -n $db_create_users && $overwrite != "on" && $(is_wp $domain) == "true" ]]; then
-			wp_conf_retrieve $domain true false
+			wp_conf_retrieve $domain false false
 			if [[ $wp_dbhost_host == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin "${mysql_params[@]}" | grep -ow $wp_dbname) ]]; then
 				echo "${blu}${dim}Restoring database for${end}${dim} $domain ${blu}${dim}site!${end}"
 				
@@ -912,7 +916,7 @@ _EOF_
 			do 
 				local suby="/$(echo $sit | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 				if [[ -n $suby && -f /var/www/$domain/htdocs$suby/wp-config.php ]]; then
-					wp_conf_retrieve $domain true false $suby
+					wp_conf_retrieve $domain false false $suby
 					if [[ $wp_dbhost_host == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin "${mysql_params[@]}" | grep -ow $wp_dbname) ]]; then
 						echo "${blu}${dim}Restoring database for${end}${dim} ${domain}${suby} ${blu}${dim}site!${end}"
 						

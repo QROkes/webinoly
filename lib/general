@@ -329,12 +329,18 @@ check_mysql_connection() {
 	# Unix socket: $(check_mysql_connection localhost /var/run/mysqld/mysqld.sock)
 	# Custom port: $(check_mysql_connection localhost 3307)
 	# External DB: $(check_mysql_connection $dburl $dbport $dburoot $dbproot)
+	# External DB if login group exist: $(check_mysql_connection $dburl $dbport $dburoot -login-file)
+	# External DB if login group exist and is master-admin: $(check_mysql_connection $dburl $dbport any -login-file -master-admin)
+	# External DB check and save it as master-admin: $(check_mysql_connection $dburl $dbport $dburoot $dbproot -master-admin)
 	
 	# Examples for especific User connection:
 	# Localhost: $(check_mysql_connection localhost $wp_dbuser $wp_dbpass)
 	# Unix socket: $(check_mysql_connection localhost $wp_dbuser $wp_dbpass /var/run/mysqld/mysqld.sock)
 	# Custom port: $(check_mysql_connection localhost $wp_dbuser $wp_dbpass 3307)
 	# External DB: $(check_mysql_connection $extdb_url $extdb_port $wp_dbuser $wp_dbpass)
+	# External DB if login group exist: $(check_mysql_connection $extdb_url $extdb_port $wp_dbuser -login-file)
+	# External DB if login group exist and is master-admin: $(check_mysql_connection $extdb_url $extdb_port any -login-file -master-admin)
+	# External DB check and save it as master-admin: $(check_mysql_connection $extdb_url $extdb_port $wp_dbuser $wp_dbpass -master-admin)
 	
 	# Examples for especific DBname/User connection:
 	# Note: Error message is not displayed!
@@ -342,18 +348,55 @@ check_mysql_connection() {
 	# Unix socket: $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname /var/run/mysqld/mysqld.sock)
 	# Custom port: $(check_mysql_connection localhost $wp_dbuser $wp_dbpass $wp_dbname 3307)
 	# External DB: $(check_mysql_connection $extdb_url $extdb_port $wp_dbuser $wp_dbpass $wp_dbname)
+	# External DB if login group exist: $(check_mysql_connection $extdb_url $extdb_port $wp_dbuser -login-file $wp_dbname)
+	# Master-admin not needed here for specific dbs.
 	
 	local query="quit"
 	local error_display="true"
 	
 	if [[ -n $1 && ${1,,} != "localhost" && $(is_url $1) =~ ^(http|https|true|http\+ip|https\+ip|ip)$ && -n $2 && -n $3 && -n $4 ]]; then
 		check_for_mysql_client
-		if [[ -n $5 ]]; then
+		local suffix_group_name="${1}:${2}_${3}"
+		local user_param="-u${3}"
+		
+		if [[ -n $5 && $5 == "-master-admin" ]]; then
+			# 'default' is a reserved word, real usernames should never use it, it's possible, but not practical!
+			local suffix_group_name="${1}:${2}_default"
+		elif [[ -n $5 ]]; then
 			local query="use $5"
 			local error_display="false"
 		fi
-		sudo mysql --connect-timeout=10 -h "$1" -P "$2" -u"$3" -p"$4" -e "$query" 2>/dev/null
-		[[ $? != "0" ]] && local out="false"
+		
+		# Create or update the login file
+		if [[ $4 != "-login-file" ]]; then
+			mysql_login_cnf
+			sudo sed -i "/\[client_${suffix_group_name}\]/,/# ClientEnd/{/.*/d}" $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+			echo "[client_${suffix_group_name}]
+host = $1
+port = $2
+user = $3
+password = $4
+# ClientEnd" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+		else
+			[[ $5 == "-master-admin" ]] && unset user_param # take the user from the login group!
+			local error_display="false"
+		fi
+		
+		# Just for the record: We don't use the 'mysql_conf_editor' just because it can not be unattended :(
+		# --defaults-group-suffix should always be at the beginning, otherwise it fails.
+		sudo mysql --defaults-group-suffix=_${suffix_group_name} --connect-timeout=10 -h "$1" -P "$2" $user_param -e "$query" 2>/dev/null
+		if [[ $? != "0" ]]; then
+			local out="false"
+			sudo sed -i "/\[client_${suffix_group_name}\]/,/# ClientEnd/{/.*/d}" $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+		else
+			# Display a warning message when not enough privileges!
+			if [[ $5 == "-master-admin" ]]; then
+				local priv=$(sudo mysql --defaults-group-suffix=_${suffix_group_name} --connect-timeout=10 -h "$1" -P "$2" -e "SHOW GRANTS FOR CURRENT_USER();")
+				if ! [[ -n $(echo $priv | grep -Fo "WITH GRANT OPTION") && ( -n $(echo $priv | grep -Fo "GRANT ALL PRIVILEGES") || ( -n $(echo $priv | grep -Fo "CREATE USER") && -n $(echo $priv | grep -Fo "ALTER"))) ]]; then
+					echo "${red}${dim}[WARNING] Seems like '$(echo $priv | grep -oP -m 1 'Grants for \K\w+')' is not a Master user!${end}" >&2
+				fi
+			fi
+		fi 
 	elif [[ ${1,,} == "localhost" && $(conf_read mysql) == "true" ]]; then
 		if [[ -n $2 && -n $3 ]]; then
 			if [[ -S $4 ]]; then
@@ -381,9 +424,9 @@ check_mysql_connection() {
 	fi
 	
 	if [[ $out == "false" && $error_display != "false" ]]; then
-		echo "${red}============================================" >&2
-		echo "    [Error]  Database conection failed." >&2
-		echo "============================================${end}" >&2
+		echo "${red}===================================================" >&2
+		echo "    [Error]  Database conection failed! (${1})" >&2
+		echo "===================================================${end}" >&2
 		echo "" >&2
 		echo "false"
 	elif [[ $out == "false" ]]; then
@@ -397,7 +440,7 @@ check_mysql_connection() {
 check_external_db_saved() {
 	if [[ -n $(conf_read external-dbh) && -n $(conf_read external-dbu) && -n $(conf_read external-dbp) && -n $(conf_read external-dbx) ]]; then
 		external_db="[$(conf_read external-dbu),$(conf_read external-dbp),$(conf_read external-dbh):$(conf_read external-dbx)]"
-		[[ $(conf_read quiet) != "true" ]] && echo "${blu}${dim}External DB credentials found!${end}" >&2
+		[[ $(conf_read quiet) != "true" ]] && echo "${blu}${dim}External DB credentials found in your saved configuration!${end}" >&2
 	fi
 }
 
@@ -426,7 +469,7 @@ external_db_parse() {
 			return
 		fi
 		
-		if [[ $(check_mysql_connection $url $port $user $pass) != "true" ]]; then
+		if [[ $(check_mysql_connection $url $port $user $pass -master-admin) != "true" ]]; then
 			echo "${red}[ERROR] Cannot connect with your External Database!${end}"
 			return
 		else
@@ -510,7 +553,7 @@ wp_conf_retrieve() {
 	# wp_conf_retrieve example.com
 	# wp_conf_retrieve example.com false false /subfolder
 	# $1 is domain
-	# $2 set to false if you want to skip external_db questions.
+	# $2 set to false if you want to skip external_db questions. ONLY NEEDED (true) when you need master-admin privileges for your DB queries!
 	# $3 set to false if you want to disable WP Domain Mapping check (wp_pref will be for the main site when disabled, wp_ instead of wp_3_).
 	# $4 is subfolder
 	
@@ -573,33 +616,56 @@ wp_conf_retrieve() {
 	#[[ -z $wp_dbhost_port ]] && wp_dbhost_port="3306"
 	
 	
+	# Only used when External DB and Master-Admin privileges are required!
+	# Example: Cloning site because its needed to create new dbs and users.
+	# Example: Delete site because its required to drop users.
 	if [[ $2 != "false" && $wp_dbhost_host != "localhost" && -z $wp_dbhost_socket && $(is_url $wp_dbhost) =~ ^(http|https|true|http\+ip|https\+ip|ip)$ ]]; then
-		if [[ -z $external_db && -n $(conf_read external-dbh) && -n $(conf_read external-dbx) && $wp_dbhost == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
-			check_external_db_saved
-		elif [[ -z $external_db && -n $(conf_read external-dbh) ]]; then
-			echo "${dim}[INFO] External Database saved credentials found, but we cannot use it because not the same host!${end}" >&2
-		fi
-		
-		if [[ -n $external_db ]]; then
-			external_db_parse
-			if [[ $wp_dbhost != $extdb_host ]]; then
-				unset external_db
-				unset extdb_user
-				unset extdb_pass
-				unset extdb_host
-				unset extdb_url
-				unset extdb_port
+		# Don't needed if already exist a login-file with master-admin privileges!
+		if [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port any -login-file -master-admin) != "true" ]]; then
+			if [[ -z $external_db && -n $(conf_read external-dbh) && -n $(conf_read external-dbx) && $wp_dbhost == "$(conf_read external-dbh):$(conf_read external-dbx)" ]]; then
+				check_external_db_saved
+			elif [[ -z $external_db && -n $(conf_read external-dbh) ]]; then
+				echo "${dim}[INFO] External Database saved credentials found, but we cannot use it because not the same host!${end}" >&2
 			fi
-		fi
-		if [[ -z $external_db ]]; then
-			echo "" >&2
-			echo "${gre}External DB${blu} '${wp_dbhost}' ${gre}found in:${blu}${dim} ${1}${4} ${end}" >&2
-			read -p "${blu}External DB username: ${end}" extdb_user
-			read -p "${blu}External DB password: ${end}" extdb_pass
+			
+			if [[ -n $external_db ]]; then
+				external_db_parse
+				if [[ $wp_dbhost != $extdb_host ]]; then
+					unset external_db
+					unset extdb_user
+					unset extdb_pass
+					unset extdb_host
+					unset extdb_url
+					unset extdb_port
+				fi
+			fi
+			if [[ -z $external_db ]]; then
+				local done="0"
+				while [[ $done -lt "3" ]]
+				do
+					echo "" >&2
+					echo "${gre}External DB${blu} '${wp_dbhost}' ${gre}found in:${blu}${dim} ${1}${4} ${end}" >&2
+					read -p "${blu}External DB Master Username: ${end}" extdb_user
+					read -p "${blu}External DB password: ${end}" extdb_pass
+					if [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $extdb_user $extdb_pass -master-admin) == "true" ]]; then
+						extdb_host=$wp_dbhost
+						extdb_url=$wp_dbhost_host
+						extdb_port=$wp_dbhost_port
+						external_db="[${extdb_user},${extdb_pass},${extdb_host}]"
+						break
+					fi
+					local done=$(($done+1))
+				done
+			fi
+		else
+			# We always need these variables for non-WP sites!
+			unset external_db
+			unset extdb_user
+			unset extdb_pass
 			extdb_host=$wp_dbhost
 			extdb_url=$wp_dbhost_host
 			extdb_port=$wp_dbhost_port
-			external_db="[${extdb_user},${extdb_pass},${extdb_host}]"
+			echo "${blu}${dim}External DB Credentials found!${end}" >&2
 		fi
 	fi
 	
@@ -616,10 +682,10 @@ wp_conf_retrieve() {
 		
 		if [[ $(is_wp_multisite $maindom $4) =~ ^(subdomain|subdirectory)$ ]]; then
 			local dbq="USE $wp_dbname; SELECT blog_id FROM ${wp_dbpref}blogs WHERE domain='$1' OR domain='www.$1';"
-			if [[ $wp_dbhost == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
+			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
 				local bid=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbq" "${mysql_params[@]}")
-			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
-				local bid=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbq")
+			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
+				local bid=$(sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbq")
 			fi
 			
 			wp_blogid=$(echo $bid | cut -f 2 -d " " -s)
@@ -997,7 +1063,7 @@ is_cache() {
 
 is_wp_multisite() {
 	if [[ $(is_wp $1 $2) == "true" ]]; then
-		wp_conf_retrieve $1 true false $2 # 3th parameter should always be 'false' to prevent an infinite loop!
+		wp_conf_retrieve $1 false false $2 # 3th parameter should always be 'false' to prevent an infinite loop!
 		if [[ -n $wp_dbhost_host && -n $wp_dbname && -n $wp_dbpref ]]; then
 			local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}sitemeta' LIMIT 1;"
 			local dbsetuc="USE $wp_dbname; SELECT meta_value FROM ${wp_dbpref}sitemeta where meta_key='subdomain_install';"
@@ -1005,9 +1071,9 @@ is_wp_multisite() {
 			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
 				wpmu=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}")
 				[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetuc" "${mysql_params[@]}")
-			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
-				wpmu=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup")
-				[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetuc")
+			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
+				wpmu=$(sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbsetup")
+				[[ -n $wpmu ]] && mutype=$(sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbsetuc")
 			fi
 			
 			if [[ $(echo $mutype | cut -f 2 -d " " -s) == "1" ]]; then
@@ -1031,7 +1097,7 @@ is_wp_installed() {
 	# When you create a WP site, DB is created only after the initial WP installation wizard is completed.
 	
 	if [[ $(is_wp $1 $2) == "true" ]]; then
-		wp_conf_retrieve $1 true false $2
+		wp_conf_retrieve $1 false false $2
 		# It makes no sense checking for mapped domains, that's why is set to false.
 		# is_wp_installed will return true even if domain is not mapped, only a domain parked pointing to a WP site.
 		# if we want to check for mapped domains: wp_conf_retrieve $1 true false $2 > /dev/null (silenced echoed messages because affects this function)
@@ -1043,8 +1109,8 @@ is_wp_installed() {
 			
 			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
 				[[ -n $(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}") ]] && echo "true" || echo "false"
-			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
-				[[ -n $(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup") ]] && echo "true" || echo "false"
+			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
+				[[ -n $(sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbsetup") ]] && echo "true" || echo "false"
 			else
 				echo "false"
 			fi
@@ -1224,7 +1290,7 @@ edit_wp_db_url_multisite() {
 	# $3 - WP BlogID to force (optional)
 	
 	if [[ -n $1 && -n $2 && $(is_wp_multisite $1) =~ ^(subdomain|subdirectory)$ ]]; then
-		wp_conf_retrieve $1 true true $subfolder
+		wp_conf_retrieve $1 false true $subfolder
 		
 		# Force WP blogID
 		if [[ -n $3 && $3 =~ ^[0-9]+$ ]]; then
@@ -1234,7 +1300,7 @@ edit_wp_db_url_multisite() {
 			
 			if [[ $wp_dbhost_host == "localhost" && -n $(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}") ]]; then
 				echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
-			elif [[ $wp_dbhost_host != "localhost" && -n $(sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "$dbsetup") ]]; then
+			elif [[ $wp_dbhost_host != "localhost" && -n $(sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbsetup") ]]; then
 				echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
 			else
 				echo "${red}${dim}[ERROR] WordPress blog ID (${wp_dbpref}) not found!${end}" >&2
@@ -1249,14 +1315,12 @@ edit_wp_db_url_multisite() {
 USE $wp_dbname;
 UPDATE ${wp_dbpref_main}blogs SET domain='$2' WHERE blog_id='${wp_blogid}';
 UPDATE ${wp_dbpref_main}blogs SET path='/' WHERE blog_id='${wp_blogid}';
-FLUSH PRIVILEGES;
 _EOF_
-			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
-				sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" <<_EOF_
+			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
+				sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref_main}blogs SET domain='$2' WHERE blog_id='${wp_blogid}';
 UPDATE ${wp_dbpref_main}blogs SET path='/' WHERE blog_id='${wp_blogid}';
-FLUSH PRIVILEGES;
 _EOF_
 			else
 				echo "${red}${dim}[ERROR] WordPress Multisite database cannot be updated!${end}" >&2
@@ -1276,7 +1340,7 @@ edit_wp_db_url() {
 	#IMPORTANT NOTE: Always be sure to take "www" Force-Redirect into consideration before updating WP Url in database.
 	
 	if [[ -n $1 && -n $2 && $(is_wp_installed $1 $3) == "true" ]]; then
-		wp_conf_retrieve $1 true true $3
+		wp_conf_retrieve $1 false true $3
 		
 		if [[ -n $wp_dbhost_host && -n $wp_dbname && -n $wp_dbpref ]]; then
 			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
@@ -1284,16 +1348,14 @@ edit_wp_db_url() {
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
-FLUSH PRIVILEGES;
 _EOF_
 
 				echo "${gre}${dim}WordPress site${blu} ${1}${3} ${gre}database URL updated! ${blu}(${2})${end}"
-			elif [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) == "true" ]]; then
-				sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" <<_EOF_
+			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
+				sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
-FLUSH PRIVILEGES;
 _EOF_
 
 				echo "${gre}${dim}WordPress site${blu} ${1}${3} ${gre}database URL updated! ${blu}(${2})${end}"
@@ -1428,7 +1490,7 @@ mysql_login_cnf() {
 		sudo chown -R root:root $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 		
 		echo "# Webinoly MySQL/MariaDB Login Configuration File
-# You can use the 'mysql-config-editor' and then remove this file.
+
 " >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	fi
 }

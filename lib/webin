@@ -1063,14 +1063,14 @@ database_import() {
 	
 	if [[ -n $external_db ]]; then
 		external_db_parse
-		if [[ $(check_mysql_connection $extdb_url $extdb_port $extdb_user $extdb_pass) != "true" ]]; then
+		if [[ $(check_mysql_connection $extdb_url $extdb_port any -login-file -master-admin) != "true" ]]; then
 			echo "${red}[ERROR] Cannot connect with your External Database!${end}"
 			exit 1
 		fi
 		
 		echo "${dim}Wait while we import your db... ${end}"
-		sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" < $file
-		sudo mysql --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -u"$extdb_user" -p"$extdb_pass" -e "FLUSH PRIVILEGES;"
+		sudo mysql --defaults-group-suffix=_${extdb_url}:${extdb_port}_default --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" < $file
+		sudo mysql --defaults-group-suffix=_${extdb_url}:${extdb_port}_default --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -e "FLUSH PRIVILEGES;"
 		echo "${gre}Database successfully imported!${end}"
 	elif [[ -z $external_db && $(check_mysql_connection localhost) == "true" ]]; then
 		check_for_mysql -ask
