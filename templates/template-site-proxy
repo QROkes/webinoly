@@ -31,7 +31,8 @@ location / {
 	proxy_pass <upstream_name>;
 		
 	# CacheStaticFiles
-	location ~* \.(3gp|3gpp|7z|aac|ai|asf|asx|atom|avi|avif|bin|bmp|bz2|cast|cco|crt|css|cur|deb|der|dll|dmg|doc|docx|ear|eot|eps|exe|flv|gif|gz|heic|hqx|htc|ico|img|iso|jad|jar|jardiff|jng|jnlp|jpeg|jpg|js|json|kar|kml|kmz|m3u8|m4a|m4v|mid|midi|mml|mng|mov|mp3|mp4|mpeg|mpg|msi|msm|msp|odg|odp|ods|odt|ogg|ogv|otf|pdb|pdf|pem|pl|pm|png|ppt|pptx|prc|ps|ra|rar|rpm|rss|rtf|run|sea|sit|svg|svgz|swf|tar|taz|tcl|tgz|tif|tiff|tk|ts|ttf|txt|tz|war|wasm|wav|wbmp|webm|webmanifest|webp|wml|wmlc|wmv|woff|woff2|xhtml|xls|xlsx|xml|xpi|xspf|z|zip)$ {
+	location ~* \.(3gp|3gpp|7z|aac|ai|asf|asx|atom|avi|avif|bin|bmp|bz2|cast|cco|crt|css|cur|deb|der|dll|dmg|doc|docx|ear|eot|eps|exe|flv|gif|gz|heic|hqx|htc|ico|img|iso|jad|jar|jardiff|jng|jnlp|jpeg|jpg|js|json|kar|kml|kmz|m3u8|m4a|m4v|mid|midi|mml|mng|mov|mp3|mp4|mpeg|mpg|msi|msm|msp|odg|odp|ods|odt|ogg|ogv|otf|pdb|pdf|pem|pl|pm|png|ppt|pptx|prc|ps|ra|rar|rpm|rss|rtf|run|sea|sit|svg|svgz|swf|tar|taz|tcl|tgz|tif|tiff|tk|ts|ttf|txt|tz|war|wasm|wav|wbmp|webm|webmanifest|webp|wml|wmlc|wmv|woff|woff2|xhtml|xls|xlsx|xpi|xspf|z|zip)$ {
+		# More info about this location, read the notes included here: /opt/webinoly/templates/nginx/common/headers.conf
 		include common/headers-http.conf;
 		include common/headers-https.conf;
 		add_header "Access-Control-Allow-Origin" "*";

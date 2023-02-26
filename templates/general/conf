@@ -251,12 +251,12 @@
 
 
 # HTTP Header: Permissions Policy
-# Values: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Feature-Policy
+# Values: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy
 # Default: <empty>
 # Note: Use 'floc' value to automatically include the policy to forbid Topics API calculation.
 # Note: https://developer.chrome.com/docs/privacy-sandbox/topics/#site-opt-out
 ###########################
-#header-permissions:microphone 'none'; geolocation 'none'
+#header-permissions:accelerometer=(),autoplay=(),camera=(),display-capture=(),encrypted-media=(),fullscreen=(),gamepad=(),geolocation=(),gyroscope=(),hid=(),local-fonts=(),magnetometer=(),microphone=(),midi=(),payment=(),picture-in-picture=(),publickey-credentials-get=(),screen-wake-lock=(),serial=(),usb=(),web-share=(),xr-spatial-tracking=()
 
 
 # HTTP Header: Referrer Policy
