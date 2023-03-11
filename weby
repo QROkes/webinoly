@@ -4,10 +4,52 @@
 # Check OS support
 distr=`echo $(lsb_release -i | cut -d':' -f 2)`
 osver=`echo $(lsb_release -c | cut -d':' -f 2)`
-# Supported: 22.04 and 20.04 (18.04 just for updates, no new installations)
-if [[ $distr != "Ubuntu" ]] || ! [[ $osver =~ ^(bionic|focal|jammy)$ ]] || [[ $osver == "bionic" && $1 != "upd" ]]; then
+
+# Check for custom version
+if [[ $2 == "-ver="* ]]; then
+	ver=$(echo "$2" | cut -d'=' -f 2 -s)
+	# Skip stadistics counters for dev and testing (custom version stats).
+	if [[ $(echo $ver | rev | cut -c-1) == "*" || $ver == "alpha" ]]; then
+		ver=${ver//'*'}
+		statskip="true"
+	fi
+fi
+
+# Supported: 22.04 Jammy and 20.04 Focal
+if [[ $distr != "Ubuntu" ]] || ! [[ $osver =~ ^(bionic|focal|jammy)$ ]]; then
 	echo "$(tput setaf 1)"
 	echo "[ERROR] This OS is not supported by Webinoly and could not work properly. $(tput dim)(${distr} '${osver}')"
+	echo "$(tput sgr0)"
+	sudo rm weby
+	exit 1
+
+# 18.04 Bionic can be installed before 1.17.0
+elif [[ $osver == "bionic" && $1 != "upd" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -ge 1170 ]]; then
+	echo "$(tput setaf 1)"
+	echo "[ERROR] Ubuntu 18.04 is not supported on this version of Webinoly!"
+	echo "$(tput sgr0)"
+	sudo rm weby
+	exit 1
+elif [[ $osver == "bionic" && $1 != "upd" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -lt 1170 ]]; then
+	echo "$(tput setaf 1)"
+	echo "[WARNING] You should consider a newer Ubuntu version! $(tput dim)(20.04 or 22.04 are recommended instead)"
+	echo "$(tput sgr0)"
+	
+# 18.04 Bionic just for updates, no new installations after 1.17.0
+elif [[ $osver == "bionic" && $1 != "upd" ]]; then
+	echo "$(tput setaf 1)"
+	echo "[ERROR] Ubuntu 18.04 is not supported for new installations! $(tput dim)(20.04 or 22.04 are recommended instead)"
+	echo "$(tput sgr0)"
+	sudo rm weby
+	exit 1
+
+# 22.04 Jammy is supported only after 1.16.6
+elif [[ $osver == "jammy" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -lt 1166 ]]; then
+	#jammy - 1.16.6
+	#focal - 1.12.0
+	#bionic - 1.4.2
+	echo "$(tput setaf 1)"
+	echo "[ERROR] Ubuntu 22.04 (Jammy) is not supported by this version!"
 	echo "$(tput sgr0)"
 	sudo rm weby
 	exit 1
@@ -63,14 +105,7 @@ fi
 
 
 # Download and install Webinoly
-if [[ $2 == "-ver="* ]]; then
-	ver=$(echo "$2" | cut -d'=' -f 2 -s)
-	# Skip stadistics counters for dev and testing (custom version stats).
-	if [[ $(echo $ver | rev | cut -c-1) == "*" || $ver == "alpha" ]]; then
-		ver=${ver//'*'}
-		statskip="true"
-	fi
-	
+if [[ -n $ver ]]; then
 	# Be sure we have a valid server response for the requested version
 	code=$(wget --server-response --spider https://qrok.es/webinoly?version=$ver 2>&1 | awk '/^  HTTP/{print $2}')
 	code="${code##*$'\n'}" # Get the last code (redirections)
@@ -102,12 +137,8 @@ sudo mkdir -p /opt/webinoly/templates/source
 sudo find /opt/webinoly -type d -exec chmod 755 {} \;
 sudo find /opt/webinoly -type f -exec chmod 644 {} \;
 sudo chmod -f 744 /opt/webinoly/lib/ex-*
-
-# REMOVE when unsupported! (Only to maintain compatibility with versions before 1.16.0)
-[[ ! -d /opt/webinoly/usr ]] && usrw="/opt/webinoly/plugins" || usrw="/opt/webinoly/usr"
-
-sudo chmod 755 ${usrw}/*
-sudo mv ${usrw}/* /usr/bin/
+sudo chmod 755 /opt/webinoly/usr/*
+sudo mv /opt/webinoly/usr/* /usr/bin/
 
 source /opt/webinoly/lib/general
 
