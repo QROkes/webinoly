@@ -951,12 +951,6 @@ stack_builder() {
 			[[ $(conf_read db-engine) == "mysql" ]] && conf_write mysql-ver $mysql_default || conf_write mysql-ver $mariadb_default
 		fi
 		
-		# REMOVE: when a new LTS is released and jammy supports more than one version.
-		if [[ $(conf_read db-engine) != "mysql" && $(conf_read mysql-ver) != "10.6" && $(lsb_release -c | cut -d':' -f 2 | xargs) == "jammy" ]]; then
-			conf_write mysql-ver 10.6
-			echo "${gre}Force MariaDB 10.6 because is the only LTS version supported in Ubuntu 22.04!${end}"
-		fi
-		
 		if [[ $(conf_read db-engine) == "mysql" ]]; then
 			[[ ! -s /usr/share/keyrings/mysql-archive-keyring.gpg ]] && sudo rm -rf /usr/share/keyrings/mysql-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/mysql-archive-keyring.gpg ]] && wget -nv -O- 'https://repo.mysql.com/RPM-GPG-KEY-mysql-2022' | sudo gpg --dearmor -o /usr/share/keyrings/mysql-archive-keyring.gpg

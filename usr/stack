@@ -249,7 +249,6 @@ elif [[ -n $purge && -n $mysql ]]; then
 		
 		if [[ $answer == [Yy] || $(conf_read force-flag) == "true" ]]; then
 			[[ $(conf_read mysql-tool-pma) == "true" ]] && stack -pma -purge=force
-			mysqlver=$(conf_read mysql-ver)
 			sudo systemctl stop mysql
 			sudo rm -rf /etc/mysql/*.conf.d/* # Prevent warnings when purging packages
 			
@@ -264,10 +263,14 @@ elif [[ -n $purge && -n $mysql ]]; then
 				sudo rm -rf /usr/share/keyrings/mysql-archive-keyring.gpg
 				sudo rm -rf /etc/apt/sources.list.d/mysql.list
 			else
+				mysqlver=$(conf_read mysql-ver)
+				# In 10.11 debconf variables changed!
+				[[ ${mysqlver//.} -lt 1011 ]] && mariadebconf="mariadb-server-${mysqlver}" || mariadebconf="mariadb-server"
+				
 				if [[ $mysql == "keep-data" ]]; then
-					echo "mariadb-server-${mysqlver}	mariadb-server-${mysqlver}/postrm_remove_databases	boolean false" | debconf-set-selections
+					echo "$mariadebconf	$mariadebconf/postrm_remove_databases	boolean false" | debconf-set-selections
 				else
-					echo "mariadb-server-${mysqlver}	mariadb-server-${mysqlver}/postrm_remove_databases	boolean true" | debconf-set-selections
+					echo "$mariadebconf	$mariadebconf/postrm_remove_databases	boolean true" | debconf-set-selections
 				fi
 				sudo apt -y purge mariadb-server mariadb-common mysql-common
 				sudo rm -rf /usr/share/keyrings/mariadb-archive-keyring.gpg
@@ -711,12 +714,6 @@ elif [[ -n $php_ver ]]; then
 
 elif [[ -n $mysql_ver ]]; then
 	api-events_update st4
-	
-	# REMOVE: when a new LTS is released and jammy supports more than one version.
-	if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) == "jammy" ]]; then
-		echo "${red}[Disabled] MariaDB 10.6 is the only LTS version supported in Ubuntu 22.04!${end}"
-		exit 1
-	fi
 	
 	if [[ $mysql_ver != true && $(check_mysql_version $mysql_ver) == "true" ]]; then
 		echo "${blu}New MySQL (MariaDB) version: '$mysql_ver' ${end}"
