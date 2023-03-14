@@ -38,8 +38,8 @@ if [[ -n $add ]]; then
 	if [[ $add == true ]]; then
 		echo ""
 		read -p "${blu}HTTP-Auth User: ${end}" user
-		read -p "${blu}HTTP-Auth Password: ${end}" pass
-		echo ""
+		read -p "${blu}HTTP-Auth Password: ${hid}" pass
+		echo "${hidend}"
 	elif [[ $(echo "${add}" | cut -c-1) == "[" && $(echo "${add}" | rev | cut -c-1) == "]" ]]; then
 		# No need for check var lenght to prevent errors, the previous condition is enough in this case.
 		userdata=${add:1:-1}

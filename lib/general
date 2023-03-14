@@ -17,12 +17,14 @@ readonly datadog_agent_ver="7"
 readonly tools_port_default="22222"
 
 # echo colors
-readonly red=`tput setaf 1`
-readonly gre=`tput setaf 2`
-readonly blu=`tput setaf 6`
-readonly end=`tput sgr0`
-readonly bol=`tput bold`
-readonly dim=`tput dim`
+readonly red=$(tput setaf 1)
+readonly gre=$(tput setaf 2)
+readonly blu=$(tput setaf 6)
+readonly end=$(tput sgr0)
+readonly bol=$(tput bold)
+readonly dim=$(tput dim)
+readonly hid=$(tput setaf 6)$(tput setab 6)
+readonly hidend=$(tput sgr0)$(tput el)
 
 
 # ***********************************************
@@ -648,7 +650,8 @@ wp_conf_retrieve() {
 					echo "" >&2
 					echo "${gre}External DB${blu} '${wp_dbhost}' ${gre}found in:${blu}${dim} ${1}${4} ${end}" >&2
 					read -p "${blu}External DB Master Username: ${end}" extdb_user
-					read -p "${blu}External DB password: ${end}" extdb_pass
+					read -p "${blu}External DB password: ${hid}" extdb_pass
+					echo "${hidend}"
 					if [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $extdb_user $extdb_pass -master-admin) == "true" ]]; then
 						extdb_host=$wp_dbhost
 						extdb_url=$wp_dbhost_host

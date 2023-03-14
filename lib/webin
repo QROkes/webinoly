@@ -136,7 +136,8 @@ smtp_setup() {
 		echo ""
 		read -p "${blu} + SMTP Host: ${end}" host
 		read -p "${blu} + User: ${end}" user
-		read -p "${blu} + Password: ${end}" pass
+		read -p "${blu} + Password: ${hid}" pass
+		echo "${hidend}"
 		read -p "${blu} + Main Hostname/Domain${default_host}: ${end}" mainhost
 		[[ -z $mainhost && -n $default_host ]] && mainhost=$hostname
 		echo ""
@@ -221,8 +222,8 @@ mysql_change_password() {
 	if [[ $mysql_password == true ]]; then
 		echo ""
 		read -p "${blu}MySQL/MariaDB User: ${end}" user
-		read -p "${blu}New Password: ${end}" pass
-		echo ""
+		read -p "${blu}New Password: ${hid}" pass
+		echo "${hidend}"
 	elif [[ $(echo "${mysql_password}" | cut -c-1) == "[" && $(echo "${mysql_password}" | rev | cut -c-1) == "]" ]]; then
 		# No need for check var lenght to prevent errors, the previous condition is enough in this case.
 		userdata=${mysql_password:1:-1}
@@ -303,7 +304,8 @@ mysql_public_access() {
 		
 		if [[ -z $user || -z $pass ]]; then
 			read -p "${blu}Master User Name: ${end}" user
-			read -p "${blu}Master User Password: ${end}" pass
+			read -p "${blu}Master User Password: ${hid}" pass
+			echo "${hidend}"
 		fi
 		
 		[[ ${pass,,} == "random" ]] && local pass=`pwgen -s -1 16`
@@ -327,7 +329,7 @@ GRANT ${priv} ON *.* TO '${user}'@'%' ${grant};
 FLUSH PRIVILEGES;
 _EOF_
 
-			[[ $? == 0 ]] && echo "${gre}${dim}Master User${blu} $user ${gre}with password ${blu}${pass}${gre} successfully created!${end}" || echo "${red}[ERROR] Unexpected error!${end}"
+			[[ $? == 0 ]] && echo "${gre}${dim}Master User${blu} $user ${gre}successfully created!${end}" || echo "${red}[ERROR] Unexpected error!${end}"
 		fi
 	
 	fi
