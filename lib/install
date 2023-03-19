@@ -235,25 +235,20 @@ mysql_install() {
 	
 	# MySQL/MariaDB Installation
 	if [[ $(conf_read db-engine) == "mysql" ]]; then
-		echo "mysql-community-server mysql-community-server/root-pass password $AUTOGENPASS_ROOT" | debconf-set-selections
-		echo "mysql-community-server mysql-community-server/re-root-pass password $AUTOGENPASS_ROOT" | debconf-set-selections
+		# We set the root password in the next step after installation.
+		echo "mysql-community-server mysql-community-server/root-pass password " | debconf-set-selections
+		#echo "mysql-community-server mysql-community-server/re-root-pass password $AUTOGENPASS_ROOT" | debconf-set-selections
 		echo "mysql-community-server mysql-server/default-auth-override select Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
 		sudo apt -y install mysql-server
 	else
-		local ver=$(conf_read mysql-ver)
-		echo "mariadb-server-${ver} mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections
-		echo "mariadb-server-${ver} mysql-server/root_password_again password $AUTOGENPASS_ROOT" | debconf-set-selections
+		# This option is no longer available in recent MariaDB versions, so we set the root password in the next step after installation.
+		#local ver=$(conf_read mysql-ver)
+		#echo "mariadb-server-${ver} mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections
+		#echo "mariadb-server-${ver} mysql-server/root_password_again password $AUTOGENPASS_ROOT" | debconf-set-selections
 		sudo apt -y install apt-transport-https dirmngr mariadb-server
 	fi
 	
 	conf_write mysql true
-	
-	# MySQL/MariaDB login data (tmp)
-	mysql_login_cnf
-	echo "[client]
-user = root
-password = $AUTOGENPASS_ROOT
-host = localhost" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	
 	# https://mariadb.com/kb/en/mysql_upgrade/
 	# The mysql_upgrade client is deprecated in MySQL 8. (This process is done automatically)
@@ -263,6 +258,11 @@ host = localhost" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	fi
 
 	#Instead of mysql_secure_installation we do this: (same but manually, because not acept unattended)
+	# - Set a password for root accounts
+	# - Remove the root accounts accessible from outside the localhost.
+	# - Remove anonymous-user accounts.
+	# - Delete the test database, accessible by anonymous users.
+	# - Reload the user privileges tables.
 	sudo mysql --user=root <<_EOF_
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
@@ -272,6 +272,12 @@ CREATE USER IF NOT EXISTS 'admin'@'localhost' IDENTIFIED BY '${AUTOGENPASS_ADMIN
 GRANT ALL PRIVILEGES ON *.* TO 'admin'@'localhost' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 _EOF_
+
+	if [[ $(conf_read db-engine) == "mysql" ]]; then
+		sudo mysql --user=root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${AUTOGENPASS_ROOT}';FLUSH PRIVILEGES;"
+	else
+		sudo mysql --user=root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${AUTOGENPASS_ROOT}';FLUSH PRIVILEGES;"
+	fi
 	
 	sudo rm -rf $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	api-events_update im4
@@ -809,22 +815,6 @@ swap_create() {
 }
 
 
-messagend_install() {
-	local ROOT_PW=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
-	local ADMIN_PW=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
-	
-	echo ""
-	echo "${gre}"
-	echo "****************************************************************************"
-	echo "******${bol}            INSTALLATION HAS FINISHED SUCCESSFULLY              ${end}${gre}******"
-	echo "****************************************************************************"
-	echo "********      Save your DB access password in a secure place:       ********"
-	echo "******${dim}      root: ${ROOT_PW}       admin: ${ADMIN_PW}      ${end}${gre}******"
-	echo "****************************************************************************"
-	echo "${blu}Never change these passwords! Read:${end}${dim} https://webinoly.com/documentation/webinolys/#dbpass"
-	echo "${end}"
-}
-
 message_welcome() {
 	echo "${blu}"
 	echo "***************************************************************"
@@ -1010,7 +1000,21 @@ stack_builder() {
 		[[ $3 == "mysql-client" && $(conf_read mysql-client) != "true" ]] && mysql_client_install
 		[[ $3 == "mysql" && $(conf_read mysql) != "true" ]] && mysql_client_install && mysql_install && local mysql_pass_display="true" && mysql_optim
 		[[ ( $3 == "mysql" || $4 == "pma" ) && $(conf_read mysql) == "true" && $(conf_read mysql-tool-pma) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && mysql_tool_pma
-		[[ $mysql_pass_display == "true" && -z $block_password_display ]] && messagend_install
+		
+		# This message is now only for legacy support!
+		# People expects the passwords displayed, so we keep this message to prevent people asking!
+		if [[ $mysql_pass_display == "true" && -z $block_password_display ]]; then
+			echo ""
+			echo "${gre}"
+			echo "****************************************************************************"
+			echo "******${bol}            INSTALLATION HAS FINISHED SUCCESSFULLY              ${end}${gre}******"
+			echo "****************************************************************************"
+			echo "********       MySQL/MariaDB properly configured and secured!       ********"
+			echo "************${dim}         Passwords no longer displayed here.        ${end}${gre}************"
+			echo "****************************************************************************"
+			echo "${blu}For passwords, read:${end}${dim} https://webinoly.com/documentation/webinolys/#dbdata"
+			echo "${end}"
+		fi
 	fi
 	
 	[[ $code != 0 || -n $(conf_read stack-build-error-flag) ]] && sudo webinoly -verify=critical || return 0 # Never end a function with negative open!
