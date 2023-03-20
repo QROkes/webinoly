@@ -989,9 +989,9 @@ redirection_manager() {
 			sudo chown -R root:root /etc/nginx/apps.d/$domain-nginx.conf
 		fi
 		
-		local exisa=$( grep -G "^# RedirectFrom: $(escaped_string $from -grep)$" /etc/nginx/apps.d/$domain-nginx.conf )
-		local exisb=$( grep -G "^# RedirectFrom: $(escaped_string $from -grep) (Regex)$" /etc/nginx/apps.d/$domain-nginx.conf )
-		local exisc=$( grep -G "^# RedirectFrom: $(escaped_string $from -grep) (Exact)$" /etc/nginx/apps.d/$domain-nginx.conf )
+		local exisa=$( grep -G "^# RedirectFrom: $(escaped_string $from)$" /etc/nginx/apps.d/$domain-nginx.conf )
+		local exisb=$( grep -G "^# RedirectFrom: $(escaped_string $from) (Regex)$" /etc/nginx/apps.d/$domain-nginx.conf )
+		local exisc=$( grep -G "^# RedirectFrom: $(escaped_string $from) (Exact)$" /etc/nginx/apps.d/$domain-nginx.conf )
 		
 		# Can have both at the same time, one exact and another.
 		if [[ ( -z $exisc && $exact == "true" ) || ( -z $exisa && -z $exisb && -z $exact ) ]]; then
