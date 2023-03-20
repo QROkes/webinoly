@@ -217,9 +217,7 @@ elif [[ -n $multisite_convert && -f /etc/nginx/sites-available/$domain ]]; then
 		exit 1
 	fi
 	
-	# We need to call this function in the parent shell to preserve variables.
-	wp_conf_retrieve $domain false false $subfolder 	
-	
+	wp_conf_retrieve $domain false false $subfolder
 	if [[ $(is_wp_installed $domain $subfolder) != "true" ]]; then
 		echo "${red}[ERROR] WordPress site${blu} $domain$subfolder ${red}is empty and still not configured!${end}"
 		exit 1
@@ -371,7 +369,6 @@ elif [[ -n $clone_from ]]; then
 	fi
 	
 	if [[ $(is_wp $clone_from $subfolder) == "true" ]]; then
-		#We need to call this function in the parent shell to preserve variables and avoid asking two times for the same values in case of external db.
 		wp_conf_retrieve $clone_from true false $subfolder
 		iswpclone="true"
 		
@@ -402,15 +399,7 @@ elif [[ -n $replace_content && -f /etc/nginx/sites-available/$domain ]]; then
 		exit 1
 	fi
 	
-	#We need to call this function in the parent shell to preserve variables.
-	wp_conf_retrieve $domain false true $subfolder
-	
-	if [[ $(is_wp_installed $domain $subfolder) != "true" ]]; then
-		echo "${red}[ERROR] WordPress is empty and still not configured in ${domain}${subfolder} site!${end}"
-		exit 1
-	else
-		wp_replace_content
-	fi
+	wp_replace_content
 
 
 # WordPress Environment Type (should be here after cloning site for precedence)

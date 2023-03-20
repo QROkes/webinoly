@@ -1220,9 +1220,6 @@ parked_domain() {
 	sed -i "/include \/var\/www\/$parked\/\*-nginx.conf;/a \	include \/var\/www\/${parked}\/\*-$(echo $parked | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;" /etc/nginx/sites-available/$parked
 	sed -i "/include \/var\/www\/$parked\/\*-nginx.conf;/a \	include \/var\/www\/${parked}/*-$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;" /etc/nginx/sites-available/$domain
 	
-	# Prevent asking multiple times in case of external DB.
-	[[ -n $domain_mapping_wp_id && $domain_mapping_wp_id =~ ^[0-9]+$ && $(is_wp $parked) == "true" ]] && wp_conf_retrieve $parked false false $subfolder
-	
 	# WordPress Domain Mapping
 	if [[ $domain_mapping_wp_id == 1  ]]; then
 		echo "${red}${dim}[ERROR] Domain Mapping failed because WP blog ID cannot be 1 (main site)! ${end}"
@@ -1845,6 +1842,12 @@ wp_replace_content() {
 	
 	if [[ -z $search || -z $replace ]]; then
 		echo "${red}[ERROR] Please, enter a valid value for search and replace!${end}"
+		exit 1
+	fi
+	
+	wp_conf_retrieve $domain false true $subfolder
+	if [[ $(is_wp_installed $domain $subfolder) != "true" ]]; then
+		echo "${red}[ERROR] WordPress is empty and still not configured in ${domain}${subfolder} site!${end}"
 		exit 1
 	fi
 	
