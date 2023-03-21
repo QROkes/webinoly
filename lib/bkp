@@ -631,18 +631,13 @@ export_server() {
 	
 	[[ -f /opt/webinoly/webinoly.conf.exported ]] && local include="/opt/webinoly/webinoly.conf.exported" || local include=""
 	[[ -d /etc/nginx/apps.d ]] && local include="$include /etc/nginx/apps.d"
-	[[ -f /etc/nginx/conf.d/blockips.conf ]] && local include="$include /etc/nginx/conf.d/blockips.conf"
-	[[ -f /etc/nginx/conf.d/webinoly.conf ]] && local include="$include /etc/nginx/conf.d/webinoly.conf"
+	[[ -d /etc/nginx/conf.d ]] && local include="$include /etc/nginx/conf.d"
 	[[ -d /etc/nginx/sites-available ]] && local include="$include /etc/nginx/sites-available"
 	[[ -d /etc/nginx/sites-enabled ]] && local include="$include /etc/nginx/sites-enabled"
 	[[ -d /var/www ]] && local include="$include /var/www"
 	[[ -d /etc/letsencrypt ]] && local include="$include /etc/letsencrypt"
 	[[ -f /etc/nginx/.htpasswd ]] && local include="$include /etc/nginx/.htpasswd"
 	[[ -f $HOME/.aws/credentials ]] && local include="$include $HOME/.aws/credentials"
-	[[ -f /opt/webinoly/templates/source/csp_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/csp_webinoly.data"
-	[[ -f /opt/webinoly/templates/source/pph_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/pph_webinoly.data"
-	[[ -f /opt/webinoly/templates/source/cch_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/cch_webinoly.data"
-	[[ -f /opt/webinoly/templates/source/rob_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/rob_webinoly.data"
 	[[ -f /opt/webinoly/templates/source/custom_header_http_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_http_webinoly.data"
 	[[ -f /opt/webinoly/templates/source/custom_header_https_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_https_webinoly.data"
 	[[ -f /opt/webinoly/templates/source/custom_header_html_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_html_webinoly.data"
@@ -723,6 +718,8 @@ export_site() {
 		[[ -z $subfolder && -d /var/www/$siteto ]] && local include="$include /var/www/$siteto"
 		[[ -n $subfolder && -d /var/www/$siteto/htdocs$subfolder ]] && local include="$include /var/www/$siteto/htdocs$subfolder"
 		
+		[[ $(is_proxy $siteto $subfolder) == "true" ]] && local rp_upstream="true" # Include upstreams for reverse proxy
+		
 		for app in /etc/nginx/apps.d/${siteto}${subn}*.conf
 		do
 			[[ -s $app ]] && local include="$include $app"
@@ -761,7 +758,7 @@ export_site() {
 			fi
 			
 			# Check if site contains WP in subfolders
-			for sit in "/etc/nginx/apps.d/${siteto}_"*-wpcommon.conf
+			for sit in "/etc/nginx/apps.d/${siteto}$(echo $subfolder | sed "s/\//_/g")_"*-wpcommon.conf
 			do 
 				local suby="/$(echo $sit | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 				if [[ $(is_wp $siteto $suby) == "true" ]]; then
@@ -793,6 +790,7 @@ export_site() {
 		[[ -f /var/www/webinoly_backup_db ]] && local include="$include /var/www/webinoly_backup_db"
 	fi
 	[[ -f /var/www/webinoly.conf_temp ]] && local include="$include /var/www/webinoly.conf_temp"
+	[[ $rp_upstream == "true" && -f /etc/nginx/conf.d/upstream_proxy.conf ]] && local include="$include /etc/nginx/conf.d/upstream_proxy.conf"
 	
 	[[ -n $include ]] && sudo tar -Pcf $destination/$filename $include
 	
@@ -1001,8 +999,8 @@ import_server() {
 		
 		if [[ -s /var/www/webinoly_backup_dball && $(conf_read mysql) == "true" && -z $skip_db ]]; then
 			sudo webinoly -db-import -file=/var/www/webinoly_backup_dball
-			[[ -n $(conf_read_exported mysql-root) ]] && conf_write mysql-root $(conf_read_exported mysql-root)
-			[[ -n $(conf_read_exported mysql-admin) ]] && conf_write mysql-admin $(conf_read_exported mysql-admin)
+			[[ -n $(conf_read_exported mysql-root) ]] && conf_write mysql-root $(conf_read_exported mysql-root) || conf_delete mysql-root -commented
+			[[ -n $(conf_read_exported mysql-admin) ]] && conf_write mysql-admin $(conf_read_exported mysql-admin) || conf_delete mysql-admin -commented
 			sudo rm -rf /var/www/webinoly_backup_dball
 			sudo webinoly -server-reset=mysql
 		elif [[ -s /var/www/webinoly_backup_dball && $(conf_read mysql) != "true" && -z $skip_db ]]; then
