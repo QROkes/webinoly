@@ -145,9 +145,16 @@ bkp_local_db() {
 		local fn="multiple"
 		local db_name_list=$(conf_read multi-bkp-db)
 		conf_delete multi-bkp-db
+		if [[ -n $(conf_read multi-bkp-dbh) ]]; then
+			local extdb_url=$(echo $(conf_read multi-bkp-dbh) | cut -d':' -f 1 -s )
+			local extdb_port=$(echo $(conf_read multi-bkp-dbh) | cut -d':' -f 2 -s )
+			conf_delete multi-bkp-dbh
+		fi
 	elif [[ -n $child_multi_bkp_db ]]; then
 		[[ -n $(conf_read multi-bkp-db) ]] && conf_write multi-bkp-db "$(conf_read multi-bkp-db) $dbname" || conf_write multi-bkp-db $dbname
 		echo "${blu}${dim}Added: $dbname ${end}"
+		[[ -z $(conf_read multi-bkp-dbh) && -n $extdb_url && -n $extdb_port ]] && conf_write multi-bkp-dbh "${extdb_url}:${extdb_port}"
+		[[ -n $(conf_read multi-bkp-dbh) && $(conf_read multi-bkp-dbh) != "${extdb_url}:${extdb_port}" ]] && conf_write multi-bkp-dbh "error:error"
 		# When is a child process we need to exit here, backup is made by master process, not child.
 		return
 	else
@@ -158,7 +165,11 @@ bkp_local_db() {
 	
 	
 	# ALL Databases
-	[[ $dbname == "all" ]] && local db_name_list="--all-databases" || local db_name_list="--databases $db_name_list"
+	if [[ $dbname == "all" ]]; then
+		local db_name_list="--all-databases"
+	elif [[ -n $db_name_list ]]; then
+		local db_name_list="--databases $db_name_list"
+	fi
 	
 	
 	# Set destination folder and filename
@@ -176,10 +187,16 @@ bkp_local_db() {
 	[[ -z $filename ]] && local filename="webinoly-backup-db_${fn}_$(date +%F)-$(date +%T).sql"
 
 	
-	if [[ ( $wp_dbhost_host == "localhost" || ( -z $extdb_url && -z $extdb_port )) && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
+	if [[ ( $wp_dbhost_host == "localhost" || ( -z $extdb_url && -z $extdb_port )) && -n $db_name_list && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
 		sudo mysqldump --user=admin --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
-	elif [[ $(check_mysql_connection $extdb_url $extdb_port any -login-file -master-admin) == "true" ]]; then
+	elif [[ -n $extdb_url && $extdb_url != "error" && -n $db_name_list && $(check_mysql_connection $extdb_url $extdb_port any -login-file -master-admin) == "true" ]]; then
 		sudo mysqldump --defaults-group-suffix=_${extdb_url}:${extdb_port}_default -h "$extdb_url" -P "$extdb_port" --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
+	elif [[ $extdb_url == "error" ]]; then
+		echo "${red}[ERROR] Multiple DB hosts not allowed!${end}"
+		exit 1
+	elif [[ -z $db_name_list ]]; then
+		echo "${red}[ERROR] Database backup failed! ${dim}(Empty DB list)${end}"
+		exit 1
 	else
 		echo "${red}[ERROR] DB Connection failed!${end}"
 		exit 1
