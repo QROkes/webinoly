@@ -22,13 +22,13 @@ fi
 
 
 linux_optim() {
-	api-events_update in4
+	api-events_update ic1
 	[[ $(conf_read linux-optim) == "true" ]] && return
 	
 	# Kernel Optimization
 	if [[ $(conf_read kernel-optim) != "false" ]]; then
 		echo "${gre}Wait while Webinoly optimize your Ubuntu Operating System...${end}"
-		api-events_update in5
+		api-events_update ic2
 		[[ -f /etc/sysctl.d/90-webinoly.conf ]] && sudo rm -rf /etc/sysctl.d/90-webinoly.conf
 		sudo cp /opt/webinoly/templates/general/sysctl /etc/sysctl.d/90-webinoly.conf
 		sudo modprobe tcp_bbr
@@ -82,7 +82,7 @@ linux_optim() {
 		# Also: 'sudo service procps force-reload' but we prefer this method to better display errors (just in case)
 		sudo sysctl -p -q /etc/sysctl.d/90-webinoly.conf
 		
-		api-events_update in6
+		api-events_update ic3
 	fi
 	
 	# File directors per process
@@ -133,7 +133,7 @@ WantedBy=multi-user.target" >> /etc/systemd/system/webinoly-disable-thp.service
 	sudo systemctl daemon-reload
 	[[ $(conf_read nginx) == "true" ]] && sudo systemctl restart nginx # We need to kill the process, don't use reload
 	conf_write linux-optim true
-	api-events_update in9
+	api-events_update ic6
 }
 
 
@@ -212,7 +212,7 @@ php_install() {
 
 
 mysql_install() {
-	api-events_update im1
+	api-events_update im3
 	echo "${gre}MySQL/MariaDB version '$(conf_read mysql-ver)' is set as default.${end}"
 	
 	# debconf-utils for unattended scripts
@@ -285,10 +285,10 @@ _EOF_
 }
 
 mysql_client_install() {
-	api-events_update im2
+	api-events_update im1
 	[[ $(conf_read db-engine) != "mysql" ]] && sudo apt -y install mariadb-client || sudo apt -y install mysql-client
 	conf_write mysql-client true
-	api-events_update im3
+	api-events_update im2
 	echo "${gre}MySQL/MariaDB Client has been successfully installed!${end}"
 }
 
@@ -408,7 +408,7 @@ location = /xmlrpc.php {
 	conf_write server-version $svr_version
 	conf_write nginx-optim true
 	sudo systemctl reload nginx
-	api-events_update in10
+	api-events_update in4
 	echo "${gre}Nginx has been successfully Optimized by Webinoly! ${end}"
 }
 
@@ -561,7 +561,7 @@ php_tool_site() {
 
 
 nginx_tool_ssl() {
-	api-events_update in11
+	api-events_update in5
 
 	# Install LetsEncrypt
 	local certb=0
@@ -581,13 +581,13 @@ nginx_tool_ssl() {
 	[[ ! -L /usr/bin/certbot ]] && sudo ln -s /snap/bin/certbot /usr/bin/certbot
 	
 	conf_write nginx-tool-ssl true
-	api-events_update in12
+	api-events_update in6
 	echo "${gre}Let's Encrypt (certbot) has been installed successfully! ${end}"
 }
 
 
 nginx_tool_bkp() {	
-	api-events_update in13
+	api-events_update in7
 	
 	# Instalar Duply & Duplicity with S3 support
 	# Now there is an Official PPA: https://launchpad.net/~duplicity-team/+archive/ubuntu/duplicity-release-git
@@ -614,7 +614,7 @@ nginx_tool_bkp() {
 	sudo chmod 755 /usr/bin/duply
 	
 	conf_write nginx-tool-bkp true
-	api-events_update in14
+	api-events_update in8
 	echo "${gre}BackUp packages has been installed successfully! ${end}"
 }
 
@@ -742,7 +742,7 @@ swap_create() {
 
 	# https://help.ubuntu.com/community/SwapFaq
 	if [[ -z $sw || $sw == "0" ]]; then
-		api-events_update in7
+		api-events_update ic4
 		if [[ -n $(conf_read swap-mem) && $(conf_read swap-mem) =~ ^[0-9]+$ ]]; then
 			local newswap=$(conf_read swap-mem)
 		elif [[ $ram -le 2 ]]; then
@@ -805,7 +805,7 @@ swap_create() {
 			conf_write swap-owner webinoly
 			echo "${gre}A new SWAP file (${newswap}Gb) has been created! ${end}"
 		fi
-		api-events_update in8
+		api-events_update ic5
 	elif [[ -n $sw && $sw =~ ^[0-9]+$ ]]; then
 		[[ $(conf_read swap-owner) != "webinoly" ]] && conf_write swap-owner system
 		echo "${gre}SWAP file (${sw}Gb) detected!${end}"
@@ -859,7 +859,7 @@ stack_builder() {
 		message_welcome $mess
 		
 		# Any action run after the meesage is displayed!
-		api-events_update i1
+		api-events_update ics
 		sudo apt -qq update
 		
 		# Usually comes by default with Ubuntu. Ensure we have it always! (software-properties-common debconf-utils zip)
@@ -873,7 +873,7 @@ stack_builder() {
 		
 		linux_optim
 		conf_write pre-packs true
-		api-events_update i2
+		api-events_update ice
 	fi
 	
 	# PPA's
@@ -897,7 +897,9 @@ stack_builder() {
 				echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/ubuntu/ $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
 			fi
 		fi
+		
 		local code="run"
+		api-events_update ikn
 	elif [[ $1 == "nginx" ]]; then
 		echo "${dim}Nginx is already installed!${end}"
 		local code=0
@@ -914,6 +916,7 @@ stack_builder() {
 			echo "deb [signed-by=/usr/share/keyrings/php-archive-keyring.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
 		fi
 		
+		api-events_update ikp
 		local code="run"
 	elif [[ $2 == "php" ]]; then
 		echo "${dim}PHP is already installed!${end}"
@@ -930,6 +933,7 @@ stack_builder() {
 			echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/redis.list
 		fi
 		
+		api-events_update ikr
 		local code="run"
 	fi
 	
@@ -955,6 +959,8 @@ stack_builder() {
 			[[ ! -f /usr/share/keyrings/mariadb-archive-keyring.gpg ]] && wget -nv -O- 'https://mariadb.org/mariadb_release_signing_key.asc' | sudo gpg --dearmor -o /usr/share/keyrings/mariadb-archive-keyring.gpg
 			echo "deb [signed-by=/usr/share/keyrings/mariadb-archive-keyring.gpg] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main" | sudo tee /etc/apt/sources.list.d/mariadb.list
 		fi
+		
+		api-events_update ikm
 		local code="run"
 	elif [[ $3 == "mysql-client" && $(conf_read mysql-client) == "true" ]]; then
 		echo "${dim}MySQL/MariaDB Client is already installed!${end}"
