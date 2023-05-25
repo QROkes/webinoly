@@ -17,6 +17,7 @@ if [[ -n $update ]]; then
 	api-events_update wy1
 	webinoly_update
 	nginx_not="true" # Nginx-Reload not-needed.
+	ads_block="true" # Don't show ads
 	
 	
 elif [[ -n $server_reset ]]; then
@@ -65,7 +66,8 @@ elif [[ -n $uninstall ]]; then
 	api-events_update wy4
 	webinoly_uninstall
 	nginx_not="true" # Nginx-Reload not-needed.
-
+	ads_block="true" # Don't show ads
+	
 	
 elif [[ -n $external_sources_update ]]; then
 	external_sources_update
@@ -289,4 +291,5 @@ fi
 
 [[ $(conf_read nginx) == "true" && -z $nginx_not ]] && sudo systemctl reload nginx
 [[ -n $err_cont ]] && exit 1
+[[ -z $ads_block ]] && ads_donate
 api-events_update wye
