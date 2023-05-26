@@ -1782,7 +1782,7 @@ custom_cache_global() {
 			[[ -n $skip_cache ]] && local value=$skip_cache
 			
 			sudo sed -Ei "/^# Value: $(escaped_string $value)( .*)?$/,/^# CacheRuleEnd/{/.*/d}" $confile
-			[[ ! -s $confile ]] && sudo rm $confile
+			[[ ! -s $confile || -z $(grep '[^[:space:]]' $confile ) ]] && sudo rm $confile # Better because also check for files containing only empty-spaces!
 		fi
 		echo "${gre}Cache rule successfully removed!${end}"
 	else

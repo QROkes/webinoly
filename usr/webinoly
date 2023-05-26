@@ -94,8 +94,15 @@ elif [[ -n $timezone ]]; then
 		read -p "${blu}Timezone: ${end}" timezone
 		echo ""
 	fi
-	conf_write timezone $timezone
-	set_timezone
+	
+	# Check first here to not overwrite a valid good value with a wrong value.
+	if [[ -n $timezone ]] && grep -Fxq $timezone /opt/webinoly/lib/timezone.dat; then
+		conf_write timezone $timezone
+		set_timezone
+	else
+		echo "${red}Timezone not found or not valid!${end}"
+		exit 1
+	fi
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 
