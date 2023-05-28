@@ -816,6 +816,7 @@ swap_create() {
 
 
 message_welcome() {
+	# Only displayed once, when pre-pack is installed!
 	echo "${blu}"
 	echo "***************************************************************"
 	echo "*****************   ${bol}Welcome to Webinoly   ${end}${blu}*********************"
@@ -856,7 +857,7 @@ stack_builder() {
 		# Set Welcome Message
 		[[ -n $4 ]] && local mess=$4 || local mess="partial" # We trust in build variable validation
 		[[ -n $lemp && -z $4 ]] && local mess="full"
-		message_welcome $mess
+		message_welcome $mess # Only displayed once, when pre-pack is installed!
 		
 		# Any action run after the meesage is displayed!
 		api-events_update ics

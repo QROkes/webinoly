@@ -389,7 +389,7 @@ password = $4
 		sudo mysql --defaults-group-suffix=_${suffix_group_name} --connect-timeout=10 -h "$1" -P "$2" $user_param -e "$query" 2>/dev/null
 		if [[ $? != "0" ]]; then
 			local out="false"
-			sudo sed -i "/\[client_${suffix_group_name}\]/,/# ClientEnd/{/.*/d}" $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+			[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf ]] && sudo sed -i "/\[client_${suffix_group_name}\]/,/# ClientEnd/{/.*/d}" $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 		else
 			# Display a warning message when not enough privileges!
 			if [[ $5 == "-master-admin" ]]; then
