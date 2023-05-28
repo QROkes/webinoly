@@ -1484,6 +1484,10 @@ mysql_default_cnf() {
 		sudo chown -R root:root $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
 		
 		echo "# Webinoly MySQL/MariaDB Configuration File
+######################################################################
+# Webinoly (This configuration file is only for internal use)        #
+# Please, DO NOT MODIFY this file, it can cause unexpected behavior. #
+######################################################################
 [mysqld]
 log_error = /var/log/mysql/error.log" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
 	fi
@@ -1496,6 +1500,10 @@ mysql_login_cnf() {
 		sudo chown -R root:root $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 		
 		echo "# Webinoly MySQL/MariaDB Login Configuration File
+######################################################################
+# Webinoly (This configuration file is only for internal use)        #
+# Please, DO NOT MODIFY this file, it can cause unexpected behavior. #
+######################################################################
 
 " >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	fi
