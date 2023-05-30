@@ -878,6 +878,7 @@ stack_builder() {
 	fi
 	
 	# PPA's
+	api-events_update iks
 	if [[ $1 == "nginx" && $(conf_read nginx) != "true" ]]; then
 		[[ $nginx =~ ^(stable|mainline)$ ]] && conf_write nginx-ppa $nginx
 		[[ $lemp =~ ^(stable|mainline)$ ]] && conf_write nginx-ppa $lemp
@@ -973,6 +974,7 @@ stack_builder() {
 		echo "${dim}MySQL/MariaDB Client is already installed!${end}"
 		local code="run"
 	fi
+	api-events_update ike
 	
 	# Exit before update!
 	# Don't run the "update" if nothing will be installed!

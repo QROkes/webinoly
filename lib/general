@@ -1940,11 +1940,12 @@ help_message() {
 
 ads_donate() {
 	# Donations message displayed once a day!
+	# Note: Don't run when stdout is redirected to /dev/null: https://unix.stackexchange.com/questions/484228/how-to-check-if-stdin-is-dev-null-from-the-shell
 	if [[ -z $(conf_read cron-ads) && -n $EPOCHSECONDS ]]; then
 		conf_write cron-ads $EPOCHSECONDS
 	elif ! [[ $(conf_read cron-ads) =~ ^[0-9]+$ ]] || [[ $(conf_read cron-ads) -gt $EPOCHSECONDS ]]; then # Autofix! (Just in case!)
 		conf_write cron-ads $EPOCHSECONDS
-	elif [[ -n $EPOCHSECONDS && -n $(conf_read cron-ads) && $(($EPOCHSECONDS-$(conf_read cron-ads))) -gt 86400 ]]; then
+	elif [[ -n $EPOCHSECONDS && -n $(conf_read cron-ads) && $(($EPOCHSECONDS-$(conf_read cron-ads))) -gt 86400 ]] && ! [[ /dev/stdout -ef /dev/null ]]; then
 		echo "${blu}"
 		echo "****************************************************************************"
 		echo "********************     ${bol}Are you enjoying Webinoly?${end}${blu}     ********************"
