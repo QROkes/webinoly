@@ -353,6 +353,9 @@ check_mysql_connection() {
 	# External DB if login group exist: $(check_mysql_connection $extdb_url $extdb_port $wp_dbuser -login-file $wp_dbname)
 	# Master-admin not needed here for specific dbs.
 	
+	# Note: You can always use the dynvar 'quiet' set to 'true' to not display messages.
+	# In this especific case ONLY, there is a third value: false, true and truebutnotmaster (connection successfull but not enough privileges for master-admin)
+	
 	local query="quit"
 	local error_display="true"
 	
@@ -395,7 +398,11 @@ password = $4
 			if [[ $5 == "-master-admin" ]]; then
 				local priv=$(sudo mysql --defaults-group-suffix=_${suffix_group_name} --connect-timeout=10 -h "$1" -P "$2" -e "SHOW GRANTS FOR CURRENT_USER();")
 				if ! [[ -n $(echo $priv | grep -Fo "WITH GRANT OPTION") && ( -n $(echo $priv | grep -Fo "GRANT ALL PRIVILEGES") || ( -n $(echo $priv | grep -Fo "CREATE USER") && -n $(echo $priv | grep -Fo "ALTER"))) ]]; then
-					echo "${red}${dim}[WARNING] Seems like '$(echo $priv | grep -oP -m 1 'Grants for \K\w+')' is not a Master user!${end}" >&2
+					if [[ $(conf_read quiet) != "true" ]]; then
+						echo "${red}${dim}[WARNING] Seems like '$(echo $priv | grep -oP -m 1 'Grants for \K\w+')' is not a Master user!${end}" >&2
+					else
+						local master_priv="false"
+					fi
 				fi
 			fi
 		fi 
@@ -425,7 +432,7 @@ password = $4
 		local out="false"
 	fi
 	
-	if [[ $out == "false" && $error_display != "false" ]]; then
+	if [[ $out == "false" && $error_display != "false" && $(conf_read quiet) != "true" ]]; then
 		echo "${red}===================================================" >&2
 		echo "    [Error]  Database conection failed! (${1})" >&2
 		echo "===================================================${end}" >&2
@@ -434,7 +441,7 @@ password = $4
 	elif [[ $out == "false" ]]; then
 		echo "false"
 	else
-		echo "true"
+		[[ $(conf_read quiet) != "true" ]] && echo "true" || echo "truebutnotmaster"
 	fi
 }
 
