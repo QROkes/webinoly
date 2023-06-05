@@ -291,6 +291,10 @@ if [[ -z $critical_mode ]]; then
 		echo "${dim}- [WARNING] Temporal variable (stack-update) has been found in the Webinoly Configuration File! ${end}${red}"
 		local ver_one_war="1"
 	fi
+	if [[ -n $(conf_read mysql-reinstall) ]]; then
+		echo "${dim}- [WARNING] Temporal variable (mysql-reinstall) has been found in the Webinoly Configuration File! ${end}${red}"
+		local ver_one_war="1"
+	fi
 
 
 	if [[ $ver_one_err == "1" ]]; then

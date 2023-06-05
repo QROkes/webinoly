@@ -230,7 +230,7 @@ mysql_install() {
 		# In case of re-installation after purge with keep-data option.
 		local AUTOGENPASS_ROOT=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 		local AUTOGENPASS_ADMIN=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt )
-		local reinstall="true"
+		conf_write mysql-reinstall true
 	fi
 	
 	# MySQL/MariaDB Installation
@@ -249,13 +249,6 @@ mysql_install() {
 	fi
 	
 	conf_write mysql true
-	
-	# https://mariadb.com/kb/en/mysql_upgrade/
-	# The mysql_upgrade client is deprecated in MySQL 8. (This process is done automatically)
-	if [[ $reinstall == "true" && $(conf_read db-engine) != "mysql" ]]; then
-		echo "${blu}${dim}Seems like you are reinstalling MySQL/MariaDB... Upgrading your old tables!${end}"
-		sudo mysql_upgrade --user=root --force --silent
-	fi
 
 	#Instead of mysql_secure_installation we do this: (same but manually, because not acept unattended)
 	# - Set a password for root accounts
@@ -263,7 +256,9 @@ mysql_install() {
 	# - Remove anonymous-user accounts.
 	# - Delete the test database, accessible by anonymous users.
 	# - Reload the user privileges tables.
-	sudo mysql --user=root <<_EOF_
+	if [[ $(conf_read mysql-reinstall) != "true" ]]; then # Just for new and fresh installations! (not needed when reinstalling)
+		echo "${blu}${dim}MySQL/MariaDB Secure Installation! ${end}"
+		sudo mysql --user=root <<_EOF_
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
@@ -273,10 +268,11 @@ GRANT ALL PRIVILEGES ON *.* TO 'admin'@'localhost' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 _EOF_
 
-	if [[ $(conf_read db-engine) == "mysql" ]]; then
-		sudo mysql --user=root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${AUTOGENPASS_ROOT}';FLUSH PRIVILEGES;"
-	else
-		sudo mysql --user=root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${AUTOGENPASS_ROOT}';FLUSH PRIVILEGES;"
+		if [[ $(conf_read db-engine) == "mysql" ]]; then
+			sudo mysql --user=root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${AUTOGENPASS_ROOT}';FLUSH PRIVILEGES;"
+		else
+			sudo mysql --user=root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${AUTOGENPASS_ROOT}';FLUSH PRIVILEGES;"
+		fi
 	fi
 	
 	sudo rm -rf $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
@@ -503,6 +499,16 @@ host = localhost
 	
 	[[ $(conf_read mysql-public-access) == "true" ]] && sudo webinoly -mysql-public-access=on
 	[[ $(conf_read mysql-public-access) == "false" ]] && sudo webinoly -mysql-public-access=off
+	
+	# https://mariadb.com/kb/en/mysql_upgrade/
+	# The mysql_upgrade client is deprecated in MySQL 8. (This process is done automatically)
+	# Should do it using admin user, root has password and it may be removed in conf file.
+	# Should be here in optim, because when reinstalling admin login CNF is removed.
+	if [[ $(conf_read mysql-reinstall) == "true" && $(conf_read db-engine) != "mysql" ]]; then
+		echo "${blu}${dim}Seems like you are reinstalling MySQL/MariaDB... Upgrading your old tables!${end}"
+		sudo mysql_upgrade --user=admin --force --silent
+		conf_delete mysql-reinstall
+	fi
 	
 	conf_write mysql-optim true
 	api-events_update im6
