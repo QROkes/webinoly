@@ -1952,7 +1952,7 @@ ads_donate() {
 		conf_write cron-ads $EPOCHSECONDS
 	elif ! [[ $(conf_read cron-ads) =~ ^[0-9]+$ ]] || [[ $(conf_read cron-ads) -gt $EPOCHSECONDS ]]; then # Autofix! (Just in case!)
 		conf_write cron-ads $EPOCHSECONDS
-	elif [[ -n $EPOCHSECONDS && -n $(conf_read cron-ads) && $(($EPOCHSECONDS-$(conf_read cron-ads))) -gt 86400 ]] && ! [[ /dev/stdout -ef /dev/null ]]; then
+	elif [[ $TERM != "dumb" && -n $EPOCHSECONDS && -n $(conf_read cron-ads) && $(($EPOCHSECONDS-$(conf_read cron-ads))) -gt 86400 ]] && ! [[ /dev/stdout -ef /dev/null ]]; then
 		echo "${blu}"
 		echo "****************************************************************************"
 		echo "********************     ${bol}Are you enjoying Webinoly?${end}${blu}     ********************"
