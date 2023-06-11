@@ -1,12 +1,25 @@
 #!/bin/bash
 
-# Internal API or Events
-# Docs: https://webinoly.com/en/internal-api-events/
+# Internal API/Events
+# Docs: https://webinoly.com/internal-api-events/
 
-# Description: Execute actions at certain points or events, for example at the end of the "stack" command each time is executed 
-# or after Nginx is installed. Just rename this file to "api-events" and check for the complete list of status codes in the documentation.
+# Description: Execute actions at certain points or events, for example at the end of the "stack" command (each time is executed), or after Nginx is installed, etc.
+
+# - Just rename this file to "api-events".
+# - Check for the complete list of status codes in the docs.
+# - Status codes can be read in this variable $1
 
 # Just put all your code inside this function:
 api-events_catch_status() {
+
+	# Example: Status codes will be "echoed" or visible each time a Webinoly command is excecuted.
+	# You can use this to see where exactly your code will be excecuted.
+	# This line can be safely removed! (it's for illustrative purposes only)
 	echo "${blu}API Status: $1 ${end}"
+	
+	# Example: Install my own package after Nginx is installed!
+	#if [[ $1 == "in2" ]]; then
+	#	sudo apt install -y my-own-package
+	#fi
+	
 }
