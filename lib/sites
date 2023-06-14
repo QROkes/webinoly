@@ -1198,8 +1198,8 @@ parked_domain() {
 	
 	sudo sed -i "/include apps.d\/$parked-nginx.conf/d" /etc/nginx/sites-available/$domain
 	sudo sed -i "/include \/var\/www\/${parked}\/\*-$(echo $parked | sed "s/[^0-9A-Za-z]/_/g")_parked.conf;/d" /etc/nginx/sites-available/$domain
-	sudo sed -i "/server_name/c \	$sername" /etc/nginx/sites-available/$domain
 	sudo sed -i "s/$(escaped_string $parked)/$domain/g"  /etc/nginx/sites-available/$domain
+	sudo sed -i "/server_name/c \	$sername" /etc/nginx/sites-available/$domain
 	sudo sed -i "/include apps.d\/.*-proxy.conf;/{s/$domain/$parked/g}"  /etc/nginx/sites-available/$domain
 	sudo sed -i "/root/c \	root /var/www/$parked/htdocs;" /etc/nginx/sites-available/$domain
 	

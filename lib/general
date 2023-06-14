@@ -354,7 +354,7 @@ check_mysql_connection() {
 	# Master-admin not needed here for specific dbs.
 	
 	# Note: You can always use the dynvar 'quiet' set to 'true' to not display messages.
-	# In this especific case ONLY, there is a third value: false, true and truebutnotmaster (connection successfull but not enough privileges for master-admin)
+	# In this especific case ONLY, there is a third value: false, true and truebutnotmaster (External DB connection successfull but not enough privileges for master-admin)
 	
 	local query="quit"
 	local error_display="true"
@@ -441,7 +441,7 @@ password = $4
 	elif [[ $out == "false" ]]; then
 		echo "false"
 	else
-		[[ $(conf_read quiet) != "true" ]] && echo "true" || echo "truebutnotmaster"
+		[[ $master_priv == "false" ]] && echo "truebutnotmaster" || echo "true"
 	fi
 }
 
