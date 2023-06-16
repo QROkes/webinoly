@@ -32,8 +32,8 @@ readonly hidend=$(tput sgr0)$(tput el)
 # ***********************************************
 
 conf_read() {
-	if [[ ! -f /opt/webinoly/webinoly.conf ]]; then
-		echo "${red}[ERROR] Config file not found!${end}"
+	if [[ ! -f /opt/webinoly/webinoly.conf ]]; then # Double check!
+		echo "${red}[ERROR] Webinoly Configuration file not found!${end}"
 		exit 1
 	fi
 	
@@ -41,8 +41,8 @@ conf_read() {
 }
 
 conf_delete() {
-	if [[ ! -f /opt/webinoly/webinoly.conf ]]; then
-		echo "${red}[ERROR] Config file not found!${end}"
+	if [[ ! -f /opt/webinoly/webinoly.conf ]]; then # Double check!
+		echo "${red}[ERROR] Webinoly Configuration file not found!${end}"
 		exit 1
 	fi
 	
@@ -78,7 +78,7 @@ conf_write() {
 if [[ $(whoami) != "root" ]]; then
 	echo "${red}Please run this script as root or using sudo.${end}"
 	exit 1
-fi
+fi	
 
 # Check for BASH Shell
 # This is a very "shity" method, but checking if file exists is very reliable

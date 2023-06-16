@@ -1,4 +1,7 @@
 #!/bin/bash
+# Example: sudo webinoly -verify
+# Example: sudo webinoly -verify=critical
+# Example: sudo webinoly -verify -check-for-updates
 
 
 webinoly_verify() {
@@ -860,32 +863,32 @@ fi
 local ver_five_err="0"
 local ver_five_war="0"
 
-if ! systemctl is-active --quiet nginx && [[ $(conf_read nginx) == "true" ]]; then
+if [[ $(conf_read nginx) == "true" ]] && ! systemctl is-active --quiet nginx; then
 	echo "- [ERROR] Nginx service not running!"
 	local ver_five_err="1"
 fi
-if ! systemctl is-active --quiet php$(conf_read php-ver)-fpm && [[ $(conf_read php) == "true" ]]; then
+if [[ $(conf_read php) == "true" ]] && ! systemctl is-active --quiet php$(conf_read php-ver)-fpm; then
 	echo "- [ERROR] PHP service not running!"
 	local ver_five_err="1"
 fi
-if ! systemctl is-active --quiet mysql && [[ $(conf_read mysql) == "true" ]]; then
+if [[ $(conf_read mysql) == "true" ]] && ! systemctl is-active --quiet mysql; then
 	echo "- [ERROR] MySQL/MariaDB service not running!"
 	local ver_five_err="1"
 fi
-if ! systemctl is-active --quiet redis-server && [[ $(conf_read php-tool-redis) == "true" ]]; then
+if [[ $(conf_read php-tool-redis) == "true" ]] && ! systemctl is-active --quiet redis-server; then
 	echo "- [ERROR] Redis service not running!"
 	local ver_five_err="1"
 fi
-if ! systemctl is-active --quiet memcached && [[ $(conf_read php-tool-memcached) == "true" ]]; then
+if [[ $(conf_read php-tool-memcached) == "true" ]] && ! systemctl is-active --quiet memcached; then
 	echo "- [ERROR] Memcached service not running!"
 	local ver_five_err="1"
 fi
-if ! systemctl is-active --quiet postfix && [[ $(conf_read php-tool-postfix) == "true" ]]; then
+if [[ $(conf_read php-tool-postfix) == "true" ]] && ! systemctl is-active --quiet postfix; then
 	echo "- [ERROR] Postfix service not running!"
 	local ver_five_err="1"
 fi
 
-if ! sudo nginx -t 2>/dev/null && [[ $(conf_read nginx) == "true" ]]; then
+if [[ $(conf_read nginx) == "true" ]] && ! sudo nginx -t 2>/dev/null; then
 	echo "- [ERROR] Nginx Configuration check failed!"
 	local ver_five_err="1"
 fi
@@ -945,7 +948,18 @@ if ! which wget >/dev/null ; then
 	local ver_six_err="1"
 fi
 
-
+# Check for OS Updates
+# Run in non-critical mode and when updating Webinoly to remember that is important to keep the OS updated, not only Webinoly.
+# For example, we can implement new Nginx directives and it will fails if Nginx package is not updated.
+if [[ -z $critical_mode || -n $check_for_updates ]]; then
+	if [[ -f /usr/lib/update-notifier/apt-check ]]; then
+		local ver_os_updates=$(echo $(/usr/lib/update-notifier/apt-check --human-readable) | grep -Eo "[0-9]+ " | head -1 | sed "s/ //")
+		if [[ $ver_os_updates =~ ^[0-9]+$ && $ver_os_updates -gt 0 ]]; then
+			echo "${dim}- [WARNING] Operating System is not updated, $ver_os_updates updates can be installed immediately.${end}${red}"
+			local ver_six_war="1"
+		fi
+	fi
+fi
 if [[ -z $critical_mode ]]; then
 	# Check for BASH Shell
 	# This is a very "shity" method, but checking if file exists is very reliable
@@ -962,15 +976,6 @@ if [[ -z $critical_mode ]]; then
 			local ver_six_war="1"
 		elif [[ -z $ver_shell_current ]]; then
 			echo "${blu}${dim}- [INFO] Shell check fails to retrieve data! ${end}${red}"
-		fi
-	fi
-	
-	# Check for updates
-	if [[ -a /usr/lib/update-notifier/apt-check ]]; then
-		local ver_os_updates=$(echo $(/usr/lib/update-notifier/apt-check --human-readable) | grep -Eo "^[0-9]+ " | head -1 | sed "s/ //")
-		if [[ $ver_os_updates =~ ^[0-9]+$ && $ver_os_updates -gt 0 ]]; then
-			echo "${dim}- [WARNING] Operating System is not updated, $ver_os_updates updates can be installed immediately.${end}${red}"
-			local ver_six_war="1"
 		fi
 	fi
 	

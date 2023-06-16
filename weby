@@ -205,7 +205,13 @@ fi
 [[ $setup == 1 ]] && stack -nginx
 [[ $setup == 2 ]] && stack -php=nginx
 [[ $setup == 3 ]] && stack -lemp
-[[ $setup != [123] ]] && sudo webinoly -verify=critical
+
+# Verify installation!
+if [[ $setup != [123] && -n $update && -n $oldapp ]]; then
+	sudo webinoly -verify=critical -check-for-updates
+elif [[ $setup != [123] ]]; then
+	sudo webinoly -verify=critical
+fi
 
 # Message Center
 if [[ -z $(conf_read stack-build-error-flag) ]]; then
