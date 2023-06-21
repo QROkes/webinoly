@@ -380,4 +380,5 @@ else
 fi
 
 [[ $(conf_read nginx) == "true" && -z $nginx_not ]] && sudo systemctl reload nginx
+ads_donate
 api-events_update hae

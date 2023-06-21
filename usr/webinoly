@@ -17,6 +17,7 @@ if [[ -n $update ]]; then
 	api-events_update wy1
 	webinoly_update
 	nginx_not="true" # Nginx-Reload not-needed.
+	ads_block="true" # Don't show ads
 	
 	
 elif [[ -n $server_reset ]]; then
@@ -65,7 +66,8 @@ elif [[ -n $uninstall ]]; then
 	api-events_update wy4
 	webinoly_uninstall
 	nginx_not="true" # Nginx-Reload not-needed.
-
+	ads_block="true" # Don't show ads
+	
 	
 elif [[ -n $external_sources_update ]]; then
 	external_sources_update
@@ -92,8 +94,15 @@ elif [[ -n $timezone ]]; then
 		read -p "${blu}Timezone: ${end}" timezone
 		echo ""
 	fi
-	conf_write timezone $timezone
-	set_timezone
+	
+	# Check first here to not overwrite a valid good value with a wrong value.
+	if [[ -n $timezone ]] && grep -Fxq $timezone /opt/webinoly/lib/timezone.dat; then
+		conf_write timezone $timezone
+		set_timezone
+	else
+		echo "${red}Timezone not found or not valid!${end}"
+		exit 1
+	fi
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 
@@ -289,4 +298,5 @@ fi
 
 [[ $(conf_read nginx) == "true" && -z $nginx_not ]] && sudo systemctl reload nginx
 [[ -n $err_cont ]] && exit 1
+[[ -z $ads_block ]] && ads_donate
 api-events_update wye

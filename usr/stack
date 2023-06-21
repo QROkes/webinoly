@@ -629,7 +629,7 @@ elif [[ -n $html || -n $nginx ]]; then
 	stack_builder nginx false false $build
 	
 elif [[ -n $php ]]; then
-	if [[ $(conf_read nginx) != "true" && $(conf_read force-flag) != "true" && $php != "nginx" ]]; then
+	if [[ $(conf_read php) != "true" && $(conf_read nginx) != "true" && $(conf_read force-flag) != "true" && $php != "nginx" ]]; then
 		echo ""
 		echo "${blu}Nginx is not installed, do you want to install it too [y/N]?${end} "
 		while read -r -n 1 -s answer; do

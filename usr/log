@@ -19,6 +19,10 @@ waiting_for_log() {
 }
 
 
+# Logs are for the entire domain, except when WP is in subfolder we need it to set the especific wp-config file.
+[[ -n $subfolder && -z $wp ]] && echo "${red}${dim}[WARNING] The subfolder parameter will be ignored!${end}"
+
+
 # Check for custom "lines" value
 [[ -n $(conf_read log-lines) && $(conf_read log-lines) =~ ^[0-9]+$ && $(conf_read log-lines) -gt 0 ]] && clines=$(conf_read log-lines) || clines=10
 [[ -n $lines && $lines =~ ^[0-9]+$ && $lines -gt 0 ]] && clines=$lines
@@ -367,4 +371,5 @@ else
 	exit 1
 fi
 
+ads_donate
 api-events_update lge

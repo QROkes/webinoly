@@ -4,7 +4,7 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.17.2"
+readonly app_version="1.17.3"
 readonly svr_version="1.8"
 readonly os_ubuntu_supported=(bionic focal jammy) # https://ubuntu.com/about/release-cycle
 readonly php_supported=(7.4 8.0 8.1 8.2) # https://www.php.net/supported-versions.php
@@ -353,6 +353,9 @@ check_mysql_connection() {
 	# External DB if login group exist: $(check_mysql_connection $extdb_url $extdb_port $wp_dbuser -login-file $wp_dbname)
 	# Master-admin not needed here for specific dbs.
 	
+	# Note: You can always use the dynvar 'quiet' set to 'true' to not display messages.
+	# In this especific case ONLY, there is a third value: false, true and truebutnotmaster (connection successfull but not enough privileges for master-admin)
+	
 	local query="quit"
 	local error_display="true"
 	
@@ -389,13 +392,17 @@ password = $4
 		sudo mysql --defaults-group-suffix=_${suffix_group_name} --connect-timeout=10 -h "$1" -P "$2" $user_param -e "$query" 2>/dev/null
 		if [[ $? != "0" ]]; then
 			local out="false"
-			sudo sed -i "/\[client_${suffix_group_name}\]/,/# ClientEnd/{/.*/d}" $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+			[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf ]] && sudo sed -i "/\[client_${suffix_group_name}\]/,/# ClientEnd/{/.*/d}" $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 		else
 			# Display a warning message when not enough privileges!
 			if [[ $5 == "-master-admin" ]]; then
 				local priv=$(sudo mysql --defaults-group-suffix=_${suffix_group_name} --connect-timeout=10 -h "$1" -P "$2" -e "SHOW GRANTS FOR CURRENT_USER();")
 				if ! [[ -n $(echo $priv | grep -Fo "WITH GRANT OPTION") && ( -n $(echo $priv | grep -Fo "GRANT ALL PRIVILEGES") || ( -n $(echo $priv | grep -Fo "CREATE USER") && -n $(echo $priv | grep -Fo "ALTER"))) ]]; then
-					echo "${red}${dim}[WARNING] Seems like '$(echo $priv | grep -oP -m 1 'Grants for \K\w+')' is not a Master user!${end}" >&2
+					if [[ $(conf_read quiet) != "true" ]]; then
+						echo "${red}${dim}[WARNING] Seems like '$(echo $priv | grep -oP -m 1 'Grants for \K\w+')' is not a Master user!${end}" >&2
+					else
+						local master_priv="false"
+					fi
 				fi
 			fi
 		fi 
@@ -425,7 +432,7 @@ password = $4
 		local out="false"
 	fi
 	
-	if [[ $out == "false" && $error_display != "false" ]]; then
+	if [[ $out == "false" && $error_display != "false" && $(conf_read quiet) != "true" ]]; then
 		echo "${red}===================================================" >&2
 		echo "    [Error]  Database conection failed! (${1})" >&2
 		echo "===================================================${end}" >&2
@@ -434,7 +441,7 @@ password = $4
 	elif [[ $out == "false" ]]; then
 		echo "false"
 	else
-		echo "true"
+		[[ $(conf_read quiet) != "true" ]] && echo "true" || echo "truebutnotmaster"
 	fi
 }
 
@@ -1484,6 +1491,10 @@ mysql_default_cnf() {
 		sudo chown -R root:root $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
 		
 		echo "# Webinoly MySQL/MariaDB Configuration File
+######################################################################
+# Webinoly (This configuration file is only for internal use)        #
+# Please, DO NOT MODIFY this file, it can cause unexpected behavior. #
+######################################################################
 [mysqld]
 log_error = /var/log/mysql/error.log" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf
 	fi
@@ -1496,6 +1507,10 @@ mysql_login_cnf() {
 		sudo chown -R root:root $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 		
 		echo "# Webinoly MySQL/MariaDB Login Configuration File
+######################################################################
+# Webinoly (This configuration file is only for internal use)        #
+# Please, DO NOT MODIFY this file, it can cause unexpected behavior. #
+######################################################################
 
 " >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 	fi
@@ -1782,7 +1797,7 @@ custom_cache_global() {
 			[[ -n $skip_cache ]] && local value=$skip_cache
 			
 			sudo sed -Ei "/^# Value: $(escaped_string $value)( .*)?$/,/^# CacheRuleEnd/{/.*/d}" $confile
-			[[ ! -s $confile ]] && sudo rm $confile
+			[[ ! -s $confile || -z $(grep '[^[:space:]]' $confile ) ]] && sudo rm $confile # Better because also check for files containing only empty-spaces!
 		fi
 		echo "${gre}Cache rule successfully removed!${end}"
 	else
@@ -1927,4 +1942,24 @@ help_message() {
 	echo "${blu}We have put a lot of time and effort into creating the most awesome, detailed and extensive documentation just for you."
 	echo "${dim}Link: https://webinoly.com/documentation/ ${end}"
 	echo ""
+}
+
+
+ads_donate() {
+	# Donations message displayed once a day!
+	# Note: Don't run when stdout is redirected to /dev/null: https://unix.stackexchange.com/questions/484228/how-to-check-if-stdin-is-dev-null-from-the-shell
+	if [[ -z $(conf_read cron-ads) && -n $EPOCHSECONDS ]]; then
+		conf_write cron-ads $EPOCHSECONDS
+	elif ! [[ $(conf_read cron-ads) =~ ^[0-9]+$ ]] || [[ $(conf_read cron-ads) -gt $EPOCHSECONDS ]]; then # Autofix! (Just in case!)
+		conf_write cron-ads $EPOCHSECONDS
+	elif [[ -n $EPOCHSECONDS && -n $(conf_read cron-ads) && $(($EPOCHSECONDS-$(conf_read cron-ads))) -gt 86400 ]] && ! [[ /dev/stdout -ef /dev/null ]]; then
+		echo "${blu}"
+		echo "****************************************************************************"
+		echo "********************     ${bol}Are you enjoying Webinoly?${end}${blu}     ********************"
+		echo "***  ${dim}With just \$1 you can make a difference to keep this project alive!${end}${blu}  ***"
+		echo "***********    ${bol}Donate Now!${end}${blu}${dim} https://github.com/sponsors/QROkes${end}${blu}    ***********"
+		echo "****************************************************************************"
+		echo "${end}"
+		conf_write cron-ads $EPOCHSECONDS
+	fi
 }
