@@ -1674,6 +1674,13 @@ cloning_site() {
 	else
 		echo "${blu}Cloning your site! ${dim} Wait...${end}"
 	fi
+
+	if [[ -n $one_file_system ]]; then
+		local archive_args="--one-file-system"
+	fi
+	if [[ -n $progress ]]; then
+		local archive_args="$archive_args --verbose"
+	fi
 	
 	if [[ -n $subfolder ]]; then
 		local subtype=$(is_subfolder $clone_from $subfolder)
@@ -1720,10 +1727,10 @@ cloning_site() {
 		if [[ -d /var/www/$clone_from/htdocs$subfolder ]]; then
 			local dest=$( echo $subfolder | rev | cut -f 2- -d "/" -s | rev )
 			sudo mkdir -p /var/www/$domain/htdocs$dest
-			sudo cp -r /var/www/$clone_from/htdocs$subfolder /var/www/$domain/htdocs$dest
+			sudo cp -r $archive_args /var/www/$clone_from/htdocs$subfolder /var/www/$domain/htdocs$dest
 		fi
 	else
-		[[ -d /var/www/$clone_from ]] && sudo cp -r /var/www/$clone_from /var/www/$domain
+		[[ -d /var/www/$clone_from ]] && sudo cp -r $archive_args /var/www/$clone_from /var/www/$domain
 	fi
 
 	[[ -d /var/www/$domain ]] && sudo chown -R www-data:www-data /var/www/$domain

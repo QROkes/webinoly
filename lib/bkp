@@ -241,7 +241,13 @@ bkp_s3_profile() {
 	
 	if [[ -n $run ]]; then
 		check_duply_profile
-		sudo duply $profile backup_verify_purge --force --allow-source-mismatch
+		if [[ -n $one_file_system ]]; then
+			local archive_args="--exclude-other-filesystems"
+		fi
+		if [[ -n $progress ]]; then
+			local archive_args="$archive_args --progress"
+		fi
+		sudo duply $profile backup_verify_purge --force --allow-source-mismatch $archive_args
 		
 	elif [[ -n $info ]]; then
 		check_duply_profile
@@ -661,8 +667,11 @@ export_server() {
 	[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf ]] && local include="$include $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf"
 	[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf ]] && local include="$include $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf"
 	[[ -d /etc/nginx/certs ]] && local include="$include /etc/nginx/certs"
+	[[ -n $one_file_system ]] && local archive_args="--one-file-system"
+	[[ -n $progress ]] && local archive_args="$archive_args --verbose"
 	
-	sudo tar $exclude -Pcf $destination/$filename $include
+	echo $archive_args
+	sudo tar $exclude $archive_args -Pcf $destination/$filename $include
 
 	
 	# Remove Temporary Files
