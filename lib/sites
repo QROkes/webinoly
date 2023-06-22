@@ -1190,6 +1190,9 @@ parked_domain() {
 	sudo truncate -s 0 /etc/nginx/sites-available/$domain
 	sudo cat /etc/nginx/sites-available/$parked > /etc/nginx/sites-available/$domain
 	
+	# Just in case: Remove Force-Redirect if enabled!
+	sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
+	
 	# Prevent if SSL is enabled in main site and ssl data is copied to parked site causing an error.
 	[[ $(is_ssl $parked) == "true" ]] && sudo site $domain -ssl=off -revoke=off -no-db-update > /dev/null 2>&1
 	
@@ -1475,6 +1478,8 @@ wp_cache() {
 		elif [[ $(is_cache $domain $subfolder) == "proxy" ]]; then
 			sudo sed -i "/proxy_cache .*;/c \	proxy_cache off;" /etc/nginx/apps.d/$domain$subname-proxy.conf
 			echo "${gre}Proxy Cache in${blu} $domain$subfolder ${gre}has been disabled!${end}"
+			[[ -n $reset && -n $subfolder ]] && site $domain -cache=custom -reset -subfolder=$subfolder
+			[[ -n $reset && -z $subfolder ]] && site $domain -cache=custom -reset
 		elif [[ -n $subfolder && $(is_cache $domain $subfolder) == "wp" ]]; then
 			sudo sed -i "/apps.d\/$domain$subname-wpfc.conf;/c \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
 			echo "${gre}FastCGI Cache in${blu} $domain$subfolder ${gre}has been disabled!${end}"
@@ -1483,6 +1488,10 @@ wp_cache() {
 			echo "${gre}FastCGI Cache in${blu} $domain ${gre}has been disabled!${end}"
 		else
 			echo "${gre}Nginx Cache is already disabled on your site${blu} $domain${end}"
+			
+			# Needed to support the reset option even when already off
+			[[ -n $reset && -n $subfolder ]] && site $domain -cache=custom -reset -subfolder=$subfolder
+			[[ -n $reset && -z $subfolder ]] && site $domain -cache=custom -reset
 		fi	
 	elif [[ $cache == "on" ]]; then
 		api-events_update si8
@@ -1539,6 +1548,7 @@ wp_cache() {
 			elif [[ $(is_proxy $domain $subfolder) == "true" && -n $(grep -F "# WebinolyProxyCacheStart" /etc/nginx/apps.d/$domain$subname-proxy.conf) ]]; then
 				sudo sed -i '/WebinolyProxyCacheStart/,/WebinolyProxyCacheEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-proxy.conf
 				sudo sed -i "/^proxy_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')${subname} .*/d" /etc/nginx/conf.d/webinoly.conf
+				[[ -f /etc/nginx/apps.d/${domain}${subname}-site_custom_cache.conf ]] && sudo rm /etc/nginx/apps.d/${domain}${subname}-site_custom_cache.conf
 				echo "${gre}Custom Proxy Cache configuration has been successfully removed! ${end}"
 			elif [[ -f /etc/nginx/apps.d/$domain$subname-${fn}.conf ]]; then
 				sudo rm /etc/nginx/apps.d/$domain$subname-${fn}.conf
