@@ -817,8 +817,10 @@ export_site() {
 	fi
 	[[ -f /var/www/webinoly.conf_temp ]] && local include="$include /var/www/webinoly.conf_temp"
 	[[ $rp_upstream == "true" && -f /etc/nginx/conf.d/upstream_proxy.conf ]] && local include="$include /etc/nginx/conf.d/upstream_proxy.conf"
-	
-	[[ -n $include ]] && sudo tar -Pcf $destination/$filename $include
+	[[ -n $one_file_system ]] && local archive_args="--one-file-system"
+	[[ -n $progress ]] && local archive_args="$archive_args --verbose"
+
+	[[ -n $include ]] && sudo tar $archive_args -Pcf $destination/$filename $include
 	
 	# Remove temporary files
 	sudo rm -rf /var/www/webinoly_backup_db
