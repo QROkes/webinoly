@@ -692,7 +692,7 @@ local ver_four_err="0"
 local ver_four_war="0"
 
 # MySQL/MariaDB
-if [[ $(conf_read mysql) == "true" ]]; then
+if [[ $(conf_read mysql) == "true" || $(conf_read mysql-client) == "true" ]]; then
 	# Check if MYSQL command is installed
 	if ! which mysql >/dev/null ; then
 		echo "- [ERROR] Seems like MYSQL command is not installed!"
@@ -702,7 +702,9 @@ if [[ $(conf_read mysql) == "true" ]]; then
 		echo "- [ERROR] Folder: /etc/mysql not found!"
 		local ver_four_err="1"
 	fi
-	
+fi
+
+if [[ $(conf_read mysql) == "true" ]]; then
 	if [[ $(conf_read db-engine) == "mysql" ]]; then
 		local ver_mysql_ver=$(sudo mysql --version | grep -Eo "Ver [0-9\.]+" | cut -f 2 -d' ' | cut -f 1-2 -d'.')
 		if [[ -n $(sudo mysql --version | grep -Fio "MariaDb") ]]; then
@@ -756,10 +758,8 @@ if [[ $(conf_read mysql) == "true" ]]; then
 			local ver_four_err="1"
 		fi
 	fi
-fi
 
-# MySQL/MariaDB Connection
-if [[ $(conf_read mysql) == "true" ]]; then
+	# MySQL/MariaDB Connection
 	if [[ -n $(conf_read mysql-root) ]]; then # Dynvar can be removed safely!
 		local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 		[[ -z $ROOT_PASS ]] && ROOT_PASS="dUmb"

@@ -188,7 +188,14 @@ nginx_install() {
 	sudo nginx -t && sudo systemctl start nginx
 	sudo systemctl enable nginx
 	conf_write nginx true
-	echo "${gre}Nginx has been installed successfully! ${end}"
+	
+	if [[ -d /etc/nginx ]] && systemctl is-active --quiet nginx; then
+		echo "${gre}Nginx has been installed successfully! ${end}"
+	else
+		# Don't need a flag or anything else, because it will be also detected during verify process!
+		echo "${red}[ERROR] Unexpected error during Nginx installation!${end}"
+	fi
+	
 	api-events_update in2
 }
 
@@ -206,8 +213,15 @@ php_install() {
 	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary php${ver}-intl php-pear graphviz ghostscript
 	
 	conf_write php true
+	
+	if [[ -d /etc/php/${ver}/fpm ]] && systemctl is-active --quiet php${ver}-fpm; then
+		echo "${gre}PHP has been installed successfully! ${end}"
+	else
+		# Don't need a flag or anything else, because it will be also detected during verify process!
+		echo "${red}[ERROR] Unexpected error during PHP installation!${end}"
+	fi
+	
 	api-events_update ip2
-	echo "${gre}PHP has been installed successfully! ${end}"
 }
 
 
@@ -276,22 +290,40 @@ _EOF_
 	fi
 	
 	sudo rm -rf $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+	
+	if [[ -d /etc/mysql ]] && systemctl is-active --quiet mysql; then
+		echo "${gre}MySQL/MariaDB has been installed successfully! ${end}"
+	else
+		# Don't need a flag or anything else, because it will be also detected during verify process!
+		echo "${red}[ERROR] Unexpected error during MySQL/MariaDB installation!${end}"
+	fi
+	
 	api-events_update im4
-	echo "${gre}MySQL/MariaDB has been installed successfully! ${end}"
 }
 
 mysql_client_install() {
 	api-events_update im1
 	[[ $(conf_read db-engine) != "mysql" ]] && sudo apt -y install mariadb-client || sudo apt -y install mysql-client
 	conf_write mysql-client true
+	
+	if [[ -d /etc/mysql ]] && which mysql >/dev/null ; then
+		echo "${gre}MySQL/MariaDB Client has been successfully installed!${end}"
+	else
+		# Don't need a flag or anything else, because it will be also detected during verify process!
+		echo "${red}[ERROR] Unexpected error during MySQL/MariaDB installation!${end}"
+	fi
+	
 	api-events_update im2
-	echo "${gre}MySQL/MariaDB Client has been successfully installed!${end}"
 }
 
 
 #NGINX OPTIM
 nginx_optim() {
 	api-events_update in3
+	if [[ ! -d /etc/nginx ]]; then
+		echo "${red}[ERROR] Nginx Optimization process aborted!${end}"
+		return
+	fi
 	
 	# Check if exists in case of server-reset
 	[[ ! -f /opt/webinoly/templates/source/default ]] && sudo cp -p /etc/nginx/sites-available/default /opt/webinoly/templates/source/
@@ -404,8 +436,8 @@ location = /xmlrpc.php {
 	conf_write server-version $svr_version
 	conf_write nginx-optim true
 	sudo systemctl reload nginx
-	api-events_update in4
 	echo "${gre}Nginx has been successfully Optimized by Webinoly! ${end}"
+	api-events_update in4
 }
 
 
@@ -413,9 +445,13 @@ location = /xmlrpc.php {
 # PHP OPTIM
 php_optim() {
 	api-events_update ip3
+	local ver=$(conf_read php-ver)
+	if [[ ! -d /etc/php/${ver}/fpm ]]; then
+		echo "${red}[ERROR] PHP Optimization process aborted!${end}"
+		return
+	fi
 	
 	# Check if exist in case of server-reset
-	local ver=$(conf_read php-ver)
 	[[ ! -f /opt/webinoly/templates/source/php.ini ]] && sudo cp -p /etc/php/${ver}/fpm/php.ini /opt/webinoly/templates/source/
 	[[ ! -f /opt/webinoly/templates/source/www.conf ]] && sudo cp -p /etc/php/${ver}/fpm/pool.d/www.conf /opt/webinoly/templates/source/
 	[[ ! -f /opt/webinoly/templates/source/php-fpm.conf ]] && sudo cp -p /etc/php/${ver}/fpm/php-fpm.conf /opt/webinoly/templates/source/
@@ -465,14 +501,19 @@ php_optim() {
 	[[ $(conf_read php-tool-redis) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
 	conf_write php-optim true
 	sudo systemctl restart php${ver}-fpm
-	api-events_update ip4
 	echo "${gre}PHP has been successfully Optimized by Webinoly! ${end}"
+	api-events_update ip4
 }
 
 
 # MySQL/MariaDB OPTIM
 mysql_optim() {
 	api-events_update im5
+	if [[ ! -d /etc/mysql ]]; then
+		echo "${red}[ERROR] MySQL/MariaDB Optimization process aborted!${end}"
+		return
+	fi
+	
 	mysql_default_cnf
 	
 	# MySQL/MariaDB login data
@@ -511,8 +552,8 @@ host = localhost
 	fi
 	
 	conf_write mysql-optim true
-	api-events_update im6
 	echo "${gre}MySQL/MariaDB has been successfully Optimized by Webinoly! ${end}"
+	api-events_update im6
 }
 
 nginx_tool_site() {
@@ -587,8 +628,15 @@ nginx_tool_ssl() {
 	[[ ! -L /usr/bin/certbot ]] && sudo ln -s /snap/bin/certbot /usr/bin/certbot
 	
 	conf_write nginx-tool-ssl true
+	
+	if which certbot >/dev/null ; then
+		echo "${gre}Let's Encrypt (certbot) has been installed successfully! ${end}"
+	else
+		# Don't need a flag or anything else, because it will be also detected during verify process!
+		echo "${red}[ERROR] Unexpected error during Let's Encrypt (certbot) installation!${end}"
+	fi
+	
 	api-events_update in6
-	echo "${gre}Let's Encrypt (certbot) has been installed successfully! ${end}"
 }
 
 
@@ -620,8 +668,15 @@ nginx_tool_bkp() {
 	sudo chmod 755 /usr/bin/duply
 	
 	conf_write nginx-tool-bkp true
+	
+	if which duply >/dev/null && which duplicity >/dev/null ; then
+		echo "${gre}BackUp packages has been installed successfully! ${end}"
+	else
+		# Don't need a flag or anything else, because it will be also detected during verify process!
+		echo "${red}[ERROR] Unexpected error during BackUp packages installation!${end}"
+	fi
+	
 	api-events_update in8
-	echo "${gre}BackUp packages has been installed successfully! ${end}"
 }
 
 
@@ -638,12 +693,24 @@ php_tool_postfix() {
 	sudo systemctl reload postfix
 	
 	conf_write php-tool-postfix true
+	
+	if [[ -d /etc/postfix ]] && systemctl is-active --quiet postfix; then
+		echo "${gre}Postfix has been installed successfully! ${end}"
+	else
+		# Don't need a flag or anything else, because it will be also detected during verify process!
+		echo "${red}[ERROR] Unexpected error during Postfix installation!${end}"
+	fi
+	
 	api-events_update ip6
-	echo "${gre}Postfix has been installed successfully! ${end}"
 }
 
 
 redis_optim() {
+	if [[ ! -d /etc/redis ]]; then
+		echo "${red}[ERROR] Redis Optimization process aborted!${end}"
+		return
+	fi
+	
 	local maxmem=$((($(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut -f 1 -d 'k')*$(check_var redis-max-mem))/100000))
 	sudo sed -i "/# maxmemory <bytes>/c\maxmemory ${maxmem}mb" /etc/redis/redis.conf
 	sudo sed -i "/^maxmemory /c\maxmemory ${maxmem}mb" /etc/redis/redis.conf
@@ -660,8 +727,15 @@ php_tool_redis() {
 	sudo systemctl enable redis-server
 	
 	conf_write php-tool-redis true
+	
+	if [[ -d /etc/redis ]] && systemctl is-active --quiet redis-server; then
+		echo "${gre}Redis has been installed successfully! ${end}"
+	else
+		# Don't need a flag or anything else, because it will be also detected during verify process!
+		echo "${red}[ERROR] Unexpected error during Redis installation!${end}"
+	fi
+	
 	api-events_update ip8
-	echo "${gre}Redis has been installed successfully! ${end}"
 }
 
 
@@ -673,8 +747,15 @@ php_tool_memcached() {
 	sudo apt -y install php${ver}-memcached php${ver}-memcache memcached
 	
 	conf_write php-tool-memcached true
+	
+	if systemctl is-active --quiet memcached; then
+		echo "${gre}Memcached has been installed successfully! ${end}"
+	else
+		# Don't need a flag or anything else, because it will be also detected during verify process!
+		echo "${red}[ERROR] Unexpected error during Memcached installation!${end}"
+	fi
+	
 	api-events_update ip10
-	echo "${gre}Memcached has been installed successfully! ${end}"
 }
 
 
@@ -700,7 +781,13 @@ mysql_tool_pma() {
 		sudo find /var/www/$ADMIN_TOOLS_SITE/htdocs/pma -type d -print0 | sudo xargs -r -0 chmod 755
 		
 		conf_write mysql-tool-pma true
-		echo "${gre}phpMyAdmin has been installed successfully! ${end}"
+		
+		if [[ -s /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/config.inc.php ]]; then
+			echo "${gre}phpMyAdmin has been installed successfully! ${end}"
+		else
+			# Don't need a flag or anything else, because it will be also detected during verify process!
+			echo "${red}[ERROR] Unexpected error during phpMyAdmin installation!${end}"
+		fi
 	else
 		echo "${red}[ERROR] Downloading phpMyAdmin failed!${end}"
 	fi
