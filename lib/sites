@@ -1311,14 +1311,15 @@ reverse_proxy() {
 	elif [[ -f /etc/nginx/sites-available/$domain && -n $dedicated_reverse_proxy && $(is_empty_root_site $domain) != "full" && $(is_dedicated_proxy_domain $domain) != "true" ]]; then
 		echo "${red}[ERROR] Main site is not a Dedicated Reverse Proxy site!${end}"
 		exit 1
-	elif [[ $(is_empty_root_site $domain) == "full" && $(is_dedicated_proxy_domain $domain) == "false" ]]; then
-		echo "${red}[ERROR] This domain is currently set as Empty (blank), to create a site you need to add your own NGINX configuration. ${dim}(/var/www/example.com/*-nginx.conf)!${end}"
-		exit 1
 	elif [[ $dedicated_reverse_proxy != "simple" && -n $url_path ]]; then
 		# URI part (subfolders) are not allowed because the proxy configuration we are using includes the static files location, this location block is using regex which is not allowed!
 		# Dedicated reverse proxy are also affected (don't have static file location block), but subfolders are not allowed in upstream servers.
 		echo "${red}[ERROR] Subfolder in your endpoint or upstream server is not supported!${dim} (URI: $url_path)${end}"
 		exit 1
+	elif [[ $(is_empty_root_site $domain) == "full" && $(is_dedicated_proxy_domain $domain) == "false" ]]; then
+		# In case you have intentionally created an empty site with custom conf, it can interfere.
+		# We allow it because it should be common having a subfolder and remove it, leaving an empty site that can fully support a new dedicated site.
+		echo "${red}${dim}[WARNING] This domain already exists and it's currently set as Empty (blank), please be sure not to have had any other custom Nginx configuration added by you that can interfere with this site.${end}"
 	fi
 	
 	if [[ ( -z $subfolder || ( -n $subfolder && ! -f /etc/nginx/sites-available/$domain )) && $(is_empty_root_site $domain) == "false" ]]; then
