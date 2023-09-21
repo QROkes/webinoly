@@ -807,7 +807,7 @@ createsite() {
 
 	# Activate FastCgi cache
 	if [[ $cache == "on" && $type == [123] ]]; then
-		sudo sed -i '/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
+		sudo sed -i '/php[x]*\.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
 		[[ -z $wp_cache_plugins || $wp_cache_plugins == "on" ]] && wp_cache_plugins
 		echo "${gre}WordPress Cache successfully enabled!${end}"
 	fi
@@ -1497,7 +1497,7 @@ wp_cache() {
 	elif [[ $cache == "on" ]]; then
 		api-events_update si8
 		if [[ $(is_wp $domain $subfolder) == "true" && $(is_cache $domain $subfolder) == "false" ]]; then
-			[[ -z $subfolder ]] && sudo sed -i '/ common\/php.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
+			[[ -z $subfolder ]] && sudo sed -i '/ common\/php[x]*\.conf/c \	include common/wpfc.conf;' /etc/nginx/sites-available/$domain
 			[[ -n $subfolder ]] && sudo sed -i "/ apps.d\/$domain$subname-php.conf;/c \	include apps.d/$domain$subname-wpfc.conf;" /etc/nginx/sites-available/$domain
 			if [[ $(is_parked $domain) == "false" && ( ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/nginx-helper || ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/redis-cache ) ]]; then
 				if [[ -z $wp_cache_plugins ]]; then
@@ -1589,10 +1589,8 @@ wp_cache() {
 			
 			echo "${gre}Custom Proxy Cache in${blu} $domain$subfolder ${gre}has been successfully enabled! ${end}"
 		elif [[ $(is_cache $domain $subfolder) == "false" ]]; then
-			[[ -z $subfolder ]] && sudo sed -i "/ common\/php.conf/c \	include apps.d/$domain$subname-${fn}.conf;" /etc/nginx/sites-available/$domain
-			[[ -z $subfolder ]] && sudo sed -i "/ common\/phpx.conf/c \	include apps.d/$domain$subname-${fn}.conf;" /etc/nginx/sites-available/$domain
-			[[ -n $subfolder ]] && sudo sed -i "/ apps.d\/$domain$subname-php.conf;/c \	include apps.d/$domain$subname-${fn}.conf;" /etc/nginx/sites-available/$domain
-			[[ -n $subfolder ]] && sudo sed -i "/ apps.d\/$domain$subname-phpx.conf;/c \	include apps.d/$domain$subname-${fn}.conf;" /etc/nginx/sites-available/$domain
+			[[ -z $subfolder ]] && sudo sed -i "/ common\/php[x]*\.conf/c \	include apps.d/$domain$subname-${fn}.conf;" /etc/nginx/sites-available/$domain
+			[[ -n $subfolder ]] && sudo sed -i "/ apps.d\/$domain$subname-php[x]*\.conf;/c \	include apps.d/$domain$subname-${fn}.conf;" /etc/nginx/sites-available/$domain
 			
 			# Creates the custom Webinoly Cache File (.cnf) only if not exists.
 			if [[ ! -f /etc/nginx/apps.d/$domain$subname-${fn}.conf ]]; then
