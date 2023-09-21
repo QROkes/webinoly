@@ -1173,7 +1173,9 @@ is_subfolder() {
 			echo "proxy"
 		elif [[ $(is_html $1 $2) == "true" ]]; then
 			echo "html"
-		elif [[ -d /var/www/$1/htdocs/$2 ]]; then
+		elif [[ -d /var/www/${1}/htdocs${2} && -z $(find /var/www/${1}/htdocs${2} -maxdepth 1 -type f | head -n 1) ]]; then
+			echo "empty"
+		elif [[ -d /var/www/${1}/htdocs${2} ]]; then
 			echo "true"
 		else
 			echo "false"

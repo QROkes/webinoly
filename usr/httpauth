@@ -233,7 +233,7 @@ elif [[ -n $path && -n $domain ]]; then
 			x="1"
 			while [[ -n $(echo $path | rev | cut -d'/' -f ${x}- -s | rev) ]]
 			do
-				if ! [[ $(is_subfolder $domain $(echo $path | rev | cut -d'/' -f ${x}- -s | rev)) =~ ^(true|false)$ ]]; then
+				if ! [[ $(is_subfolder $domain $(echo $path | rev | cut -d'/' -f ${x}- -s | rev)) =~ ^(true|false|empty)$ ]]; then
 					echo "${red}[ERROR] Subfolder parameter not found!${end}"
 					exit 1
 				fi
