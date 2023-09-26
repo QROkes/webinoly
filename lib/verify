@@ -234,6 +234,11 @@ if [[ ! -f /usr/bin/stack ]]; then
 	local ver_one_err="1"
 fi
 
+if [[ -n $(conf_read init-error-flag) ]]; then
+	echo "- [ERROR] This copy of Webinoly is not genuine!"
+	local ver_one_err="1"
+fi
+
 
 if [[ -z $critical_mode ]]; then
 	# Check if Webinoly is updated

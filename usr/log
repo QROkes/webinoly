@@ -19,8 +19,11 @@ waiting_for_log() {
 }
 
 
-# Logs are for the entire domain, except when WP is in subfolder we need it to set the especific wp-config file.
-[[ -n $subfolder && -z $wp ]] && echo "${red}${dim}[WARNING] The subfolder parameter will be ignored!${end}"
+# Only these commands are supported with subfolders
+if [[ -n $subfolder && -z $wp ]]; then
+	echo "${red}[ERROR] Subfolder option not supported!${end}"
+	exit 1
+fi
 
 
 # Check for custom "lines" value
@@ -326,7 +329,7 @@ elif [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 		fi
 		
 	elif [[ -n $wp ]]; then
-		echo "${red}[ERROR] WordPress configuration file not found!${end}"
+		echo "${red}[ERROR] Please, enter a valid WP site! ${dim}(${domain}${subfolder})${end}"
 		exit 1
 	
 	# Access and error logs

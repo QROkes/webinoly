@@ -190,6 +190,7 @@ if [[ $statskip != "true" ]]; then
 		opt=$oldapp
 	else
 		type="Error"
+		conf_write init-error-flag true
 		echo "${red}[ERROR] Installation method not recognized!${end}"
 	fi
 

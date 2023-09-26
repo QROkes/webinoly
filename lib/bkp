@@ -83,7 +83,7 @@ bkp_local_db() {
 				echo "${red}[ERROR] Site not found! ${dim}($wp)${end}"
 				exit 1
 			elif [[ $(is_wp $wp $subfolder) != "true"  ]]; then
-				echo "${red}[ERROR] Please, enter a valid WP site! ${dim}($wp)${end}"
+				echo "${red}[ERROR] Please, enter a valid WP site! ${dim}(${wp}${subfolder})${end}"
 				exit 1
 			else
 				wp_conf_retrieve $wp true true $subfolder

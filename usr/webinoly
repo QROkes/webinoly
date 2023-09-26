@@ -13,6 +13,13 @@ check_for_parameters $@
 api-events_update wys
 
 
+# Only these commands are supported with subfolders
+if [[ -n $subfolder && -z $clear_cache && -z $backup ]]; then
+	echo "${red}[ERROR] Subfolder option not supported!${end}"
+	exit 1
+fi
+
+
 if [[ -n $update ]]; then
 	api-events_update wy1
 	webinoly_update

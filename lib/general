@@ -692,6 +692,8 @@ wp_conf_retrieve() {
 			local maindom=$1
 		fi
 		
+		# Parked site don't have support for subfolders, but we send it here as double check.
+		# If we send only the domain and the original request contains the subfolder, we can get a wrong value in return.
 		if [[ $(is_wp_multisite $maindom $4) =~ ^(subdomain|subdirectory)$ ]]; then
 			local dbq="USE $wp_dbname; SELECT blog_id FROM ${wp_dbpref}blogs WHERE domain='$1' OR domain='www.$1';"
 			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then

@@ -870,6 +870,9 @@ clear_caches() {
 		if [[ $(conf_read nginx) == "true" && $(is_cache $clear_cache $subfolder) =~ ^(custom|proxy)$ ]]; then
 			sudo rm -Rf /run/nginx-cache/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')$(echo $subfolder | sed "s/\//_/g")
 			echo "${gre}Custom Nginx Cache for${blu} ${clear_cache}${subfolder} ${gre}has been successfully cleared!${end}"
+		elif [[ $(is_subfolder $clear_cache $subfolder) == "false" ]]; then
+			echo "${red}[ERROR] Please, enter a valid site! ${dim}(${clear_cache}${subfolder})${end}"
+			err_cont=true
 		elif ! [[ $(is_cache $clear_cache $subfolder) =~ ^(custom|proxy)$ ]]; then
 			echo "${red}[ERROR] Custom Cache is not enabled for this site!${end}"
 			err_cont=true

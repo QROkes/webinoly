@@ -9,7 +9,16 @@ source /opt/webinoly/lib/general
 check_for_parameters $@
 api-events_update has
 
+
+# Only these commands are supported with subfolders
+if [[ -n $subfolder && -z $wp_admin && -z $path ]]; then
+	echo "${red}[ERROR] Subfolder option not supported!${end}"
+	exit 1
+fi
+
+
 [[ -z $empty_param && -z $h && -z $H && -z $help ]] && ! [[ -n $wp_admin && -z $domain ]] && check_for_nginx -ask
+
 
 # Check for domain.
 if [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
