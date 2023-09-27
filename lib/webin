@@ -414,6 +414,13 @@ fix_permissions() {
 		sudo find $CURRENT_HOME/.ssh -path "$CURRENT_HOME/.ssh/*.pub" -type f -print0 | sudo xargs -r -0 chmod 644
 		sudo chown -R ${CURRENT_USER}:${CURRENT_USER} $CURRENT_HOME/.ssh
 	fi
+	# Always check root when logname user is different!
+	if [[ $CURRENT_HOME != "/root" && -d /root/.ssh ]]; then
+		sudo find /root/.ssh -type d -print0 | sudo xargs -r -0 chmod 700
+		sudo find /root/.ssh ! -path "/root/.ssh/*.pub" -type f -print0 | sudo xargs -r -0 chmod 600
+		sudo find /root/.ssh -path "/root/.ssh/*.pub" -type f -print0 | sudo xargs -r -0 chmod 644
+		sudo chown -R root:root /root/.ssh
+	fi
 	
 	sudo chown -R www-data:www-data /var/www
 	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www

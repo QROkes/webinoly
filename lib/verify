@@ -1160,6 +1160,11 @@ if [[ -z $critical_mode ]]; then
 			local ver_check_dir="/var/www"
 			local ver_check_user="www-data"
 			local ver_count_ssh=2
+		# Always check root when logname user is different!
+		elif [[ $ver_count_ssh == 2 && $CURRENT_HOME != "/root" ]]; then
+			local ver_check_dir="/root"
+			local ver_check_user="root"
+			local ver_count_ssh=3
 		else
 			break
 		fi
