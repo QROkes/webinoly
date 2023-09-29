@@ -223,7 +223,7 @@ check_duply_profile() {
 
 
 bkp_s3_profile() {
-	if [[ ! -s $HOME/.aws/credentials && $(conf_read awsiamrole) != true ]]; then
+	if [[ ! -f $HOME/.aws/credentials || ( -f $HOME/.aws/credentials && ( ! -s $HOME/.aws/credentials || -z $(grep '[^[:space:]]' $HOME/.aws/credentials ))) && $(conf_read awsiamrole) != true ]]; then
 		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
 		exit 1
 	fi
@@ -403,7 +403,7 @@ bkp_s3_list() {
 
 
 s3_send() {
-	if [[ ! -s $HOME/.aws/credentials && $(conf_read awsiamrole) != true ]]; then
+	if [[ ! -f $HOME/.aws/credentials || ( -f $HOME/.aws/credentials && ( ! -s $HOME/.aws/credentials || -z $(grep '[^[:space:]]' $HOME/.aws/credentials ))) && $(conf_read awsiamrole) != true ]]; then
 		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
 		exit 1
 	fi
@@ -960,7 +960,7 @@ _EOF_
 
 import_server() {
 	[[ -z $file || $file == "true" ]] && read -p "${blu}Path file to import: ${end}" file
-	if [[ ! -s $file ]]; then
+	if [[ ! -f $file || ( -f $file && ( ! -s $file || -z $(grep '[^[:space:]]' $file ))) ]]; then
 		echo "${red}[ERROR] File not found or empty!${end}"
 		exit 1
 	elif ! [[ $import =~ ^(true|sites|stack|full)$ ]]; then

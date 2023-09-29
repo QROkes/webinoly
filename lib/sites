@@ -11,7 +11,7 @@ warning_messages() {
 		if [[ $type == [123] && $dbhost != "localhost" && $(conf_read dbrole) =~ ^(all|grant)$ ]]; then
 			echo "${dim}[WARNING] You have set '$(conf_read dbrole)' as default privileges, some external DB services may not support it!${end}"
 		fi
-		if [[ $type == [123] && $(conf_read wp-admin-auth) != "purged" && ! -s /etc/nginx/.htpasswd && ! -s /etc/nginx/apps.d/.htpasswd-$domain ]]; then
+		if [[ $type == [123] && $(conf_read wp-admin-auth) != "purged" && ( ! -s /etc/nginx/.htpasswd || -z $(grep '[^[:space:]]' /etc/nginx/.htpasswd )) && ( ! -s /etc/nginx/apps.d/.htpasswd-$domain || -z $(grep '[^[:space:]]' /etc/nginx/apps.d/.htpasswd-$domain )) ]]; then
 			echo "${dim}[WARNING] HTTP Authentication Credentials not found and you may need it to complete the WordPress installation process!!${end}"
 		fi
 		if [[ $(conf_read login-www-data) != "true" && (( -z $forward && -z $proxy && -z $parked && -z $mysql ) || ( -n $mysql && -n $domain )) ]]; then
@@ -602,14 +602,14 @@ deletesite() {
 	# In case of custom cache
 	if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
 		sudo sed -i "/^fastcgi_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g').*/d" /etc/nginx/conf.d/webinoly.conf
-		[[ ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
+		[[ -f /etc/nginx/conf.d/webinoly.conf && ( ! -s /etc/nginx/conf.d/webinoly.conf || -z $(grep '[^[:space:]]' /etc/nginx/conf.d/webinoly.conf )) ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
 	fi
 	
 	# Check for Reverse Proxy upstreams
 	if [[ -f /etc/nginx/conf.d/upstream_proxy.conf ]]; then
 		local domvar=$(echo "$domain" | sed "s/[^0-9A-Za-z]/_/g")
 		sudo sed -i "/upstream ${domvar}/,/} #End/{/.*/d}" /etc/nginx/conf.d/upstream_proxy.conf
-		[[ ! -s /etc/nginx/conf.d/upstream_proxy.conf ]] && sudo rm /etc/nginx/conf.d/upstream_proxy.conf
+		[[ -f /etc/nginx/conf.d/upstream_proxy.conf && ( ! -s /etc/nginx/conf.d/upstream_proxy.conf || -z $(grep '[^[:space:]]' /etc/nginx/conf.d/upstream_proxy.conf )) ]] && sudo rm /etc/nginx/conf.d/upstream_proxy.conf
 	fi
 	
 	echo "${gre}Site${blu} $domain ${gre}has been successfully deleted!${end}"
@@ -654,7 +654,7 @@ deletesite_subfolder() {
 		# In case of custom cache
 		if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
 			sudo sed -i "/^fastcgi_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g')${subname} .*/d" /etc/nginx/conf.d/webinoly.conf
-			[[ ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
+			[[ -f /etc/nginx/conf.d/webinoly.conf && ( ! -s /etc/nginx/conf.d/webinoly.conf || -z $(grep '[^[:space:]]' /etc/nginx/conf.d/webinoly.conf )) ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
 		fi
 			
 		echo "${gre}${dim}Subfolder${blu} $subfolder ${gre}from${blu} $domain ${gre}has been successfully deleted!${end}"
@@ -668,7 +668,7 @@ deletesite_subfolder() {
 	if [[ -f /etc/nginx/conf.d/upstream_proxy.conf ]]; then
 		local domvar=$(echo "$domain$subfolder" | sed "s/[^0-9A-Za-z]/_/g")
 		sudo sed -i "/upstream ${domvar}/,/} #End/{/.*/d}" /etc/nginx/conf.d/upstream_proxy.conf
-		[[ ! -s /etc/nginx/conf.d/upstream_proxy.conf ]] && sudo rm /etc/nginx/conf.d/upstream_proxy.conf
+		[[ -f /etc/nginx/conf.d/upstream_proxy.conf && ( ! -s /etc/nginx/conf.d/upstream_proxy.conf || -z $(grep '[^[:space:]]' /etc/nginx/conf.d/upstream_proxy.conf )) ]] && sudo rm /etc/nginx/conf.d/upstream_proxy.conf
 	fi
 	
 	sudo rm -rf /var/www/$domain/htdocs$subfolder
@@ -935,7 +935,7 @@ redirection_manager() {
 		if [[ -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
 			sudo sed -Ei '/^# RedirectFrom: '$(escaped_string $from)'( .*)?$/,/^# RedirectEnd/{/.*/d}' /etc/nginx/apps.d/$domain-nginx.conf
 			
-			if [[ ! -s /etc/nginx/apps.d/$domain-nginx.conf ]]; then
+			if [[ -f /etc/nginx/apps.d/$domain-nginx.conf && ( ! -s /etc/nginx/apps.d/$domain-nginx.conf || -z $(grep '[^[:space:]]' /etc/nginx/apps.d/$domain-nginx.conf )) ]]; then
 				sudo rm /etc/nginx/apps.d/$domain-nginx.conf
 				sudo sed -i "/$domain-nginx.conf;/d" /etc/nginx/sites-available/$domain
 			fi
@@ -1558,7 +1558,7 @@ wp_cache() {
 			else
 				echo "${gre}Custom Nginx Cache configuration not found! ${end}"
 			fi
-			[[ -f /etc/nginx/conf.d/webinoly.conf && ! -s /etc/nginx/conf.d/webinoly.conf ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
+			[[ -f /etc/nginx/conf.d/webinoly.conf && ( ! -s /etc/nginx/conf.d/webinoly.conf || -z $(grep '[^[:space:]]' /etc/nginx/conf.d/webinoly.conf )) ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
 		elif [[ -n $query_string_never_cache || $query_string_cache || $skip_cache || -n $skip_cookie_cache ]]; then
 			custom_cache_global -site
 		elif [[ -n $query_string_cache_default ]]; then

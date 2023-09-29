@@ -101,7 +101,7 @@ linux_optim() {
 	# File directors for Nginx
 	[[ ! -d /etc/systemd/system/nginx.service.d ]] && sudo mkdir /etc/systemd/system/nginx.service.d
 	[[ ! -f /etc/systemd/system/nginx.service.d/nofile_limit.conf ]] && sudo touch /etc/systemd/system/nginx.service.d/nofile_limit.conf
-	[[ ! -s /etc/systemd/system/nginx.service.d/nofile_limit.conf ]] && sudo echo "[Service]
+	[[ ! -s /etc/systemd/system/nginx.service.d/nofile_limit.conf || -z $(grep '[^[:space:]]' /etc/systemd/system/nginx.service.d/nofile_limit.conf ) ]] && sudo echo "[Service]
 LimitNOFILE=$fd_per_process" >> /etc/systemd/system/nginx.service.d/nofile_limit.conf
 	
 	# Disable Transparent Huge Pages
@@ -984,7 +984,7 @@ stack_builder() {
 				echo | sudo add-apt-repository "deb https://nginx.org/packages/ubuntu/ $(check_osname) nginx"
 			fi
 		else
-			[[ ! -s /usr/share/keyrings/nginx-archive-keyring.gpg ]] && sudo rm -rf /usr/share/keyrings/nginx-archive-keyring.gpg # Prevent issues!
+			[[ -f /usr/share/keyrings/nginx-archive-keyring.gpg && ( ! -s /usr/share/keyrings/nginx-archive-keyring.gpg || -z $(grep '[^[:space:]]' /usr/share/keyrings/nginx-archive-keyring.gpg )) ]] && sudo rm -rf /usr/share/keyrings/nginx-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/nginx-archive-keyring.gpg ]] && wget -nv -O- https://nginx.org/keys/nginx_signing.key | sudo gpg --dearmor -o /usr/share/keyrings/nginx-archive-keyring.gpg
 			if [[ $(conf_read nginx-ppa) == "mainline" ]]; then
 				echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/mainline/ubuntu/ $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
@@ -1006,7 +1006,7 @@ stack_builder() {
 			#sudo apt install -y language-pack-en-base
 			sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
 		else
-			[[ ! -s /usr/share/keyrings/php-archive-keyring.gpg ]] && sudo rm -rf /usr/share/keyrings/php-archive-keyring.gpg # Prevent issues!
+			[[ -f /usr/share/keyrings/php-archive-keyring.gpg && ( ! -s /usr/share/keyrings/php-archive-keyring.gpg || -z $(grep '[^[:space:]]' /usr/share/keyrings/php-archive-keyring.gpg )) ]] && sudo rm -rf /usr/share/keyrings/php-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/php-archive-keyring.gpg ]] && wget -nv -O- 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x14aa40ec0831756756d7f66c4f4ea0aae5267a6c' | sudo gpg --dearmor -o /usr/share/keyrings/php-archive-keyring.gpg
 			echo "deb [signed-by=/usr/share/keyrings/php-archive-keyring.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
 		fi
@@ -1023,7 +1023,7 @@ stack_builder() {
 			# Snap is available but it has no support for ARM architecture: https://snapcraft.io/redis
 			echo | sudo add-apt-repository ppa:redislabs/redis
 		else
-			[[ ! -s /usr/share/keyrings/redis-archive-keyring.gpg ]] && sudo rm -rf /usr/share/keyrings/redis-archive-keyring.gpg # Prevent issues!
+			[[ -f /usr/share/keyrings/redis-archive-keyring.gpg && ( ! -s /usr/share/keyrings/redis-archive-keyring.gpg || -z $(grep '[^[:space:]]' /usr/share/keyrings/redis-archive-keyring.gpg )) ]] && sudo rm -rf /usr/share/keyrings/redis-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/redis-archive-keyring.gpg ]] && wget -nv -O- https://packages.redis.io/gpg | sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
 			echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/redis.list
 		fi
@@ -1041,7 +1041,7 @@ stack_builder() {
 		fi
 		
 		if [[ $(conf_read db-engine) == "mysql" ]]; then
-			[[ ! -s /usr/share/keyrings/mysql-archive-keyring.gpg ]] && sudo rm -rf /usr/share/keyrings/mysql-archive-keyring.gpg # Prevent issues!
+			[[ -f /usr/share/keyrings/mysql-archive-keyring.gpg && ( ! -s /usr/share/keyrings/mysql-archive-keyring.gpg || -z $(grep '[^[:space:]]' /usr/share/keyrings/mysql-archive-keyring.gpg )) ]] && sudo rm -rf /usr/share/keyrings/mysql-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/mysql-archive-keyring.gpg ]] && wget -nv -O- 'https://repo.mysql.com/RPM-GPG-KEY-mysql-2022' | sudo gpg --dearmor -o /usr/share/keyrings/mysql-archive-keyring.gpg
 			echo "deb [signed-by=/usr/share/keyrings/mysql-archive-keyring.gpg] http://repo.mysql.com/apt/ubuntu $(lsb_release -cs) mysql-8.0" | sudo tee /etc/apt/sources.list.d/mysql.list
 		
@@ -1050,7 +1050,7 @@ stack_builder() {
 			sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
 			echo | sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main"
 		else
-			[[ ! -s /usr/share/keyrings/mariadb-archive-keyring.gpg ]] && sudo rm -rf /usr/share/keyrings/mariadb-archive-keyring.gpg # Prevent issues!
+			[[ -f /usr/share/keyrings/mariadb-archive-keyring.gpg && ( ! -s /usr/share/keyrings/mariadb-archive-keyring.gpg || -z $(grep '[^[:space:]]' /usr/share/keyrings/mariadb-archive-keyring.gpg )) ]] && sudo rm -rf /usr/share/keyrings/mariadb-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/mariadb-archive-keyring.gpg ]] && wget -nv -O- 'https://mariadb.org/mariadb_release_signing_key.asc' | sudo gpg --dearmor -o /usr/share/keyrings/mariadb-archive-keyring.gpg
 			echo "deb [signed-by=/usr/share/keyrings/mariadb-archive-keyring.gpg] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main" | sudo tee /etc/apt/sources.list.d/mariadb.list
 		fi
