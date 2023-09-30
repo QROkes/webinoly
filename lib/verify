@@ -1024,7 +1024,7 @@ if [[ $(conf_read php-tool-redis) == "true" ]]; then
 	# 18.04 - /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg
 	# 20.04 - /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg
 	# 22.04 - /usr/share/keyrings/redis-archive-keyring.gpg
-	if [[ ( ! -f /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg || ! -s /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg || -z $(grep '[^[:space:]]' /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg ) ) && ( ! -f /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg || ! -s /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg || -z $(grep '[^[:space:]]' /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg ) ) && ( ! -f /usr/share/keyrings/redis-archive-keyring.gpg || ! -s /usr/share/keyrings/redis-archive-keyring.gpg || -z $(grep '[^[:space:]]' /usr/share/keyrings/redis-archive-keyring.gpg ) ) ]]; then
+	if [[ ( ! -f /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg || ! -s /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg || -z $(cat -v /etc/apt/trusted.gpg.d/redislabs_ubuntu_redis.gpg | grep '[^[:space:]]') ) && ( ! -f /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg || ! -s /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg || -z $(cat -v /etc/apt/trusted.gpg.d/redislabs-ubuntu-redis.gpg | grep '[^[:space:]]') ) && ( ! -f /usr/share/keyrings/redis-archive-keyring.gpg || ! -s /usr/share/keyrings/redis-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/redis-archive-keyring.gpg | grep '[^[:space:]]') ) ]]; then
 		echo "- [ERROR] Redis Apt Key not found!"
 		local ver_seven_err="1"
 	fi
