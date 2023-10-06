@@ -223,7 +223,7 @@ check_duply_profile() {
 
 
 bkp_s3_profile() {
-	if [[ ! -f $HOME/.aws/credentials || ( -f $HOME/.aws/credentials && ( ! -s $HOME/.aws/credentials || -z $(grep '[^[:space:]]' $HOME/.aws/credentials ))) && $(conf_read awsiamrole) != true ]]; then
+	if [[ ( ! -f $HOME/.aws/credentials || ( -f $HOME/.aws/credentials && ( ! -s $HOME/.aws/credentials || -z $(grep '[^[:space:]]' $HOME/.aws/credentials )))) && $(conf_read awsiamrole) != true ]]; then
 		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
 		exit 1
 	fi
@@ -403,7 +403,7 @@ bkp_s3_list() {
 
 
 s3_send() {
-	if [[ ! -f $HOME/.aws/credentials || ( -f $HOME/.aws/credentials && ( ! -s $HOME/.aws/credentials || -z $(grep '[^[:space:]]' $HOME/.aws/credentials ))) && $(conf_read awsiamrole) != true ]]; then
+	if [[ ( ! -f $HOME/.aws/credentials || ( -f $HOME/.aws/credentials && ( ! -s $HOME/.aws/credentials || -z $(grep '[^[:space:]]' $HOME/.aws/credentials )))) && $(conf_read awsiamrole) != true ]]; then
 		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
 		exit 1
 	fi

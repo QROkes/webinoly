@@ -113,6 +113,7 @@ if [[ -n $ver ]]; then
 	if [[ $code == 200 ]]; then
 		sudo wget --timeout=15 -t 1 -qrO $HOME/webinoly.tar https://qrok.es/webinoly?version=$ver
 		[[ $ver == "beta" ]] && echo "$(tput setaf 1)[WARNING] You are installing a BETA version of Webinoly and it's not recommended for production enviroments.$(tput sgr0)"
+		type="Custom"
 	else
 		echo "$(tput setaf 1)[ERROR] Version not found or not available! ($code) $(tput sgr0)"
 		sudo rm weby
@@ -157,6 +158,19 @@ if [[ -f /opt/webinoly/webinoly.conf ]]; then
 	oldver=$(conf_read server-version)
 	newver=$svr_version
 	echo "${gre}${dim}Webinoly Configuration file was found, so we will use it!${end}"
+	
+	# Reinstall after uninstalled! (Can be considered new)
+	if [[ -z $update ]] && ! [[ $ver =~ ^(alpha|beta)$ ]]; then
+		new_install="true"
+		echo "${blu}${dim}It seems like you're reinstalling Webinoly! (Upgrading from: ${oldapp})${end} ${blu}${bol}Welcome back!!!${end}"
+	
+	# Downgrade!
+	elif [[ -n $update && $type == "Custom" ]]; then
+		echo "${blu}Updating to the latest version is always recommended! ${dim}(Downgrade to: ${ver})${end}"
+	fi
+	
+elif [[ $type == "Custom" ]]; then
+	echo "${blu}Custom version installed: ${ver}${end}"
 else
 	new_install="true"
 fi
@@ -165,7 +179,10 @@ fi
 # Write app version
 webyversion=$app_version
 conf_write app-version $webyversion
-[[ $ver =~ ^(alpha|beta)$ ]] && conf_write branch $ver
+if [[ $ver =~ ^(alpha|beta)$ ]]; then
+	conf_write branch $ver
+	echo "${blu}${bol}This is a testing version, please don't use it in production!${end}"
+fi
 
 
 # Ping to Webinoly Stats
@@ -177,17 +194,16 @@ if [[ $statskip != "true" ]]; then
 		type="New"
 	elif [[ $ver == "beta" ]]; then
 		type="Beta"
-	elif [[ -n $update && $ver =~ ^[0-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
+	elif [[ -n $update && $type == "Custom" ]]; then
 		type="Downgrade"
-		webyversion=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
-		opt=$ver
-	elif [[ -n $setup && $ver =~ ^[0-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
-		type="Custom"
 		webyversion=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
 		opt=$ver
 	elif [[ -n $update && -n $oldapp ]]; then
 		type="Updates"
 		opt=$oldapp
+	elif [[ $type == "Custom" ]]; then
+		webyversion=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
+		opt=$ver
 	else
 		type="Error"
 		conf_write init-error-flag true
