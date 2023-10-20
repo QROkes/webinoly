@@ -82,7 +82,7 @@ onethree_to_onefour() {
 		sudo mkdir -p /etc/nginx/apps.d
 		sudo cp /etc/nginx/common/acl.conf /opt/webinoly/templates/source/acl.conf.old
 		grep "^allow [^127.0.0.1]" /opt/webinoly/templates/source/acl.conf.old > /etc/nginx/apps.d/whitelist-acl.conf
-		[[ -f /etc/nginx/apps.d/whitelist-acl.conf && ( ! -s /etc/nginx/apps.d/whitelist-acl.conf || -z $(grep '[^[:space:]]' /etc/nginx/apps.d/whitelist-acl.conf )) ]] && sudo rm /etc/nginx/apps.d/whitelist-acl.conf
+		[[ -f /etc/nginx/apps.d/whitelist-acl.conf && ( ! -s /etc/nginx/apps.d/whitelist-acl.conf || -z $(cat -v /etc/nginx/apps.d/whitelist-acl.conf | grep -m 1 '[^[:space:]]')) ]] && sudo rm /etc/nginx/apps.d/whitelist-acl.conf
 		[[ -f /etc/nginx/sites-available/$(conf_read tools-port) ]] && sudo sed -i "/acl.conf;/i \	include common\/auth.conf;" /etc/nginx/sites-available/$(conf_read tools-port)
 		
 		for site in "/etc/nginx/sites-available"/*

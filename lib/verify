@@ -350,7 +350,7 @@ if [[ $(conf_read nginx) == "true" ]]; then
 			echo "- [ERROR] Nginx Apt Key not found!"
 			local ver_two_err="1"
 		fi
-		if [[ ! -f /etc/apt/sources.list.d/nginx.list || ! -s /etc/apt/sources.list.d/nginx.list || -z $(grep '[^[:space:]]' /etc/apt/sources.list.d/nginx.list ) ]]; then
+		if [[ ! -f /etc/apt/sources.list.d/nginx.list || ! -s /etc/apt/sources.list.d/nginx.list || -z $(cat -v /etc/apt/sources.list.d/nginx.list | grep -m 1 '[^[:space:]]') ]]; then
 			echo "- [ERROR] Nginx PPA not found in sources list!"
 			local ver_two_err="1"
 		fi
@@ -573,11 +573,11 @@ if [[ $(conf_read php) == "true" ]]; then
 	fi
 	
 	if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
-		if [[ ! -f /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg || ! -s /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg || -z $(grep '[^[:space:]]' /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg ) ]]; then
+		if [[ ! -f /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg || ! -s /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg || -z $(cat -v /etc/apt/trusted.gpg.d/ondrej_ubuntu_php.gpg | grep -m 1 '[^[:space:]]') ]]; then
 			echo "- [ERROR] PHP Apt Key not found!"
 			local ver_three_err="1"
 		fi
-		if [[ ! -f /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list || ! -s /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list || -z $(grep '[^[:space:]]' /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list ) ]]; then
+		if [[ ! -f /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list || ! -s /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list || -z $(cat -v /etc/apt/sources.list.d/ondrej-ubuntu-php-$(check_osname).list | grep -m 1 '[^[:space:]]') ]]; then
 			echo "- [ERROR] PHP PPA not found in sources list!"
 			local ver_three_err="1"
 		fi
@@ -586,7 +586,7 @@ if [[ $(conf_read php) == "true" ]]; then
 			echo "- [ERROR] PHP Apt Key not found!"
 			local ver_three_err="1"
 		fi
-		if [[ ! -f /etc/apt/sources.list.d/php.list || ! -s /etc/apt/sources.list.d/php.list || -z $(grep '[^[:space:]]' /etc/apt/sources.list.d/php.list ) ]]; then
+		if [[ ! -f /etc/apt/sources.list.d/php.list || ! -s /etc/apt/sources.list.d/php.list || -z $(cat -v /etc/apt/sources.list.d/php.list | grep -m 1 '[^[:space:]]') ]]; then
 			echo "- [ERROR] PHP PPA not found in sources list!"
 			local ver_three_err="1"
 		fi
@@ -736,11 +736,11 @@ if [[ $(conf_read mysql) == "true" ]]; then
 	
 	# PPA & Keys
 	if [[ $(conf_read db-engine) == "mysql" ]]; then
-		if [[ ! -f /usr/share/keyrings/mysql-archive-keyring.gpg || ! -s /usr/share/keyrings/mysql-archive-keyring.gpg || -z $(grep '[^[:space:]]' /usr/share/keyrings/mysql-archive-keyring.gpg ) ]]; then
+		if [[ ! -f /usr/share/keyrings/mysql-archive-keyring.gpg || ! -s /usr/share/keyrings/mysql-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/mysql-archive-keyring.gpg | grep -m 1 '[^[:space:]]') ]]; then
 			echo "- [ERROR] MySQL Apt Key not found!"
 			local ver_four_err="1"
 		fi
-		if [[ ! -f /etc/apt/sources.list.d/mysql.list || ! -s /etc/apt/sources.list.d/mysql.list || -z $(grep '[^[:space:]]' /etc/apt/sources.list.d/mysql.list ) ]]; then
+		if [[ ! -f /etc/apt/sources.list.d/mysql.list || ! -s /etc/apt/sources.list.d/mysql.list || -z $(cat -v /etc/apt/sources.list.d/mysql.list | grep -m 1 '[^[:space:]]') ]]; then
 			echo "- [ERROR] MySQL PPA not found in sources list!"
 			local ver_four_err="1"
 		fi
@@ -758,7 +758,7 @@ if [[ $(conf_read mysql) == "true" ]]; then
 			echo "- [ERROR] MariaDB Apt Key not found!"
 			local ver_four_err="1"
 		fi
-		if [[ ! -f /etc/apt/sources.list.d/mariadb.list || ! -s /etc/apt/sources.list.d/mariadb.list || -z $(grep '[^[:space:]]' /etc/apt/sources.list.d/mariadb.list ) ]]; then
+		if [[ ! -f /etc/apt/sources.list.d/mariadb.list || ! -s /etc/apt/sources.list.d/mariadb.list || -z $(cat -v /etc/apt/sources.list.d/mariadb.list | grep -m 1 '[^[:space:]]') ]]; then
 			echo "- [ERROR] MariaDB PPA not found in sources list!"
 			local ver_four_err="1"
 		fi
@@ -1031,7 +1031,7 @@ if [[ $(conf_read php-tool-redis) == "true" ]]; then
 	# 18.04 - /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list
 	# 20.04 - /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list
 	# 22.04 - /etc/apt/sources.list.d/redis.list
-	if [[ ( ! -f /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list || ! -s /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list || -z $(grep '[^[:space:]]' /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list ) ) && ( ! -f /etc/apt/sources.list.d/redis.list || ! -s /etc/apt/sources.list.d/redis.list || -z $(grep '[^[:space:]]' /etc/apt/sources.list.d/redis.list )) ]]; then
+	if [[ ( ! -f /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list || ! -s /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list || -z $(cat -v /etc/apt/sources.list.d/redislabs-ubuntu-redis-$(check_osname).list | grep -m 1 '[^[:space:]]')) && ( ! -f /etc/apt/sources.list.d/redis.list || ! -s /etc/apt/sources.list.d/redis.list || -z $(cat -v /etc/apt/sources.list.d/redis.list | grep -m 1 '[^[:space:]]')) ]]; then
 		echo "- [ERROR] Redis PPA not found in sources list!"
 		local ver_seven_err="1"
 	fi
@@ -1222,7 +1222,7 @@ if [[ -z $critical_mode ]]; then
 		if [[ $ver_domi != "html" && $ver_domi != $ADMIN_TOOLS_SITE ]]; then
 			# If WordPress, then check connection!
 			if [[ $(is_wp $ver_domi) == "true" ]]; then
-				if [[ ( ! -s /etc/nginx/.htpasswd || -z $(grep '[^[:space:]]' /etc/nginx/.htpasswd )) && ( ! -s /etc/nginx/apps.d/.htpasswd-$ver_domi || -z $(grep '[^[:space:]]' /etc/nginx/apps.d/.htpasswd-$ver_domi )) && $(is_wp_auth $ver_domi) == "true" ]]; then
+				if [[ ( ! -s /etc/nginx/.htpasswd || -z $(cat -v /etc/nginx/.htpasswd | grep '[^[:space:]]')) && ( ! -s /etc/nginx/apps.d/.htpasswd-$ver_domi || -z $(cat -v /etc/nginx/apps.d/.htpasswd-$ver_domi | grep -m 1 '[^[:space:]]')) && $(is_wp_auth $ver_domi) == "true" ]]; then
 					echo "${blu}${dim}- [INFO] HTTP Authentication Credentials not found for $ver_domi${end}${red}"
 				fi
 				

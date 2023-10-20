@@ -4,7 +4,7 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.17.6"
+readonly app_version="1.17.7"
 readonly svr_version="1.8"
 readonly os_ubuntu_supported=(bionic focal jammy) # https://ubuntu.com/about/release-cycle
 readonly php_supported=(7.4 8.0 8.1 8.2) # https://www.php.net/supported-versions.php
@@ -1801,7 +1801,7 @@ custom_cache_global() {
 			[[ -n $skip_cache ]] && local value=$skip_cache
 			
 			sudo sed -Ei "/^# Value: $(escaped_string $value)( .*)?$/,/^# CacheRuleEnd/{/.*/d}" $confile
-			[[ -f $confile && ( ! -s $confile || -z $(grep '[^[:space:]]' $confile )) ]] && sudo rm $confile # Better because also check for files containing only empty-spaces!
+			[[ -f $confile && ( ! -s $confile || -z $(cat -v $confile | grep -m 1 '[^[:space:]]')) ]] && sudo rm $confile # Better because also check for files containing only empty-spaces!
 		fi
 		echo "${gre}Cache rule successfully removed!${end}"
 	else

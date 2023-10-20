@@ -695,7 +695,7 @@ set_tools_site() {
 	fi
 
 	# Warning Message
-	if [[ (( ! -s /etc/nginx/.htpasswd || -z $(grep '[^[:space:]]' /etc/nginx/.htpasswd )) && $tools_site == "default" ) || (( ! -s /etc/nginx/.htpasswd || -z $(grep '[^[:space:]]' /etc/nginx/.htpasswd )) && $tools_site != "default" && -f /etc/nginx/sites-available/$tools_site && ( ! -s /etc/nginx/apps.d/.htpasswd-$tools_site || -z $(grep '[^[:space:]]' /etc/nginx/apps.d/.htpasswd-$tools_site ))) ]]; then
+	if [[ (( ! -s /etc/nginx/.htpasswd || -z $(cat -v /etc/nginx/.htpasswd | grep '[^[:space:]]')) && $tools_site == "default" ) || (( ! -s /etc/nginx/.htpasswd || -z $(cat -v /etc/nginx/.htpasswd | grep '[^[:space:]]')) && $tools_site != "default" && -f /etc/nginx/sites-available/$tools_site && ( ! -s /etc/nginx/apps.d/.htpasswd-$tools_site || -z $(cat -v /etc/nginx/apps.d/.htpasswd-$tools_site | grep -m 1 '[^[:space:]]'))) ]]; then
 		echo "${dim}[WARNING] HTTP Authentication Credentials not found and you may need it to access these tools!${end}"
 	fi
 }
@@ -953,7 +953,7 @@ nginx_blockip() {
 			[[ -f /etc/nginx/conf.d/blockips.conf ]] && sed -i "\#^deny ${blockip};#d" /etc/nginx/conf.d/blockips.conf
 			
 			# Remove site-auth-file if empty.
-			[[ -f /etc/nginx/conf.d/blockips.conf && ( ! -s /etc/nginx/conf.d/blockips.conf || -z $(grep '[^[:space:]]' /etc/nginx/conf.d/blockips.conf )) ]] && sudo rm /etc/nginx/conf.d/blockips.conf
+			[[ -f /etc/nginx/conf.d/blockips.conf && ( ! -s /etc/nginx/conf.d/blockips.conf || -z $(cat -v /etc/nginx/conf.d/blockips.conf | grep -m 1 '[^[:space:]]')) ]] && sudo rm /etc/nginx/conf.d/blockips.conf
 			
 			echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully unblocked!${end}"
 		else
