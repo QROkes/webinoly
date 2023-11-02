@@ -833,7 +833,7 @@ clear_caches() {
 			sudo redis-cli flushall
 			echo "${gre}- Redis Cache has been successfully cleared!${end}"
 		else
-			echo "${red}[ERROR] We can not clear Redis Cache because is not installed!${end}"
+			[[ $clear_cache != "all" ]] && echo "${red}[ERROR] We can not clear Redis Cache because is not installed!${end}"
 			err_cont=true
 		fi
 	fi
@@ -844,7 +844,7 @@ clear_caches() {
 			echo flush_all > /dev/tcp/$memhost/$memport
 			echo "${gre}- Memcached has been successfully cleared!${end}"
 		else
-			echo "${red}[ERROR] We can not clear Memcache because is not installed!${end}"
+			[[ $clear_cache != "all" ]] && echo "${red}[ERROR] We can not clear Memcache because is not installed!${end}"
 			err_cont=true
 		fi
 	fi
@@ -860,7 +860,7 @@ clear_caches() {
 			wget --spider --no-check-certificate --timeout=15 -t 1 localhost:$(conf_read tools-port)/php/opcache/  > /dev/null 2>&1 &
 			echo "${gre}- OpCache has been successfully cleared!${end}"
 		else
-			echo "${red}[ERROR] We can not clear OpCache because PHP or NGINX are not installed!${end}"
+			[[ $clear_cache != "all" ]] && echo "${red}[ERROR] We can not clear OpCache because PHP or NGINX are not installed!${end}"
 			err_cont=true
 		fi
 	fi
@@ -869,7 +869,7 @@ clear_caches() {
 			sudo rm -Rf /run/nginx-cache/*
 			echo "${gre}- FastCgi Cache has been successfully cleared!${end}"
 		else	
-			echo "${red}[ERROR] We can not clear FastCGI Cache because NGINX is not installed!${end}"
+			[[ $clear_cache != "all" ]] && echo "${red}[ERROR] We can not clear FastCGI Cache because NGINX is not installed!${end}"
 			err_cont=true
 		fi
 	fi
