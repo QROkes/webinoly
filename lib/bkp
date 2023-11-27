@@ -214,14 +214,6 @@ bkp_local_db() {
 }
 
 
-check_duply_profile() {
-	if [[ ! -d $HOME/.duply/$profile ]]; then
-		echo "${red}[ERROR] Backup profile not found!${end}"
-		exit 1
-	fi
-}
-
-
 bkp_s3_profile() {
 	if [[ ( ! -f $HOME/.aws/credentials || ( -f $HOME/.aws/credentials && ( ! -s $HOME/.aws/credentials || -z $(cat -v $HOME/.aws/credentials | grep -m 1 '[^[:space:]]')))) && $(conf_read awsiamrole) != true ]]; then
 		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
@@ -238,14 +230,19 @@ bkp_s3_profile() {
 		fi
 	fi
 	
+	# These options needs a valid profile!
+	if [[ -n $profile && $profile != "true" && ! -d $HOME/.duply/$profile && ( -n $run || -n $info || -n $delete || -n $restore || -n $add_db_pre ) ]]; then
+		echo "${red}[ERROR] Backup profile not found!${end}"
+		exit 1
+	#else 
+		# Create a new profile!
+	fi
+	
 	
 	if [[ -n $run ]]; then
-		check_duply_profile
 		sudo duply $profile backup_verify_purge --force --allow-source-mismatch
 		
 	elif [[ -n $info ]]; then
-		check_duply_profile
-		
 		local tar=$(grep -E "^TARGET[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "'" )
 		local sou=$(grep -E "^SOURCE[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "'" )
 		local age=$(grep -E "^MAX_AGE[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "=" )
@@ -265,14 +262,10 @@ bkp_s3_profile() {
 		echo ""
 	
 	elif [[ -n $delete ]]; then
-		check_duply_profile
-		
 		sudo rm -rf $HOME/.duply/$profile
 		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully deleted!${end}"
 		
 	elif [[ -n $restore ]]; then
-		check_duply_profile
-		
 		# Temporary check!!!! Should be removed soon!!!
 		if [[ $restore != "true" && -z $destination ]]; then
 			echo "${red}[ERROR] Backup Restore syntax has changed, destination paramater is needed!${end}"
@@ -294,8 +287,6 @@ bkp_s3_profile() {
 		
 		
 	elif [[ -n $add_db_pre && -n $list ]]; then
-		check_duply_profile
-		
 		if [[ -s $HOME/.duply/$profile/pre ]]; then
 			if [[ -z $raw ]]; then
 				echo ""
@@ -310,22 +301,18 @@ bkp_s3_profile() {
 	
 	
 	elif [[ -n $add_db_pre && -n $purge ]]; then
-		check_duply_profile	
 		sudo rm -rf $HOME/.duply/$profile/pre
 		echo "${gre}PRE Database backups for${blu} '$profile' ${gre}has been successfully removed!${end}"
 		
 		
 	elif [[ -n $add_db_pre ]]; then
-		check_duply_profile
-		
 		[[ $add_db_pre == "true" ]] &&	read -p "${gre}WordPress site: ${end}" add_db_pre
+		
 		# we dont check is_wp_installed because at this point we are still not doing a backup, just setting it.
 		if [[ -z $add_db_pre || $(is_wp $add_db_pre $subfolder) != "true"  ]]; then
 			echo "${red}[ERROR] Please, enter a valid WP site!${end}"
 			exit 1
-		fi
-		
-		if [[ $(wp_config_read $add_db_pre DB_HOST $subfolder) != "localhost" && -z $(conf_read external-dbu) && -z $(conf_read external-dbp) ]]; then
+		elif [[ $(wp_config_read $add_db_pre DB_HOST $subfolder) != "localhost" && -z $(conf_read external-dbu) && -z $(conf_read external-dbp) ]]; then
 			echo "${red}[ERROR] Database host is not localhost!${dim} (External databases are supported only when credentials are saved in Webinoly Configuration file)${end}"
 			exit 1
 		fi
