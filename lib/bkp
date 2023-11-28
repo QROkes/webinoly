@@ -67,8 +67,13 @@ bkp_local_db() {
 	if [[ -z $master_multi_bkp_db && $dbname != "all" ]]; then
 		if [[ ( -z $wp || $wp == "true") && ( -z $dbname || $dbname == "true" ) ]]; then
 			read -p "${gre}WordPress site (domain) or Database name: ${end}" dbq
-			if [[ -n $dbq && -f /etc/nginx/sites-available/$dbq ]]; then
-				wp=$dbq
+			
+			is_url $dbq -split
+			
+			# We check if is_wp here to give it a second chance as dbname in case it fails.
+			if [[ -n $url_host && -f /etc/nginx/sites-available/$url_host && $(is_wp $url_host $url_path) == "true" ]]; then
+					wp=$url_host
+					[[ -n $url_path ]] && subfolder=$url_path
 			elif [[ -n $dbq ]]; then
 				dbname=$dbq
 				wp=""
@@ -306,7 +311,16 @@ bkp_s3_profile() {
 		
 		
 	elif [[ -n $add_db_pre ]]; then
-		[[ $add_db_pre == "true" ]] &&	read -p "${gre}WordPress site: ${end}" add_db_pre
+		if [[ $add_db_pre == "true" ]]; then
+			read -p "${gre}WordPress site (domain): ${end}" add_db_pre
+			
+			is_url $add_db_pre -split
+			
+			if [[ -n $url_host && -n $url_path ]]; then
+					add_db_pre=$url_host
+					subfolder=$url_path
+			fi
+		fi
 		
 		# we dont check is_wp_installed because at this point we are still not doing a backup, just setting it.
 		if [[ -z $add_db_pre || $(is_wp $add_db_pre $subfolder) != "true"  ]]; then
@@ -1073,8 +1087,13 @@ bkp_wizard() {
 	elif [[ $wzd == 8 ]]; then
 		bkp_s3_list
 	elif [[ $wzd == 9 ]]; then
-		read -p "${blu}Site to export: ${end}" site
-		sudo webinoly -backup=local -export=$site
+		read -p "${blu}Site to export (domain): ${end}" site
+		is_url $site -split	
+		if [[ -n $url_host && -n $url_path ]]; then
+			sudo webinoly -backup=local -export=$url_host -subfolder=$url_path
+		else # if not a URL, let it fail in the export function!
+			sudo webinoly -backup=local -export=$site
+		fi
 	elif [[ $wzd == 10 ]]; then
 		export_server
 	elif [[ $wzd == 11 ]]; then
