@@ -44,7 +44,7 @@ must-staple = True" | tee -a /etc/letsencrypt/cli.ini
 		for site in "/etc/nginx/sites-available"/*
 		do
 			domi=$(echo $site | cut -f 5 -d "/")
-			[[ $domi != "html" && $domi != $(conf_read tools-port) && $domi != *".dpkg-"* ]] && sudo sed -i "/#include \/var\/www\//c\	include /var/www/$domi/*-nginx.conf;" /etc/nginx/sites-available/$domi
+			[[ -f /etc/nginx/sites-available/$domi && $domi != "html" && $domi != $(conf_read tools-port) && $domi != *".dpkg-"* ]] && sudo sed -i "/#include \/var\/www\//c\	include /var/www/$domi/*-nginx.conf;" /etc/nginx/sites-available/$domi
 		done
 	fi
 	
@@ -64,7 +64,7 @@ onetwo_to_onethree() {
 	for site in "/etc/nginx/sites-available"/*
 	do
 		domi=$(echo $site | cut -f 5 -d "/")
-		[[ $domi != "html" && $domi != $(conf_read tools-port) ]] && sudo sed -i "/ssl on;/c\	#ssl on;" /etc/nginx/sites-available/$domi
+		[[ -f /etc/nginx/sites-available/$domi && $domi != "html" && $domi != $(conf_read tools-port) ]] && sudo sed -i "/ssl on;/c\	#ssl on;" /etc/nginx/sites-available/$domi
 	done
 	
 	# swappines is now included by default in linux optimization.
@@ -88,7 +88,7 @@ onethree_to_onefour() {
 		for site in "/etc/nginx/sites-available"/*
 		do
 			domi=$(echo $site | cut -f 5 -d "/")
-			if [[ $domi != "html" && $domi != $(conf_read tools-port) ]]; then
+			if [[ -f /etc/nginx/sites-available/$domi && $domi != "html" && $domi != $(conf_read tools-port) ]]; then
 				if [[ $(is_proxy $domi) == "true" ]]; then
 					pat="\t}"
 				elif [[ $(is_wp $domi) == "true" || $(is_php $domi) == "true" ]]; then

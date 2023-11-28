@@ -76,7 +76,7 @@ logrotate_perm() {
 		local path="/etc/logrotate.d/php$(conf_read php-ver)-fpm"
 		local owner="root root"
 	elif [[ $1 == "mysql" ]]; then
-		local path="/etc/logrotate.d/mysql-server"
+		[[ -f /etc/logrotate.d/mariadb ]] && local path="/etc/logrotate.d/mariadb" || local path="/etc/logrotate.d/mysql-server"
 		local owner="mysql adm"
 	elif [[ $1 == "redis" ]]; then
 		local path="/etc/logrotate.d/redis-server"
@@ -86,7 +86,7 @@ logrotate_perm() {
 		local owner=""
 	fi
 	
-	if [[ -n $path && -n $owner ]]; then
+	if [[ -n $path && -n $owner && -f $path ]]; then
 		sudo sed -i "/create [0-9]/d" $path
 		sudo sed -i "/missingok/i \	create 0644 $owner" $path
 	fi

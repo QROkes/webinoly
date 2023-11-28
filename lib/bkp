@@ -765,7 +765,7 @@ export_site() {
 			for sit in "/etc/nginx/apps.d/${siteto}$(echo $subfolder | sed "s/\//_/g")_"*-wpcommon.conf
 			do 
 				local suby="/$(echo $sit | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
-				if [[ $(is_wp $siteto $suby) == "true" ]]; then
+				if [[ -n $suby && $(is_wp $siteto $suby) == "true" ]]; then
 					wp_conf_retrieve $siteto false false $suby
 					if [[ -n $suby && $(conf_read mysql) == "true" && $wp_dbhost_host == "localhost" && $(is_wp_installed $siteto $suby) == "true" && -n $wp_dbname ]]; then
 						if [[ -z $export_db_list ]]; then

@@ -701,7 +701,7 @@ delete_all_sites() {
 	do
 		[[ ${delete_all,,} == "keep-db" ]] && delete="keep-db" || delete="force"
 		domain=$(echo $site | cut -f 5 -d "/")
-		[[ $domain != "default" && $domain != $ADMIN_TOOLS_SITE && $domi != *".dpkg-"* ]] && deletesite
+		[[ -f /etc/nginx/sites-available/$domain && $domain != "default" && $domain != $ADMIN_TOOLS_SITE && $domain != *".dpkg-"* ]] && deletesite
 	done
 	
 	# Delete all files - double check!
@@ -1892,7 +1892,7 @@ list_sites() {
 	for site in "/etc/nginx/sites-available"/*
 	do
 		local domi=$(echo $site | cut -f 5 -d "/")
-		[[ $domi == "default" || $domi == $ADMIN_TOOLS_SITE || $domi == *".dpkg-"* ]] && continue
+		[[ ! -f /etc/nginx/sites-available/$domi || $domi == "default" || $domi == $ADMIN_TOOLS_SITE || $domi == *".dpkg-"* ]] && continue
 		
 		if [[ $list != "true" ]]; then
 			[[ ${list,,} == "disabled" && -L /etc/nginx/sites-enabled/$domi ]] && continue

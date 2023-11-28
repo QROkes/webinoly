@@ -1081,7 +1081,7 @@ if [[ -z $critical_mode ]]; then
 	for cert in "/etc/letsencrypt/live"/*
 	do
 		domain=$(echo $cert | cut -f 5 -d "/")
-		if [[ -d $cert && ! -f /etc/nginx/sites-available/$domain ]]; then
+		if [[ -d $cert && ! -f /etc/nginx/sites-available/$domain && -n $domain ]]; then
 			echo "${blu}${dim}- [INFO] SSL Orphan-Cert found ($domain)!${end}${red}"
 		fi
 	done
@@ -1219,6 +1219,8 @@ if [[ -z $critical_mode ]]; then
 	for ver_site in "/etc/nginx/sites-available"/*
 	do
 		local ver_domi=$(echo $ver_site | cut -f 5 -d "/")
+		[[ ! -f /etc/nginx/sites-available/$ver_domi ]] && continue # Double check!
+		
 		if [[ $ver_domi != "html" && $ver_domi != $ADMIN_TOOLS_SITE ]]; then
 			# If WordPress, then check connection!
 			if [[ $(is_wp $ver_domi) == "true" ]]; then
