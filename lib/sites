@@ -161,6 +161,13 @@ wpinstall() {
 			if [[ $dbhost != "localhost" ]]; then
 				# DB host validation
 				is_url $dbhost -split
+				
+				# Prevent example.com/ cause an error that is really easy to fix, just remove the /
+				if [[ $url_path == "/" ]]; then
+					dbhost=${dbhost:0:-1}
+					is_url $dbhost -split # Reset in case data has changed!
+				fi
+				
 				if [[ -n $url_path ]]; then
 					echo "${red}[ERROR] Invalid database host/port!${dim} (Folders in DB host are not supported: ${dbhost}) ${end}"
 					url_path=""
@@ -964,8 +971,12 @@ redirection_manager() {
 			echo "${red}[ERROR] Please, enter a valid from/to redirection path!${end}"
 			exit 1
 		elif [[ $from == "/" ]]; then
-			echo "${red}[ERROR] Root folder redirection is not allowed, use the 'domain forwarding' feature if want to redirect a complete domain!${end}"
-			exit 1
+			if [[ -z $exact ]]; then
+				echo "${red}[ERROR] Root folder redirection is not allowed, use the 'domain forwarding' feature if want to redirect a complete domain, or use the '-exact' parameter to redirect only the main page and not the complete domain.${end}"
+				exit 1
+			else
+				echo "${dim}[INFO] Use the 'domain forwarding' feature if want to redirect a complete domain!${end}"
+			fi
 		elif ! [[ $http_code =~ ^(301|302|303|307|308|403|410|444|451)$ ]]; then
 			echo "${red}[ERROR] Invalid redirection HTTP Code!${end}"
 			exit 1
