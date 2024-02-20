@@ -30,7 +30,8 @@ system_info() {
 	
 	echo "${blu}${bol}[NGINX]${end}"
 	if [[ $(conf_read nginx) == "true" ]]; then
-		echo "${blu}Branch:${end}${dim} $(conf_read nginx-ppa) ${end}"
+		[[ -z $(conf_read nginx-ppa) ]] && local nginxbranch="stable" || local nginxbranch=$(conf_read nginx-ppa)
+		echo "${blu}Branch:${end}${dim} ${nginxbranch} ${end}"
 		echo "${blu}Version:${end}${dim} $(sudo nginx -v 2>&1 | cut -d'/' -f 2- -s) ${end}"
 		echo "${blu}worker_processes:${end}${dim} $(grep worker_processes /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';') ${end}"
 		echo "${blu}worker_connections:${end}${dim} $(grep worker_connections /etc/nginx/nginx.conf | cut -f 2 -d ' ' | tr -d ';') ${end}"
