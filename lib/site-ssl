@@ -98,6 +98,8 @@ site_ssl_on() {
 	elif [[ ! -f /etc/letsencrypt/live/$domain/fullchain.pem && $ssl == "force-renewal" ]]; then
 		echo "${red}[ERROR] Cert you're trying to renew not found!${end}"
 		exit 1
+	elif [[ -n $test_cert ]]; then
+		echo "${dim}[INFO] This is TEST Cert request! (Don't use it on a real/final site)${end}"
 	fi
 	
 
@@ -147,13 +149,14 @@ site_ssl_on() {
 	elif [[ ! -f /etc/letsencrypt/live/$domain/fullchain.pem || $ssl == "force-renewal" ]]; then
 		if [[ -n $manual ]]; then
 			sudo certbot certonly --manual --preferred-challenges=$manual $domset $param
+			echo "${dim}[INFO] Be aware that manual Certs are NOT automatically renewed! (Read the docs for manual renewing process)${end}"
 		else
 			sudo certbot certonly --webroot -w /var/www/$path/htdocs/ $domset $param
 		fi
 	
 	# Existing cert
 	elif [[ -f /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
-		echo "${blu}Certificate for${end} $domain ${blu}already exist and found, wait while we configure your server to use it!${end}"
+		echo "${dim}[INFO] Cert NOT requested because already exist!${end}"
 		[[ -z $test_cert && $(is_ssl_staging $domain) == "true" ]] && echo "${red}[WARNING] Cert found is a staging cert for testing.${end}"
 		[[ -n $test_cert && $(is_ssl_staging $domain) != "true" ]] && echo "${red}[WARNING] Test-Cert was requested and cert found is a real/normal cert.${end}"
 	fi
