@@ -708,13 +708,22 @@ www_data_sftp_access() {
 	elif [[ $login_www_data == "off" && $(conf_read login-www-data) != "true" ]]; then
 		echo "${gre}SFTP access for www-data user is already disabled! ${end}"
 	elif [[ $login_www_data == "on" ]]; then
+		# Remove if empty! (prevent empty files with spaces taken as valid)
+		if [[ -f /var/www/.ssh/authorized_keys && ( ! -s /var/www/.ssh/authorized_keys || -z $(cat -v /var/www/.ssh/authorized_keys | grep -m 1 '[^[:space:]]')) ]]; then
+			sudo rm -rf /var/www/.ssh/authorized_keys
+		fi
+		
 		# Allow access for www-data user
-		if [[ -f $CURRENT_HOME/.ssh/authorized_keys ]]; then
+		if [[ -f /var/www/.ssh/authorized_keys ]]; then
+			echo "${blu}${dim}SSH keys already exists in www-data folder!${end}"
+		elif [[ ! -f /var/www/.ssh/authorized_keys && -f $CURRENT_HOME/.ssh/authorized_keys ]]; then
 			echo "${blu}${dim}Copying your SSH keys from '${CURRENT_USER}' to www-data access!${end}"
 			sudo mkdir -p /var/www/.ssh
 			sudo chmod 700 /var/www/.ssh
 			sudo cat $CURRENT_HOME/.ssh/authorized_keys > /var/www/.ssh/authorized_keys
 			sudo chmod 600 /var/www/.ssh/*
+		else
+			echo "${red}${dim}[WARNING] SSH keys not found!${end}"
 		fi
 		sudo chown -R www-data:www-data /var/www
 
@@ -741,7 +750,6 @@ Match Group sftponly
 		echo "${gre}SFTP access for www-data user has been successfuly enabled! ${end}"
 	
 	elif [[ $login_www_data == "off" ]]; then
-		sudo rm -rf /var/www/.ssh
 		sudo sed -i '/www-data:/c\www-data:x:33:33:www-data:\/var\/www:\/usr\/sbin\/nologin' /etc/passwd
 		sudo gpasswd -d www-data sftponly  > /dev/null 2>&1
 		sudo delgroup sftponly > /dev/null 2>&1
