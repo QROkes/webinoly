@@ -1081,6 +1081,7 @@ database_import() {
 	fi
 	
 	check_external_db_saved
+	echo "${dim}Wait while we import your db... ${end}"
 	
 	if [[ -n $external_db ]]; then
 		external_db_parse
@@ -1089,15 +1090,22 @@ database_import() {
 			exit 1
 		fi
 		
-		echo "${dim}Wait while we import your db... ${end}"
 		sudo mysql --defaults-group-suffix=_${extdb_url}:${extdb_port}_default --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" < $file
-		sudo mysql --defaults-group-suffix=_${extdb_url}:${extdb_port}_default --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -e "FLUSH PRIVILEGES;"
-		echo "${gre}Database successfully imported!${end}"
+		if [[ $? == "0" ]]; then
+			sudo mysql --defaults-group-suffix=_${extdb_url}:${extdb_port}_default --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -e "FLUSH PRIVILEGES;"
+			echo "${gre}Database successfully imported!${end}"
+		else
+			echo "${red}[ERROR] An error occurred while we tried to import your database!${end}"
+		fi
 	elif [[ -z $external_db && $(check_mysql_connection localhost) == "true" ]]; then
 		check_for_mysql -ask
 		sudo mysql -u admin < $file
-		sudo mysql --connect-timeout=10 --user=admin -e "FLUSH PRIVILEGES;"
-		echo "${gre}Database successfully imported!${end}"
+		if [[ $? == "0" ]]; then
+			sudo mysql --connect-timeout=10 --user=admin -e "FLUSH PRIVILEGES;"
+			echo "${gre}Database successfully imported!${end}"
+		else
+			echo "${red}[ERROR] An error occurred while we tried to import your database!${end}"
+		fi
 	else
 		echo "${red}[ERROR] A connection can not be established with MySQL/MariaDB localhost!${end}"
 		exit 1
