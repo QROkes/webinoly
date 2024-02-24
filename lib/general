@@ -449,7 +449,7 @@ password = $4
 check_external_db_saved() {
 	if [[ -n $(conf_read external-dbh) && -n $(conf_read external-dbu) && -n $(conf_read external-dbp) && -n $(conf_read external-dbx) ]]; then
 		external_db="[$(conf_read external-dbu),$(conf_read external-dbp),$(conf_read external-dbh):$(conf_read external-dbx)]"
-		[[ $(conf_read quiet) != "true" ]] && echo "${blu}${dim}External DB credentials found in your saved configuration!${end}" >&2
+		[[ $(conf_read quiet) != "true" ]] && echo "${blu}${dim}External DB credentials found in your saved configuration! ($(conf_read external-dbh):$(conf_read external-dbx))${end}" >&2
 	fi
 }
 
@@ -677,7 +677,7 @@ wp_conf_retrieve() {
 			extdb_host=$wp_dbhost
 			extdb_url=$wp_dbhost_host
 			extdb_port=$wp_dbhost_port
-			echo "${blu}${dim}External DB Credentials found!${end}" >&2
+			echo "${blu}${dim}External DB Credentials found! (${wp_dbhost})${end}" >&2
 		fi
 	fi
 	
