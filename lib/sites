@@ -206,7 +206,7 @@ wpinstall() {
 				fi
 				
 				if [[ $ext_login == "true" ]]; then
-					echo "${blu}${dim}External DB Credentials found!${end}"
+					echo "${blu}${dim}External DB Credentials found! (${dburl}:${dbport})${end}"
 				elif [[ -n $retry && $retry -ge 3 ]]; then
 					setupmysql="N"
 					local db_error_flag="true"

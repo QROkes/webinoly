@@ -43,6 +43,7 @@ elif [[ -n $verify ]]; then
 	webinoly_verify
 	[[ $? != 0 ]] && exit 1
 	nginx_not="true" # Nginx-Reload not-needed.
+	[[ $verify == "critical" ]] && ads_block="true" # Don't show ads
 	
 	
 elif [[ -n $dbpass ]]; then

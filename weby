@@ -231,7 +231,7 @@ elif [[ $setup != [123] ]]; then
 fi
 
 # Message Center
-if [[ -z $(conf_read stack-build-error-flag) ]]; then
+if [[ -z $(conf_read stack-build-error-flag) && $type != "Error" ]]; then # We use $type instead of dynvar to not make it persistant!
 	if [[ $new_install == "true" && $setup == 0 ]]; then
 		echo "${blu}You have chosen the option '0', it means that you have to manually build your own stack."
 		echo "But, don't worry! With Webinoly this is an easy task, just use the stack command, i.e. 'sudo stack -lemp' ${end}"

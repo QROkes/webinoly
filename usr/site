@@ -36,7 +36,7 @@ if [[ -n $wp || -n $mysql ]]; then
 		
 		[[ $wp == "true" ]] && wp="[true,true,${exth},${dona},${dona},random,wp_,$(conf_read external-dbu),$(conf_read external-dbp)]"
 		[[ $mysql == "true" ]] && mysql="[${exth},${dona},${dona},random,$(conf_read external-dbu),$(conf_read external-dbp)]"
-		echo "${blu}${dim}External DB credentials found!${end}"
+		echo "${blu}${dim}External DB credentials found! (${exth})${end}"
 	fi
 
 	if [[ ( -n $wp && $wp != true ) || ( -n $mysql && $mysql != true ) ]]; then
