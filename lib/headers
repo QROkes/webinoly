@@ -2,6 +2,7 @@
 
 # Note: Custom headers function defined in webin lib
 # Note: No need to check for Nginx because is only called from nginx-optim function
+# Note: The 'always' parameter in 'add_header' is enforced only for HSTS and CSP headers. Do we need more?
 
 #############################################
 # If empty these headers set a default value, but they all accept the 'off' value.
@@ -57,7 +58,7 @@ http_header_hsts() {
 	else
 		[[ ${header_data,,} == "preload" ]] && local set_hsts="63072000; includeSubDomains; preload" || local set_hsts="${header_data}; includeSubDomains"
 		sudo sed -Ei "/^#?add_header Strict-Transport-Security/d" /etc/nginx/common/headers-https.conf
-		sudo echo "add_header Strict-Transport-Security \"max-age=${set_hsts}\";" >> /etc/nginx/common/headers-https.conf
+		sudo echo "add_header Strict-Transport-Security \"max-age=${set_hsts}\" always;" >> /etc/nginx/common/headers-https.conf
 		echo "${gre}${dim}HSTS Header successfully configured!${end}"
 	fi
 }
@@ -137,7 +138,7 @@ http_header_csp() {
 	if [[ -n $(conf_read header-csp) ]]; then
 		[[ $(conf_read header-csp-report-only) == "on" ]] && local cspro="-Report-Only"
 		sudo sed -Ei "/^#?add_header Content-Security-Policy/d" /etc/nginx/common/headers-html.conf			
-		sudo echo "add_header Content-Security-Policy${cspro} \"$(conf_read header-csp)\";" >> /etc/nginx/common/headers-html.conf
+		sudo echo "add_header Content-Security-Policy${cspro} \"$(conf_read header-csp)\" always;" >> /etc/nginx/common/headers-html.conf
 		echo "${gre}${dim}CSP Header successfully configured!${end}"
 	else
 		sudo sed -i '/^add_header Content-Security-Policy/s/^/#/' /etc/nginx/common/headers-html.conf

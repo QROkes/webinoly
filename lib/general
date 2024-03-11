@@ -4,8 +4,8 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.17.9"
-readonly svr_version="1.8"
+readonly app_version="1.18.0"
+readonly svr_version="1.9"
 readonly os_ubuntu_supported=(bionic focal jammy) # https://ubuntu.com/about/release-cycle
 readonly php_supported=(7.4 8.0 8.1 8.2 8.3) # https://www.php.net/supported-versions.php
 readonly php_default="8.2"
@@ -1528,7 +1528,7 @@ check_var() {
 	
 	# PHP Memory limit
 	elif [[ $1 == "php-max-mem" ]]; then
-		[[ -n $(conf_read php-max-mem) && $(conf_read php-max-mem) =~ ^[0-9]+$ && $(conf_read php-max-mem) -gt 0 ]] && local out=$(conf_read php-max-mem) || local out=192
+		[[ -n $(conf_read php-max-mem) && $(conf_read php-max-mem) =~ ^[0-9]+$ && $(conf_read php-max-mem) -gt 0 ]] && local out=$(conf_read php-max-mem) || local out=256
 	
 	# PHP simultaneous file uploads
 	elif [[ $1 == "php-max-files" ]]; then
@@ -1595,9 +1595,17 @@ check_var() {
 	# Locations: Deny Files
 	elif [[ $1 == "locations-deny-files" ]]; then
 		if [[ -z $(conf_read locations-deny-files) ]]; then
-			local out="changelog|example|installation|legalnotice|license|readme|wp-config"
+			local out="changelog|environment|example|install|installation|legalnotice|license|phpunit|readme|update|upgrade|wp-config"
 		else
 			local out=$(conf_read locations-deny-files)
+		fi
+	
+	# Locations: Deny Exact-Match
+	elif [[ $1 == "locations-deny-match" ]]; then
+		if [[ -z $(conf_read locations-deny-match) ]]; then
+			local out="/vendor/|/node_modules/|composer\.json|/fixtures/|/behat/"
+		else
+			local out=$(conf_read locations-deny-match)
 		fi
 	
 	# FastCGI Cache: Exclude URL

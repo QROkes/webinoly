@@ -33,16 +33,8 @@ linux_optim() {
 		sudo cp /opt/webinoly/templates/general/sysctl /etc/sysctl.d/90-webinoly.conf
 		sudo modprobe tcp_bbr
 		
-		# https://github.com/amazonlinux/autotune
-		# https://github.com/amzn/amzn-drivers/blob/master/kernel/linux/ena/ENA_Linux_Best_Practices.rst
-		# https://www.brendangregg.com/Slides/AWSreInvent2017_performance_tuning_EC2.pdf
-		# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/performance_tuning_guide/s-memory-tunables
-		# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-configuration_tools-configuring_system_memory_capacity
-		
 		if [[ $ram -gt 28 ]]; then
-			# https://mariadb.com/kb/en/configuring-swappiness/
 			sudo sed -i "/vm.swappiness =/c \vm.swappiness = 1" /etc/sysctl.d/90-webinoly.conf
-			
 			sudo sed -i "/vm.min_free_kbytes =/c \vm.min_free_kbytes = $(($ramb*20))" /etc/sysctl.d/90-webinoly.conf
 			sudo sed -i "/vm.dirty_ratio =/c \vm.dirty_ratio = 0" /etc/sysctl.d/90-webinoly.conf
 			sudo sed -i "/vm.dirty_background_ratio =/c \vm.dirty_background_ratio = 0" /etc/sysctl.d/90-webinoly.conf
@@ -51,13 +43,13 @@ linux_optim() {
 			sudo sed -i "/#vm.dirty_background_bytes =/c \vm.dirty_background_bytes = 917504000" /etc/sysctl.d/90-webinoly.conf
 			sudo sed -i "/#vm.dirty_writeback_centisecs =/c \vm.dirty_writeback_centisecs = 100" /etc/sysctl.d/90-webinoly.conf
 		elif [[ $ram -gt 2 ]]; then
-			# Default is 65M, if RAM >= 3Gb take 3%, and > 28Gb only 2%
+			# vm.min_free_kbytes - Default is 65M, if RAM >= 3Gb take 3%, and > 28Gb only 2%
 			sudo sed -i "/vm.min_free_kbytes =/c \vm.min_free_kbytes = $(($ramb*30))" /etc/sysctl.d/90-webinoly.conf
-			
-			# https://lonesysadmin.net/2013/12/22/better-linux-disk-caching-performance-vm-dirty_ratio/
 			sudo sed -i "/vm.dirty_ratio =/c \vm.dirty_ratio = 30" /etc/sysctl.d/90-webinoly.conf
 			sudo sed -i "/vm.dirty_expire_centisecs =/c \vm.dirty_expire_centisecs = 900" /etc/sysctl.d/90-webinoly.conf
 			sudo sed -i "/vm.swappiness =/c \vm.swappiness = 5" /etc/sysctl.d/90-webinoly.conf
+		#else
+			# Less than 3Gb RAM: Take the default values in the template.
 		fi
 		
 		if [[ $ram -gt 1 ]]; then
@@ -349,6 +341,7 @@ nginx_optim() {
 	# Locations
 	sudo sed -i "s&<locations-deny-extensions>&$(check_var locations-deny-extensions)&" /etc/nginx/common/locations.conf
 	sudo sed -i "s#<locations-deny-files>#$(check_var locations-deny-files)#" /etc/nginx/common/locations.conf
+	sudo sed -i "s#<locations-deny-match>#$(check_var locations-deny-match)#" /etc/nginx/common/locations.conf
 	
 	# WP Cache
 	[[ $(check_var wpcache-query-strings) == "all" ]] && sudo sed -i '/# URL with a query string should always go to php/,/\} #End/{/.*/d}' /etc/nginx/common/wpfc.conf
@@ -655,7 +648,9 @@ nginx_tool_bkp() {
 	
 	# Duplicity installation directly from source
 	# Temporal fix to remove warning - wait for: https://github.com/pypa/pip/issues/10556 - remove from stack purge too! --root-user-action=ignore | Remove from update function also
-	sudo pip3 install duplicity 2>&1 | grep -v "pip as the 'root' user"
+	# IMPORTANT - Specific version! This package is updated very often and we have had serious issues with some releases.
+	# IMPORTANT - Upgrade version should also be raised in update function.
+	sudo pip3 install 'duplicity==2.1.5' 2>&1 | grep -v "pip as the 'root' user"
 	# In future, we need to do the correct way - using virtual env
 	#sudo apt install python3-venv
 	#sudo python3 -m venv /opt/duplicity/
