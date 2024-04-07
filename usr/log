@@ -218,7 +218,18 @@ elif [[ -n $syslog ]]; then
 		[[ ! -s /var/log/syslog ]] && waiting_for_log
 		sudo tail -f --lines=$clines /var/log/syslog
 	else
-		echo "${red}[ERROR] MySQL/MariaDB Error log (syslog) file not found or still empty!${end}"
+		echo "${red}[ERROR] Syslog file not found or still empty!${end}"
+		exit 1
+	fi
+
+
+# Authentication
+elif [[ -n $auth ]]; then
+	if [[ -s /var/log/auth.log ]]; then
+		[[ ! -s /var/log/auth.log ]] && waiting_for_log
+		sudo tail -f --lines=$clines /var/log/auth.log
+	else
+		echo "${red}[ERROR] Auth Log file not found or still empty!${end}"
 		exit 1
 	fi	
 
