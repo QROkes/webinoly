@@ -599,24 +599,14 @@ set_tools_site() {
 	elif [[ $tools_site == $(conf_read tools-site) ]]; then
 		echo "${gre}Tools-Site not changed! ${end}"
 	elif [[ -f /etc/nginx/sites-available/$tools_site && -f /etc/nginx/sites-available/$ADMIN_TOOLS_SITE && $tools_site != "default" ]]; then
-		# Check for previous assigned domain and remove
-		if [[ -n $(conf_read tools-site) ]]; then
-			sudo sed -i '/server_name/d' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
-			# In case SSL is enabled
-			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) default_server deferred;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
-			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) default_server;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
-			sudo sed -i '/headers-https.conf/d' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE # For legacy (old sites) support!
-			sudo sed -i '/headers.conf;/c \	include common/header.conf;' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
-			sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
-			sudo sed -i '/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/.*/d}' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
-		fi
+		# Reset the Nginx Conf
+		sudo cp /opt/webinoly/templates/general/admin_tools.conf /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+		sudo sed -i "s/<port>/$(conf_read tools-port)/g"  /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+		sudo sed -i "s/<admin_tools_sitename>/${tools_site}:$(conf_read tools-port)/g"  /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		
 		# Assign new domain/site
 		sername=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$tools_site | grep -F "server_name" | sed -e 's/^[ \t]*//')
 		sudo sed -i "/error_log/a \	${sername}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
-		sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) deferred;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
-		sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port);" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
-		sudo sed -i "s/$ADMIN_TOOLS_SITE/${tools_site}:$(conf_read tools-port)/g"  /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		
 		# If SSL is enabled
 		if [[ $(is_ssl $tools_site) == "true" ]]; then
@@ -644,6 +634,7 @@ set_tools_site() {
 		fi
 		
 		# Default blackhole for requests different from our assigned Tools-Site
+		sudo sed -i "s/ default_server//g"  /etc/nginx/sites-available/$ADMIN_TOOLS_SITE # Blackhole will be default!
 		sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /opt/webinoly/templates/general/tools-site-blackhole' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/<port>/$(conf_read tools-port)/}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		if [[ $(is_ssl $tools_site) == "false" ]]; then
@@ -665,6 +656,14 @@ set_tools_site() {
 		[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
 		
 		conf_write tools-site $tools_site
+		
+		local force_www=$(is_force_redirect $tools_site)
+		if [[ $force_www =~ ^(www|root)$ ]]; then
+			sudo site galaboral.com -force-redirect=off > /dev/null 2>&1
+			sudo site galaboral.com -force-redirect=$force_www > /dev/null 2>&1
+			echo "${gre}${dim}Force-Redirect '${force_www}' settings updated!${end}"
+		fi
+	
 		echo "${gre}Domain${blu} ${tools_site}:$(conf_read tools-port) ${gre}was successfully assigned to access your server tools!${end}"
 	elif [[ $tools_site == "default" ]]; then
 		if [[ $ADMIN_TOOLS_SITE != "default:$(conf_read tools-port)" ]]; then
@@ -687,6 +686,25 @@ set_tools_site() {
 		fi
 		conf_write tools-site default
 		echo "${gre}Tools Site settings has been reset successfully!${end}"
+	elif [[ $tools_site == "reset" ]]; then
+		# Better remove it manually, to make sure is clean in case of corrupted files.
+		sudo rm -rf /var/www/$ADMIN_TOOLS_SITE
+		sudo rm -rf /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+		sudo rm -rf /etc/nginx/sites-enabled/$ADMIN_TOOLS_SITE
+		
+		conf_write tools-port $tools_port_default
+		conf_write tools-site default
+		
+		# RECURSIVE needed to update the readonly $ADMIN_TOOLS_SITE
+		[[ $child != "true" ]] && webinoly -tools-site=reset -child > /dev/null 2>&1
+		if [[ $child == "true" && $(conf_read nginx) == "true" ]]; then
+			nginx_tool_site
+			[[ $(conf_read php) == "true" ]] && php_tool_site
+			[[ $(conf_read mysql-tool-pma) == "true" ]] && mysql_tool_pma
+		fi
+	
+		echo "${gre}Admin Tools-Site has been successfully rebuilt and reset!${end}"
+		
 	elif [[ -f /etc/nginx/sites-available/$tools_site && ! -f /etc/nginx/sites-available/$ADMIN_TOOLS_SITE ]]; then
 		echo "${red}[ERROR] Tools Site is not enabled! ${end}"
 		exit 1
