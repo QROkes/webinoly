@@ -339,14 +339,35 @@ nginx_optim() {
 	sudo sed -i "/open_file_cache max /c \	open_file_cache max=$(($fd_per_process/3)) inactive=5m;" /etc/nginx/nginx.conf
 	
 	# Locations
-	sudo sed -i "s&<locations-deny-extensions>&$(check_var locations-deny-extensions)&" /etc/nginx/common/locations.conf
-	sudo sed -i "s#<locations-deny-files>#$(check_var locations-deny-files)#" /etc/nginx/common/locations.conf
-	sudo sed -i "s#<locations-deny-match>#$(check_var locations-deny-match)#" /etc/nginx/common/locations.conf
+	if [[ $(check_var locations-deny-extensions) != "off" ]]; then
+		sudo sed -i "s&<locations-deny-extensions>&$(check_var locations-deny-extensions)&" /etc/nginx/common/locations.conf
+	else
+		sudo sed -i '/# Deny\/Block some extensions/,/\} #End/{/.*/d}' /etc/nginx/common/locations.conf
+	fi
+	if [[ $(check_var locations-deny-files) != "off" ]]; then
+		sudo sed -i "s#<locations-deny-files>#$(check_var locations-deny-files)#" /etc/nginx/common/locations.conf
+	else
+		sudo sed -i '/# Deny\/Block for readme/,/\} #End/{/.*/d}' /etc/nginx/common/locations.conf
+	fi
+	if [[ $(check_var locations-deny-match) != "off" ]]; then
+		sudo sed -i "s#<locations-deny-match>#$(check_var locations-deny-match)#" /etc/nginx/common/locations.conf
+	else
+		sudo sed -i '/# Deny\/Block some files and folder/,/\} #End/{/.*/d}' /etc/nginx/common/locations.conf
+	fi
 	
 	# WP Cache
-	[[ $(check_var wpcache-query-strings) == "all" ]] && sudo sed -i '/# URL with a query string should always go to php/,/\} #End/{/.*/d}' /etc/nginx/common/wpfc.conf
-	sudo sed -i "s#<wpcache-exclude-url>#$(check_var wpcache-exclude-url)#" /etc/nginx/common/wpfc.conf
-	sudo sed -i "s#<wpcache-exclude-cookie>#$(check_var wpcache-exclude-cookie)#" /etc/nginx/common/wpfc.conf
+	[[ $(check_var wpcache-query-strings) =~ ^(all|off)$ ]] && sudo sed -i '/# URL with a query string should always go to php/,/\} #End/{/.*/d}' /etc/nginx/common/wpfc.conf
+	
+	if [[ $(check_var wpcache-exclude-url) != "off" ]]; then
+		sudo sed -i "s#<wpcache-exclude-url>#$(check_var wpcache-exclude-url)#" /etc/nginx/common/wpfc.conf
+	else
+		sudo sed -i "/# Don't cache URL containing the following segments/,/\} #End/{/.*/d}" /etc/nginx/common/wpfc.conf
+	fi
+	if [[ $(check_var wpcache-exclude-cookie) != "off" ]]; then
+		sudo sed -i "s#<wpcache-exclude-cookie>#$(check_var wpcache-exclude-cookie)#" /etc/nginx/common/wpfc.conf
+	else
+		sudo sed -i "/# Don't use the cache for logged in users or/,/\} #End/{/.*/d}" /etc/nginx/common/wpfc.conf
+	fi
 	
 	# Remove it, then add it again to prevent multiple # for each server-reset
 	sudo sed -i '/ SERVER_NAME /s/#//' /etc/nginx/fastcgi_params

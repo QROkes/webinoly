@@ -179,10 +179,11 @@
 # Values:  <ext>|<ext>... (case-insensitive, any file using any of these extensions)
 # Values:  <match>|<match>... (case-sensitive exact-match, any file or folder)
 # Note: This is a security feature, please don't modify unless you are sure about it.
-# Note: For example, any request to 'readme.txt' or 'anyname.log' will be blocked (case insensitive) by default.
-# Note: To revert any changes and set the original Webinoly defaults, just #comment these two variables and then server-reset.
+# Note: For example, any request to 'readme.txt', 'anyname.log', or 'composer.json' will be blocked by default.
+# Note: To revert any changes and set the original Webinoly defaults, just #comment these variables and then server-reset.
 # Note: You can remove some extensions like 'exe' if you are distributing installers, for instance, or you can add any of your preference.
 # Note: Dot files (hidden) are blocked by default (for example: .config or .lock).
+# Note: Use the 'off' value to disable any of these features.
 ###########################
 #locations-deny-files:changelog|environment|example|install|installation|legalnotice|license|phpunit|readme|update|upgrade|wp-config
 #locations-deny-extensions:7z|asc|asp|aspx|ba|bak|bash|bat|bin|bz2|c|cfg|cgi|class|com|conf|cpp|crt|cs|dat|db|dbf|deb|der|dll|dmg|dmp|dump|ear|exe|git|gz|h|hg|hqx|img|ini|iso|jar|jsp|log|mdb|msi|msm|msp|old|orig|original|out|pem|php#|php_bak|php~|pkg|pl|ppk|py|rar|rdf|rpm|run|save|sh|sql|srv|svn|swo|swp|sys|tar|taz|tcl|tgz|tk|tmp|tpl|tz|vb|war|wsf|z|zip
@@ -205,6 +206,7 @@
 # Note: To revert any changes and set the original Webinoly defaults, just #comment these three variables and then server-reset.
 # Note: Also, you can add further rules via command line using the proper commands described in the docs.
 # Note: https://webinoly.com/documentation/webinolys/#cache
+# Note: Use the 'off' value to disable any of these features.
 ###########################
 #wpcache-query-strings:never
 #wpcache-exclude-url:/wp-admin/|/xmlrpc.php|wp-.*.php|index.php|/feed/|.*sitemap.*\.xml|/feed/|/account/|/add_to_cart/|/cart/|/my-account/|/checkout/|/logout/

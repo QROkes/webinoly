@@ -1578,7 +1578,7 @@ check_var() {
 	
 	# FastCGI Cache: Query Strings
 	elif [[ $1 == "wpcache-query-strings" ]]; then
-		if [[ $(conf_read wpcache-query-strings) =~ ^(all|never)$ ]]; then
+		if [[ $(conf_read wpcache-query-strings) =~ ^(all|never|off)$ ]]; then
 			local out=$(conf_read wpcache-query-strings)
 		else
 			local out="false"
