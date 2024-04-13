@@ -1603,7 +1603,7 @@ check_var() {
 	# Locations: Deny Exact-Match
 	elif [[ $1 == "locations-deny-match" ]]; then
 		if [[ -z $(conf_read locations-deny-match) ]]; then
-			local out="/vendor/|/node_modules/|composer\.json|/fixtures/|/behat/"
+			local out="/node_modules/|composer\.json|/fixtures/|/behat/"
 		else
 			local out=$(conf_read locations-deny-match)
 		fi

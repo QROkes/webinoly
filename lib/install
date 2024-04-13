@@ -355,6 +355,12 @@ nginx_optim() {
 		sudo sed -i '/# Deny\/Block some files and folder/,/\} #End/{/.*/d}' /etc/nginx/common/locations.conf
 	fi
 	
+	# WP-Admin Limited Requests
+	if [[ $(conf_read wp-admin-limited) == "false" ]]; then
+		sudo sed -i '/# WP-Admin Limited Access/,/\} #End/{/.*/d}' /etc/nginx/common/wpcommon.conf
+		sudo sed -i '/# WP-Admin Limited Access/,/\} #End/{/.*/d}' /etc/nginx/common/wpcommon-noauth.conf
+	fi
+	
 	# WP Cache
 	[[ $(check_var wpcache-query-strings) =~ ^(all|off)$ ]] && sudo sed -i '/# URL with a query string should always go to php/,/\} #End/{/.*/d}' /etc/nginx/common/wpfc.conf
 	
@@ -415,26 +421,11 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	http_header_xfo
 	[[ $(conf_read header-custom) == "true" ]] && sudo webinoly -custom-headers=reload
 	
-	if [[ $(conf_read xmlrpc) =~ ^(blocked|limited|open)$ ]]; then
-		if [[ $(conf_read xmlrpc) != "limited" ]]; then
-			sudo sed -i '/WPxmlrpcStart/,/WPxmlrpcEnd/{/.*/d}' /etc/nginx/common/wpcommon.conf
-			sudo sed -i '/WPxmlrpcStart/,/WPxmlrpcEnd/{/.*/d}' /etc/nginx/common/wpcommon-noauth.conf
-		fi
-		
-		if [[ $(conf_read xmlrpc) == "blocked" ]]; then
-			echo "# WPxmlrpcStart
-location = /xmlrpc.php {
-	return 403;
-}
-# WPxmlrpcEnd" >> /etc/nginx/common/wpcommon.conf
-			echo "# WPxmlrpcStart
-location = /xmlrpc.php {
-	return 403;
-}
-# WPxmlrpcEnd" >> /etc/nginx/common/wpcommon-noauth.conf
-		fi
-		
-		echo "${gre}WordPress XMLRPC successfully configured!${dim} ($(conf_read xmlrpc))${end}"
+	# WordPress XMLRPC
+	if [[ $(conf_read xmlrpc) == "open" ]]; then
+		sudo sed -i '/WPxmlrpcStart/,/WPxmlrpcEnd/{/.*/d}' /etc/nginx/common/wpcommon.conf
+		sudo sed -i '/WPxmlrpcStart/,/WPxmlrpcEnd/{/.*/d}' /etc/nginx/common/wpcommon-noauth.conf	
+		echo "${gre}WordPress XMLRPC successfully configured! ${dim}(Open)${end}"
 	fi
 
 	# Create Direct Access for easy navigation

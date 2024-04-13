@@ -1224,6 +1224,8 @@ if [[ -z $critical_mode ]]; then
 		if [[ $ver_domi != "html" && $ver_domi != $ADMIN_TOOLS_SITE ]]; then
 			# If WordPress, then check connection!
 			if [[ $(is_wp $ver_domi) == "true" ]]; then
+				wp_site_exist="true"
+			
 				if [[ ( ! -s /etc/nginx/.htpasswd || -z $(cat -v /etc/nginx/.htpasswd | grep '[^[:space:]]')) && ( ! -s /etc/nginx/apps.d/.htpasswd-$ver_domi || -z $(cat -v /etc/nginx/apps.d/.htpasswd-$ver_domi | grep -m 1 '[^[:space:]]')) && $(is_wp_auth $ver_domi) == "true" ]]; then
 					echo "${blu}${dim}- [INFO] HTTP Authentication Credentials not found for $ver_domi${end}${red}"
 				fi
@@ -1249,6 +1251,12 @@ if [[ -z $critical_mode ]]; then
 		fi
 	done
 
+	# WordPress (only if at least one WP site is found)
+	if [[ $(conf_read nginx) == "true" && -n $wp_site_exist ]]; then
+		[[ $(conf_read wp-admin-limited) == "false" ]] && echo "${blu}${dim}- [INFO] You have at least one WP site and WP-Admin Limited Request feature is disabled!${end}${red}"
+		[[ $(conf_read xmlrpc) == "open" ]] && echo "${blu}${dim}- [INFO] You have at least one WP site and XMLRPC is open!${end}${red}"
+	fi
+	
 
 	if [[ $ver_nine_err == "1" ]]; then
 		echo "(9) Sites Verification Test has failed!"

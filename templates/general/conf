@@ -187,7 +187,7 @@
 ###########################
 #locations-deny-files:changelog|environment|example|install|installation|legalnotice|license|phpunit|readme|update|upgrade|wp-config
 #locations-deny-extensions:7z|asc|asp|aspx|ba|bak|bash|bat|bin|bz2|c|cfg|cgi|class|com|conf|cpp|crt|cs|dat|db|dbf|deb|der|dll|dmg|dmp|dump|ear|exe|git|gz|h|hg|hqx|img|ini|iso|jar|jsp|log|mdb|msi|msm|msp|old|orig|original|out|pem|php#|php_bak|php~|pkg|pl|ppk|py|rar|rdf|rpm|run|save|sh|sql|srv|svn|swo|swp|sys|tar|taz|tcl|tgz|tk|tmp|tpl|tz|vb|war|wsf|z|zip
-#locations-deny-match:/vendor/|/node_modules/|composer\.json|/fixtures/|/behat/
+#locations-deny-match:/node_modules/|composer\.json|/fixtures/|/behat/
 
 
 # FastCGI Cache
@@ -224,11 +224,22 @@
 #wp-admin-auth:true
 
 
-# WordPress XMLRPC requests
-# Values: open | limited | blocked
-# Default: limited
+# WordPress WP-Admin Limited Requests
+# Values: boolean (true/false)
+# Default: true
+# Note: Excesive requests on 'wp-admin' can have a fatal effect on your site and server performance.
+# Note: Denial of Service (DoS) attacks can easily abuse it, or even poorly coded themes and plugins can have the same effect under high-traffic conditions.
+# Note: For example, '/wp-admin/admin-ajax.php', '/wp-admin/load-scripts.php' and '/wp-admin/load-styles.php' are a common target.
+# Note: This is a security feature and shouldn't be disabled under normal circumstances.
 ###########################
-#xmlrpc:limited
+#wp-admin-limited:true
+
+
+# WordPress XMLRPC requests
+# Values: open | blocked
+# Default: blocked
+###########################
+#xmlrpc:blocked
 
 
 # HTTP Header: Cache Control
