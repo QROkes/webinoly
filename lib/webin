@@ -280,19 +280,53 @@ mysql_public_access() {
 	check_for_mysql -ask
 	
 	if [[ $mysql_public_access == "on" ]]; then
-		cnf_write skip-networking 0
-		cnf_write skip-bind-address
+		if [[ -z $bind ]]; then
+			cnf_write skip-networking 0
+			cnf_write skip-bind-address
+		
+		elif [[ $bind =~ ^(::|\*)$ || $(is_ip $bind) == "true" ]]; then
+			cnf_write skip-networking 0
+			cnf_write bind-address "$bind"
+		
+		# List of IP's
+		elif [[ $(is_ip $(echo $bind | cut -d',' -f1 -s)) == "true" ]]; then
+			local x=2 # 1 was already checked!
+			while [[ -n $(echo $bind | cut -d',' -f${x} -s) ]]
+			do
+				if [[ $(is_ip $(echo $bind | cut -d',' -f${x} -s)) != "true" ]]; then
+					echo "BAD: $(echo $bind | cut -d',' -f${x} -s)"
+					x="false"
+					break
+				else
+					echo "OK: $(echo $bind | cut -d',' -f${x} -s)"
+					x=$((x+1))
+				fi
+			done
+			
+			# We need to do it outside the while loop because this kind of loops runs in a different process!
+			if [[ $x == "false" ]]; then
+				echo "${red}[ERROR] Please, enter a valid bind-address! ${dim}(Invalid IP listed)${end}"
+				exit 1
+			fi
+			
+			cnf_write skip-networking 0
+			cnf_write bind-address "$bind"
+		else
+			echo "${red}[ERROR] Please, enter a valid bind-address!${end}"
+			exit 1
+		fi
+			
 		echo ""
-		echo "${red}[WARNING] Please, be careful and take the proper security actions to protect your server, now that MySQL/MariaDB is open for public access you should at least set your firewall to prevent against any unwanted request.${end}"
+		echo "${red}[WARNING] Please, be careful and take the proper security actions to protect your server, now that MySQL/MariaDB is open for remote access you should at least set your firewall to prevent against any unwanted request.${end}"
 		echo ""
-		[[ -z $create_master_user ]] && echo "${dim}[INFO] Be sure you have a MySQL/MariaDB User with public access!${end}"
+		[[ -z $create_master_user ]] && echo "${dim}[INFO] Be sure you have a MySQL/MariaDB User with remote access!${end}"
 		conf_write mysql-public-access true
-		echo "${gre}MySQL/MariaDB public access successfully enabled!${end}"
+		echo "${gre}MySQL/MariaDB remote access successfully enabled!${end}"
 	elif [[ $mysql_public_access == "off" ]]; then
 		cnf_delete skip-networking
 		cnf_delete skip-bind-address
 		conf_write mysql-public-access false
-		echo "${gre}MySQL/MariaDB public access successfully disabled!${end}"
+		echo "${gre}MySQL/MariaDB remote access successfully disabled!${end}"
 	fi
 	
 	sudo systemctl restart mysql
