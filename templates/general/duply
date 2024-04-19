@@ -9,7 +9,7 @@
 #  changed from ftplicity to duply.                                            #
 #  See http://duply.net or http://ftplicity.sourceforge.net/ for more info.    #
 #  (c) 2006 Christiane Ruetten, Heise Zeitschriften Verlag, Germany            #
-#  (c) 2008-2022 Edgar Soldin (changes since version 1.3)                      #
+#  (c) 2008-2023 Edgar Soldin (changes since version 1.3)                      #
 ################################################################################
 #  LICENSE:                                                                    #
 #  This program is licensed under GPLv2.                                       #
@@ -25,15 +25,44 @@
 #  - implement log-fd interpretation
 #  - add a duplicity option check against the options pending 
 #    deprecation since 0.5.10 namely --time-separator
-#                               --short-filenames
-#                              --old-filenames
+#                                    --short-filenames
+#                                    --old-filenames
 #  - add 'exclude_<command>' list usage e.g. exclude_verify
 #  - featreq 25: a download/install duplicity option
 #  - import/export profile from/to .tgz function !!!
 #  - remove url_encode, test for invalid chars n throw error instead
 #
 #  CHANGELOG:
-#  2.4 (6.4.2022)
+#  2.5.2 (30.11.2023)
+#  - bug #139: "ampersand (&) in gpg passphrase breaks gpg tests"
+#
+#  2.5.1 (4.10.2023)
+#  - quotewrap only strings with quotes ('") or spaces from now on
+#  - add --verbosity only if set in profile conf
+#  - bugfix #138: fix quoting when filtering params, thx Eric
+#  - bugfix #137: relax version parsing regex
+#
+#  2.5.0 (25.09.2023)
+#  - bugfix #136: "not compatible with duplicity 2.x", thx tengel, lds, Rhomeo
+#    check for duplicity 2.1+ (2.0 broke implied commands), 
+#    command line ui changed incompatibly
+#  - filter in/excludes more strictly for more duplicity actions now
+#  - replace '--file-to-restore' with '--path-to-restore'
+#  - filter backup only params now
+#
+#  2.4.3 (05.05.2023)
+#  - bugfix #134: workaround bash 4.2 and earlier read bug (thx Tavio Wong)
+#
+#  2.4.2 (19.01.2023)
+#  - featreq #55: change to purgeAuto in systemd unit files (thx B.Foresman)
+#  - featreq #56: systemd files should go in /etc, not /lib (thx B.Foresman)
+#  - bugfix #133: read -N not available on macOS (thx Peter Torelli)
+#
+#  2.4.1 (09.09.2022)
+#  - fixup duplicity links, moved to http://duplicity.us
+#  - bugfix: duply hangs on awk version detection on OpenBSD (thx phthomas137)
+#
+#  2.4 (06.04.2022)
 #  - bugfix #127: date_from_nsecs ignores format string
 #  - bugfix #116: separators print date now too
 #  - featreq #48: add purgeAuto command (see man page)
@@ -44,7 +73,7 @@
 #  - version output, always print PYTHONPATH, if interpreter was determined
 #  - update python references to python3
 #
-#  2.3.1 (11.2.2021)
+#  2.3.1 (11.02.2021)
 #  - bugfix 123: symmetric encryption errs out, asks for '' private key
 #
 #  2.3 (30.12.2020)
@@ -527,7 +556,7 @@ function lookup {
 ME_LONG="$0"
 ME="$(basename $0)"
 ME_NAME="${ME%%.*}"
-ME_VERSION="2.4"
+ME_VERSION="2.5.2"
 ME_WEBSITE="https://duply.net"
 
 # default config values
@@ -603,8 +632,14 @@ function using_info {
   local NOTFOUND="INVALID"
   local AWK_VERSION GREP_VERSION PYTHON_RUNNER \
     PYTHON_RUNNER_RESOLVED PYTHON_VERSION PYTHON_PATH
-  # freebsd awk (--version only), debian mawk (-W version only), deliver '' so awk does not wait for input
-  AWK_VERSION=$( lookup awk && (awk --version 2>/dev/null || awk -W version 2>&1) | awk 'NR<=2&&tolower($0)~/(busybox|awk)/{success=1;print;exit} END{if(success<1) print "unknown"}' || echo "$NOTFOUND" )
+  # freebsd awk / GNU awk (--version), 
+  # debian mawk (-W version), 
+  # openbsd awk (-V, exitcode 0 when any program string is given regardless .e.g. "-W version", so place it last) 
+  # some awks wait for input if they misinterpret/don't know the options, pipe '' as a precaution
+  AWK_VERSION=$( lookup awk && ( 
+	echo | awk --version ||\
+	echo | awk -V ||\
+	echo | awk -W version ) 2>/dev/null | awk 'NR<=2&&tolower($0)~/(busybox|awk)/{success=1;print;exit} END{if(success<1) print "unknown"}' || echo "$NOTFOUND" )
   GREP_VERSION=$( lookup grep && grep --version 2>&1 | awk 'NR<=2&&tolower($0)~/(busybox|grep.*[0-9]+\.[0-9]+)/{success=1;print;exit} END{if(success<1) print "unknown"}' || echo "$NOTFOUND" )
 
   if [ -n "$PYTHON" ]; then
@@ -820,8 +855,7 @@ FILES:
 $(hint_profile)
 
 SEE ALSO:
-  duplicity man page:
-    duplicity(1) or http://duplicity.nongnu.org/duplicity.1.html
+  duplicity man page duplicity(1) or http://duplicity.us/docs.html
 USAGE_EOF
 }
 
@@ -898,7 +932,7 @@ GPG_PW='${DEFAULT_GPG_PW}'
 # e.g.
 #   sftp://bob:secret@backupserver.com//home/bob/dupbkp
 # for details and available backends see duplicity manpage, section URL Format
-#   http://duplicity.nongnu.org/duplicity.1.html#sect7
+#   http://duplicity.us/vers8/duplicity.1.html#url-format
 # BE AWARE:
 #   some backends (cloudfiles, S3 etc.) need additional env vars to be set to
 #   work properly, read after the TARGET definition for more details.
@@ -1026,7 +1060,7 @@ EOF
 # + dir/bar
 # - **
 # for more details see duplicity manpage, section File Selection
-# http://duplicity.nongnu.org/duplicity.1.html#sect9
+# http://duplicity.us/vers8/duplicity.1.html#file-selection
 
 EOF
 
@@ -1159,8 +1193,8 @@ function duplicity_version_get {
     CMD="$PYTHON $(qw "$(which duplicity)")"
 
   DUPL_VERSION_OUT=$($CMD --version)
-  DUPL_VERSION=`echo $DUPL_VERSION_OUT | awk '/^duplicity /{print $2; exit;}'`
-  #DUPL_VERSION='0.7.03' #'0.6.08b' #,0.4.4.RC4,0.6.08b
+  DUPL_VERSION=$(echo $DUPL_VERSION_OUT | awk '/^duplicity/{print $2; exit;}')
+  #DUPL_VERSION='1.2.3' #'0.7.03' #'0.6.08b' #,0.4.4.RC4,0.6.08b
   DUPL_VERSION_VALUE=0
   DUPL_VERSION_AWK=$(awk -v v="$DUPL_VERSION" 'BEGIN{
   if (match(v,/[^\.0-9]+[0-9]*$/)){
@@ -1185,8 +1219,12 @@ resulted in
 "
   elif [ $DUPL_VERSION_VALUE -le 404 ] && [ ${DUPL_VERSION_RC:-4} -lt 4 ]; then
     error "The installed version $DUPL_VERSION is incompatible with $ME_NAME v$ME_VERSION.
-You should upgrade your version of duplicity to at least v0.4.4RC4 or
+You should upgrade your version of $ME_NAME to at least v0.4.4RC4 or
 use the older ftplicity version 1.1.1 from $ME_WEBSITE."
+  elif [ $DUPL_VERSION_VALUE -le 20100 ] ; then
+    error "The installed version $DUPL_VERSION is incompatible with $ME_NAME v$ME_VERSION.
+You should upgrade your version of duplicity to at least v2.1.0 or
+use the older $ME_NAME version 2.4.3 from $ME_WEBSITE."
   fi
 }
 
@@ -1208,9 +1246,12 @@ function duplicity_python_binary_parse {
     } || return 1
   }
 
+  # no duplicity, nothing to parse
+  lookup duplicity || return 1
+
   local DUPL_BIN=$(which duplicity)
   # test for shebang
-  IFS= LC_ALL=C read -rN2 shebang < "$DUPL_BIN" && [ "$shebang" != '#!' ] && {
+  IFS= LC_ALL=C read -rn2 shebang < "$DUPL_BIN" && [ "$shebang" != '#!' ] && {
     DUPL_PYTHON_BIN=""
     return 1
   }
@@ -1276,12 +1317,12 @@ function run_cmd {
   return $CMD_ERR
 }
 
-function qw { quotewrap "$@"; }
+function qw { quotewrap $@; }
 
 function quotewrap {
   local param="$@"
   # quote strings having non word chars (e.g. spaces)
-  if echo "$param"  | awk '/[^A-Za-z0-9_\.\-\/]/{exit 0}{exit 1}'; then
+  if echo "$param" | awk '/[^a-zA-Z0-9,\._\+\-@%\/]/{exit 0}{exit 1}'; then
     echo "$param" | awk '{\
       gsub(/[\047]/,"\047\\\047\047",$0);\
       gsub(/[\042]/,"\047\\\042\047",$0);\
@@ -1325,45 +1366,83 @@ function duplicity_params_global {
     fi
   fi
 
-DUPL_PARAMS_GLOBAL="${DUPL_ARCHDIR} ${DUPL_PARAM_ENC} \
-${DUPL_PARAM_SIGN} --verbosity '${VERBOSITY:-4}' \
+DUPL_PARAMS_GLOBAL="${DUPL_ARCHDIR} ${DUPL_PARAM_ENC}\
+ ${DUPL_PARAM_SIGN} ${VERBOSITY:+--verbosity $VERBOSITY}\
  ${GPG_OPTS}"
 
-DUPL_VARS_GLOBAL="TMPDIR='$TEMP_DIR' \
+DUPL_VARS_GLOBAL="TMPDIR='$TEMP_DIR'\
  ${DUPL_ARG_ENC}"
 }
 
 # function to filter the DUPL_PARAMS var from user conf
 function duplicity_params_conf {
+  local OUT="$DUPL_PARAMS"
   # reuse cmd var from main loop
-  ## in/exclude parameters are currently not supported on restores
-  if [ "$cmd" = "fetch" ] || [ "$cmd" = "restore" ] || [ "$cmd" = "status" ]; then
-    # filter exclude params from fetch/restore/status
-    eval "stripXcludes $DUPL_PARAMS"
-    return
-  fi
+  ## in/exclude parameters are currently not supported on 
+  ## cleanup, status (collection_status), list (list_current_files), purge* (remove_*), fetch/restore
+  case $cmd in
+    cleanup | status | list | purge* | restore | fetch )
+      # filter exclude params from fetch/restore/status
+      OUT=$(eval stripXcludes $OUT)
+    ;;
+  esac
 
-  # nothing done, print unchanged
-  echo "$DUPL_PARAMS"
+  case $cmd in
+    bkp | incr | full )
+      # nothing to strip, we're backing up'
+    ;;
+    *)
+      OUT=$(eval stripBkpOnlyParams $OUT)
+    ;;
+  esac
+
+  # print result
+  echo "$OUT"
 }
 
 # strip in/exclude parameters from param string
 function stripXcludes {
   local STRIPNEXT OUT;
   for p in "$@"; do
+    #echo "calc =$p="
     if [ -n "$STRIPNEXT" ]; then
       unset STRIPNEXT
       # strip the value of previous parameter
       continue
-    elif echo "$p" | awk '/^\-\-(in|ex)clude(\-[a-zA-Z]+)?$/{exit 0;}{exit 1;}'; then
+    elif echo "$p" | awk '/^\-\-(in|ex)clude(\-[a-zA-Z\-]+)?$/{exit 0;}{exit 1;}'; then
       # strips e.g. --include /foo/bar
       STRIPNEXT="yes"
       continue
-    elif echo "$p" | awk '/^\-\-(in|ex)clude(\-[a-zA-Z]+)?=/{exit 0;}{exit 1;}'; then
+    elif echo "$p" | awk '/^\-\-(in|ex)clude(\-[a-zA-Z\-]+)?=/{exit 0;}{exit 1;}'; then
       # strips e.g. --include=/foo/bar
       continue
     fi
-    
+
+    OUT="$OUT $(qw "$p")"
+  done
+  echo "$OUT"
+}
+
+# strip backup only parameters from param string
+function stripBkpOnlyParams {
+  local STRIPNEXT OUT;
+
+  for p in "$@"; do
+    if [ -n "$STRIPNEXT" ]; then
+      unset STRIPNEXT
+      # strip the value of previous parameter
+      continue
+    elif echo "$p" | awk '/^\-\-(allow-source-mismatch|asynchronous-upload|dry-run)$/{exit 0;}{exit 1;}'; then
+      continue
+    elif echo "$p" | awk '/^\-\-(volsize)$/{exit 0;}{exit 1;}'; then
+      # strips e.g. --volsize 100
+      STRIPNEXT="yes"
+      continue
+    elif echo "$p" | awk '/^\-\-volsize=/{exit 0;}{exit 1;}'; then
+      # strips e.g. --volsize=100
+      continue
+    fi
+
     OUT="$OUT $(qw "$p")"
   done
   echo "$OUT"
@@ -1399,8 +1478,8 @@ function duplify { # the actual wrapper function
     CMD="$PYTHON $(qw "$(which duplicity)")"
 
 $RUN "${DUPL_VARS_GLOBAL} ${BACKEND_PARAMS}\
-  ${DUPL_PRECMD} $CMD $DUPL_CMD $DUPL_PARAMS_GLOBAL $(duplicity_params_conf)\
-  $GPG_USEAGENT $(gpg_custom_binary) $DUPL_CMD_PARAMS"
+ ${DUPL_PRECMD} $CMD $DUPL_CMD $DUPL_PARAMS_GLOBAL $(duplicity_params_conf)\
+ $GPG_USEAGENT $(gpg_custom_binary) $DUPL_CMD_PARAMS"
 
   local ERR=$?
   return $ERR
@@ -2244,9 +2323,9 @@ fi
 
 
 # get volsize, default duplicity volume size is 25MB since v0.5.07
-VOLSIZE=${VOLSIZE:-25}
+#VOLSIZE=${VOLSIZE:-25}
 # double if asynch is on
-echo $@ $DUPL_PARAMS | grep -q -e '--asynchronous-upload' && FACTOR=2 || FACTOR=1
+#echo $@ $DUPL_PARAMS | grep -q -e '--asynchronous-upload' && FACTOR=2 || FACTOR=1
 
 # TODO: check for enough (async= upload space and WARN only
 #       use function tmp_space 
@@ -2423,7 +2502,7 @@ cmds=$(awk -v cmds="$cmds" "BEGIN{ \
   print cmds}")
 
 # split commands by '_', preserve spaces even if not allowed :)
-IFS='_' read -ra CMDS_IN <<< "$(tolower $cmds)"
+IFS='_' read -ra CMDS_IN <<< "$(tolower "$cmds")"
 
 # convert cmds to array, 
 # post process, translate batch commands
@@ -2585,11 +2664,11 @@ case "$(tolower $cmd)" in
     ( run_script "$script" )
     ;;
   'bkp')
-    duplify -- "${dupl_opts[@]}" $EXCLUDE_PARAM "$EXCLUDE" \
+    duplify backup -- "${dupl_opts[@]}" $EXCLUDE_PARAM "$EXCLUDE" \
           "$SOURCE" "$BACKEND_URL"
     ;;
   'incr')
-    duplify incr -- "${dupl_opts[@]}" $EXCLUDE_PARAM "$EXCLUDE" \
+    duplify incremental -- "${dupl_opts[@]}" $EXCLUDE_PARAM "$EXCLUDE" \
           "$SOURCE" "$BACKEND_URL"
     ;;
   'full')
@@ -2610,7 +2689,7 @@ case "$(tolower $cmd)" in
     Syntax is -> $ME <profile> verifyPath <rel_bkp_path> <local_path> [<age>]"
 
     duplify verify -- $TIME "${dupl_opts[@]}" $EXCLUDE_PARAM "$EXCLUDE" \
-          --file-to-restore "$IN_PATH" "$BACKEND_URL" "$OUT_PATH"
+          --path-to-restore "$IN_PATH" "$BACKEND_URL" "$OUT_PATH"
     ;;
   'list')
     # time param exists since 0.5.10+
@@ -2647,20 +2726,19 @@ case "$(tolower $cmd)" in
   
   Hint: 
     Syntax is -> $ME <profile> restore <target_path> [<age>]"
-    
-    duplify  -- -t "$TIME" "${dupl_opts[@]}" "$BACKEND_URL" "$OUT_PATH"
+
+    duplify restore -- -t "$TIME" "${dupl_opts[@]}" "$BACKEND_URL" "$OUT_PATH"
     ;;
   'fetch')
     IN_PATH="${ftpl_pars[0]}"; OUT_PATH="${ftpl_pars[1]}"; 
     TIME="${ftpl_pars[2]:-now}";
     ( [ -z "$IN_PATH" ] || [ -z "$OUT_PATH" ] ) && error "  Missing parameter <src_path> or <target_path> for fetch.
-  
+
   Hint: 
     Syntax is -> $ME <profile> fetch <src_path> <target_path> [<age>]"
-    
-    # duplicity 0.4.7 doesnt like cmd restore in combination with --file-to-restore
-    duplify -- --restore-time "$TIME" "${dupl_opts[@]}" \
-              --file-to-restore "$IN_PATH" "$BACKEND_URL" "$OUT_PATH"
+
+    duplify restore -- --restore-time "$TIME" "${dupl_opts[@]}" \
+              --path-to-restore "$IN_PATH" "$BACKEND_URL" "$OUT_PATH"
     ;;
   'status')
     duplify collection-status -- "${dupl_opts[@]}" "$BACKEND_URL"

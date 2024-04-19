@@ -1771,10 +1771,21 @@ cloning_site() {
 		if [[ -d /var/www/$clone_from/htdocs$subfolder ]]; then
 			local dest=$( echo $subfolder | rev | cut -f 2- -d "/" -s | rev )
 			sudo mkdir -p /var/www/$domain/htdocs$dest
-			sudo cp -r /var/www/$clone_from/htdocs$subfolder /var/www/$domain/htdocs$dest
+			
+			if [[ $(conf_read exclude-other-filesystems) == "true" ]]; then
+				sudo cp -rx /var/www/$clone_from/htdocs$subfolder /var/www/$domain/htdocs$dest
+				echo "${blu}${dim}Exclude-Other-Filesystems enabled!${end}"
+			else
+				sudo cp -r /var/www/$clone_from/htdocs$subfolder /var/www/$domain/htdocs$dest
+			fi
 		fi
 	else
-		[[ -d /var/www/$clone_from ]] && sudo cp -r /var/www/$clone_from /var/www/$domain
+		if [[ -d /var/www/$clone_from && $(conf_read exclude-other-filesystems) == "true" ]]; then
+			sudo cp -rx /var/www/$clone_from /var/www/$domain
+			echo "${blu}${dim}Exclude-Other-Filesystems enabled!${end}"
+		elif [[ -d /var/www/$clone_from ]]; then
+			sudo cp -r /var/www/$clone_from /var/www/$domain
+		fi
 	fi
 
 	[[ -d /var/www/$domain ]] && sudo chown -R www-data:www-data /var/www/$domain

@@ -662,7 +662,7 @@ nginx_tool_bkp() {
 	# Temporal fix to remove warning - wait for: https://github.com/pypa/pip/issues/10556 - remove from stack purge too! --root-user-action=ignore | Remove from update function also
 	# IMPORTANT - Specific version! This package is updated very often and we have had serious issues with some releases.
 	# IMPORTANT - Upgrade version should also be raised in update function.
-	sudo pip3 install 'duplicity==2.1.5' 2>&1 | grep -v "pip as the 'root' user"
+	sudo pip3 install "duplicity==${duplicity_version}" 2>&1 | grep -v "pip as the 'root' user"
 	# In future, we need to do the correct way - using virtual env
 	#sudo apt install python3-venv
 	#sudo python3 -m venv /opt/duplicity/

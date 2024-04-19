@@ -348,7 +348,7 @@ oneseven_to_oneight() {
 [[ ${oldver//.} -lt 18 ]] && oneseven_to_oneight
 
 # Update PIP packages!
-sudo pip3 install --upgrade 'duplicity==2.1.5' 2>&1 | grep -v "pip as the 'root' user"
+sudo pip3 install --upgrade "duplicity==${duplicity_version}" 2>&1 | grep -v "pip as the 'root' user"
 
 api-events_update wysue
 conf_delete stack-update

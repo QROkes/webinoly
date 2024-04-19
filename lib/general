@@ -13,8 +13,11 @@ readonly mariadb_supported=(10.6 10.11) # https://mariadb.com/kb/en/mariadb-serv
 readonly mariadb_default="10.11"
 readonly mysql_supported=(8.0)
 readonly mysql_default="8.0"
-readonly datadog_agent_ver="7"
 readonly tools_port_default="22222"
+
+# Additional Tools
+readonly datadog_agent_ver="7"
+readonly duplicity_version="2.1.4"
 
 # echo colors
 readonly red=$(tput setaf 1)

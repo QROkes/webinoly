@@ -245,7 +245,7 @@ bkp_s3_profile() {
 	
 	
 	if [[ -n $run ]]; then
-		sudo duply $profile backup_verify_purge --force --allow-source-mismatch
+		sudo duply $profile backup_verify_purge --force --allow-source-mismatch --progress
 		
 	elif [[ -n $info ]]; then
 		local tar=$(grep -E "^TARGET[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "'" )
@@ -376,6 +376,11 @@ bkp_s3_profile() {
 		if [[ -n $s3_compatible_endpoint ]]; then
 			sudo echo "DUPL_PARAMS=\"\$DUPL_PARAMS --s3-endpoint-url $s3_compatible_endpoint \"" >> $HOME/.duply/$profile/conf
 			echo "${blu}${dim}S3 Compatible service mode enabled (Not AWS)${end}"
+		fi
+		if [[ $(conf_read exclude-other-filesystems) == "true" ]]; then
+			# https://github.com/QROkes/webinoly/pull/78
+			sudo echo "DUPL_PARAMS=\"\$DUPL_PARAMS --exclude-other-filesystems \"" >> $HOME/.duply/$profile/conf
+			echo "${blu}${dim}Exclude-Other-Filesystems enabled!${end}"
 		fi
 		
 		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully created!${end}"
@@ -663,8 +668,12 @@ export_server() {
 	[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf ]] && local include="$include $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf"
 	[[ -d /etc/nginx/certs ]] && local include="$include /etc/nginx/certs"
 	
-	sudo tar $exclude -Pcf $destination/$filename $include
-
+	if [[ $(conf_read exclude-other-filesystems) == "true" ]]; then
+		sudo tar $exclude --one-file-system -Pcf $destination/$filename $include
+		echo "${blu}${dim}Exclude-Other-Filesystems enabled!${end}"
+	else
+		sudo tar $exclude -Pcf $destination/$filename $include
+	fi
 	
 	# Remove Temporary Files
 	sudo rm -rf /opt/webinoly/webinoly.conf.exported
@@ -810,7 +819,12 @@ export_site() {
 	[[ -f /var/www/webinoly.conf_temp ]] && local include="$include /var/www/webinoly.conf_temp"
 	[[ $rp_upstream == "true" && -f /etc/nginx/conf.d/upstream_proxy.conf ]] && local include="$include /etc/nginx/conf.d/upstream_proxy.conf"
 	
-	[[ -n $include ]] && sudo tar -Pcf $destination/$filename $include
+	if [[ -n $include && $(conf_read exclude-other-filesystems) == "true" ]]; then
+		sudo tar --one-file-system -Pcf $destination/$filename $include
+		echo "${blu}${dim}Exclude-Other-Filesystems enabled!${end}"
+	elif [[ -n $include ]]; then
+		sudo tar -Pcf $destination/$filename $include
+	fi
 	
 	# Remove temporary files
 	sudo rm -rf /var/www/webinoly_backup_db
