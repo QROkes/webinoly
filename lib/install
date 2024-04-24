@@ -355,6 +355,10 @@ nginx_optim() {
 		sudo sed -i '/# Deny\/Block some files and folder/,/\} #End/{/.*/d}' /etc/nginx/common/locations.conf
 	fi
 	
+	# Browser Cache for static files
+	sudo sed -i "s&<browser-cache-extensions>&$(check_var browser-cache-extensions)&" /etc/nginx/common/header.conf
+	sudo sed -i "s&<browser-cache-extensions>&$(check_var browser-cache-extensions)&" /etc/nginx/common/headers.conf
+	
 	# WP-Admin Limited Requests
 	if [[ $(conf_read wp-admin-limited) == "false" ]]; then
 		sudo sed -i '/# WP-Admin Limited Access/,/\} #End/{/.*/d}' /etc/nginx/common/wpcommon.conf

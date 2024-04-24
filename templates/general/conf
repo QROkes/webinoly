@@ -186,8 +186,17 @@
 # Note: Use the 'off' value to disable any of these features.
 ###########################
 #locations-deny-files:changelog|environment|example|install|installation|legalnotice|license|phpunit|readme|update|upgrade|wp-config
-#locations-deny-extensions:7z|asc|asp|aspx|ba|bak|bash|bat|bin|bz2|c|cfg|cgi|class|com|conf|cpp|crt|cs|dat|db|dbf|deb|der|dll|dmg|dmp|dump|ear|exe|git|gz|h|hg|hqx|img|ini|iso|jar|jsp|log|mdb|msi|msm|msp|old|orig|original|out|pem|php#|php_bak|php~|pkg|pl|ppk|py|rar|rdf|rpm|run|save|sh|sql|srv|svn|swo|swp|sys|tar|taz|tcl|tgz|tk|tmp|tpl|tz|vb|war|wsf|z|zip
+#locations-deny-extensions:7z|ai|asc|asp|aspx|ba|bak|bash|bat|bin|bz2|c|cco|cfg|cgi|class|com|conf|cpp|crt|cs|dat|db|dbf|deb|der|dll|dmg|dmp|dump|ear|eps|exe|git|gz|h|hg|hqx|img|ini|iso|jad|jar|jardiff|jnlp|jsp|kar|kml|kmz|log|m3u8|mdb|mml|msi|msm|msp|odp|ods|odt|old|orig|original|out|pdb|pem|php#|php_bak|php~|pkg|pl|pm|ppk|prc|ps|py|rar|rdf|rpm|run|save|sea|sh|sit|sql|srv|svn|swo|swp|sys|tar|taz|tcl|tgz|tk|tmp|tpl|tsl|tz|vb|war|wsf|xspf|z|zip
 #locations-deny-match:/node_modules/|composer\.json|/fixtures/|/behat/
+
+
+# Browser Cache for static files
+# Values:  <ext>|<ext>... (case-insensitive, any file using any of these extensions)
+# Note: Cross-Origin Resource Sharing (CORS) header is also included by default here with a wildcard value.
+# Note: The "expires max;" is applied in Nginx (10 years).
+# Note: Enables the “Expires” and “Cache-Control” response header fields provided that the response code equals 200, 201, 204, 206, 301, 302, 303, 304, 307, or 308.
+# Note: To revert any changes and set the original Webinoly defaults, just #comment this variable and then server-reset.
+#browser-cache-extensions:3gp|3gpp|3g2|3gpp2|aac|asf|asx|atom|avi|avif|bmp|cast|css|cur|doc|docx|eot|flv|gif|heic|htc|ico|jng|jpeg|jpg|js|json|m4a|m4v|mid|midi|mng|mov|mp3|mp4|mpeg|mpg|odg|ogg|ogv|otf|pdf|png|ppt|pptx|ra|rss|rtf|svg|svgz|swf|tif|tiff|ts|ttc|ttf|txt|wasm|wav|wbmp|webm|webmanifest|webp|wml|wmlc|wmv|woff|woff2|xls|xlsx|xpi
 
 
 # FastCGI Cache
