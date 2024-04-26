@@ -738,10 +738,12 @@ api-events_update() {
 
 remove_nginx_default_server() {
 	if [[ -n $1 && -f /etc/nginx/sites-available/$1 ]]; then
-		sudo sed -i "s/listen 80 default_server;/listen 80;/" /etc/nginx/sites-available/$1
-		sudo sed -i "s/listen \[::\]:80 default_server;/listen [::]:80;/" /etc/nginx/sites-available/$1
-		sudo sed -i "s/listen 443 ssl http2 default_server;/listen 443 ssl http2;/" /etc/nginx/sites-available/$1
-		sudo sed -i "s/listen \[::\]:443 ssl http2 default_server;/listen [::]:443 ssl http2;/" /etc/nginx/sites-available/$1
+		sudo sed -i "s/listen 80.*/listen 80;/" /etc/nginx/sites-available/$1
+		sudo sed -i "s/listen \[::\]:80.*/listen [::]:80;/" /etc/nginx/sites-available/$1
+		sudo sed -i "s/listen 443 ssl.*/listen 443 ssl;/" /etc/nginx/sites-available/$1
+		sudo sed -i "s/listen \[::\]:443 ssl.*/listen [::]:443 ssl;/" /etc/nginx/sites-available/$1
+		sudo sed -i "s/listen 443 quic.*/listen 443 quic;/" /etc/nginx/sites-available/$1
+		sudo sed -i "s/listen \[::\]:443 quic.*/listen [::]:443 quic;/" /etc/nginx/sites-available/$1
 		sudo sed -i '/WebinolyStartBlackhole/,/WebinolyEndBlackhole/{/.*/d}' /etc/nginx/sites-available/$1
 	fi
 }

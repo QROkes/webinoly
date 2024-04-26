@@ -1,8 +1,10 @@
 # WebinolyStartBlackhole
 server {
-	listen 443 ssl http2 default_server;
-	listen [::]:443 ssl http2 default_server;
-
+	listen 443 ssl reuseport default_server;
+	listen [::]:443 ssl reuseport default_server;
+	listen 443 quic reuseport default_server;
+	listen [::]:443 quic reuseport default_server;
+	
 	ssl_certificate /etc/ssl/certs/webinoly-blackhole.crt.pem;
 	ssl_certificate_key /etc/ssl/private/webinoly-blackhole.key.pem;
 
@@ -10,8 +12,8 @@ server {
 }
 # NonSSL
 server {
-	listen 80 default_server;
-	listen [::]:80 default_server;
+	listen 80 reuseport default_server;
+	listen [::]:80 reuseport default_server;
 
 	return 444;
 }

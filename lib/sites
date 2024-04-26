@@ -911,8 +911,8 @@ force_redirect() {
 		sudo sed -i '/Webinoly Admin-Tools NGINX CONFIGURATION/r /tmp/template-site-wwwredirect' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 		
 	elif [[ $(is_ssl $domain) == "true" && $force_redirect =~ ^(www|root)$ ]]; then
-		sudo sed -i '/listen 80/c \	listen 443 ssl http2;' /tmp/template-site-wwwredirect
-		sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl http2;' /tmp/template-site-wwwredirect
+		sudo sed -i '/listen 80/c \	listen 443 ssl;' /tmp/template-site-wwwredirect
+		sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl;' /tmp/template-site-wwwredirect
 	
 		if [[ -z $ignore_ssl ]]; then
 			sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /tmp/template-site-wwwredirect

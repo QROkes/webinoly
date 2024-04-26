@@ -644,8 +644,10 @@ set_tools_site() {
 		
 		# If SSL is enabled
 		if [[ $(is_ssl $tools_site) == "true" ]]; then
-			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) ssl http2 deferred;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
-			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) ssl http2;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i "/listen $(conf_read tools-port)/c \	listen $(conf_read tools-port) ssl;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/c \	listen [::]:$(conf_read tools-port) ssl;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/a \	listen $(conf_read tools-port) quic;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i "/listen \[::\]:$(conf_read tools-port)/a \	listen [::]:$(conf_read tools-port) quic;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			sudo sed -i '/server_name /r /opt/webinoly/templates/template-site-ssl' /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			
 			local ssl_cer=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$tools_site | grep -F "ssl_certificate " | tr -d '\t')
@@ -675,6 +677,7 @@ set_tools_site() {
 			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/ssl_certificate/d}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/error_page/d}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{s/ssl //}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
+			sudo sed -i "/WebinolyToolsStartBlackhole/,/WebinolyToolsEndBlackhole/{/quic reuseport/d}" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			echo "${red}It's highly recommended having an SSL Cert enabled on this site. ${end}"
 		fi
 		
@@ -1057,10 +1060,12 @@ set_default_nginx_response() {
 		# Domain option
 		if [[ -L /etc/nginx/sites-enabled/$default_site ]]; then
 			remove_domain_default_site
-			sudo sed -i '/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 80;/listen 80 default_server;/}' /etc/nginx/sites-available/$default_site
-			sudo sed -i '/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:80;/listen [::]:80 default_server;/}' /etc/nginx/sites-available/$default_site
-			sudo sed -i '/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 ssl http2;/listen 443 ssl http2 default_server;/}' /etc/nginx/sites-available/$default_site
-			sudo sed -i '/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 ssl http2;/listen [::]:443 ssl http2 default_server;/}' /etc/nginx/sites-available/$default_site
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 80.*/listen 80 default_server;/}" /etc/nginx/sites-available/$default_site
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:80.*/listen [::]:80 default_server;/}" /etc/nginx/sites-available/$default_site
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 ssl.*/listen 443 ssl default_server;/}" /etc/nginx/sites-available/$default_site
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 ssl.*/listen [::]:443 ssl default_server;/}" /etc/nginx/sites-available/$default_site
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 quic.*/listen 443 quic default_server;/}" /etc/nginx/sites-available/$default_site
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 quic.*/listen [::]:443 quic default_server;/}" /etc/nginx/sites-available/$default_site
 			
 			# If default site is Non-SSL, we need add a blackhole for port 443.
 			if [[ $(is_ssl $default_site) == "false" ]]; then
