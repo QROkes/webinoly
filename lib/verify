@@ -929,10 +929,10 @@ if [[ $(lsb_release -i | cut -d':' -f 2 | xargs) != "Ubuntu" ]]; then
 elif [[ $(check_ubuntu_release) != "true" ]]; then
 	echo "- [ERROR] This Ubuntu version is not supported!"
 	local ver_six_err="1"
-elif [[ $(lsb_release -c | cut -d':' -f 2 | xargs) == "bionic" ]]; then
-	#echo "${blu}${dim}- [INFO] You should start considering moving to Ubuntu 22.04 or 20.04 ${end}${red}"
-	echo "${dim}- [WARNING] Support for Ubuntu 18.04 will be removed very soon! ${end}${red}"
-	local ver_six_war="1"
+elif [[ $(lsb_release -c | cut -d':' -f 2 | xargs) == "focal" ]]; then
+	echo "${blu}${dim}- [INFO] You should start considering moving to Ubuntu 24.04 or 22.04 ${end}${red}"
+	#echo "${dim}- [WARNING] Support for Ubuntu 20.04 will be removed very soon! ${end}${red}"
+	#local ver_six_war="1"
 fi
 # Double-Check for sudo/root privileges
 if [[ $(whoami) != "root" ]]; then

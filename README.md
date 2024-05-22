@@ -46,7 +46,7 @@ sudo httpauth -add
 ```
 
 ### Requirements
-* Ubuntu 22.04 or 20.04
+* Ubuntu 24.04 or 22.04
 
 
 ### Documentation
@@ -54,9 +54,7 @@ For complete documentation, please [visit our site](https://webinoly.com/documen
 
 
 ## Contributing
-Please open an issue first to discuss what you would like to change.
-
-You don't need developer skills to help, visit our site to know [How to Contribute to Webinoly](https://webinoly.com/en/contribute/).
+You don't need developer skills to help, visit our site to know [How to Contribute to Webinoly](https://webinoly.com/contribute/).
 
 ### Donations
 
@@ -69,7 +67,6 @@ If you like Webinoly, buy me a coffee or a beer to show support.
 **_Your regular donations keep this project moving forward._**
 
 ### Community
-- Visit our [Community Forum](https://webinoly.com/support/)
+- [Discussions/Issues](https://webinoly.com/premium/)
 - Follow [@Webinoly](https://twitter.com/Webinoly) on Twitter
 - Subscribe to our [Newsletter](https://webinoly.com/newsletter/)
-

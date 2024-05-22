@@ -371,7 +371,14 @@ elif [[ -n $purge && -n $backups ]]; then
 				echo "${gre}${dim}Backup (duply) profiles deleted!${end}"
 			fi
 			
-			sudo pip3 uninstall -y duplicity 2>&1 | grep -v "pip as the 'root' user"
+			if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(jammy|focal)$ ]]; then
+				sudo pip3 uninstall -y duplicity 2>&1 | grep -v "pip as the 'root' user"
+			else
+				sudo /opt/duplicity/bin/pip uninstall -y duplicity
+				sudo rm -rf /usr/bin/duplicity
+				sudo rm -rf /opt/duplicity
+			fi
+			
 			sudo apt -y purge python3-boto3
 			sudo rm -rf /usr/bin/duply
 			

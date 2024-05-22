@@ -15,41 +15,42 @@ if [[ $2 == "-ver="* ]]; then
 	fi
 fi
 
-# Supported: 22.04 Jammy and 20.04 Focal
-if [[ $distr != "Ubuntu" ]] || ! [[ $osver =~ ^(bionic|focal|jammy)$ ]]; then
+# Supported: 22.04 Jammy and 24.04 Noble
+if [[ $distr != "Ubuntu" ]] || ! [[ $osver =~ ^(focal|jammy|noble)$ ]]; then
 	echo "$(tput setaf 1)"
 	echo "[ERROR] This OS is not supported by Webinoly and could not work properly. $(tput dim)(${distr} '${osver}')"
 	echo "$(tput sgr0)"
 	sudo rm weby
 	exit 1
 
-# 18.04 Bionic can be installed before 1.17.0
-elif [[ $osver == "bionic" && $1 != "upd" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -ge 1170 ]]; then
-	echo "$(tput setaf 1)"
-	echo "[ERROR] Ubuntu 18.04 is not supported on this version of Webinoly!"
-	echo "$(tput sgr0)"
-	sudo rm weby
-	exit 1
-elif [[ $osver == "bionic" && $1 != "upd" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -lt 1170 ]]; then
-	echo "$(tput setaf 1)"
-	echo "[WARNING] You should consider a newer Ubuntu version! $(tput dim)(20.04 or 22.04 are recommended instead)"
-	echo "$(tput sgr0)"
+# Block new installs for: 20.04 Focal (can be installed before 1.xx.0) (April 2025 EOL)
+#elif [[ $osver == "focal" && $1 != "upd" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -ge 1170 ]]; then
+#	echo "$(tput setaf 1)"
+#	echo "[ERROR] Ubuntu 20.04 is not supported on this version of Webinoly!"
+#	echo "$(tput sgr0)"
+#	sudo rm weby
+#	exit 1
+#elif [[ $osver == "focal" && $1 != "upd" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -lt 1170 ]]; then
+#	echo "$(tput setaf 1)"
+#	echo "[WARNING] You should consider a newer Ubuntu version! $(tput dim)(24.04 or 22.04 are recommended instead)"
+#	echo "$(tput sgr0)"
 	
-# 18.04 Bionic just for updates, no new installations after 1.17.0
-elif [[ $osver == "bionic" && $1 != "upd" ]]; then
-	echo "$(tput setaf 1)"
-	echo "[ERROR] Ubuntu 18.04 is not supported for new installations! $(tput dim)(20.04 or 22.04 are recommended instead)"
-	echo "$(tput sgr0)"
-	sudo rm weby
-	exit 1
+# 20.04 Focal just for updates, no new installations after 1.xx.0
+#elif [[ $osver == "focal" && $1 != "upd" ]]; then
+#	echo "$(tput setaf 1)"
+#	echo "[ERROR] Ubuntu 20.04 is not supported for new installations! $(tput dim)(24.04 or 22.04 are recommended instead)"
+#	echo "$(tput sgr0)"
+#	sudo rm weby
+#	exit 1
 
-# 22.04 Jammy is supported only after 1.16.6
-elif [[ $osver == "jammy" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -lt 1166 ]]; then
+# 24.04 Noble is supported only after 1.18.0
+elif [[ $osver == "noble" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -lt 1180 ]]; then
+	#noble - 1.18.0
 	#jammy - 1.16.6
 	#focal - 1.12.0
 	#bionic - 1.4.2
 	echo "$(tput setaf 1)"
-	echo "[ERROR] Ubuntu 22.04 (Jammy) is not supported by this version!"
+	echo "[ERROR] Ubuntu 24.04 (Noble) is not supported by this version of Webinoly!"
 	echo "$(tput sgr0)"
 	sudo rm weby
 	exit 1
