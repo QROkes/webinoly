@@ -336,6 +336,33 @@ oneseven_to_oneight() {
 }
 
 
+oneight_to_onenine() {
+	# Regenerate conf file
+	if [[ -f /opt/webinoly/webinoly.conf ]]; then
+		mv /opt/webinoly/webinoly.conf /opt/webinoly/webinoly.conf.old
+		IFS=$'\n' # FOR loop takes whitespace as a delimiter, so IFS overwrite this.
+		for i in $(grep -E "^([a-z\-]+)\:.*$" /opt/webinoly/webinoly.conf.old)
+		do
+			conf_write $(echo $i | cut -d':' -f 1 -s) $(echo $i | cut -d':' -f 2- -s)
+		done
+	fi
+	
+	# Loop All Sites - HTTP3 enable! 
+	for site in "/etc/nginx/sites-available"/*
+	do
+		local domi=$(echo $site | cut -f 5 -d "/")
+		if [[ $domi != "html" && $domi != $(conf_read tools-port) && -f /etc/nginx/sites-available/$domi && $(is_ssl $domi) == "true" ]]; then
+			site $domi -ssl=off -revoke=off > /dev/null 2>&1
+			site $domi -ssl=on > /dev/null 2>&1
+			echo "${gre}${dim}- HTTP3 enabled for $domi site!${end}"
+		fi
+	done
+	
+	# Reset blackhole needed for new reuseport configuration!
+	[[ $(conf_read default-site) == "blackhole" ]] && webinoly -default-site=blackhole
+	
+}
+
 
 # Version numbers without point
 [[ ${oldver//.} -lt 11 ]] && onezero_to_oneone
@@ -346,9 +373,10 @@ oneseven_to_oneight() {
 [[ ${oldver//.} -lt 16 ]] && onefive_to_onesix
 [[ ${oldver//.} -lt 17 ]] && onesix_to_oneseven
 [[ ${oldver//.} -lt 18 ]] && oneseven_to_oneight
+[[ ${oldver//.} -lt 19 ]] && oneight_to_onenine
 
 # Update PIP packages!
-sudo pip3 install --upgrade "duplicity==${duplicity_version}" 2>&1 | grep -v "pip as the 'root' user"
+[[ $(conf_read nginx-tool-bkp) == "true" ]] && sudo pip3 install --upgrade "duplicity==${duplicity_version}" 2>&1 | grep -v "pip as the 'root' user"
 
 api-events_update wysue
 conf_delete stack-update
