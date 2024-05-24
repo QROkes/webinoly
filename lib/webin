@@ -1051,6 +1051,7 @@ set_default_nginx_response() {
 		fi
 	elif [[ $default_site == "blackhole" ]]; then
 		sudo cat /opt/webinoly/templates/general/nginx-blackhole >| /etc/nginx/sites-available/default
+		sudo sed -i "s/<somax>/$(($somax/2))/g" /etc/nginx/sites-available/default
 		remove_domain_default_site
 		create_blackhole_cert
 		conf_write default-site blackhole
@@ -1071,6 +1072,7 @@ set_default_nginx_response() {
 			if [[ $(is_ssl $default_site) == "false" ]]; then
 				create_blackhole_cert
 				sudo sed -i '1r /opt/webinoly/templates/general/nginx-blackhole' /etc/nginx/sites-available/$default_site
+				sudo sed -i "s/<somax>/$(($somax/2))/g" /etc/nginx/sites-available/$default_site
 				sudo sed -i '/NonSSL/,/NonSSLend/{/.*/d}' /etc/nginx/sites-available/$default_site
 			else
 				sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{s/listen 80;/listen 80 default_server;/}' /etc/nginx/sites-available/$default_site

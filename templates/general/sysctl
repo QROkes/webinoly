@@ -71,9 +71,7 @@ net.ipv4.tcp_congestion_control = bbr
 net.ipv4.tcp_notsent_lowat = 16384
 net.core.default_qdisc = fq
 
-# Increase number of incoming connections
-# For high-traffic, "backlog" parameter in "listen" Nginx directive should be used in conjuntion with "somaxconn".
-# https://www.getpagespeed.com/server-setup/nginx/maximizing-nginx-performance-a-comprehensive-guide-to-tuning-the-backlog-and-net-core-somaxconn-parameters
+# Maximum queue of pending connections waiting to be accepted.
 net.core.somaxconn = 4096
 
 # Allowed local port range

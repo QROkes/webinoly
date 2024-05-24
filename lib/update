@@ -357,10 +357,6 @@ oneight_to_onenine() {
 			echo "${gre}${dim}- HTTP3 enabled for $domi site!${end}"
 		fi
 	done
-	
-	# Reset blackhole needed for new reuseport configuration!
-	[[ $(conf_read default-site) == "blackhole" ]] && webinoly -default-site=blackhole
-	
 }
 
 

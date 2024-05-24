@@ -9,6 +9,7 @@ readonly ramk=$(grep MemTotal /proc/meminfo | cut -f 2 -d ':' | tr -d ' ' | cut 
 readonly ramb=$(($ramk/1000))
 [[ $(($ramb%1000)) -gt 700 ]] && readonly ram=$((($ramb/1000)+1)) || readonly ram=$(($ramb/1000))
 [[ $(($ramb*30)) -lt 65535 ]] && readonly fd_per_process=65535 || readonly fd_per_process=$(($ramb*30)) # File descriptors per process 3%
+[[ $(($cores*1024)) -lt 65535 ]] && readonly somax=$(($cores*1024)) || readonly somax=65535
 
 # Validation
 [[ $cores =~ ^[0-9]+$ ]] || echo "${red}[ERROR] System info (cores) retrieve corrupted!${end}"
@@ -70,6 +71,9 @@ linux_optim() {
 		sudo sed -i "/kernel.shmall =/c \kernel.shmall = $(($(getconf PAGE_SIZE)*2))" /etc/sysctl.d/90-webinoly.conf
 		sudo sed -i "/kernel.msgmni =/c \kernel.msgmni = $msgmni" /etc/sysctl.d/90-webinoly.conf
 		sudo sed -i "/kernel.sem =/c \kernel.sem = 250 1024000 32 $shmmni" /etc/sysctl.d/90-webinoly.conf
+		
+		# https://www.getpagespeed.com/server-setup/nginx/maximizing-nginx-performance-a-comprehensive-guide-to-tuning-the-backlog-and-net-core-somaxconn-parameters
+		sudo sed -i "/net.core.somaxconn = /c \net.core.somaxconn = ${somax}" /etc/sysctl.d/90-webinoly.conf
 		
 		# Also: 'sudo service procps force-reload' but we prefer this method to better display errors (just in case)
 		sudo sysctl -p -q /etc/sysctl.d/90-webinoly.conf

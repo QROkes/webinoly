@@ -1,9 +1,12 @@
 # WebinolyStartBlackhole
 server {
-	listen 443 ssl reuseport default_server;
-	listen [::]:443 ssl reuseport default_server;
+	listen 443 ssl reuseport backlog=<somax> deferred default_server;
+	listen [::]:443 ssl reuseport backlog=<somax> deferred default_server;
 	listen 443 quic reuseport default_server;
 	listen [::]:443 quic reuseport default_server;
+	
+	# NOTE: quic doesn't support backlog and deferred.
+	# NOTE: fastopen seems like not make sense now with http2 and http3, maybe only for port 80.
 	
 	ssl_certificate /etc/ssl/certs/webinoly-blackhole.crt.pem;
 	ssl_certificate_key /etc/ssl/private/webinoly-blackhole.key.pem;
@@ -12,8 +15,8 @@ server {
 }
 # NonSSL
 server {
-	listen 80 reuseport default_server;
-	listen [::]:80 reuseport default_server;
+	listen 80 reuseport backlog=<somax> deferred default_server;
+	listen [::]:80 reuseport backlog=<somax> deferred default_server;
 
 	return 444;
 }
