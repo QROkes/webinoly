@@ -134,6 +134,9 @@ if [[ -n $purge && ( -n $html || -n $nginx ) ]]; then
 			sudo rm -rf /opt/webinoly/templates/source/default
 			sudo rm -rf /opt/webinoly/templates/source/nginx.conf
 			
+			# Remove kTLS module
+			sudo rm -rf /etc/modules-load.d/webinoly_tls.conf
+			
 			api-events_update pn6
 			conf_write nginx purged
 			conf_write nginx-optim purged

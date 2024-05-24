@@ -141,7 +141,7 @@ linux_purge() {
 		sudo service procps force-reload
 		
 		sudo sed -i '/\/run/d' /etc/fstab
-		sudo mount -o remount tmpfs
+		sudo mount -o remount tmpfs > /dev/null 2>&1
 		
 		# Check in case of upgrading old stacks (before 1.14.0) when this service still not included
 		if [[ -f /etc/systemd/system/webinoly-disable-thp.service ]]; then
@@ -338,6 +338,18 @@ nginx_optim() {
 	sudo sed -i "/worker_rlimit_core /c \worker_rlimit_core $fd_per_process;" /etc/nginx/nginx.conf
 	sudo sed -i "/worker_rlimit_nofile /c \worker_rlimit_nofile $fd_per_process;" /etc/nginx/nginx.conf
 	sudo sed -i "/open_file_cache max /c \	open_file_cache max=$(($fd_per_process/3)) inactive=5m;" /etc/nginx/nginx.conf
+	
+	# kTLS not supported in 20.04
+	if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) == "focal" ]]; then
+		sudo sed -i '/ssl_conf_command Options KTLS/d' /etc/nginx/nginx.conf
+	else
+		sudo modprobe tls
+		# This module for some unknown reason is not automatically loaded
+		# https://manpages.ubuntu.com/manpages/noble/en/man5/modules-load.d.5.html
+		sudo rm -rf /etc/modules-load.d/webinoly_tls.conf # Rebuild file!
+		sudo echo tls > /etc/modules-load.d/webinoly_tls.conf
+		echo "${gre}${dim}kTLS Enabled!${end}"
+	fi
 	
 	# Locations
 	if [[ $(check_var locations-deny-extensions) != "off" ]]; then
