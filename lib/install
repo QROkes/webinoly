@@ -564,8 +564,13 @@ host = localhost
 	[[ $(conf_read mysql-log-slow) == "true" && -n $(conf_read mysql-long-query-time) ]] && sudo log -mysql=slow -enable -long-query-time=$(conf_read mysql-long-query-time)
 	[[ $(conf_read mysql-log-slow) == "false" ]] && sudo log -mysql=slow -disable
 	
-	[[ $(conf_read mysql-public-access) == "true" ]] && sudo webinoly -mysql-public-access=on
-	[[ $(conf_read mysql-public-access) == "false" ]] && sudo webinoly -mysql-public-access=off
+	if [[ $(conf_read mysql-public-access) == "true" ]]; then
+		sudo webinoly -mysql-public-access=on
+	elif [[ $(conf_read mysql-public-access) == "false" ]]; then
+		sudo webinoly -mysql-public-access=off
+	elif [[ -n $(conf_read mysql-public-access) ]]; then
+		sudo webinoly -mysql-public-access=on -bind=$(conf_read mysql-public-access)
+	fi
 	
 	# https://mariadb.com/kb/en/mysql_upgrade/
 	# The mysql_upgrade client is deprecated in MySQL 8. (This process is done automatically)

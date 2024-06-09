@@ -1600,7 +1600,7 @@ check_var() {
 	# Locations: Deny Extensions
 	elif [[ $1 == "locations-deny-extensions" ]]; then
 		if [[ -z $(conf_read locations-deny-extensions) ]]; then
-			local out="7z|ai|asc|asp|aspx|ba|bak|bash|bat|bin|bz2|c|cco|cfg|cgi|class|com|conf|cpp|crt|cs|dat|db|dbf|deb|der|dll|dmg|dmp|dump|ear|eps|exe|git|gz|h|hg|hqx|img|ini|iso|jad|jar|jardiff|jnlp|jsp|kar|kml|kmz|log|m3u8|mdb|mml|msi|msm|msp|odp|ods|odt|old|orig|original|out|pdb|pem|php#|php_bak|php~|pkg|pl|pm|ppk|prc|ps|py|rar|rdf|rpm|run|save|sea|sh|sit|sql|srv|svn|swo|swp|sys|tar|taz|tcl|tgz|tk|tmp|tpl|tsl|tz|vb|war|wsf|xspf|z|zip"
+			local out="7z|ai|asc|asp|aspx|ba|bak|bash|bat|bin|bz2|c|cco|cfg|cgi|class|com|conf|cpp|crt|cs|dat|db|dbf|deb|der|dll|dmg|dmp|dump|ear|eps|exe|git|gz|h|hg|hqx|img|ini|iso|jad|jar|jardiff|jnlp|jsp|kar|kml|kmz|log|m3u8|mdb|mml|msi|msm|msp|odp|ods|odt|old|orig|original|out|pdb|pem|php#|php_bak|php~|pkg|pl|pm|ppk|prc|ps|py|rar|rdf|rpm|run|save|sea|sh|sit|sql|srv|svn|swo|swp|sys|tar|taz|tcl|tgz|tk|tmp|tpl|tsl|tz|vb|yml|war|wsf|xspf|z|zip"
 		else
 			local out=$(conf_read locations-deny-extensions)
 		fi

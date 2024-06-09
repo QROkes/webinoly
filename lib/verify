@@ -497,6 +497,9 @@ if [[ -z $critical_mode ]]; then
 	fi
 
 	# Check for Tools and Default site.
+	if [[ $(conf_read default-site) != "blackhole" ]]; then
+		echo "${blu}${dim}- [INFO] Setting the Nginx default site/response to 'blackhole' is highly recommended!${end}${red}"
+	fi
 	if [[ -n $(conf_read default-site) && ! ( $(conf_read default-site) =~ ^(default|blackhole)$ ) && ! -L /etc/nginx/sites-enabled/$(conf_read default-site) ]]; then
 		echo "${dim}- [WARNING] Default site not found or is not enabled!${end}${red}"
 		local ver_two_war="1"
@@ -1253,8 +1256,9 @@ if [[ -z $critical_mode ]]; then
 
 	# WordPress (only if at least one WP site is found)
 	if [[ $(conf_read nginx) == "true" && -n $wp_site_exist ]]; then
-		[[ $(conf_read wp-admin-limited) == "false" ]] && echo "${blu}${dim}- [INFO] You have at least one WP site and WP-Admin Limited Request feature is disabled!${end}${red}"
-		[[ $(conf_read xmlrpc) == "open" ]] && echo "${blu}${dim}- [INFO] You have at least one WP site and XMLRPC is open!${end}${red}"
+		[[ $(conf_read wp-admin-limited) == "false" ]] && echo "${blu}${dim}- [INFO] WP-Admin Limited Request is a security feature and is disabled, you should reconsider this decision!${end}${red}"
+		[[ $(conf_read wp-admin-limited) != "false" ]] && echo "${blu}${dim}- [INFO] WP-Admin Limited Request is a security feature and is enabled by default, in some rare cases you may experience some unexpected errors in WP sites!${end}${red}"
+		[[ $(conf_read xmlrpc) == "open" ]] && echo "${blu}${dim}- [INFO] You have at least one WP site and XMLRPC is open, you should reconsider this decision!${end}${red}"
 	fi
 	
 

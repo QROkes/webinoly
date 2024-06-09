@@ -290,6 +290,11 @@ elif [[ -n $redirection && -f /etc/nginx/sites-available/$domain ]]; then
 
 # SSL (Letsencrypt)
 elif [[ -n $ssl ]]; then
+	if [[ -n $domain && -f /etc/nginx/sites-available/$domain && -n $(echo $domain | cut -d':' -f2 -s) ]]; then
+		echo "${red}[ERROR] Domain names with custom port are not allowed! ${end}"
+		exit 1
+	fi
+
 	if [[ $ssl == "renew" && -z $domain ]]; then
 			# Post-Hook removed because we always restart nginx at the end of site command
 			sudo certbot renew

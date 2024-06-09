@@ -283,6 +283,7 @@ mysql_public_access() {
 		if [[ -z $bind ]]; then
 			cnf_write skip-networking 0
 			cnf_write skip-bind-address
+			bind="true"
 		
 		elif [[ $bind =~ ^(::|\*)$ || $(is_ip $bind) == "true" ]]; then
 			cnf_write skip-networking 0
@@ -294,11 +295,9 @@ mysql_public_access() {
 			while [[ -n $(echo $bind | cut -d',' -f${x} -s) ]]
 			do
 				if [[ $(is_ip $(echo $bind | cut -d',' -f${x} -s)) != "true" ]]; then
-					echo "BAD: $(echo $bind | cut -d',' -f${x} -s)"
 					x="false"
 					break
 				else
-					echo "OK: $(echo $bind | cut -d',' -f${x} -s)"
 					x=$((x+1))
 				fi
 			done
@@ -307,6 +306,13 @@ mysql_public_access() {
 			if [[ $x == "false" ]]; then
 				echo "${red}[ERROR] Please, enter a valid bind-address! ${dim}(Invalid IP listed)${end}"
 				exit 1
+			else
+				local checkver=$(conf_read mysql-ver)
+				# We check 10.9 because 10.11 can cause issues when for example 11.4 (10.10 is a short term release, nobody should have it installed, so no problem in theory)
+				if ! [[ ${checkver//.} -gt 109 ]]; then
+					echo "${red}[ERROR] IP lists in bind-address are supported starting with MariaDB v10.11.${end}"
+					exit 1
+				fi
 			fi
 			
 			cnf_write skip-networking 0
@@ -320,7 +326,7 @@ mysql_public_access() {
 		echo "${red}[WARNING] Please, be careful and take the proper security actions to protect your server, now that MySQL/MariaDB is open for remote access you should at least set your firewall to prevent against any unwanted request.${end}"
 		echo ""
 		[[ -z $create_master_user ]] && echo "${dim}[INFO] Be sure you have a MySQL/MariaDB User with remote access!${end}"
-		conf_write mysql-public-access true
+		conf_write mysql-public-access "$bind"
 		echo "${gre}MySQL/MariaDB remote access successfully enabled!${end}"
 	elif [[ $mysql_public_access == "off" ]]; then
 		cnf_delete skip-networking

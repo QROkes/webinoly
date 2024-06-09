@@ -913,6 +913,8 @@ force_redirect() {
 	elif [[ $(is_ssl $domain) == "true" && $force_redirect =~ ^(www|root)$ ]]; then
 		sudo sed -i '/listen 80/c \	listen 443 ssl;' /tmp/template-site-wwwredirect
 		sudo sed -i '/listen \[::\]:80/c \	listen [::]:443 ssl;' /tmp/template-site-wwwredirect
+		sudo sed -i '/listen 443/a \	listen 443 quic;' /tmp/template-site-wwwredirect
+		sudo sed -i '/listen \[::\]:443/a \	listen [::]:443 quic;' /tmp/template-site-wwwredirect
 	
 		if [[ -z $ignore_ssl ]]; then
 			sudo sed -i '/headers-http.conf/a \	include common/headers-https.conf;' /tmp/template-site-wwwredirect
@@ -937,8 +939,8 @@ force_redirect() {
 		sudo sed -i '/WebinolySSLredirectEnd/r /tmp/template-site-wwwredirect' /etc/nginx/sites-available/$domain
 		
 		# Admin Tools!
-		sudo sed -i "/listen 443/c \	listen $(conf_read tools-port) ssl;" /tmp/template-site-wwwredirect
-		sudo sed -i "/listen \[::\]:443/c \	listen [::]:$(conf_read tools-port) ssl;" /tmp/template-site-wwwredirect
+		sudo sed -i "s/listen 443/listen $(conf_read tools-port)/g" /tmp/template-site-wwwredirect
+		sudo sed -i "s/listen \[::\]:443/listen [::]:$(conf_read tools-port)/g" /tmp/template-site-wwwredirect
 		[[ $force_redirect == "www" ]] && sudo sed -i "/return 301 /c \	return 301 https://www.${domain}:$(conf_read tools-port)\$request_uri;" /tmp/template-site-wwwredirect
 		[[ $force_redirect == "root" ]] && sudo sed -i "/return 301 /c \	return 301 https://${domain}:$(conf_read tools-port)\$request_uri;" /tmp/template-site-wwwredirect
 		sudo sed -i "/return 301 /i \	error_page 497  https:\/\/\$host:\$server_port\$request_uri;" /tmp/template-site-wwwredirect
