@@ -9,8 +9,8 @@ readonly svr_version="1.9"
 readonly os_ubuntu_supported=(focal jammy noble) # https://ubuntu.com/about/release-cycle
 readonly php_supported=(7.4 8.0 8.1 8.2 8.3) # https://www.php.net/supported-versions.php
 readonly php_default="8.2"
-readonly mariadb_supported=(10.6 10.11) # https://mariadb.com/kb/en/mariadb-server-release-dates/
-readonly mariadb_default="10.11"
+readonly mariadb_supported=(10.6 10.11 11.4) # https://mariadb.com/kb/en/mariadb-server-release-dates/
+readonly mariadb_default="11.4"
 readonly mysql_supported=(8.0)
 readonly mysql_default="8.0"
 readonly tools_port_default="22222"
@@ -101,9 +101,17 @@ fi
 if [[ $(conf_read db-engine) == "mysql" ]]; then
 	readonly MYSQL_CONF_PATH="/etc/mysql/mysql.conf.d"
 	readonly MYSQL_CONF_PREF="xx"
+	readonly MYSQL_COMMAND="mysql"
+	readonly MYSQL_DUMP_COMMAND="mysqldump"
+	readonly MYSQL_SHOW_COMMAND="mysqlshow"
+	readonly MYSQL_UPGRADE_COMMAND="mysql_upgrade"
 else
 	readonly MYSQL_CONF_PATH="/etc/mysql/mariadb.conf.d"
 	readonly MYSQL_CONF_PREF="90"
+	readonly MYSQL_COMMAND="mariadb"
+	readonly MYSQL_DUMP_COMMAND="mariadb-dump"
+	readonly MYSQL_SHOW_COMMAND="mariadb-show"
+	readonly MYSQL_UPGRADE_COMMAND="mariadb-upgrade"
 fi
 
 # Current LoggedIn User!
@@ -392,14 +400,14 @@ password = $4
 		
 		# Just for the record: We don't use the 'mysql_conf_editor' just because it can not be unattended :(
 		# --defaults-group-suffix should always be at the beginning, otherwise it fails.
-		sudo mysql --defaults-group-suffix=_${suffix_group_name} --connect-timeout=10 -h "$1" -P "$2" $user_param -e "$query" 2>/dev/null
+		$MYSQL_COMMAND --defaults-group-suffix=_${suffix_group_name} --connect-timeout=10 -h "$1" -P "$2" $user_param -e "$query" 2>/dev/null
 		if [[ $? != "0" ]]; then
 			local out="false"
 			[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf ]] && sudo sed -i "/\[client_${suffix_group_name}\]/,/# ClientEnd/{/.*/d}" $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
 		else
 			# Display a warning message when not enough privileges!
 			if [[ $5 == "-master-admin" ]]; then
-				local priv=$(sudo mysql --defaults-group-suffix=_${suffix_group_name} --connect-timeout=10 -h "$1" -P "$2" -e "SHOW GRANTS FOR CURRENT_USER();")
+				local priv=$($MYSQL_COMMAND --defaults-group-suffix=_${suffix_group_name} --connect-timeout=10 -h "$1" -P "$2" -e "SHOW GRANTS FOR CURRENT_USER();")
 				if ! [[ -n $(echo $priv | grep -Fo "WITH GRANT OPTION") && ( -n $(echo $priv | grep -Fo "GRANT ALL PRIVILEGES") || ( -n $(echo $priv | grep -Fo "CREATE USER") && -n $(echo $priv | grep -Fo "ALTER"))) ]]; then
 					if [[ $(conf_read quiet) != "true" ]]; then
 						echo "${red}${dim}[WARNING] Seems like '$(echo $priv | grep -oP -m 1 'Grants for \K\w+')' is not a Master user!${end}" >&2
@@ -421,14 +429,14 @@ password = $4
 				[[ $5 =~ ^[0-9]+$ && $5 -ge 0 && $5 -le 65535 ]] && local mysql_params=(-P${5} --protocol=TCP)
 			fi
 			# We need the protocol socket fixed to prevent warnings when custom port is used.
-			sudo mysql --connect-timeout=10 --user=$2 -p$3 -e "$query" "${mysql_params[@]}" 2>/dev/null
+			$MYSQL_COMMAND --connect-timeout=10 --user=$2 -p$3 -e "$query" "${mysql_params[@]}" 2>/dev/null
 			[[ $? != "0" ]] && local out="false"
 			local error_display="false"
 		else
 			# In case of Unix socket or localhost with custom port
 			[[ -S $2 ]] && local mysql_params="-S${2}"
 			[[ $2 =~ ^[0-9]+$ && $2 -ge 0 && $2 -le 65535 ]] && local mysql_params=(-P${2} --protocol=TCP)
-			sudo mysql --connect-timeout=10 --user=admin -e "$query" "${mysql_params[@]}" 2>/dev/null
+			$MYSQL_COMMAND --connect-timeout=10 --user=admin -e "$query" "${mysql_params[@]}" 2>/dev/null
 			[[ $? != "0" ]] && local out="false"
 		fi
 	else
@@ -700,9 +708,9 @@ wp_conf_retrieve() {
 		if [[ $(is_wp_multisite $maindom $4) =~ ^(subdomain|subdirectory)$ ]]; then
 			local dbq="USE $wp_dbname; SELECT blog_id FROM ${wp_dbpref}blogs WHERE domain='$1' OR domain='www.$1';"
 			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
-				local bid=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbq" "${mysql_params[@]}")
+				local bid=$($MYSQL_COMMAND --connect-timeout=10 --user=admin -e "$dbq" "${mysql_params[@]}")
 			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
-				local bid=$(sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbq")
+				local bid=$($MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbq")
 			fi
 			
 			wp_blogid=$(echo $bid | cut -f 2 -d " " -s)
@@ -1088,11 +1096,11 @@ is_wp_multisite() {
 			local dbsetuc="USE $wp_dbname; SELECT meta_value FROM ${wp_dbpref}sitemeta where meta_key='subdomain_install';"
 			
 			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
-				wpmu=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}")
-				[[ -n $wpmu ]] && mutype=$(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetuc" "${mysql_params[@]}")
+				wpmu=$($MYSQL_COMMAND --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}")
+				[[ -n $wpmu ]] && mutype=$($MYSQL_COMMAND --connect-timeout=10 --user=admin -e "$dbsetuc" "${mysql_params[@]}")
 			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
-				wpmu=$(sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbsetup")
-				[[ -n $wpmu ]] && mutype=$(sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbsetuc")
+				wpmu=$($MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbsetup")
+				[[ -n $wpmu ]] && mutype=$($MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbsetuc")
 			fi
 			
 			if [[ $(echo $mutype | cut -f 2 -d " " -s) == "1" ]]; then
@@ -1127,9 +1135,9 @@ is_wp_installed() {
 			local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
 			
 			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
-				[[ -n $(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}") ]] && echo "true" || echo "false"
+				[[ -n $($MYSQL_COMMAND --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}") ]] && echo "true" || echo "false"
 			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
-				[[ -n $(sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbsetup") ]] && echo "true" || echo "false"
+				[[ -n $($MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbsetup") ]] && echo "true" || echo "false"
 			else
 				echo "false"
 			fi
@@ -1314,9 +1322,9 @@ edit_wp_db_url_multisite() {
 			local wp_blogid=$3		
 			local dbsetup="SELECT * FROM information_schema.tables WHERE table_schema = '$wp_dbname' AND table_name = '${wp_dbpref}options' LIMIT 1;"
 			
-			if [[ $wp_dbhost_host == "localhost" && -n $(sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}") ]]; then
+			if [[ $wp_dbhost_host == "localhost" && -n $($MYSQL_COMMAND --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}") ]]; then
 				echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
-			elif [[ $wp_dbhost_host != "localhost" && -n $(sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbsetup") ]]; then
+			elif [[ $wp_dbhost_host != "localhost" && -n $($MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbsetup") ]]; then
 				echo "${blu}${dim}WordPress blog ID (${wp_dbpref}) found and validated in a WP Multisite Network!${end}" >&2
 			else
 				echo "${red}${dim}[ERROR] WordPress blog ID (${wp_dbpref}) not found!${end}" >&2
@@ -1327,13 +1335,13 @@ edit_wp_db_url_multisite() {
 		
 		if [[ -n $wp_dbhost_host && -n $wp_dbname && -n $wp_dbpref_main && -n $wp_blogid ]]; then
 			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
-				sudo mysql --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
+				$MYSQL_COMMAND --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref_main}blogs SET domain='$2' WHERE blog_id='${wp_blogid}';
 UPDATE ${wp_dbpref_main}blogs SET path='/' WHERE blog_id='${wp_blogid}';
 _EOF_
 			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
-				sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" <<_EOF_
+				$MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref_main}blogs SET domain='$2' WHERE blog_id='${wp_blogid}';
 UPDATE ${wp_dbpref_main}blogs SET path='/' WHERE blog_id='${wp_blogid}';
@@ -1360,7 +1368,7 @@ edit_wp_db_url() {
 		
 		if [[ -n $wp_dbhost_host && -n $wp_dbname && -n $wp_dbpref ]]; then
 			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
-				sudo mysql --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
+				$MYSQL_COMMAND --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
@@ -1368,7 +1376,7 @@ _EOF_
 
 				echo "${gre}${dim}WordPress site${blu} ${1}${3} ${gre}database URL updated! ${blu}(${2})${end}"
 			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
-				sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" <<_EOF_
+				$MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='home';
 UPDATE ${wp_dbpref}options SET option_value='$2' WHERE option_name='siteurl';
@@ -1424,7 +1432,7 @@ db_user_role() {
 	elif [[ $db_role == "limited" ]]; then
 		local priv="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER"
 	elif [[ $db_role == "extra" ]]; then
-		local priv="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER,LOCK TABLES"
+		local priv="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER,CREATE TEMPORARY TABLES,LOCK TABLES"
 	elif [[ $db_role == "complete" ]]; then
 		local priv="SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,ALTER,CREATE TEMPORARY TABLES,EXECUTE,CREATE VIEW,SHOW VIEW,CREATE ROUTINE,ALTER ROUTINE,EVENT,TRIGGER"
 	elif [[ $db_role == "grant" ]]; then

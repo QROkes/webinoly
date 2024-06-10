@@ -241,9 +241,9 @@ wpinstall() {
 				while [[ $dbname == $newdbname && $dbreuse != [yY] ]]; do
 					if [[ $dbhost == "localhost" ]]; then
 						# https://stackoverflow.com/questions/7364709/bash-script-check-if-mysql-database-exists-perform-action-based-on-result
-						local newdbname=$(sudo mysqlshow --user=admin | grep -ow $dbname)
+						local newdbname=$($MYSQL_SHOW_COMMAND --user=admin | grep -ow $dbname)
 					else
-						local newdbname=$(sudo mysqlshow --defaults-group-suffix=_${dburl}:${dbport}_default -h "$dburl" -P "$dbport" | grep -ow $dbname)
+						local newdbname=$($MYSQL_SHOW_COMMAND --defaults-group-suffix=_${dburl}:${dbport}_default -h "$dburl" -P "$dbport" | grep -ow $dbname)
 					fi
 					
 					if [[ $newdbname == $dbname || $dbname != $(dbword_check $dbname) ]]; then
@@ -290,9 +290,9 @@ wpinstall() {
 				while [[ $dbuser == $newdbuser && $dbureuse != [yY] ]]; do
 					if [[ $dbhost == "localhost" ]]; then
 						# https://stackoverflow.com/questions/7364709/bash-script-check-if-mysql-database-exists-perform-action-based-on-result
-						[[ -z $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" | grep -ow $dbuser) ]] && newdbuser=""
+						[[ -z $($MYSQL_COMMAND --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" | grep -ow $dbuser) ]] && newdbuser=""
 					else
-						[[ -z $(sudo mysql --defaults-group-suffix=_${dburl}:${dbport}_default --connect-timeout=10 -h "$dburl" -P "$dbport" -e "SELECT User FROM mysql.user;" | grep -ow $dbuser) ]] && newdbuser=""
+						[[ -z $($MYSQL_COMMAND --defaults-group-suffix=_${dburl}:${dbport}_default --connect-timeout=10 -h "$dburl" -P "$dbport" -e "SELECT User FROM mysql.user;" | grep -ow $dbuser) ]] && newdbuser=""
 					fi
 					
 					if [[ $newdbuser == $dbuser || $dbuser != $(dbword_check $dbuser user) ]]; then
@@ -375,7 +375,7 @@ wpinstall() {
 			if [[ $setupmysql == [yY] || -n $dbreassign ]] ; then
 				if [[ $dbhost == "localhost" && -z $dbreassign ]]; then
 					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
-					sudo mysql --connect-timeout=10 --user=admin <<_EOF_
+					$MYSQL_COMMAND --connect-timeout=10 --user=admin <<_EOF_
 CREATE DATABASE $dbname;
 CREATE USER '${dbuser}'@'localhost' IDENTIFIED BY '${dbpass}';
 GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'localhost';
@@ -384,7 +384,7 @@ _EOF_
 				
 				elif [[ -z $dbreassign ]]; then
 					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
-					sudo mysql --defaults-group-suffix=_${dburl}:${dbport}_default --connect-timeout=10 -h "$dburl" -P "$dbport" <<_EOF_
+					$MYSQL_COMMAND --defaults-group-suffix=_${dburl}:${dbport}_default --connect-timeout=10 -h "$dburl" -P "$dbport" <<_EOF_
 CREATE DATABASE ${dbname};
 CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
 GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'%';
@@ -395,7 +395,7 @@ _EOF_
 				# Reuse Database
 				elif [[ $dbhost == "localhost" && $dbreassign == "db" ]]; then
 					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
-					sudo mysql --connect-timeout=10 --user=admin <<_EOF_
+					$MYSQL_COMMAND --connect-timeout=10 --user=admin <<_EOF_
 CREATE USER '${dbuser}'@'localhost' IDENTIFIED BY '${dbpass}';
 GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'localhost';
 FLUSH PRIVILEGES;
@@ -403,7 +403,7 @@ _EOF_
 				
 				elif [[ $dbreassign == "db" ]]; then
 					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
-					sudo mysql --defaults-group-suffix=_${dburl}:${dbport}_default --connect-timeout=10 -h "$dburl" -P "$dbport" <<_EOF_
+					$MYSQL_COMMAND --defaults-group-suffix=_${dburl}:${dbport}_default --connect-timeout=10 -h "$dburl" -P "$dbport" <<_EOF_
 CREATE USER '${dbuser}'@'%' IDENTIFIED BY '${dbpass}';
 GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
@@ -413,7 +413,7 @@ _EOF_
 				# Reuse User
 				elif [[ $dbhost == "localhost" && $dbreassign == "dbuser" ]]; then
 					# Starting with MySQL 8 you no longer can (implicitly) create a user using the GRANT command.
-					sudo mysql --connect-timeout=10 --user=admin <<_EOF_
+					$MYSQL_COMMAND --connect-timeout=10 --user=admin <<_EOF_
 CREATE DATABASE ${dbname};
 GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'localhost';
 FLUSH PRIVILEGES;
@@ -421,7 +421,7 @@ _EOF_
 				
 				elif [[ $dbreassign == "dbuser" ]]; then
 					# We can not use GRAN ALL PRIVILIGES with AWS RDS, that's why are all separate.
-					sudo mysql --defaults-group-suffix=_${dburl}:${dbport}_default --connect-timeout=10 -h "$dburl" -P "$dbport" <<_EOF_
+					$MYSQL_COMMAND --defaults-group-suffix=_${dburl}:${dbport}_default --connect-timeout=10 -h "$dburl" -P "$dbport" <<_EOF_
 CREATE DATABASE ${dbname};
 GRANT $(db_user_role) on ${dbname}.* to '${dbuser}'@'%';
 FLUSH PRIVILEGES;
@@ -518,13 +518,13 @@ db_delete() {
 	# DROP USER use '%' when empty, and wildcard does not match 'localhost' (I don't know why).
 	dbsetup="DELETE FROM mysql.user WHERE User='$wp_dbuser';DROP DATABASE IF EXISTS $wp_dbname;DELETE FROM mysql.db WHERE Db='$wp_dbname' OR Db='$wp_dbname\\_%';FLUSH PRIVILEGES;"
 	if [[ $wp_dbhost_host == "localhost" ]]; then
-		sudo mysql --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}"
+		$MYSQL_COMMAND --connect-timeout=10 --user=admin -e "$dbsetup" "${mysql_params[@]}"
 		echo "${gre}${dim}Database of your site ${blu}${1}${2}${gre} has been successfully deleted! ${end}"
 	else
 		if [[ $extdb_user == "root" && -z $extdb_pass ]]; then
 			echo "${red}Action aborted, database not deleted! ${dim}(root user without password not allowed!)${end}"
 		else
-			sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -e "$dbsetup"
+			$MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -e "$dbsetup"
 			echo "${gre}${dim}Database of your site ${blu}${1}${2}${gre} has been successfully deleted! ${end}"
 		fi
 	fi
@@ -1851,13 +1851,13 @@ cloning_site() {
 		
 		if [[ $wp_dbhost_host == "localhost" ]]; then
 			site -mysql=[localhost,$dom,$usr,$AUTOGENPASS_WPDB] > /dev/null 2>&1
-			mysqldump -u admin "${mysql_params[@]}" $wp_dbname | mysql -u admin "${mysql_params[@]}" $dom
+			$MYSQL_DUMP_COMMAND -u admin "${mysql_params[@]}" $wp_dbname | $MYSQL_COMMAND -u admin "${mysql_params[@]}" $dom
 			
 			# No need of force-redirect check because this is a new and different site.
 			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
 		else
 			site -mysql=[$wp_dbhost,$dom,$usr,$AUTOGENPASS_WPDB,$extdb_user,$extdb_pass] > /dev/null 2>&1
-			mysqldump --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default -h "$wp_dbhost_host" -P "$wp_dbhost_port" $wp_dbname | mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default -h "$wp_dbhost_host" -P "$wp_dbhost_port" $dom
+			$MYSQL_DUMP_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default -h "$wp_dbhost_host" -P "$wp_dbhost_port" $wp_dbname | $MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default -h "$wp_dbhost_host" -P "$wp_dbhost_port" $dom
 			
 			# No need of force-redirect check because this is a new and different site.
 			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
@@ -1923,9 +1923,9 @@ wp_replace_content() {
 		query="USE $wp_dbname; UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'$search','$replace');"
 		
 		if [[ $wp_dbhost_host == "localhost" ]]; then
-			sudo mysql --connect-timeout=10 --user=admin -e "$query" "${mysql_params[@]}"
+			$MYSQL_COMMAND --connect-timeout=10 --user=admin -e "$query" "${mysql_params[@]}"
 		else
-			sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$query"
+			$MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$query"
 		fi
 		echo "${gre}Content successfully replaced in your WP site!${end}"
 	else
@@ -2187,13 +2187,13 @@ wp_env_type() {
 	elif [[ -n $wp_dbhost_host && -n $wp_dbname && -n $wp_dbpref ]]; then
 		if [[ $(is_wp_installed $domain $subfolder) == "true" ]]; then
 			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
-				sudo mysql --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
+				$MYSQL_COMMAND --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$index' WHERE option_name='blog_public';
 _EOF_
 		
 			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
-				sudo mysql --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" <<_EOF_
+				$MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" <<_EOF_
 USE $wp_dbname;
 UPDATE ${wp_dbpref}options SET option_value='$index' WHERE option_name='blog_public';
 _EOF_

@@ -713,16 +713,15 @@ if [[ $(conf_read mysql) == "true" || $(conf_read mysql-client) == "true" ]]; th
 fi
 
 if [[ $(conf_read mysql) == "true" ]]; then
+	local ver_mysql_ver=$($MYSQL_COMMAND --version | grep -Eo "[0-9\.]+\-" | cut -f 2 -d' ' | cut -f 1-2 -d'.')
 	if [[ $(conf_read db-engine) == "mysql" ]]; then
-		local ver_mysql_ver=$(sudo mysql --version | grep -Eo "Ver [0-9\.]+" | cut -f 2 -d' ' | cut -f 1-2 -d'.')
-		if [[ -n $(sudo mysql --version | grep -Fio "MariaDb") ]]; then
+		if [[ -n $($MYSQL_COMMAND --version | grep -Fio "MariaDb") ]]; then
 			echo "- [ERROR] MySQL DB Engine in Configuration File is corrupted!"
 			local ver_four_err="1"
 		fi
 	else
 		# To check supported versions: https://mariadb.com/kb/en/mariadb-server/
-		local ver_mysql_ver=$(sudo mysql --version  | sed 's/.*Distrib \([^\-]*\).*/\1/' | cut -f 1-2 -d'.')
-		if [[ -z $(sudo mysql --version | grep -Fio "MariaDb") || ( -n $(conf_read db-engine) && $(conf_read db-engine) != "mariadb" ) ]]; then
+		if [[ -z $($MYSQL_COMMAND --version | grep -Fio "MariaDb") || ( -n $(conf_read db-engine) && $(conf_read db-engine) != "mariadb" ) ]]; then
 			echo "- [ERROR] MySQL DB Engine in Configuration File is corrupted!"
 			local ver_four_err="1"
 		fi
@@ -771,13 +770,13 @@ if [[ $(conf_read mysql) == "true" ]]; then
 	if [[ -n $(conf_read mysql-root) ]]; then # Dynvar can be removed safely!
 		local ROOT_PASS=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt )
 		[[ -z $ROOT_PASS ]] && ROOT_PASS="dUmb"
-		if ! sudo mysql --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit" 2>/dev/null; then
+		if ! $MYSQL_COMMAND --connect-timeout=10 --user=root -p$ROOT_PASS -e "quit" 2>/dev/null; then
 			echo "- [ERROR] MySQL/MariaDB Connection to localhost failed! (root)"
 			local ver_four_err="1"
 		fi
 	fi
 	
-	if ! sudo mysql --connect-timeout=10 --user=admin -e "quit" 2>/dev/null; then
+	if ! $MYSQL_COMMAND --connect-timeout=10 --user=admin -e "quit" 2>/dev/null; then
 		echo "- [ERROR] MySQL/MariaDB Connection to localhost failed! (admin)"
 		local ver_four_err="1"
 	fi
@@ -798,13 +797,13 @@ if [[ -z $critical_mode ]]; then
 		fi
 		
 		# MySQL and MariaDB can be mixed, don't worry!
-		if ! [[ $ver_mysql_ver =~ ^(8.0|10.0|10.1|10.2|10.3|10.4|10.5|10.6|10.11)$ ]]; then
+		if ! [[ $ver_mysql_ver =~ ^(8.0|10.0|10.1|10.2|10.3|10.4|10.5|10.6|10.11|11.4)$ ]]; then
 			echo "${dim}- [WARNING] Unknown MySQL/MariaDB version!${end}${red}"
 			local ver_four_war="1"
-		elif [[ $ver_mysql_ver =~ ^(10.0|10.1|10.2|10.3)$ ]]; then
+		elif [[ $ver_mysql_ver =~ ^(10.0|10.1|10.2|10.3|10.4)$ ]]; then
 			echo "${dim}- [WARNING] You have an obsolete MariaDB version (${ver_mysql_ver}) installed that not even receive security updates!${end}${red}"
 			local ver_four_war="1"
-		elif [[ $ver_mysql_ver =~ ^(10.4)$ ]]; then
+		elif [[ $ver_mysql_ver =~ ^(10.5)$ ]]; then
 			echo "${blu}${dim}- [INFO] MariaDB v10.6 or later is recommended to get an optimal perfomance! (Current: ${ver_mysql_ver}) ${end}${red}"
 		fi
 	fi

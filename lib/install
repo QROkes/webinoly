@@ -269,7 +269,7 @@ mysql_install() {
 	# - Reload the user privileges tables.
 	if [[ $(conf_read mysql-reinstall) != "true" ]]; then # Just for new and fresh installations! (not needed when reinstalling)
 		echo "${blu}${dim}MySQL/MariaDB Secure Installation! ${end}"
-		sudo mysql --user=root <<_EOF_
+		$MYSQL_COMMAND --user=root <<_EOF_
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
@@ -280,9 +280,9 @@ FLUSH PRIVILEGES;
 _EOF_
 
 		if [[ $(conf_read db-engine) == "mysql" ]]; then
-			sudo mysql --user=root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${AUTOGENPASS_ROOT}';FLUSH PRIVILEGES;"
+			$MYSQL_COMMAND --user=root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${AUTOGENPASS_ROOT}';FLUSH PRIVILEGES;"
 		else
-			sudo mysql --user=root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${AUTOGENPASS_ROOT}';FLUSH PRIVILEGES;"
+			$MYSQL_COMMAND --user=root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${AUTOGENPASS_ROOT}';FLUSH PRIVILEGES;"
 		fi
 	fi
 	
@@ -578,7 +578,7 @@ host = localhost
 	# Should be here in optim, because when reinstalling admin login CNF is removed.
 	if [[ $(conf_read mysql-reinstall) == "true" && $(conf_read db-engine) != "mysql" ]]; then
 		echo "${blu}${dim}Seems like you are reinstalling MySQL/MariaDB... Upgrading your old tables!${end}"
-		sudo mysql_upgrade --user=admin --force --silent
+		$MYSQL_UPGRADE_COMMAND --user=admin --force --silent
 		conf_delete mysql-reinstall
 	fi
 	
@@ -1077,7 +1077,7 @@ stack_builder() {
 		
 		if [[ $(conf_read db-engine) == "mysql" ]]; then
 			[[ -f /usr/share/keyrings/mysql-archive-keyring.gpg && ( ! -s /usr/share/keyrings/mysql-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/mysql-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/mysql-archive-keyring.gpg # Prevent issues!
-			[[ ! -f /usr/share/keyrings/mysql-archive-keyring.gpg ]] && wget -nv -O- 'https://repo.mysql.com/RPM-GPG-KEY-mysql-2022' | sudo gpg --dearmor -o /usr/share/keyrings/mysql-archive-keyring.gpg
+			[[ ! -f /usr/share/keyrings/mysql-archive-keyring.gpg ]] && wget -nv -O- 'https://repo.mysql.com/RPM-GPG-KEY-mysql-2023' | sudo gpg --dearmor -o /usr/share/keyrings/mysql-archive-keyring.gpg
 			echo "deb [signed-by=/usr/share/keyrings/mysql-archive-keyring.gpg] http://repo.mysql.com/apt/ubuntu $(lsb_release -cs) mysql-8.0" | sudo tee /etc/apt/sources.list.d/mysql.list
 		
 		# https://mariadb.org/download/?t=repo-config

@@ -127,14 +127,14 @@ bkp_local_db() {
 					echo "${red}[ERROR] Cannot connect with your database (localhost)!${end}"
 					exit 1
 				fi
-				local checkdbname=$(sudo mysqlshow --user=admin | grep -ow $dbname)
+				local checkdbname=$($MYSQL_SHOW_COMMAND --user=admin | grep -ow $dbname)
 			else
 				external_db_parse
 				if [[ $(check_mysql_connection $extdb_url $extdb_port any -login-file -master-admin) != "true" ]]; then
 					echo "${red}[ERROR] Cannot connect with your External Database!${end}"
 					exit 1
 				fi
-				local checkdbname=$(sudo mysqlshow --defaults-group-suffix=_${extdb_url}:${extdb_port}_default -h "$extdb_url" -P "$extdb_port" | grep -ow $dbname)
+				local checkdbname=$($MYSQL_SHOW_COMMAND --defaults-group-suffix=_${extdb_url}:${extdb_port}_default -h "$extdb_url" -P "$extdb_port" | grep -ow $dbname)
 			fi
 			
 			if [[ $checkdbname != $dbname  ]]; then
@@ -193,9 +193,9 @@ bkp_local_db() {
 
 	
 	if [[ ( $wp_dbhost_host == "localhost" || ( -z $extdb_url && -z $extdb_port )) && -n $db_name_list && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
-		sudo mysqldump --user=admin --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
+		$MYSQL_DUMP_COMMAND --user=admin --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
 	elif [[ -n $extdb_url && $extdb_url != "error" && -n $db_name_list && $(check_mysql_connection $extdb_url $extdb_port any -login-file -master-admin) == "true" ]]; then
-		sudo mysqldump --defaults-group-suffix=_${extdb_url}:${extdb_port}_default -h "$extdb_url" -P "$extdb_port" --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
+		$MYSQL_DUMP_COMMAND --defaults-group-suffix=_${extdb_url}:${extdb_port}_default -h "$extdb_url" -P "$extdb_port" --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
 	elif [[ $extdb_url == "error" ]]; then
 		echo "${red}[ERROR] Multiple DB hosts not allowed!${end}"
 		exit 1
@@ -922,12 +922,12 @@ import_site() {
 		# Database recovery - create users because they are not imported
 		if [[ -n $db_create_users && $overwrite != "on" && $(is_wp $domain) == "true" ]]; then
 			wp_conf_retrieve $domain false false
-			if [[ $wp_dbhost_host == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin "${mysql_params[@]}" | grep -ow $wp_dbname) ]]; then
+			if [[ $wp_dbhost_host == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $($MYSQL_SHOW_COMMAND --user=admin "${mysql_params[@]}" | grep -ow $wp_dbname) ]]; then
 				echo "${blu}${dim}Restoring database for${end}${dim} $domain ${blu}${dim}site!${end}"
 				
 				# Check if user exists
-				if [[ -z $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" "${mysql_params[@]}" | grep -ow $wp_dbuser) ]]; then
-					sudo mysql --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
+				if [[ -z $($MYSQL_COMMAND --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" "${mysql_params[@]}" | grep -ow $wp_dbuser) ]]; then
+					$MYSQL_COMMAND --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
 CREATE USER '${wp_dbuser}'@'localhost' IDENTIFIED BY '${wp_dbpass}';
 GRANT $(db_user_role) on ${wp_dbname}.* to '${wp_dbuser}'@'localhost';
 FLUSH PRIVILEGES;
@@ -947,12 +947,12 @@ _EOF_
 				local suby="/$(echo $sit | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
 				if [[ -n $suby && -f /var/www/$domain/htdocs$suby/wp-config.php ]]; then
 					wp_conf_retrieve $domain false false $suby
-					if [[ $wp_dbhost_host == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $(sudo mysqlshow --user=admin "${mysql_params[@]}" | grep -ow $wp_dbname) ]]; then
+					if [[ $wp_dbhost_host == "localhost" && -n $wp_dbname && -n $wp_dbuser && -n $wp_dbpass && -n $($MYSQL_SHOW_COMMAND --user=admin "${mysql_params[@]}" | grep -ow $wp_dbname) ]]; then
 						echo "${blu}${dim}Restoring database for${end}${dim} ${domain}${suby} ${blu}${dim}site!${end}"
 						
 						# Check if user exists
-						if [[ -z $(sudo mysql --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" "${mysql_params[@]}" | grep -ow $wp_dbuser) ]]; then
-							sudo mysql --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
+						if [[ -z $($MYSQL_COMMAND --connect-timeout=10 --user=admin -e "SELECT User FROM mysql.user;" "${mysql_params[@]}" | grep -ow $wp_dbuser) ]]; then
+							$MYSQL_COMMAND --connect-timeout=10 --user=admin "${mysql_params[@]}" <<_EOF_
 CREATE USER '${wp_dbuser}'@'localhost' IDENTIFIED BY '${wp_dbpass}';
 GRANT $(db_user_role) on ${wp_dbname}.* to '${wp_dbuser}'@'localhost';
 FLUSH PRIVILEGES;
