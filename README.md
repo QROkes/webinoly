@@ -46,7 +46,7 @@ sudo httpauth -add
 ```
 
 ### Requirements
-* Ubuntu 24.04 or 22.04
+* Ubuntu ~~24.04~~ or 22.04
 
 
 ### Documentation

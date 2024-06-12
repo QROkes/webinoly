@@ -16,7 +16,7 @@ if [[ $2 == "-ver="* ]]; then
 fi
 
 # Supported: 22.04 Jammy and 24.04 Noble
-if [[ $distr != "Ubuntu" ]] || ! [[ $osver =~ ^(focal|jammy|noble)$ ]]; then
+if [[ $distr != "Ubuntu" ]] || ! [[ $osver =~ ^(focal|jammy)$ ]]; then
 	echo "$(tput setaf 1)"
 	echo "[ERROR] This OS is not supported by Webinoly and could not work properly. $(tput dim)(${distr} '${osver}')"
 	echo "$(tput sgr0)"
