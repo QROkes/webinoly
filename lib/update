@@ -347,6 +347,14 @@ oneight_to_onenine() {
 		done
 	fi
 	
+	# Update Nginx key! https://blog.nginx.org/blog/updating-pgp-key-for-nginx-software
+	if [[ $(conf_read nginx) == "true" && $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
+		sudo apt-key adv --fetch-keys 'https://nginx.org/keys/nginx_signing.key'
+	elif [[ -f /usr/share/keyrings/nginx-archive-keyring.gpg ]]; then
+		rm -rf /usr/share/keyrings/nginx-archive-keyring.gpg
+		wget -nv -O- https://nginx.org/keys/nginx_signing.key | sudo gpg --dearmor -o /usr/share/keyrings/nginx-archive-keyring.gpg
+	fi
+	
 	# Loop All Sites - HTTP3 enable! 
 	for site in "/etc/nginx/sites-available"/*
 	do

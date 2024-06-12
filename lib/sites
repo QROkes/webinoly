@@ -826,6 +826,9 @@ createsite() {
 	else
 		sudo log $domain -only-error=off > /dev/null 2>&1
 	fi
+
+	# Blackhole default-site should be enabled after the first site is created!
+	[[ -z $(conf_read default-site) && $domain != $ADMIN_TOOLS_SITE ]] && webinoly -default-site=blackhole
 	
 	sudo chown -R www-data:www-data /var/www
 	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
