@@ -281,11 +281,13 @@ mysql_public_access() {
 	
 	if [[ $mysql_public_access == "on" ]]; then
 		if [[ -z $bind ]]; then
+			cnf_delete bind-address
 			cnf_write skip-networking 0
 			cnf_write skip-bind-address
 			bind="true"
 		
 		elif [[ $bind =~ ^(::|\*)$ || $(is_ip $bind) == "true" ]]; then
+			cnf_delete skip-bind-address
 			cnf_write skip-networking 0
 			cnf_write bind-address "$bind"
 		
@@ -315,6 +317,7 @@ mysql_public_access() {
 				fi
 			fi
 			
+			cnf_delete skip-bind-address
 			cnf_write skip-networking 0
 			cnf_write bind-address "$bind"
 		else
@@ -331,6 +334,7 @@ mysql_public_access() {
 	elif [[ $mysql_public_access == "off" ]]; then
 		cnf_delete skip-networking
 		cnf_delete skip-bind-address
+		cnf_delete bind-address
 		conf_write mysql-public-access false
 		echo "${gre}MySQL/MariaDB remote access successfully disabled!${end}"
 	fi

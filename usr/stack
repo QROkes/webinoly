@@ -731,8 +731,7 @@ elif [[ -n $mysql_ver ]]; then
 			echo "${gre}MySQL (MariaDB) $mysql_ver is currently installed!${end}"
 		elif [[ $(conf_read mysql) == "true" ]]; then
 			# Downgrades are not allowed - https://mariadb.com/kb/en/downgrading-between-major-versions-of-mariadb/
-			current_mysql_ver="$(conf_read mysql-ver)"
-			if [[ -n $current_mysql_ver && ${current_mysql_ver//.} -gt ${mysql_ver//.} ]]; then
+			if [[ $(version $(conf_read mysql-ver)) -gt $(version $mysql_ver) ]]; then
 				echo "${red}[ERROR] Downgrading MySQL/MariaDB is not supported!${end}"
 				exit 1
 			fi

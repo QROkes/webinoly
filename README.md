@@ -46,11 +46,12 @@ sudo httpauth -add
 ```
 
 ### Requirements
-* Ubuntu ~~24.04~~ or 22.04
+* Ubuntu 24.04 or 22.04
 
 
 ### Documentation
-For complete documentation, please [visit our site](https://webinoly.com/documentation/).
+For complete documentation: [English](https://webinoly.com/documentation/) | [Español](https://webinoly.com/es/documentacion/) | [
+繁體中文](https://webinoly.com/zh/shuo-ming-wen-jian/)
 
 
 ## Contributing

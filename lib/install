@@ -494,6 +494,11 @@ php_optim() {
 	sudo sed -i -r "/^[;]?memory_limit =/c\memory_limit = ${phpmem}M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r "/^[;]?max_input_vars =/c\max_input_vars = $(check_var php-max-input-vars)" /etc/php/$ver/fpm/php.ini
 	
+	# Remove this non-sense restriction in the next stack update (1.10)
+	# We can not make it default because not all conf files have this option because it was included in a minor release (1.18.2)
+	[[ -n $(conf_read php-disable-functions) && $(conf_read php-disable-functions) != "off" ]] && sudo sed -i -r "/^[;]?disable_functions =/c\disable_functions = $(check_var php-disable-functions)" /etc/php/$ver/fpm/php.ini
+	[[ -n $(conf_read php-allow-url-fopen) ]] && sudo sed -i -r "/^[;]?allow_url_fopen =/c\allow_url_fopen = $(check_var php-allow-url-fopen)" /etc/php/$ver/fpm/php.ini
+	
 	sudo sed -i -r "/^[;]?opcache.memory_consumption=/c\opcache.memory_consumption=$(check_var php-max-mem)" /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.interned_strings_buffer=/c\opcache.interned_strings_buffer=16' /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.max_accelerated_files=/c\opcache.max_accelerated_files=100000' /etc/php/$ver/fpm/php.ini

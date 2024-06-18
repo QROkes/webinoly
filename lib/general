@@ -4,12 +4,12 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.18.1"
+readonly app_version="1.18.2"
 readonly svr_version="1.9"
 readonly os_ubuntu_supported=(focal jammy noble) # https://ubuntu.com/about/release-cycle
 readonly php_supported=(7.4 8.0 8.1 8.2 8.3) # https://www.php.net/supported-versions.php
 readonly php_default="8.3"
-readonly mariadb_supported=(10.6 10.11 11.4) # https://mariadb.com/kb/en/mariadb-server-release-dates/
+readonly mariadb_supported=(10.11 11.4) # https://mariadb.com/kb/en/mariadb-server-release-dates/
 readonly mariadb_default="11.4"
 readonly mysql_supported=(8.0)
 readonly mysql_default="8.0"
@@ -174,6 +174,7 @@ check_mysql_version() {
 	fi
 	echo $check
 }
+
 
 check_osname() {
 	if ! [[ $(lsb_release -i | cut -d':' -f 2 | xargs) == "Ubuntu" && $(check_ubuntu_release) == "true" ]]; then
@@ -1569,13 +1570,23 @@ check_var() {
 	
 	# PHP opcache validate timestamps
 	elif [[ $1 == "php-opcache-timestamps" ]]; then
-			local out="false"
-			[[ $(conf_read php-opcache-timestamps) == "true" ]] && local out="1"
-			[[ $(conf_read php-opcache-timestamps) == "false" ]] && local out="0"
+		[[ $(conf_read php-opcache-timestamps) == "false" ]] && local out="0" || local out="1"
 
 	# PHP opcache revalidate frequency
 	elif [[ $1 == "php-opcache-reval" ]]; then
 		[[ -n $(conf_read php-opcache-reval) && $(conf_read php-opcache-reval) =~ ^[0-9]+$ && $(conf_read php-opcache-reval) -ge 0 ]] && local out=$(conf_read php-opcache-reval) || local out="false"
+	
+	# PHP disable_functions
+	elif [[ $1 == "php-disable-functions" ]]; then
+		if [[ -z $(conf_read php-disable-functions) ]]; then
+			local out="pcntl_alarm,pcntl_fork,pcntl_waitpid,pcntl_wait,pcntl_wifexited,pcntl_wifstopped,pcntl_wifsignaled,pcntl_wifsignaled,pcntl_wifcontinued,pcntl_wexitstatus,pcntl_wtermsig,pcntl_wstopsig,pcntl_signal,pcntl_signal_get_handler,pcntl_signal_dispatch,pcntl_get_last_error,pcntl_strerror,pcntl_sigprocmask,pcntl_sigwaitinfo,pcntl_sigtimedwait,pcntl_exec,pcntl_getpriority,pcntl_setpriority,pcntl_async_signals,posix_ctermid,posix_getcwd,posix_getegid,posix_geteuid,posix_getgid,posix_getgrgid,posix_getgrnam,posix_getgroups,posix_getlogin,posix_getpgid,posix_getpgrp,posix_getpid,posix,_getppid,posix_getpwuid,posix_getrlimit,posix_getsid,posix_getuid,posix_isatty,posix_kill,posix_mkfifo,posix_setegid,posix_seteuid,posix_setgid,posix_setpgid,posix_setsid,posix_setuid,posix_times,posix_ttyname,posix_uname,socket_accept,socket_bind,socket_clear_error,socket_close,socket_connect,socket_listen,socket_create_listen,socket_read,socket_create_pair,stream_socket_server,proc_open,proc_close,proc_nice,proc_terminate,dl,link,highlight_file,show_source,diskfreespace,disk_free_space,getmyuid,popen,escapeshellcmd,symlink,shell_exec,exec,system,passthru"
+		else
+			local out=$(conf_read php-disable-functions)
+		fi
+	
+	# PHP Fopen Wrappers
+	elif [[ $1 == "php-allow-url-fopen" ]]; then
+		[[ $(conf_read php-allow-url-fopen) == "true" ]] && local out="On" || local out="Off"
 	
 	# Redis Memory
 	elif [[ $1 == "redis-max-mem" ]]; then
@@ -1966,6 +1977,13 @@ smtp_backup_recovery() {
 			echo "${red}[ERROR] SMTP Configuration recovery failed! ${end}"
 		fi
 	fi
+}
+
+
+# Compare versions format numbers!
+# Example: [[ $(version $VAR) -ge $(version "6.2.0") ]]
+version () {
+	echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'
 }
 
 
