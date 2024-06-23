@@ -370,9 +370,9 @@
 
 # PHP maximum amount of memory that a script is allowed to allocate
 # Values: numeric int (MB)
-# Default: 192
+# Default: 256
 ###########################
-#php-max-mem:192
+#php-max-mem:256
 
 
 # PHP maximum time in seconds a script is allowed to run before it is terminated

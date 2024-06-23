@@ -839,6 +839,7 @@ mysql_tool_pma() {
 
 set_timezone() {
 	if [[ -n $(conf_read timezone) ]] && grep -Fxq $(conf_read timezone) /opt/webinoly/lib/timezone.dat; then
+		sudo systemctl daemon-reload # Prevent some warnings, also useful in server-reset!
 		sudo timedatectl set-timezone $(conf_read timezone)
 		if [[ $(conf_read php) == "true" ]]; then
 			sudo sed -i "/date.timezone =/c\date.timezone = $(conf_read timezone)" /etc/php/$(conf_read php-ver)/fpm/php.ini
