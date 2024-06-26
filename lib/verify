@@ -659,8 +659,8 @@ if [[ -z $critical_mode ]]; then
 		local ver_three_war="1"
 	fi
 
-	# Check for PHP version
 	if [[ $(conf_read php) == "true" ]]; then
+		# Check for PHP version
 		local ver_php_ver=$(php -v | grep -m1 "" | sed 's/PHP \([^\-]*\).*/\1/' | cut -f 1-2 -d'.')
 		
 		if [[ $(conf_read php-ver) != $ver_php_ver ]]; then
@@ -676,6 +676,12 @@ if [[ -z $critical_mode ]]; then
 			local ver_three_war="1"
 		#elif [[ $ver_php_ver == "8.1" ]]; then
 		#	echo "${blu}${dim}- [INFO] PHP v8.2 or later is recommended to get an optimal perfomance! (Current: ${ver_php_ver}) ${end}${red}"
+		fi
+		
+		# Security check...
+		if [[ $(conf_read php-disable-functions) == "off" ]]; then
+			echo "${dim}- [WARNING] PHP Security is compromised! (disable_functions)${end}${red}"
+			local ver_three_war="1"
 		fi
 	fi
 

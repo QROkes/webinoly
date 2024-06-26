@@ -2007,8 +2007,8 @@ ads_donate() {
 		echo "${blu}"
 		echo "****************************************************************************"
 		echo "********************     ${bol}Are you enjoying Webinoly?${end}${blu}     ********************"
-		echo "***  ${dim}With just \$1 you can make a difference to keep this project alive!${end}${blu}  ***"
-		echo "***********    ${bol}Donate Now!${end}${blu}${dim} https://github.com/sponsors/QROkes${end}${blu}    ***********"
+		echo "****  ${dim}Join us and be part of our small and selected Premium Community.${end}${blu}  ****"
+		echo "***************       ${dim} https://webinoly.com/premium/ ${end}${blu}       ****************"
 		echo "****************************************************************************"
 		echo "${end}"
 		conf_write cron-ads $EPOCHSECONDS
