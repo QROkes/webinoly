@@ -415,8 +415,9 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	sudo sed -i "/fastcgi_cache_path/c \fastcgi_cache_path /run/nginx-cache levels=1:2 keys_zone=WORDPRESS:50m max_size=$(((9*$ramb*$(check_var run-folder-size))/1000))m inactive=7d;" /etc/nginx/conf.d/fastcgi.conf
 	sudo sed -i "/fastcgi_read_timeout/c \fastcgi_read_timeout $(check_var php-max-time)s;" /etc/nginx/conf.d/fastcgi.conf
 	
-	# www-data sftp default uploads permissions 755 and 644, instead of 775 and 664.
-	sudo sed -i '/USERGROUPS_ENAB/c \USERGROUPS_ENAB no' /etc/login.defs
+	# www-data sftp default uploads permissions 750 and 640, instead of 775 and 664.
+	sudo sed -i '/USERGROUPS_ENAB /c \USERGROUPS_ENAB no' /etc/login.defs
+	sudo sed -i '/^UMASK/c \UMASK		027' /etc/login.defs
 
 	# Check for dynamic variables.
 	sudo systemctl restart nginx # We need to kill the process, don't use reload (I don't know why here, but it's needed!)
@@ -526,8 +527,9 @@ php_optim() {
 	sudo sed -i -r '/^[;]?pm.max_requests =/c\pm.max_requests = 1000' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i -r '/^[;]?pm.status_path =/c\pm.status_path = /status' /etc/php/$ver/fpm/pool.d/www.conf
 	sudo sed -i -r '/^[;]?ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i -r '/^[;]?listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i -r '/^[;]?listen.allowed_clients = /c\listen.allowed_clients = 127.0.0.1' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i -r '/^[;]?listen.mode = /c\listen.mode = 0600' /etc/php/$ver/fpm/pool.d/www.conf
+	#sudo sed -i -r '/^[;]?listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
+	#sudo sed -i -r '/^[;]?listen.allowed_clients = /c\listen.allowed_clients = 127.0.0.1' /etc/php/$ver/fpm/pool.d/www.conf
 	
 	[[ $(conf_read php-tool-redis) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
 	conf_write php-optim true
@@ -818,8 +820,8 @@ mysql_tool_pma() {
 		sudo cp /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/config.sample.inc.php /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/config.inc.php
 		sudo sed -i "/blowfish_secret/c \$cfg['blowfish_secret'] = '$(pwgen -s -1 32)';" /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/config.inc.php
 		sudo chown -R www-data:www-data /var/www/$ADMIN_TOOLS_SITE/htdocs/pma
-		sudo find /var/www/$ADMIN_TOOLS_SITE/htdocs/pma -type f -print0 | sudo xargs -r -0 chmod 644
-		sudo find /var/www/$ADMIN_TOOLS_SITE/htdocs/pma -type d -print0 | sudo xargs -r -0 chmod 755
+		sudo find /var/www/$ADMIN_TOOLS_SITE/htdocs/pma -type f -print0 | sudo xargs -r -0 chmod 640
+		sudo find /var/www/$ADMIN_TOOLS_SITE/htdocs/pma -type d -print0 | sudo xargs -r -0 chmod 750
 		
 		conf_write mysql-tool-pma true
 		

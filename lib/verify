@@ -1132,8 +1132,8 @@ if [[ -z $critical_mode ]]; then
 	# /var/www
 	if [[ -d /var/www ]]; then
 		local ver_perm_user=$(find /var/www -path "/var/www/*" ! -path "/var/www/\.*" ! -user www-data | head -10)
-		local ver_perm_dire=$(find /var/www ! -path "/var/www/\.*" -type d ! -perm 755 | head -10) # Exclude dotted folders
-		local ver_perm_file=$(find /var/www ! -path "/var/www/\.*/*" -type f ! -perm 644 | head -10) # Exclude files inside dotted folders
+		local ver_perm_dire=$(find /var/www ! -path "/var/www/\.*" -type d -perm /22 | head -10) # Exclude dotted folders (i.e.: 755 octal XOR 777 octal)
+		local ver_perm_file=$(find /var/www ! -path "/var/www/\.*/*" -type f -perm /133 | head -10) # Exclude files inside dotted folders (i.e.: 644 octal XOR 777 octal)
 
 		if [[ $(conf_read login-www-data) != "true" && -d /var/www && $(stat -c '%U' /var/www) != "www-data" ]]; then
 			echo "${dim}- [WARNING] Directory owner is not 'www-data' /var/www ${end}${red}"
@@ -1147,11 +1147,11 @@ if [[ -z $critical_mode ]]; then
 			local ver_eight_war="1"
 		fi
 		if [[ -n $ver_perm_dire ]]; then
-			echo "$ver_perm_dire" | sed "s/^/${dim}- \[WARNING\] Directory permission is not 755 /" | sed "s/$/${end}${red}/"
+			echo "$ver_perm_dire" | sed "s/^/${dim}- \[WARNING\] Directory permission is more than 755 /" | sed "s/$/${end}${red}/"
 			local ver_eight_war="1"
 		fi
 		if [[ -n $ver_perm_file ]]; then
-			echo "$ver_perm_file" | sed "s/^/${dim}- \[WARNING\] File permission is not 644 /" | sed "s/$/${end}${red}/"
+			echo "$ver_perm_file" | sed "s/^/${dim}- \[WARNING\] File permission is more than 644 /" | sed "s/$/${end}${red}/"
 			local ver_eight_war="1"
 		fi
 	fi
@@ -1181,7 +1181,7 @@ if [[ -z $critical_mode ]]; then
 			local ver_ssh_owner=$(find $ver_check_dir/.ssh ! -user $ver_check_user | head -10)
 			local ver_ssh_dire=$(sudo find $ver_check_dir/.ssh -type d ! -perm 700 | head -10)
 			local ver_ssh_file=$(sudo find $ver_check_dir/.ssh ! -path "$ver_check_dir/.ssh/*.pub" -type f ! -perm 600 | head -10)
-			local ver_ssh_fpub=$(sudo find $ver_check_dir/.ssh -path "$ver_check_dir/.ssh/*.pub" -type f ! -perm 644 | head -10)
+			local ver_ssh_fpub=$(sudo find $ver_check_dir/.ssh -path "$ver_check_dir/.ssh/*.pub" -type f -perm /133 | head -10) # (i.e.: 644 octal XOR 777 octal)
 			
 			if [[ -n $ver_ssh_owner ]]; then
 				echo "$ver_ssh_owner" | sed "s/^/${dim}- \[WARNING\] File owner is not '${ver_check_user}' /" | sed "s/$/${end}${red}/"
@@ -1196,7 +1196,7 @@ if [[ -z $critical_mode ]]; then
 				local ver_eight_war="1"
 			fi
 			if [[ -n $ver_ssh_fpub ]]; then
-				echo "$ver_ssh_fpub" | sed "s/^/${dim}- \[WARNING\] File permission is not 644 /" | sed "s/$/${end}${red}/"
+				echo "$ver_ssh_fpub" | sed "s/^/${dim}- \[WARNING\] File permission is more than 644 /" | sed "s/$/${end}${red}/"
 				local ver_eight_war="1"
 			fi
 		fi

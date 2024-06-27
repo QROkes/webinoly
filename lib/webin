@@ -445,8 +445,9 @@ webinoly_update() {
 
 fix_permissions() {
 	# https://github.com/QROkes/webinoly/issues/49
-	sudo find /var/www ! -path "/var/www/\.*" -type d -print0 | sudo xargs -r -0 chmod 755
-	sudo find /var/www ! -path "/var/www/\.*" -type f -print0 | sudo xargs -r -0 chmod 644
+	sudo find /var/www/* ! -path "/var/www/\.*" -type d -print0 | sudo xargs -r -0 chmod 750
+	sudo find /var/www/* ! -path "/var/www/\.*" -type f -print0 | sudo xargs -r -0 chmod 640
+	sudo chmod 755 /var/www
 	
 	if [[ -d /var/www/.ssh ]]; then
 		sudo find /var/www/.ssh -type d -print0 | sudo xargs -r -0 chmod 700
