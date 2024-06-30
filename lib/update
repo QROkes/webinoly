@@ -336,6 +336,7 @@ oneseven_to_oneight() {
 }
 
 
+# v1.18.0
 oneight_to_onenine() {
 	# Regenerate conf file
 	if [[ -f /opt/webinoly/webinoly.conf ]]; then
@@ -368,16 +369,35 @@ oneight_to_onenine() {
 }
 
 
+# v1.18.3
+onenine_to_oneten() {
+	# Regenerate conf file
+	if [[ -f /opt/webinoly/webinoly.conf ]]; then
+		mv /opt/webinoly/webinoly.conf /opt/webinoly/webinoly.conf.old
+		IFS=$'\n' # FOR loop takes whitespace as a delimiter, so IFS overwrite this.
+		for i in $(grep -E "^([a-z\-]+)\:.*$" /opt/webinoly/webinoly.conf.old)
+		do
+			conf_write $(echo $i | cut -d':' -f 1 -s) $(echo $i | cut -d':' -f 2- -s)
+		done
+	fi
+	
+	# Backups to S3 not working in 24.04
+	[[ $(conf_read nginx-tool-bkp) == "true" && $(lsb_release -c | cut -d':' -f 2 | xargs) == "noble" ]] && sudo /opt/duplicity/bin/pip install boto3
+}
+
+
 # Version numbers without point
-[[ ${oldver//.} -lt 11 ]] && onezero_to_oneone
-[[ ${oldver//.} -lt 12 ]] && oneone_to_onetwo
-[[ ${oldver//.} -lt 13 ]] && onetwo_to_onethree
-[[ ${oldver//.} -lt 14 ]] && onethree_to_onefour
-[[ ${oldver//.} -lt 15 ]] && onefour_to_onefive
-[[ ${oldver//.} -lt 16 ]] && onefive_to_onesix
-[[ ${oldver//.} -lt 17 ]] && onesix_to_oneseven
-[[ ${oldver//.} -lt 18 ]] && oneseven_to_oneight
-[[ ${oldver//.} -lt 19 ]] && oneight_to_onenine
+[[ $(version $oldver) -lt $(version "1.1") ]] && onezero_to_oneone
+[[ $(version $oldver) -lt $(version "1.2") ]] && oneone_to_onetwo
+[[ $(version $oldver) -lt $(version "1.3") ]] && onetwo_to_onethree
+[[ $(version $oldver) -lt $(version "1.4") ]] && onethree_to_onefour
+[[ $(version $oldver) -lt $(version "1.5") ]] && onefour_to_onefive
+[[ $(version $oldver) -lt $(version "1.6") ]] && onefive_to_onesix
+[[ $(version $oldver) -lt $(version "1.7") ]] && onesix_to_oneseven
+[[ $(version $oldver) -lt $(version "1.8") ]] && oneseven_to_oneight
+[[ $(version $oldver) -lt $(version "1.9") ]] && oneight_to_onenine
+[[ $(version $oldver) -lt $(version "1.10") ]] && onenine_to_oneten
+
 
 # Update PIP packages!
 if [[ $(conf_read nginx-tool-bkp) == "true" && $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(jammy|focal)$ ]]; then

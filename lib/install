@@ -495,10 +495,8 @@ php_optim() {
 	sudo sed -i -r "/^[;]?memory_limit =/c\memory_limit = ${phpmem}M" /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r "/^[;]?max_input_vars =/c\max_input_vars = $(check_var php-max-input-vars)" /etc/php/$ver/fpm/php.ini
 	
-	# Remove this non-sense restriction in the next stack update (1.10)
-	# We can not make it default because not all conf files have this option because it was included in a minor release (1.18.2)
-	[[ -n $(conf_read php-disable-functions) && $(conf_read php-disable-functions) != "off" ]] && sudo sed -i -r "/^[;]?disable_functions =/c\disable_functions = $(check_var php-disable-functions)" /etc/php/$ver/fpm/php.ini
-	[[ -n $(conf_read php-allow-url-fopen) ]] && sudo sed -i -r "/^[;]?allow_url_fopen =/c\allow_url_fopen = $(check_var php-allow-url-fopen)" /etc/php/$ver/fpm/php.ini
+	[[ $(conf_read php-disable-functions) != "off" ]] && sudo sed -i -r "/^[;]?disable_functions =/c\disable_functions = $(check_var php-disable-functions)" /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r "/^[;]?allow_url_fopen =/c\allow_url_fopen = $(check_var php-allow-url-fopen)" /etc/php/$ver/fpm/php.ini
 	
 	sudo sed -i -r "/^[;]?opcache.memory_consumption=/c\opcache.memory_consumption=$(check_var php-max-mem)" /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.interned_strings_buffer=/c\opcache.interned_strings_buffer=16' /etc/php/$ver/fpm/php.ini
@@ -1030,6 +1028,7 @@ stack_builder() {
 		else
 			[[ -f /usr/share/keyrings/nginx-archive-keyring.gpg && ( ! -s /usr/share/keyrings/nginx-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/nginx-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/nginx-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/nginx-archive-keyring.gpg ]] && wget -nv -O- https://nginx.org/keys/nginx_signing.key | sudo gpg --dearmor -o /usr/share/keyrings/nginx-archive-keyring.gpg
+			chmod 644 /usr/share/keyrings/nginx-archive-keyring.gpg
 			if [[ $(conf_read nginx-ppa) == "mainline" ]]; then
 				echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/mainline/ubuntu/ $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
 			else
@@ -1053,6 +1052,7 @@ stack_builder() {
 			[[ -f /usr/share/keyrings/php-archive-keyring.gpg && ( ! -s /usr/share/keyrings/php-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/php-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/php-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/php-archive-keyring.gpg ]] && wget -nv -O- 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xB8DC7E53946656EFBCE4C1DD71DAEAAB4AD4CAB6' | sudo gpg --dearmor -o /usr/share/keyrings/php-archive-keyring.gpg
 			echo "deb [signed-by=/usr/share/keyrings/php-archive-keyring.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
+			chmod 644 /usr/share/keyrings/php-archive-keyring.gpg
 		fi
 		
 		api-events_update ikp
@@ -1070,6 +1070,7 @@ stack_builder() {
 			[[ -f /usr/share/keyrings/redis-archive-keyring.gpg && ( ! -s /usr/share/keyrings/redis-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/redis-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/redis-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/redis-archive-keyring.gpg ]] && wget -nv -O- https://packages.redis.io/gpg | sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
 			echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/redis.list
+			chmod 644 /usr/share/keyrings/redis-archive-keyring.gpg
 		fi
 		
 		api-events_update ikr
@@ -1088,6 +1089,7 @@ stack_builder() {
 			[[ -f /usr/share/keyrings/mysql-archive-keyring.gpg && ( ! -s /usr/share/keyrings/mysql-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/mysql-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/mysql-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/mysql-archive-keyring.gpg ]] && wget -nv -O- 'https://repo.mysql.com/RPM-GPG-KEY-mysql-2023' | sudo gpg --dearmor -o /usr/share/keyrings/mysql-archive-keyring.gpg
 			echo "deb [signed-by=/usr/share/keyrings/mysql-archive-keyring.gpg] http://repo.mysql.com/apt/ubuntu $(lsb_release -cs) mysql-8.0" | sudo tee /etc/apt/sources.list.d/mysql.list
+			chmod 644 /usr/share/keyrings/mysql-archive-keyring.gpg
 		
 		# https://mariadb.org/download/?t=repo-config
 		elif [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
@@ -1097,6 +1099,7 @@ stack_builder() {
 			[[ -f /usr/share/keyrings/mariadb-archive-keyring.gpg && ( ! -s /usr/share/keyrings/mariadb-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/mariadb-archive-keyring.gpg | grep -m 1 '[^[:space:]]' )) ]] && sudo rm -rf /usr/share/keyrings/mariadb-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/mariadb-archive-keyring.gpg ]] && wget -nv -O- 'https://mariadb.org/mariadb_release_signing_key.asc' | sudo gpg --dearmor -o /usr/share/keyrings/mariadb-archive-keyring.gpg
 			echo "deb [signed-by=/usr/share/keyrings/mariadb-archive-keyring.gpg] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main" | sudo tee /etc/apt/sources.list.d/mariadb.list
+			chmod 644 /usr/share/keyrings/mariadb-archive-keyring.gpg
 		fi
 		
 		api-events_update ikm

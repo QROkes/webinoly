@@ -432,14 +432,14 @@
 # Note: Use 'off' value to disable this security feature (not-recommended).
 # Note: This feature is utilized to help secure your websites and reduce your attack surface by preventing the execution of potentially risky PHP functions that could be exploited by attackers. Our default settings restrict access to specific PHP functions that aren't critical for the vast majority of websites.
 ###########################
-php-disable-functions:pcntl_alarm,pcntl_fork,pcntl_waitpid,pcntl_wait,pcntl_wifexited,pcntl_wifstopped,pcntl_wifsignaled,pcntl_wifsignaled,pcntl_wifcontinued,pcntl_wexitstatus,pcntl_wtermsig,pcntl_wstopsig,pcntl_signal,pcntl_signal_get_handler,pcntl_signal_dispatch,pcntl_get_last_error,pcntl_strerror,pcntl_sigprocmask,pcntl_sigwaitinfo,pcntl_sigtimedwait,pcntl_exec,pcntl_getpriority,pcntl_setpriority,pcntl_async_signals,posix_ctermid,posix_getcwd,posix_getegid,posix_geteuid,posix_getgid,posix_getgrgid,posix_getgrnam,posix_getgroups,posix_getlogin,posix_getpgid,posix_getpgrp,posix_getpid,posix_getppid,posix_getpwuid,posix_getrlimit,posix_getsid,posix_getuid,posix_isatty,posix_kill,posix_mkfifo,posix_setegid,posix_seteuid,posix_setgid,posix_setpgid,posix_setsid,posix_setuid,posix_times,posix_ttyname,posix_uname,socket_accept,socket_bind,socket_clear_error,socket_close,socket_connect,socket_listen,socket_create_listen,socket_read,socket_create_pair,stream_socket_server,proc_open,proc_close,proc_nice,proc_terminate,dl,link,highlight_file,show_source,diskfreespace,disk_free_space,getmyuid,popen,escapeshellcmd,symlink,shell_exec,exec,system,passthru
+#php-disable-functions:pcntl_alarm,pcntl_fork,pcntl_waitpid,pcntl_wait,pcntl_wifexited,pcntl_wifstopped,pcntl_wifsignaled,pcntl_wifsignaled,pcntl_wifcontinued,pcntl_wexitstatus,pcntl_wtermsig,pcntl_wstopsig,pcntl_signal,pcntl_signal_get_handler,pcntl_signal_dispatch,pcntl_get_last_error,pcntl_strerror,pcntl_sigprocmask,pcntl_sigwaitinfo,pcntl_sigtimedwait,pcntl_exec,pcntl_getpriority,pcntl_setpriority,pcntl_async_signals,posix_ctermid,posix_getcwd,posix_getegid,posix_geteuid,posix_getgid,posix_getgrgid,posix_getgrnam,posix_getgroups,posix_getlogin,posix_getpgid,posix_getpgrp,posix_getpid,posix_getppid,posix_getpwuid,posix_getrlimit,posix_getsid,posix_getuid,posix_isatty,posix_kill,posix_mkfifo,posix_setegid,posix_seteuid,posix_setgid,posix_setpgid,posix_setsid,posix_setuid,posix_times,posix_ttyname,posix_uname,socket_accept,socket_bind,socket_clear_error,socket_close,socket_connect,socket_listen,socket_create_listen,socket_read,socket_create_pair,stream_socket_server,proc_open,proc_close,proc_nice,proc_terminate,dl,link,highlight_file,show_source,diskfreespace,disk_free_space,getmyuid,popen,escapeshellcmd,symlink,shell_exec,exec,system,passthru
 
 
 # PHP Fopen Wrappers (allow_url_fopen)
 # Values: boolean (true/false)
 # Default: false
 # Note: Determines whether PHP can retrieve URL objects, such as files. This functionality is typically disabled for security purposes, although certain scripts may require it to work correctly.
-php-allow-url-fopen:false
+#php-allow-url-fopen:false
 
 
 # Redis maximum amount of memory before eviction policies

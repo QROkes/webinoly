@@ -216,7 +216,7 @@ fi
 
 
 # Update stack!
-[[ -n $oldver && ${newver//.} -gt ${oldver//.} ]] && source /opt/webinoly/lib/update
+[[ -n $oldver && $(version $newver) -gt $(version $oldver) ]] && source /opt/webinoly/lib/update
 [[ -f /usr/bin/duply && -f /opt/webinoly/templates/general/duply ]] && sudo cp /opt/webinoly/templates/general/duply /usr/bin/ && sudo chmod 755 /usr/bin/duply
 
 # Stack installation
