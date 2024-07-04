@@ -1094,11 +1094,11 @@ stack_builder() {
 		# https://mariadb.org/download/?t=repo-config
 		elif [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
 			sudo apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc'
-			echo | sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main"
+			echo | sudo add-apt-repository "deb [arch=amd64,arm64,ppc64el] https://deb.mariadb.org/$(conf_read mysql-ver)/ubuntu $(check_osname) main"
 		else
 			[[ -f /usr/share/keyrings/mariadb-archive-keyring.gpg && ( ! -s /usr/share/keyrings/mariadb-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/mariadb-archive-keyring.gpg | grep -m 1 '[^[:space:]]' )) ]] && sudo rm -rf /usr/share/keyrings/mariadb-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/mariadb-archive-keyring.gpg ]] && wget -nv -O- 'https://mariadb.org/mariadb_release_signing_key.asc' | sudo gpg --dearmor -o /usr/share/keyrings/mariadb-archive-keyring.gpg
-			echo "deb [signed-by=/usr/share/keyrings/mariadb-archive-keyring.gpg] http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu $(check_osname) main" | sudo tee /etc/apt/sources.list.d/mariadb.list
+			echo "deb [signed-by=/usr/share/keyrings/mariadb-archive-keyring.gpg] https://deb.mariadb.org/$(conf_read mysql-ver)/ubuntu $(check_osname) main" | sudo tee /etc/apt/sources.list.d/mariadb.list
 			chmod 644 /usr/share/keyrings/mariadb-archive-keyring.gpg
 		fi
 		
