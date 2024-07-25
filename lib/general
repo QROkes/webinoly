@@ -4,7 +4,7 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.18.4"
+readonly app_version="1.18.5"
 readonly svr_version="1.11"
 readonly os_ubuntu_supported=(focal jammy noble) # https://ubuntu.com/about/release-cycle
 readonly php_supported=(7.4 8.0 8.1 8.2 8.3) # https://www.php.net/supported-versions.php
@@ -1579,7 +1579,7 @@ check_var() {
 	# PHP disable_functions
 	elif [[ $1 == "php-disable-functions" ]]; then
 		if [[ -z $(conf_read php-disable-functions) ]]; then
-			local out="pcntl_alarm,pcntl_fork,pcntl_waitpid,pcntl_wait,pcntl_wifexited,pcntl_wifstopped,pcntl_wifsignaled,pcntl_wifsignaled,pcntl_wifcontinued,pcntl_wexitstatus,pcntl_wtermsig,pcntl_wstopsig,pcntl_signal,pcntl_signal_get_handler,pcntl_signal_dispatch,pcntl_get_last_error,pcntl_strerror,pcntl_sigprocmask,pcntl_sigwaitinfo,pcntl_sigtimedwait,pcntl_exec,pcntl_getpriority,pcntl_setpriority,pcntl_async_signals,posix_ctermid,posix_getcwd,posix_getegid,posix_geteuid,posix_getgid,posix_getgrgid,posix_getgrnam,posix_getgroups,posix_getlogin,posix_getpgid,posix_getpgrp,posix_getpid,posix_getppid,posix_getpwuid,posix_getrlimit,posix_getsid,posix_getuid,posix_isatty,posix_kill,posix_mkfifo,posix_setegid,posix_seteuid,posix_setgid,posix_setpgid,posix_setsid,posix_setuid,posix_times,posix_ttyname,posix_uname,socket_accept,socket_bind,socket_clear_error,socket_close,socket_connect,socket_listen,socket_create_listen,socket_read,socket_create_pair,stream_socket_server,proc_open,proc_close,proc_nice,proc_terminate,dl,link,highlight_file,show_source,diskfreespace,disk_free_space,getmyuid,popen,escapeshellcmd,symlink,shell_exec,exec,system,passthru"
+			local out="pcntl_alarm,pcntl_fork,pcntl_waitpid,pcntl_wait,pcntl_wifexited,pcntl_wifstopped,pcntl_wifsignaled,pcntl_wifsignaled,pcntl_wifcontinued,pcntl_wexitstatus,pcntl_wtermsig,pcntl_wstopsig,pcntl_signal,pcntl_signal_get_handler,pcntl_signal_dispatch,pcntl_get_last_error,pcntl_strerror,pcntl_sigprocmask,pcntl_sigwaitinfo,pcntl_sigtimedwait,pcntl_exec,pcntl_getpriority,pcntl_setpriority,pcntl_async_signals,posix_ctermid,posix_getcwd,posix_getegid,posix_geteuid,posix_getgid,posix_getgrgid,posix_getgrnam,posix_getgroups,posix_getlogin,posix_getpgid,posix_getpgrp,posix_getpid,posix_getppid,posix_getpwuid,posix_getrlimit,posix_getsid,posix_getuid,posix_isatty,posix_kill,posix_mkfifo,posix_setegid,posix_seteuid,posix_setgid,posix_setpgid,posix_setsid,posix_setuid,posix_times,posix_ttyname,posix_uname,socket_accept,socket_bind,socket_clear_error,socket_close,socket_connect,socket_listen,socket_create_listen,socket_read,socket_create_pair,stream_socket_server,proc_open,proc_close,proc_nice,proc_terminate,dl,link,highlight_file,show_source,diskfreespace,disk_free_space,getmyuid,popen,escapeshellcmd,symlink,shell_exec,exec,system,passthru,putenv"
 		else
 			local out=$(conf_read php-disable-functions)
 		fi
