@@ -11,8 +11,8 @@ readonly php_supported=(7.4 8.0 8.1 8.2 8.3) # https://www.php.net/supported-ver
 readonly php_default="8.3"
 readonly mariadb_supported=(10.11 11.4) # https://mariadb.com/kb/en/mariadb-server-release-dates/
 readonly mariadb_default="11.4"
-readonly mysql_supported=(8.0)
-readonly mysql_default="8.0"
+readonly mysql_supported=(8.0 8.4) # https://endoflife.date/mysql
+readonly mysql_default="8.4"
 readonly tools_port_default="22222"
 
 # Additional Tools
@@ -1669,6 +1669,19 @@ check_var() {
 		local out="false"
 	fi
 	echo $out
+}
+
+
+cpu_arch() {
+	local arch=$(lscpu | grep "Vendor ID:" | cut -d ":" -f 2 -s | sed 's/^[ \t]*//')
+	
+	if [[ -n $(echo $arch | grep -oi "ARM") ]]; then
+		echo "ARM"
+	elif [[ -n $(echo $arch | grep -oi "Intel") ]]; then
+		echo "Intel"
+	else
+		echo "Unknown"
+	fi
 }
 
 

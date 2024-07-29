@@ -719,7 +719,8 @@ if [[ $(conf_read mysql) == "true" || $(conf_read mysql-client) == "true" ]]; th
 fi
 
 if [[ $(conf_read mysql) == "true" ]]; then
-	local ver_mysql_ver=$($MYSQL_COMMAND --version | grep -Eo "[0-9\.]+\-" | cut -f 2 -d' ' | cut -f 1-2 -d'.')
+	#local ver_mysql_ver=$($MYSQL_COMMAND --version | grep -Eo "[0-9\.]+\-" | cut -f 2 -d' ' | cut -f 1-2 -d'.')
+	local ver_mysql_ver=$($MYSQL_COMMAND --version | grep -Eo "[0-9]+\.[0-9]+\.[0-9]+" | cut -f 1-2 -d'.')
 	if [[ $(conf_read db-engine) == "mysql" ]]; then
 		if [[ -n $($MYSQL_COMMAND --version | grep -Fio "MariaDb") ]]; then
 			echo "- [ERROR] MySQL DB Engine in Configuration File is corrupted!"
@@ -803,7 +804,7 @@ if [[ -z $critical_mode ]]; then
 		fi
 		
 		# MySQL and MariaDB can be mixed, don't worry!
-		if ! [[ $ver_mysql_ver =~ ^(8.0|10.0|10.1|10.2|10.3|10.4|10.5|10.6|10.11|11.4)$ ]]; then
+		if ! [[ $ver_mysql_ver =~ ^(8.0|8.4|10.0|10.1|10.2|10.3|10.4|10.5|10.6|10.11|11.4)$ ]]; then
 			echo "${dim}- [WARNING] Unknown MySQL/MariaDB version!${end}${red}"
 			local ver_four_war="1"
 		elif [[ $ver_mysql_ver =~ ^(10.0|10.1|10.2|10.3|10.4)$ ]]; then

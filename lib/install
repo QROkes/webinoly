@@ -584,9 +584,9 @@ host = localhost
 	if [[ $(conf_read mysql-reinstall) == "true" && $(conf_read db-engine) != "mysql" ]]; then
 		echo "${blu}${dim}Seems like you are reinstalling MySQL/MariaDB... Upgrading your old tables!${end}"
 		$MYSQL_UPGRADE_COMMAND --user=admin --force --silent
-		conf_delete mysql-reinstall
 	fi
 	
+	conf_delete mysql-reinstall
 	conf_write mysql-optim true
 	echo "${gre}MySQL/MariaDB has been successfully Optimized by Webinoly! ${end}"
 	api-events_update im6
@@ -1088,7 +1088,12 @@ stack_builder() {
 		if [[ $(conf_read db-engine) == "mysql" ]]; then
 			[[ -f /usr/share/keyrings/mysql-archive-keyring.gpg && ( ! -s /usr/share/keyrings/mysql-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/mysql-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/mysql-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/mysql-archive-keyring.gpg ]] && wget -nv -O- 'https://repo.mysql.com/RPM-GPG-KEY-mysql-2023' | sudo gpg --dearmor -o /usr/share/keyrings/mysql-archive-keyring.gpg
-			echo "deb [signed-by=/usr/share/keyrings/mysql-archive-keyring.gpg] http://repo.mysql.com/apt/ubuntu $(lsb_release -cs) mysql-8.0" | sudo tee /etc/apt/sources.list.d/mysql.list
+			
+			# Stupid things that are only needed for MySQL.
+			# Be aware that they like to change names and syntax unexpectedly at anytime.
+			[[ $(conf_read mysql-ver) == "8.0" ]] && local mysql_repo_name="mysql-$(conf_read mysql-ver)" || local mysql_repo_name="mysql-$(conf_read mysql-ver)-lts"
+			
+			echo "deb [signed-by=/usr/share/keyrings/mysql-archive-keyring.gpg] http://repo.mysql.com/apt/ubuntu $(lsb_release -cs) ${mysql_repo_name}" | sudo tee /etc/apt/sources.list.d/mysql.list
 			chmod 644 /usr/share/keyrings/mysql-archive-keyring.gpg
 		
 		# https://mariadb.org/download/?t=repo-config

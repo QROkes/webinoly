@@ -467,10 +467,10 @@
 
 
 # MySQL/MariaDB Version
-# Values: https://mariadb.com/kb/en/mariadb-server-release-dates/ (at least latest three stable)
+# Values: https://mariadb.com/kb/en/mariadb-server-release-dates/ (LTS)
+# Values: https://endoflife.date/mysql (LTS)
 # Default: <latest-stable>
 # Note: (set before installing, server-reset not needed)
-# Note: In case of MySQL, 8.0 is the only supported version.
 # Note: NEVER change this value here when MySQL (MariaDB) package is already installed, use the proper command instead.
 # Same as: sudo stack -mysql-ver=10.6 (<-This is the proper command to change the MarianDB version even when is already installed)
 ###########################
