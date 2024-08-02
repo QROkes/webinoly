@@ -650,11 +650,6 @@ elif [[ -n $php ]]; then
 	[[ $answer = [Yy] || $php == "nginx" ]] && stack_builder nginx php false $build || stack_builder false php false $build
 	
 elif [[ -n $mysql ]]; then
-	if [[ $(conf_read db-engine) == "mysql" && $(cpu_arch) == "ARM" ]]; then
-		echo "${red}[ERROR] ARM processors are not supported by MySQL!${end}"
-		exit 1
-	fi
-	
 	[[ $(conf_read php) != "true" || $(conf_read nginx) != "true" ]] && build=light
 	[[ $mysql == "client" ]] && stack_builder false false mysql-client || stack_builder false false mysql $build
 

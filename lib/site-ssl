@@ -88,6 +88,9 @@ site_ssl_on() {
 	if [[ -n $manual && $manual != "http" && $manual != "dns" ]]; then
 		echo "${red}[ERROR] Invalid value for manual option!${end}"
 		exit 1
+	elif [[ $(is_forward $domain) == "true" ]]; then
+		echo "${red}[ERROR] SSL Certs are not supported in forwared domains!${end}"
+		exit 1
 	elif [[ ! -d /var/www/$path/htdocs && -z $root_path && -z $manual ]]; then
 		echo "${red}[ERROR] Seems like you are trying to request an SSL Certificate for a Parked/Mapped Domain."
 		echo "Please, use the '-root=domain.com' parameter to specify the main domain."
