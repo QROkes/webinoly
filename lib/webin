@@ -914,10 +914,13 @@ clear_caches() {
 	fi
 	if [[ $clear_cache =~ ^(memcache|memcached|all)$ ]]; then
 		if [[ $(conf_read php-tool-memcached) == "true" && -f /etc/memcached.conf ]]; then
-			memhost=$(grep ^-l /etc/memcached.conf | cut -f 2 -d ' ' | head -1)
-			memport=$(grep ^-p /etc/memcached.conf | cut -f 2 -d ' ' | head -1)
-			echo flush_all > /dev/tcp/$memhost/$memport
-			echo "${gre}- Memcached has been successfully cleared!${end}"
+			local memhost=$(grep ^-l /etc/memcached.conf | cut -f 2 -d ' ' | head -1)
+			local memport=$(grep ^-p /etc/memcached.conf | cut -f 2 -d ' ' | head -1)
+			if [[ -n $memhost && -n $memport ]] && echo flush_all > /dev/tcp/$memhost/$memport; then
+				echo "${gre}- Memcached has been successfully cleared!${end}"
+			else
+				echo "${red}- Memcached connection failed! ${dim}(/dev/tcp/$memhost/$memport)${end}"
+			fi
 		else
 			[[ $clear_cache != "all" ]] && echo "${red}[ERROR] We can not clear Memcache because is not installed!${end}"
 			err_cont=true
