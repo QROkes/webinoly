@@ -914,8 +914,8 @@ clear_caches() {
 	fi
 	if [[ $clear_cache =~ ^(memcache|memcached|all)$ ]]; then
 		if [[ $(conf_read php-tool-memcached) == "true" && -f /etc/memcached.conf ]]; then
-			memhost=$(grep ^-l /etc/memcached.conf | cut -f 2 -d ' ')
-			memport=$(grep ^-p /etc/memcached.conf | cut -f 2 -d ' ')
+			memhost=$(grep ^-l /etc/memcached.conf | cut -f 2 -d ' ' | head -1)
+			memport=$(grep ^-p /etc/memcached.conf | cut -f 2 -d ' ' | head -1)
 			echo flush_all > /dev/tcp/$memhost/$memport
 			echo "${gre}- Memcached has been successfully cleared!${end}"
 		else
