@@ -454,7 +454,7 @@ if [[ $(conf_read nginx) == "true" ]]; then
 		echo "- [ERROR] ADMIN_TOOLS_SITE variable is corrupted!" # You never know!
 		local ver_two_err="1"
 	fi
-	if [[ -n $(conf_read tools-port) && -n $(conf_read tools-site) && ( ! -f /etc/nginx/sites-available/$(conf_read tools-site) || ! -f /etc/nginx/sites-enabled/$(conf_read tools-site) ) ]]; then
+	if [[ -n $(conf_read tools-port) && -n $(conf_read tools-site) && $(conf_read tools-site) != "default" && ! -f /etc/nginx/sites-available/$(conf_read tools-site) ]]; then
 		echo "- [ERROR] Tools-Site seems to have a domain configured, but this site does not exist! ($(conf_read tools-site))"
 		local ver_two_err="1"
 	fi
