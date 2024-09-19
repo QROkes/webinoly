@@ -147,7 +147,7 @@
 # Default: default
 # Same as: sudo webinoly -tools-site
 ###########################
-tools-site:default
+#tools-site:default
 
 
 # Admin Tools Access Port

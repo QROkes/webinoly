@@ -327,6 +327,9 @@ nginx_optim() {
 	fi
 	
 	# Check if exists in case of server-reset
+	# These two files are only saved the first time Nginx is installed, we need a copy of the original file.
+	# Default: is the original default nginx response site, we need it to set the default site.
+	# Nginx conf: don't really need it, I just like to have a copy of the original nginx conf before replaced with the Webinoly custom conf.
 	[[ ! -f /opt/webinoly/templates/source/default ]] && sudo cp -p /etc/nginx/sites-available/default /opt/webinoly/templates/source/
 	[[ ! -f /opt/webinoly/templates/source/nginx.conf ]] && sudo cp -p /etc/nginx/nginx.conf /opt/webinoly/templates/source/
 	
