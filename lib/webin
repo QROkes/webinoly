@@ -311,7 +311,7 @@ mysql_public_access() {
 			else
 				local checkver=$(conf_read mysql-ver)
 				# We check 10.9 because 10.11 can cause issues when for example 11.4 (10.10 is a short term release, nobody should have it installed, so no problem in theory)
-				if ! [[ ${checkver//.} -gt 109 ]]; then
+				if ! [[ $(version $checkver) -gt $(version "10.9") ]]; then
 					echo "${red}[ERROR] IP lists in bind-address are supported starting with MariaDB v10.11.${end}"
 					exit 1
 				fi
@@ -419,8 +419,8 @@ webinoly_update() {
 		if [[ -z $checkver || -z $currentver ]] || ! [[ $checkver =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 			echo "${red}[ERROR] Version check service unavailable!${dim} (Webinoly API)${end}"
 			exit 1
-		elif [[ ${currentver//.} -ge ${checkver//.} ]]; then
-			echo "${gre}You currently have the latest version!${dim} (v${checkver})${end}"
+		elif [[ $(version $currentver) -ge $(version $checkver) ]]; then
+			echo "${gre}You currently have the latest version!${dim} (v${currentver})${end}"
 			exit 0
 		else
 			echo "${dim}Updating...${end}"

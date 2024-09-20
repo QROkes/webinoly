@@ -244,7 +244,7 @@ if [[ -z $critical_mode ]]; then
 	# Check if Webinoly is updated
 	local ver_currentver=$(conf_read app-version)
 	local ver_checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
-	if ! [[ -n $ver_checkver && -n $ver_currentver && ${ver_currentver//.} -ge ${ver_checkver//.} ]]; then
+	if ! [[ -n $ver_checkver && -n $ver_currentver && $(version $ver_currentver) -ge $(version $ver_checkver) ]]; then
 		echo "${dim}- [WARNING] Webinoly App is not updated. A new version is available!${end}${red}"
 		local ver_one_war="1"
 	fi

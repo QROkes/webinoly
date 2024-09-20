@@ -268,7 +268,7 @@ elif [[ -n $purge && -n $mysql ]]; then
 			else
 				mysqlver=$(conf_read mysql-ver)
 				# In 10.11 debconf variables changed!
-				[[ ${mysqlver//.} -lt 1011 ]] && mariadebconf="mariadb-server-${mysqlver}" || mariadebconf="mariadb-server"
+				[[ $(version $mysqlver) -lt $(version "10.11") ]] && mariadebconf="mariadb-server-${mysqlver}" || mariadebconf="mariadb-server"
 				
 				if [[ $mysql == "keep-data" ]]; then
 					echo "$mariadebconf	$mariadebconf/postrm_remove_databases	boolean false" | debconf-set-selections
