@@ -827,6 +827,11 @@ Match Group sftponly
 			foo=${falus%$suffix}
 			sudo sed -i "s/$falus/$foo/" /etc/ssh/sshd_config
 		fi
+		
+		# Not needed anymore!
+		# Remove in the future!
+		# Keep it just for compatibility with old instalations!
+		sudo sed -i '/www-data:/c\www-data:x:33:33:www-data:\/var\/www:\/usr\/sbin\/nologin' /etc/passwd
 
 		conf_write login-www-data false
 		conf_write sftp-www-data false
