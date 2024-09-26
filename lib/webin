@@ -794,11 +794,10 @@ www_data_sftp_access() {
 		sudo chown -R www-data:www-data /var/www
 
 		# www-data sftp-only access jail - if fails usrlib must be listed in /etc/shells
-		sudo usermod -s /usr/lib/openssh/sftp-server www-data
 		sudo addgroup --system sftponly > /dev/null 2>&1
 		sudo usermod -G sftponly www-data
 		sudo chown root:root /var/www
-		sudo sed -i "/Subsystem sftp/c\Subsystem sftp internal-sftp" /etc/ssh/sshd_config
+		sudo sed -i "/Subsystem	sftp/c\Subsystem	sftp	internal-sftp" /etc/ssh/sshd_config
 		sudo echo '# WebinolySFTPstart
 Match Group sftponly
 	ChrootDirectory /var/www
@@ -816,11 +815,10 @@ Match Group sftponly
 		echo "${gre}SFTP access for www-data user has been successfuly enabled! ${end}"
 	
 	elif [[ $login_www_data == "off" ]]; then
-		sudo sed -i '/www-data:/c\www-data:x:33:33:www-data:\/var\/www:\/usr\/sbin\/nologin' /etc/passwd
 		sudo gpasswd -d www-data sftponly  > /dev/null 2>&1
 		sudo delgroup sftponly > /dev/null 2>&1
 		sudo chown www-data:www-data /var/www
-		sudo sed -i "/Subsystem sftp/c\Subsystem sftp \/usr\/lib\/openssh\/sftp-server" /etc/ssh/sshd_config
+		sudo sed -i "/Subsystem	sftp/c\Subsystem	sftp	\/usr\/lib\/openssh\/sftp-server" /etc/ssh/sshd_config # This is the default value!
 		sudo sed -i '/WebinolySFTPstart/,/WebinolySFTPend/{/.*/d}' /etc/ssh/sshd_config
 		
 		falus=$( grep -Gi "^AllowUsers " /etc/ssh/sshd_config )
