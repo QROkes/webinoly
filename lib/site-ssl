@@ -125,6 +125,7 @@ site_ssl_on() {
 	echo "${end}"
 	[[ $subdomain == "false" ]] && echo "${blu}Please, be sure that${end} $domain ${blu}and${end} www.$domain ${blu}are both currently pointing (DNS) to this server. ${end}"
 	[[ $subdomain == "true" ]] && echo "${blu}Please, be sure that the${end} $domain ${blu}subdomain is currently pointing (DNS) to this server. ${end}"
+	echo "${blu}Firewall Settings: Port 80 (TCP) and port 443 (TCP and UDP) must be open (inbound and outbound). ${end}"
 	
 	# We need an email to notify each renew intent (cron)
 	while [[ -z $cermail ]]
