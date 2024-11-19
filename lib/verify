@@ -327,7 +327,7 @@ local ver_two_war="0"
 if [[ $(conf_read nginx) == "true" ]]; then
 	# Check if NGINX command is installed
 	if ! which nginx >/dev/null ; then
-		echo "- [ERROR] Seems like NGIN command is not installed!"
+		echo "- [ERROR] Seems like NGINX (cli) command is not installed!"
 		local ver_two_err="1"
 	fi
 	
@@ -480,18 +480,17 @@ fi
 if [[ -z $critical_mode ]]; then
 	if [[ $(conf_read nginx) != "true" ]]; then
 		if [[ -f /etc/nginx/nginx.conf ]]; then
-			echo "${dim}- [WARNING] Seems like NGINX is installed but Webinoly can not detect it!${end}${red}"
+			echo "${dim}- [WARNING] Seems like NGINX is installed but not found in Webinoly configuration!${end}${red}"
 			local ver_two_war="1"
-		fi
-		if [[ -f /etc/nginx/fastcgi.conf ]]; then
-			echo "${dim}- [WARNING] Seems like NGINX is installed but Webinoly can not detect it!${end}${red}"
+		elif [[ -f /etc/nginx/fastcgi.conf ]]; then
+			echo "${dim}- [WARNING] Seems like NGINX is installed but not found in Webinoly configuration!${end}${red}"
 			local ver_two_war="1"
 		fi
 	fi
 
 	if [[ $(conf_read nginx) != "true" && -n $(conf_read tools-port) ]]; then
 		if [[ -f /etc/nginx/sites-available/$ADMIN_TOOLS_SITE || -d /var/www/$ADMIN_TOOLS_SITE ]]; then
-			echo "${dim}- [WARNING] Seems like Nginx Tools are enabled but Webinoly can not detect it!${end}${red}"
+			echo "${dim}- [WARNING] Seems like Nginx Tools are enabled but not found in Webinoly configuration!${end}${red}"
 			local ver_two_war="1"
 		fi
 	fi
@@ -501,17 +500,17 @@ if [[ -z $critical_mode ]]; then
 		echo "${blu}${dim}- [INFO] Setting the Nginx default site/response to 'blackhole' is highly recommended!${end}${red}"
 	fi
 	if [[ -n $(conf_read default-site) && ! ( $(conf_read default-site) =~ ^(default|blackhole)$ ) && ! -L /etc/nginx/sites-enabled/$(conf_read default-site) ]]; then
-		echo "${dim}- [WARNING] Default site not found or is not enabled!${end}${red}"
+		echo "${dim}- [WARNING] Default site is set but not found or is not enabled!${end}${red}"
 		local ver_two_war="1"
 	fi
 	if [[ -n $(conf_read tools-site) && $(conf_read tools-site) != "default" && ! -L /etc/nginx/sites-enabled/$(conf_read tools-site) ]]; then
-		echo "${dim}- [WARNING] Tools site not found or is not enabled!${end}${red}"
+		echo "${dim}- [WARNING] Tools site is set but not found or is not enabled!${end}${red}"
 		local ver_two_war="1"
 	fi
 
 	# NGINX Conf check
 	if [[ $(conf_read nginx) != "true" && $(conf_read nginx-optim) == "true" ]]; then
-		echo "${dim}- [WARNING] NGINX Configuration corrupted!${end}${red}"
+		echo "${dim}- [WARNING] NGINX Configuration corrupted! (mismatch in Webinoly configuration)${end}${red}"
 		local ver_two_war="1"
 	fi
 	
@@ -566,7 +565,7 @@ local ver_three_war="0"
 if [[ $(conf_read php) == "true" ]]; then
 	# Check if PHP command is installed
 	if ! which php >/dev/null ; then
-		echo "- [ERROR] Seems like PHP command is not installed!"
+		echo "- [ERROR] Seems like PHP (cli) command is not installed!"
 		local ver_three_err="1"
 	fi
 	
@@ -638,24 +637,24 @@ fi
 
 if [[ -z $critical_mode ]]; then
 	if [[ -f /etc/php/$(conf_read php-ver)/fpm/php.ini && $(conf_read php) != "true" ]]; then
-		echo "${dim}- [WARNING] Seems like PHP is installed but Webinoly can not detect it!${end}${red}"
+		echo "${dim}- [WARNING] Seems like PHP is installed but not found in Webinoly configuration!${end}${red}"
 		local ver_three_war="1"
 	fi
 
 	if [[ $(conf_read php) != "true" && $(conf_read nginx) == "true" ]]; then
 		if [[ -f /var/www/$ADMIN_TOOLS_SITE/htdocs/status ]]; then
-			echo "${dim}- [WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!${end}${red}"
+			echo "${dim}- [WARNING] Seems like PHP Tools are enabled but not found in Webinoly configuration!${end}${red}"
 			local ver_three_war="1"
 		fi
 		if [[ -f /var/www/$ADMIN_TOOLS_SITE/htdocs/php/index.php ]]; then
-			echo "${dim}- [WARNING] Seems like PHP Tools are enabled but Webinoly can not detect it!${end}${red}"
+			echo "${dim}- [WARNING] Seems like PHP Tools are enabled but not found in Webinoly configuration!${end}${red}"
 			local ver_three_war="1"
 		fi
 	fi
 
 	# PHP Conf check
 	if [[ $(conf_read php) != "true" && $(conf_read php-optim) == "true" ]]; then
-		echo "${dim}- [WARNING] PHP Configuration corrupted!${end}${red}"
+		echo "${dim}- [WARNING] PHP Configuration corrupted! (mismatch in Webinoly configuration)${end}${red}"
 		local ver_three_war="1"
 	fi
 
@@ -669,7 +668,7 @@ if [[ -z $critical_mode ]]; then
 		fi
 		
 		if ! [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0|8.1|8.2|8.3)$ ]]; then
-			echo "${dim}- [WARNING] Unknown PHP version!${end}${red}"
+			echo "${dim}- [WARNING] Unknown PHP version! (${ver_php_ver}) ${end}${red}"
 			local ver_three_war="1"
 		elif [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0)$ ]]; then
 			echo "${dim}- [WARNING] You have an obsolete PHP version installed (${ver_php_ver}) that not even receive security updates!${end}${red}"
@@ -680,7 +679,7 @@ if [[ -z $critical_mode ]]; then
 		
 		# Security check...
 		if [[ $(conf_read php-disable-functions) == "off" ]]; then
-			echo "${dim}- [WARNING] PHP Security is compromised! (disable_functions)${end}${red}"
+			echo "${dim}- [WARNING] PHP Security is compromised! (disable_functions is off)${end}${red}"
 			local ver_three_war="1"
 		fi
 	fi
@@ -709,7 +708,7 @@ local ver_four_war="0"
 if [[ $(conf_read mysql) == "true" || $(conf_read mysql-client) == "true" ]]; then
 	# Check if MYSQL command is installed
 	if ! which mysql >/dev/null ; then
-		echo "- [ERROR] Seems like MYSQL command is not installed!"
+		echo "- [ERROR] Seems like MYSQL (cli) command is not installed!"
 		local ver_four_err="1"
 	fi
 	if [[ ! -d /etc/mysql ]]; then
@@ -805,7 +804,7 @@ if [[ -z $critical_mode ]]; then
 		
 		# MySQL and MariaDB can be mixed, don't worry!
 		if ! [[ $ver_mysql_ver =~ ^(8.0|8.4|10.0|10.1|10.2|10.3|10.4|10.5|10.6|10.11|11.4)$ ]]; then
-			echo "${dim}- [WARNING] Unknown MySQL/MariaDB version!${end}${red}"
+			echo "${dim}- [WARNING] Unknown MySQL/MariaDB version! (${ver_mysql_ver}) ${end}${red}"
 			local ver_four_war="1"
 		elif [[ $ver_mysql_ver =~ ^(10.0|10.1|10.2|10.3|10.4)$ ]]; then
 			echo "${dim}- [WARNING] You have an obsolete MariaDB version (${ver_mysql_ver}) installed that not even receive security updates!${end}${red}"
@@ -816,17 +815,17 @@ if [[ -z $critical_mode ]]; then
 	fi
 
 	if [[ $(conf_read mysql) != "true" && $(conf_read mysql-tool-pma) == "true" ]]; then
-		echo "${dim}- [WARNING] MySQL Configuration corrupted!${end}${red}"
+		echo "${dim}- [WARNING] MySQL Configuration corrupted! (phpMyAdmin is configured, MySQL is not) ${end}${red}"
 		local ver_four_war="1"
 	fi
 
 	if [[ -d /etc/mysql && $(conf_read mysql) != "true" && $(conf_read mysql-client) != "true" ]]; then
-		echo "${dim}- [WARNING] Seems like some MySQL data remains but MySQL is not installed or Webinoly can not detect it!${end}${red}"
+		echo "${dim}- [WARNING] Seems like some MySQL data remains but MySQL is not installed or not found in Webinoly configuration!${end}${red}"
 		local ver_four_war="1"
 	fi
 
 	if [[ ( -d /var/www/$ADMIN_TOOLS_SITE/htdocs/pma || -d /usr/share/phpmyadmin ) && $(conf_read mysql-tool-pma) != "true" ]]; then
-		echo "${dim}- [WARNING] Seems like phpMyAdmin is installed but Webinoly can not detect it!${end}${red}"
+		echo "${dim}- [WARNING] Seems like phpMyAdmin is installed but not found in Webinoly configuration!${end}${red}"
 		local ver_four_war="1"
 	fi
 	
@@ -854,7 +853,7 @@ if [[ -z $critical_mode ]]; then
 				local ver_four_war="1"
 			fi
 		fi
-		conf_delete quiet		
+		conf_delete quiet
 	fi
 
 
@@ -1023,7 +1022,7 @@ local ver_seven_war="0"
 if [[ $(conf_read php-tool-redis) == "true" ]]; then
 	# Check if REDIS command is installed
 	if ! which redis-cli >/dev/null ; then
-		echo "- [ERROR] Seems like Redis command is not installed!"
+		echo "- [ERROR] Seems like Redis (cli) command is not installed!"
 		local ver_seven_err="1"
 	fi
 	if [[ ! -d /etc/redis ]]; then
@@ -1053,7 +1052,7 @@ fi
 if [[ $(conf_read php-tool-memcached) == "true" ]]; then
 	# Check if MEMCACHED command is installed
 	if ! which memcached >/dev/null ; then
-		echo "- [ERROR] Seems like Memcached command is not installed!"
+		echo "- [ERROR] Seems like Memcached (cli) command is not installed!"
 		local ver_seven_err="1"
 	fi
 fi
@@ -1068,19 +1067,19 @@ fi
 if [[ $(conf_read nginx-tool-ssl) == "true" ]]; then
 	# Check if CERTBOT command is installed
 	if ! which certbot >/dev/null ; then
-		echo "- [ERROR] Seems like Certbot command is not installed!"
+		echo "- [ERROR] Seems like Certbot (cli) command is not installed!"
 		local ver_seven_err="1"
 	fi
 fi
 if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
 	# Check if DUPLY command is installed
 	if ! which duply >/dev/null ; then
-		echo "- [ERROR] Seems like Duply command is not installed!"
+		echo "- [ERROR] Seems like Duply (cli) command is not installed!"
 		local ver_seven_err="1"
 	fi
 	# Check if DUPLICITY command is installed
 	if ! which duplicity >/dev/null ; then
-		echo "- [ERROR] Seems like Duplicity command is not installed!"
+		echo "- [ERROR] Seems like Duplicity (cli) command is not installed!"
 		local ver_seven_err="1"
 	fi
 fi
@@ -1245,6 +1244,7 @@ if [[ -z $critical_mode ]]; then
 					local ver_nine_war="1"
 				
 				elif [[ $wp_dbhost_host == "localhost" && -n $wp_dbhost_port ]]; then
+					# Localhost (unix socket), a custom port will force TCP/IP protocol.
 					echo "${blu}${dim}- [INFO] Localhost with custom port could have a negative impact in performance (Site: $ver_domi | Host: ${wp_dbhost}).${end}${red}"
 					
 				elif [[ $wp_dbhost_host != "localhost" && ( -z $wp_dbhost_host || -z $wp_dbhost_port || -z $wp_dbuser || -z $wp_dbpass || -z $wp_dbname || $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass $wp_dbname) != "true" ) ]]; then
