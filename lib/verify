@@ -243,15 +243,20 @@ fi
 if [[ -z $critical_mode ]]; then
 	# Check if Webinoly is updated
 	local ver_currentver=$(conf_read app-version)
-	local ver_checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
-	if ! [[ -n $ver_checkver && -n $ver_currentver && $(version $ver_currentver) -ge $(version $ver_checkver) ]]; then
-		echo "${dim}- [WARNING] Webinoly App is not updated. A new version is available!${end}${red}"
-		local ver_one_war="1"
-	fi
-
-	if [[ $ver_currentver != $app_version ]]; then
+	if [[ -z $ver_currentver ]] || ! [[ $ver_currentver =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+		echo "- [ERROR] Webinoly Configuration file is corrupted! (Unable to retrieve version info from 'app-version')"
+		local ver_one_err="1"
+	elif [[ $ver_currentver != $app_version ]]; then
 		echo "${dim}- [WARNING] Webinoly App version check is corrupted! (Installed: $app_version != Conf: ${ver_currentver}) ${end}${red}"
 		local ver_one_war="1"
+	else
+		local ver_checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
+		if [[ -z $ver_checkver ]] || ! [[ $ver_checkver =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+			echo "${blu}${dim}- [INFO] Webinoly API Unavailable! (version check failed)${end}${red}"
+		elif [[ $(version $ver_checkver) -gt $(version $ver_currentver) ]]; then
+			echo "${dim}- [WARNING] Webinoly App is not updated. A new version is available!${end}${red}"
+			local ver_one_war="1"
+		fi
 	fi
 	
 	# Configuration File - Check for duplicate directives
@@ -550,7 +555,7 @@ if [[ -z $critical_mode ]]; then
 			echo "${blu}${dim}- [INFO] X-XSS Header is no longer recommended, use a strong CSP instead!${end}${red}"
 		fi
 		if [[ -n $(conf_read header-xfo) && $(conf_read header-xfo) != "sameorigin" && $(conf_read header-xfo) != "off" ]]; then
-			echo "${blu}${dim}- [INFO] X-XSS Header is no longer recommended, use a strong CSP instead!${end}${red}"
+			echo "${blu}${dim}- [INFO] X-XFO Header is no longer recommended, use a strong CSP instead!${end}${red}"
 		fi
 	fi
 

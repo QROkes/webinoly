@@ -411,13 +411,20 @@ webinoly_update() {
 	fi
 	
 	local currentver=$(conf_read app-version)
+	if [[ -z $currentver ]] || ! [[ $currentver =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+		echo "${red}[ERROR] Webinoly Configuration file is corrupted! ${dim}(Unable to retrieve version info from 'app-version')${end}"
+		exit 1
+	elif [[ $currentver != $app_version ]]; then
+		echo "${red}[ERROR] Webinoly App version check is corrupted! ${dim}(Installed: $app_version != Conf: ${currentver}) ${end}"
+		exit 1
+	fi
 	
 	if [[ -n $update && $update != true ]]; then
 		local branch="-ver=${update}"
 	else
 		local checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
-		if [[ -z $checkver || -z $currentver ]] || ! [[ $checkver =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-			echo "${red}[ERROR] Version check service unavailable!${dim} (Webinoly API)${end}"
+		if [[ -z $checkver ]] || ! [[ $checkver =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+			echo "${red}[ERROR] Webinoly API Unavailable! ${dim}(version check failed)${end}"
 			exit 1
 		elif [[ $(version $currentver) -ge $(version $checkver) ]]; then
 			echo "${gre}You currently have the latest version!${dim} (v${currentver})${end}"
