@@ -817,12 +817,6 @@ fi
 
 
 if [[ -z $critical_mode ]]; then
-	# MySQL RAM requirements!
-	if [[ $(conf_read db-engine) == "mysql" && $ram -lt 2 ]]; then
-		echo "${dim}- [WARNING] You have MySQL set as database engine, you should not use it in production with less than 2GB RAM. (4GB recommended) ${end}${red}"
-		local ver_four_war="1"
-	fi
-	
 	# Check for MySQL version
 	if [[ $(conf_read mysql) == "true" ]]; then		
 		if [[ $(conf_read mysql-ver) != $ver_mysql_ver ]]; then
@@ -830,6 +824,13 @@ if [[ -z $critical_mode ]]; then
 			local ver_four_war="1"
 		fi
 		
+		# MySQL RAM requirements!
+		if [[ $(conf_read db-engine) == "mysql" && $ram -lt 2 ]]; then
+			echo "${dim}- [WARNING] You have MySQL set as database engine, you should not use it in production with less than 2GB RAM. (4GB recommended) ${end}${red}"
+			local ver_four_war="1"
+		fi		
+		
+		# Versions!!!
 		if [[ $(conf_read db-engine) == "mysql" ]]; then
 			if ! [[ $ver_mysql_ver =~ ^(8.0|8.4)$ ]]; then
 				echo "${dim}- [WARNING] Unknown MySQL version! (${ver_mysql_ver}) ${end}${red}"

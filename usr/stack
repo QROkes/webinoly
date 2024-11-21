@@ -25,7 +25,8 @@ purge_mysql_client() {
 	[[ $(conf_read db-engine) == "mysql" ]] && sudo apt -y purge mysql-client || sudo apt -y purge mariadb-client
 	
 	if [[ $(conf_read db-engine) == "mysql" ]]; then
-		sudo rm -rf /etc/apt/trusted.gpg.d/mysql_release_signing_key.asc
+		sudo rm -rf /etc/apt/trusted.gpg.d/mysql_release_signing_key.asc # legacy!
+		sudo rm -rf /usr/share/keyrings/mysql-archive-keyring.gpg
 		sudo rm -rf /etc/apt/sources.list.d/mysql.list
 		
 	# APT-KEY deprecated in 22.04
@@ -33,9 +34,12 @@ purge_mysql_client() {
 		echo | sudo add-apt-repository --remove "http://mirrors.syringanetworks.net/mariadb/repo/$(conf_read mysql-ver)/ubuntu"
 		sudo apt-key del 0xF1656F24C74CD1D8
 	else
-		sudo rm -rf /etc/apt/trusted.gpg.d/mariadb_release_signing_key.asc
+		sudo rm -rf /etc/apt/trusted.gpg.d/mariadb_release_signing_key.asc # legacy!
+		sudo rm -rf /usr/share/keyrings/mariadb-archive-keyring.gpg
 		sudo rm -rf /etc/apt/sources.list.d/mariadb.list
 	fi
+	
+	[[ $mysql != "keep-data" ]] && sudo rm -rf /etc/mysql
 	
 	conf_write mysql-client purged
 }
@@ -263,8 +267,6 @@ elif [[ -n $purge && -n $mysql ]]; then
 					echo "mysql-community-server	mysql-community-server/remove-data-dir  boolean true" | debconf-set-selections
 				fi
 				sudo apt -y purge mysql-server mysql-common mysql-common
-				sudo rm -rf /usr/share/keyrings/mysql-archive-keyring.gpg
-				sudo rm -rf /etc/apt/sources.list.d/mysql.list
 			else
 				mysqlver=$(conf_read mysql-ver)
 				# In 10.11 debconf variables changed!
@@ -276,17 +278,16 @@ elif [[ -n $purge && -n $mysql ]]; then
 					echo "$mariadebconf	$mariadebconf/postrm_remove_databases	boolean true" | debconf-set-selections
 				fi
 				sudo apt -y purge mariadb-server mariadb-common mysql-common
-				sudo rm -rf /usr/share/keyrings/mariadb-archive-keyring.gpg
-				sudo rm -rf /etc/apt/sources.list.d/mariadb.list
 			fi
 			
+			# Keyrings and sources list removed in mysql-client!
 			purge_mysql_client
 			purge_autoremove="true"
 						
 			if [[ $mysql != "keep-data" ]]; then
-				sudo rm -rf /etc/mysql
+				#sudo rm -rf /etc/mysql # Removed in mysql-client
 				sudo rm -rf /var/lib/mysql
-				sudo rm -rf /usr/share/mysql
+				sudo rm -rf /usr/share/mysql*
 				conf_delete mysql-root
 				conf_delete mysql-admin
 			else

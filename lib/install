@@ -1158,7 +1158,15 @@ stack_builder() {
 		[[ ( $2 == "php" || $4 == "redis" ) && $(conf_read php) == "true" && $(conf_read php-tool-redis) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && php_tool_redis
 		[[ ( $2 == "php" || $4 == "memcached" ) && $(conf_read php) == "true" && $(conf_read php-tool-memcached) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && php_tool_memcached
 		
-		[[ $3 == "mysql-client" && $(conf_read mysql-client) != "true" ]] && mysql_client_install
+		if [[ $3 == "mysql-client" && $(conf_read mysql-client) != "true" ]]; then
+			mysql_client_install
+			# MySQL-Client: MariaDB creates /etc/mysql folder automatically when client only, MySQL NOT!
+			if [[ $(conf_read db-engine) == "mysql" && ! -d /etc/mysql/mysql.conf.d ]]; then
+				mkdir -p /etc/mysql/mysql.conf.d
+				sudo find /etc/mysql -type d -exec chmod 755 {} \;
+			fi
+		fi
+		
 		[[ $3 == "mysql" && $(conf_read mysql) != "true" ]] && mysql_client_install && mysql_install && local mysql_pass_display="true" && mysql_optim
 		[[ ( $3 == "mysql" || $4 == "pma" ) && $(conf_read mysql) == "true" && $(conf_read mysql-tool-pma) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]] && mysql_tool_pma
 		
