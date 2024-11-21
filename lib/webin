@@ -475,6 +475,11 @@ fix_permissions() {
 		sudo chown -R root:root /root/.ssh
 	fi
 	
+	# Keyrings should be publicly accessible
+	if [[ -d /usr/share/keyrings ]]; then
+		sudo find /usr/share/keyrings/* ! -path "/usr/share/keyrings/\.*" -type f -print0 | sudo xargs -r -0 chmod 644
+	fi
+	
 	sudo chown -R www-data:www-data /var/www
 	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
 }
