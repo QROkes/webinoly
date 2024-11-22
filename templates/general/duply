@@ -33,8 +33,14 @@
 #  - remove url_encode, test for invalid chars n throw error instead
 #
 #  CHANGELOG:
+#  2.5.3 (10.7.2024)
+#  - bugfix #140,141: "GPG_OPTS broken"
+#      see also https://duplicity.us/stable/duplicity.1.html#argparse-problem
+#  - detect gpg version and add '--pinentry-mode loopback' as duplicity does
+#    no need to it manually in GPG_OPTS anymore
+#
 #  2.5.2 (30.11.2023)
-#  - bug #139: "ampersand (&) in gpg passphrase breaks gpg tests"
+#  - bugfix #139: "ampersand (&) in gpg passphrase breaks gpg tests"
 #
 #  2.5.1 (4.10.2023)
 #  - quotewrap only strings with quotes ('") or spaces from now on
@@ -556,7 +562,7 @@ function lookup {
 ME_LONG="$0"
 ME="$(basename $0)"
 ME_NAME="${ME%%.*}"
-ME_VERSION="2.5.2"
+ME_VERSION="2.5.3"
 ME_WEBSITE="https://duply.net"
 
 # default config values
@@ -637,9 +643,9 @@ function using_info {
   # openbsd awk (-V, exitcode 0 when any program string is given regardless .e.g. "-W version", so place it last) 
   # some awks wait for input if they misinterpret/don't know the options, pipe '' as a precaution
   AWK_VERSION=$( lookup awk && ( 
-	echo | awk --version ||\
-	echo | awk -V ||\
-	echo | awk -W version ) 2>/dev/null | awk 'NR<=2&&tolower($0)~/(busybox|awk)/{success=1;print;exit} END{if(success<1) print "unknown"}' || echo "$NOTFOUND" )
+  echo | awk --version ||\
+  echo | awk -V ||\
+  echo | awk -W version ) 2>/dev/null | awk 'NR<=2&&tolower($0)~/(busybox|awk)/{success=1;print;exit} END{if(success<1) print "unknown"}' || echo "$NOTFOUND" )
   GREP_VERSION=$( lookup grep && grep --version 2>&1 | awk 'NR<=2&&tolower($0)~/(busybox|grep.*[0-9]+\.[0-9]+)/{success=1;print;exit} END{if(success<1) print "unknown"}' || echo "$NOTFOUND" )
 
   if [ -n "$PYTHON" ]; then
@@ -915,8 +921,6 @@ GPG_PW='${DEFAULT_GPG_PW}'
 #   or "--compress-algo=bzip2 --bzip2-compress-level=9"
 #   or "--personal-cipher-preferences AES256,AES192,AES..."
 #   or "--homedir ~/.duply" - keep keyring and gpg settings duply specific
-#   or "--pinentry-mode loopback" - needed for GPG 2.1+ _and_
-#      also enable allow-loopback-pinentry in your .gnupg/gpg-agent.conf
 #GPG_OPTS=''
 
 # disable preliminary tests with the following setting
@@ -1348,7 +1352,8 @@ function duplicity_params_global {
     var_isset 'GPG_PW_SIGN' && DUPL_ARG_ENC="${DUPL_ARG_ENC} SIGN_PASSPHRASE=$(qw "${GPG_PW_SIGN}")"
   fi
 
-  local GPG_OPTS=${GPG_OPTS:+"--gpg-options $(qw "${GPG_OPTS}")"}
+  # workaround python argparse issue https://duplicity.us/stable/duplicity.1.html#argparse-problem
+  local GPG_OPTS=${GPG_OPTS:+"--gpg-options=$(qw "${GPG_OPTS}")"}
 
   # set name for dupl archive folder, since 0.6.0
   if duplicity_version_ge 601; then
@@ -1898,6 +1903,44 @@ function gpg_agent_avail {
   return $ERR
 }
 
+# compare arg1 with "gpg --version" output, possible arg1 formats e.g. 
+#   2.5+ (greater equals), 1.3- (less or equals) or plain 2.2 (equals)
+#   returns 0 on success, 1 on failure or 255 on error
+function gpg_version_compare {
+  [ -n "$GPGVERSION_ERROR" ] && return 255
+  
+  GPGVERSION=$(gpg --version|awk '/^gpg \(GnuPG\) [0-9\.]+$/{print $NF;exit}')  || echo warning
+  
+  ! awk '!/^[0-9\.]+$/{exit 1}' <<< "$GPGVERSION" && {
+    # silently ignore, currently only used for gpg tests anyway
+    GPGVERSION_ERROR=1
+    return 255
+  }
+  GPGVERSION=( ${GPGVERSION//./ } )
+  
+  CMPIN=$( awk '{sub(/[+\-]*$/,"");print}' <<< "$1" )
+  CMPMODE=$( awk '{mode="-eq"}/-$/{mode="-le"}/+$/{mode="-ge"}{print mode;exit}' <<< "$1")
+  CMPVERSION=( ${CMPIN//./ } )
+
+  #echo ${GPGVERSION[@]} "/" ${CMPVERSION[@]} "/" $CMPMODE
+
+  local max=$( [ ${#GPGVERSION[@]} -gt ${#CMPVERSION[@]} ] && echo ${#GPGVERSION[@]} || echo ${#CMPVERSION[@]} )
+
+  #limit=$( [ $max -gt 0 ] && echo (($max-1)) || echo 0 )
+  local i gpg cmp
+  for ((i=0; i<$max; i++)); do
+    gpg=${GPGVERSION[$i]}
+    [ -z "$gpg" ] && gpg=0
+    cmp=${CMPVERSION[$i]}
+    [ -z "$cmp" ] && cmp=0
+    #echo $gpg $CMPMODE $cmp
+    # compare n fail early
+    ! [ $gpg $CMPMODE $cmp ] && { return 1; }
+  done
+  
+  return 0
+}
+
 function gpg_custom_binary {
   var_isset GPG && [ "$GPG" != "$DEFAULT_GPG" ] &&\
     echo "--gpg-binary $(qw "$GPG")"
@@ -2344,6 +2387,25 @@ GPG_TEST_PREFIX="$TEMP_DIR/${ME_NAME}.$$.$(date_fix %s)"
 function cleanup_gpgtest { 
   echo -en "Cleanup - Delete '${GPG_TEST_PREFIX}_*'"
   rm "${GPG_TEST_PREFIX}"_* 2>/dev/null && echo "(OK)" || echo "(FAILED)"
+}
+
+# add pinentry mode for gpg2.1+ and --use-agent not enabled, like duplicity does in gpg.py
+GPG_PINENTRY='--pinentry-mode=loopback'
+for p in $GPG_OPTS; do
+  # we respect already set --pinentry-mode though
+  $( awk '/^--pinentry-mode/{exit 0}{exit 1}' <<< "$p" ) && {
+    unset GPG_PINENTRY
+    break
+    }
+done
+for p in $GPG_USEAGENT "${dupl_opts[@]}" $DUPL_PARAMS; do
+  $( awk '/^--use-agent/{exit 0}{exit 1}' <<< "$p" ) && {
+    unset GPG_PINENTRY
+    break
+    }
+done
+gpg_version_compare "2.1+" && var_isset GPG_PINENTRY && {
+  GPG_OPTS="$GPG_OPTS $GPG_PINENTRY"
 }
 
 # signing enabled?
