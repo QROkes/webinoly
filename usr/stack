@@ -39,7 +39,16 @@ purge_mysql_client() {
 		sudo rm -rf /etc/apt/sources.list.d/mariadb.list
 	fi
 	
-	[[ $mysql != "keep-data" ]] && sudo rm -rf /etc/mysql
+	if [[ $mysql != "keep-data" ]]; then
+		sudo rm -rf /etc/mysql
+		sudo rm -rf /var/lib/mysql
+		sudo rm -rf /usr/share/mysql*
+		conf_delete mysql-root
+		conf_delete mysql-admin
+		echo "${gre}${dim}MySQL/MariaDB data succesffully removed!${end}"
+	else
+		echo "${blu}MySQL/MariaDB data was not removed.${end}"
+	fi
 	
 	conf_write mysql-client purged
 }
@@ -280,21 +289,13 @@ elif [[ -n $purge && -n $mysql ]]; then
 				sudo apt -y purge mariadb-server mariadb-common mysql-common
 			fi
 			
-			# Keyrings and sources list removed in mysql-client!
+			# Keyrings and sources list removed in mysql-client! (purge_mysql_client)
+			# keep-data moved to mysql-client! (purge_mysql_client)
+			
 			purge_mysql_client
 			purge_autoremove="true"
-						
-			if [[ $mysql != "keep-data" ]]; then
-				#sudo rm -rf /etc/mysql # Removed in mysql-client
-				sudo rm -rf /var/lib/mysql
-				sudo rm -rf /usr/share/mysql*
-				conf_delete mysql-root
-				conf_delete mysql-admin
-			else
-				echo "${blu}MySQL/MariaDB data was not removed.${end}"
-			fi
-			
 			conf_write mysql purged
+			
 			echo ""
 			echo "${gre}MySQL/MariaDB has been deleted successfully! ${end}"
 			echo ""
