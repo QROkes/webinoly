@@ -1161,10 +1161,28 @@ stack_builder() {
 		if [[ $3 == "mysql-client" && $(conf_read mysql-client) != "true" ]]; then
 			mysql_client_install
 			# MySQL-Client: MariaDB creates /etc/mysql folder automatically when client only, MySQL NOT!
-			if [[ $(conf_read db-engine) == "mysql" && ! -d /etc/mysql/mysql.conf.d ]]; then
-				mkdir -p /etc/mysql/mysql.conf.d
-				sudo find /etc/mysql -type d -exec chmod 755 {} \;
-			fi
+			# MySQL-Client: MariaDB doesn't create default CNF (sometimes) when reinstalling client alone. I don't know why!
+			[[ $(conf_read db-engine) == "mysql" && ! -d /etc/mysql/mysql.conf.d ]] && mkdir -p /etc/mysql/mysql.conf.d
+			[[ $(conf_read db-engine) != "mysql" && ! -d /etc/mysql/mariadb.conf.d ]] && mkdir -p /etc/mysql/mariadb.conf.d
+			[[ ! -d /etc/mysql/conf.d ]] && mkdir -p /etc/mysql/conf.d
+			
+			# We need to force our own CNF
+			# These files are very inconcistent, especially for MySQL
+			# Sometimes are not created, sometimes 'mysql.conf.d' folder is not included, etc...
+			# Seems like it only happens with mysql-client alone, mysql-server seems to be fine!
+			rm -rf /etc/mysql/my.cnf
+			touch /etc/mysql/my.cnf
+			echo "[client-server]
+# Port or socket location where to connect
+# port = 3306
+socket = /run/mysqld/mysqld.sock
+
+# Import all .cnf files from configuration directory
+!includedir /etc/mysql/conf.d/
+!includedir /etc/mysql/mariadb.conf.d/" >> /etc/mysql/my.cnf
+				
+			[[ $(conf_read db-engine) == "mysql" ]] && sed -i 's/mariadb/mysql/g' /etc/mysql/my.cnf
+			sudo find /etc/mysql -type d -exec chmod 755 {} \;
 		fi
 		
 		[[ $3 == "mysql" && $(conf_read mysql) != "true" ]] && mysql_client_install && mysql_install && local mysql_pass_display="true" && mysql_optim

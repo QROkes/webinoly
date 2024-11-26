@@ -275,7 +275,7 @@ elif [[ -n $purge && -n $mysql ]]; then
 				else
 					echo "mysql-community-server	mysql-community-server/remove-data-dir  boolean true" | debconf-set-selections
 				fi
-				sudo apt -y purge mysql-server mysql-common mysql-common
+				sudo apt -y purge mysql-server mysql-common
 			else
 				mysqlver=$(conf_read mysql-ver)
 				# In 10.11 debconf variables changed!
