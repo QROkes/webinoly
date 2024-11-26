@@ -778,7 +778,7 @@ if [[ $(conf_read mysql) == "true" ]]; then
 			echo "- [ERROR] MariaDB Apt Key not found!"
 			local ver_four_err="1"
 		fi
-		if [[ ! -f /etc/apt/sources.list || -z $(grep -Fo "mirrors.syringanetworks.net/mariadb/repo" /etc/apt/sources.list) ]]; then
+		if [[ ! -f /etc/apt/sources.list || -z $(grep -Fo "deb.mariadb.org" /etc/apt/sources.list) ]]; then
 			echo "- [ERROR] MariaDB PPA not found in sources list!"
 			local ver_four_err="1"
 		fi
