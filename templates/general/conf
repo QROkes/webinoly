@@ -400,7 +400,7 @@
 
 # PHP OpCache Validate Timestamps
 # Values: boolean (true/false)
-# Default: true
+# Default: (Not-Changed/system default)
 # Note: When this directive is disabled, you must reset OPcache manually or by restarting the Web server for changes to the filesystem to take effect.
 ###########################
 #php-opcache-timestamps:true
@@ -408,7 +408,7 @@
 
 # PHP OpCache Revalidate Frequency
 # Values: numeric int (seconds)
-# Default: 2
+# Default: (Not-Changed/system default)
 # Note: Raising this value can cause developers to notice that changes in PHP code not taking effect. (similar to validate timestamps)
 # Note: This configuration directive is ignored if opcache.validate_timestamps is disabled.
 # Note: A good value (10-15), production servers with not frequent changes in code (60).
@@ -441,6 +441,14 @@
 # Default: false
 # Note: Determines whether PHP can retrieve URL objects, such as files. This functionality is typically disabled for security purposes, although certain scripts may require it to work correctly.
 #php-allow-url-fopen:false
+
+
+# PHP Session Max Lifetime
+# Values: numeric int (seconds)
+# Default: (Not-Changed/system default)
+# Note: https://www.php.net/manual/en/session.configuration.php
+#php-session-max-lifetime:1440
+#php-session-cookie-lifetime:0
 
 
 # Redis maximum amount of memory before eviction policies

@@ -512,12 +512,18 @@ php_optim() {
 	sudo sed -i -r '/^[;]?opcache.enable_cli=/c\opcache.enable_cli=1' /etc/php/$ver/fpm/php.ini
 	sudo sed -i -r '/^[;]?opcache.enable=/c\opcache.enable=1' /etc/php/$ver/fpm/php.ini
 	
-	# Not set, unless non-empty!
-	if [[ $(check_var php-opcache-timestamps) != "false" ]]; then
+	# Not set, unless non-empty and valid!
+	if [[ -n $(check_var php-opcache-timestamps) ]]; then
 		sudo sed -i -r "/^[;]?opcache.validate_timestamps=/c\opcache.validate_timestamps=$(check_var php-opcache-timestamps)" /etc/php/$ver/fpm/php.ini
 	fi
-	if [[ $(check_var php-opcache-reval) != "false" ]]; then
+	if [[ -n $(check_var php-opcache-reval) ]]; then
 		sudo sed -i -r "/^[;]?opcache.revalidate_freq=/c\opcache.revalidate_freq=$(check_var php-opcache-reval)" /etc/php/$ver/fpm/php.ini
+	fi
+	if [[ -n $(check_var php-session-max-lifetime) ]]; then
+		sudo sed -i -r "/^[;]?session.gc_maxlifetime = /c\session.gc_maxlifetime = $(check_var php-session-max-lifetime)" /etc/php/$ver/fpm/php.ini
+	fi
+	if [[ -n $(check_var php-session-cookie-lifetime) ]]; then
+		sudo sed -i -r "/^[;]?session.cookie_lifetime = /c\session.cookie_lifetime = $(check_var php-session-cookie-lifetime)" /etc/php/$ver/fpm/php.ini
 	fi
 	
 	

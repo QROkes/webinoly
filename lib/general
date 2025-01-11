@@ -1570,11 +1570,37 @@ check_var() {
 	
 	# PHP opcache validate timestamps
 	elif [[ $1 == "php-opcache-timestamps" ]]; then
-		[[ $(conf_read php-opcache-timestamps) == "false" ]] && local out="0" || local out="1"
+		if [[ $(conf_read php-opcache-timestamps) == "false" ]]; then
+			local out="0"
+		elif [[ $(conf_read php-opcache-timestamps) == "true" ]]; then
+			local out="1"
+		else
+			local out=""
+		fi
 
 	# PHP opcache revalidate frequency
 	elif [[ $1 == "php-opcache-reval" ]]; then
-		[[ -n $(conf_read php-opcache-reval) && $(conf_read php-opcache-reval) =~ ^[0-9]+$ && $(conf_read php-opcache-reval) -ge 0 ]] && local out=$(conf_read php-opcache-reval) || local out="false"
+		if [[ -n $(conf_read php-opcache-reval) && $(conf_read php-opcache-reval) =~ ^[0-9]+$ && $(conf_read php-opcache-reval) -ge 0 ]]; then
+			local out=$(conf_read php-opcache-reval)
+		else
+			local out=""
+		fi
+	
+	# PHP Session Max Lifetime
+	elif [[ $1 == "php-session-max-lifetime" ]]; then
+		if [[ -n $(conf_read php-session-max-lifetime) && $(conf_read php-session-max-lifetime) =~ ^[0-9]+$ && $(conf_read php-session-max-lifetime) -ge 0 ]]; then
+			local out=$(conf_read php-session-max-lifetime)
+		else
+			local out=""
+		fi
+		
+	# PHP Session Cookie Lifetime
+	elif [[ $1 == "php-session-cookie-lifetime" ]]; then
+		if [[ -n $(conf_read php-session-cookie-lifetime) && $(conf_read php-session-cookie-lifetime) =~ ^[0-9]+$ && $(conf_read php-session-cookie-lifetime) -ge 0 ]]; then
+			local out=$(conf_read php-session-cookie-lifetime)
+		else
+			local out=""
+		fi
 	
 	# PHP disable_functions
 	elif [[ $1 == "php-disable-functions" ]]; then
