@@ -1005,10 +1005,10 @@ stack_builder() {
 		api-events_update ics
 		sudo apt -qq update
 		
-		# Usually comes by default with Ubuntu. Ensure we have it always! (software-properties-common debconf-utils zip)
+		# Usually comes by default with Ubuntu. Ensure we have it always! (software-properties-common snapd debconf-utils zip)
 		# Webinoly tools (pwgen unzip)
 		# Fix issue installing in some Digital Ocean droplets (dialog)
-		sudo apt -y -qq install software-properties-common debconf-utils zip pwgen unzip dialog
+		sudo apt -y -qq install software-properties-common snapd debconf-utils zip pwgen unzip dialog
 		
 		# Snap is installed by default since 16.04, but better be sure!
 		sudo snap install core
