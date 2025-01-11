@@ -827,6 +827,9 @@ createsite() {
 		sudo log $domain -only-error=off > /dev/null 2>&1
 	fi
 
+	# Force redirection "root" is now enabled by default!
+	[[ $subdomain != "true" ]] && sudo site $domain -force-redirect=root
+
 	# Blackhole default-site should be enabled after the first site is created!
 	[[ -z $(conf_read default-site) && $domain != $ADMIN_TOOLS_SITE ]] && webinoly -default-site=blackhole
 	
@@ -866,7 +869,7 @@ force_redirect() {
 			# Admin Tools!
 			sudo sed -i "/server_name /c \	server_name www.$domain;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			
-			echo "${gre}Force-Redirection to WWW has been successfully enabled!${end}"
+			echo "${gre}Force-Redirection${blu} (${domain} -> www.${domain}) ${gre}has been successfully enabled!${end}"
 		;;
 		"root")
 			[[ -n $rediron ]] && sudo sed -i '/WebinolyWWWredirectStart/,/WebinolyWWWredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
@@ -880,7 +883,7 @@ force_redirect() {
 			# Admin Tools!
 			sudo sed -i "/server_name /c \	server_name $domain;" /etc/nginx/sites-available/$ADMIN_TOOLS_SITE
 			
-			echo "${gre}Force-Redirection to non-WWW has been successfully enabled!${end}"
+			echo "${gre}Force-Redirection${blu} (www.${domain} -> ${domain}) ${gre}has been successfully enabled!${end}"
 		;;
 		"off")
 			if [[ -n $rediron ]]; then
