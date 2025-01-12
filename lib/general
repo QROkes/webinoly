@@ -831,8 +831,8 @@ is_domain() {
 	if ! [[ $1 =~ ^[\.0-9A-Za-z\-]+$ ]]; then
 		echo "false"
 	
-	# Check Lenght
-	elif [[ ${#1} -gt 67 ]]; then
+	# Check Total Lenght
+	elif [[ ${#1} -gt 255 ]]; then
 		echo "false"
 		
 	# Can not start or end with a hyphen
@@ -848,7 +848,22 @@ is_domain() {
 		echo "false"
 	
 	else
-		echo "true"
+		# Check if each subdomain-string is not more than 63 character lenght.
+		local c=1
+		local out="true"
+		while true; do
+			local sub_dom=$(echo $1 | cut -d'.' -f $c -s)
+			[[ -z $sub_dom && $c == 1 ]] && local sub_dom=$1 # Allow domains without a dot just for convenience!!!
+			[[ -z $sub_dom ]] && break
+			if [[ ${#sub_dom} -gt 63 ]]; then
+				local out="false"
+				break
+			else
+				local c=$((c+1))
+			fi			
+		done
+	
+		[[ $out == "true" ]] && echo "true" || echo "false"
 	fi
 }
 
