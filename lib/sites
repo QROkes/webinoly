@@ -965,15 +965,15 @@ force_redirect() {
 
 redirection_manager() {
 	if [[ -n $list ]]; then
-		[[ -n $raw || $list == "raw" ]] && echo "" || echo "${gre}"
+		echo "${gre}"
 		
 		if [[ -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
 			isred=$( grep -P "^# RedirectFrom: " /etc/nginx/apps.d/$domain-nginx.conf )
 			sudo sed -n '/RedirectFrom/{h;d;}; H; /To:/{x;p;}' /etc/nginx/apps.d/$domain-nginx.conf | sed '/# To:/ s/$/\n/' | sed 's/^# //'
 		fi
-		[[ -z $isred && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No redirections were found!${end}"
+		[[ -z $isred ]] && echo "${blu}[Empty] No redirections were found!"
 	
-		[[ -n $raw || $list == "raw" ]] && echo "" || echo "${end}"
+		echo "${end}"
 	elif [[ -n $delete ]]; then
 		echo ""
 		[[ -z $from || $from == "true" ]] && read -p "${blu}Redirect 'from path' to delete: ${end}" from
@@ -1994,31 +1994,25 @@ list_sites() {
 			[[ ${list,,} == "wpenv" && -z $(wp_config_read $domi WP_ENVIRONMENT_TYPE) ]] && continue
 		fi
 		
-		if [[ -z $raw && $list != "raw" ]]; then
-			[[ -d /var/www/$domi ]] && local sign="${gre} +" || local sign="${blu} *${gre}"
-			[[ ! -L /etc/nginx/sites-enabled/$domi ]] && local sign="${red} -"
+		[[ -d /var/www/$domi ]] && local sign="${gre} +" || local sign="${blu} *${gre}"
+		[[ ! -L /etc/nginx/sites-enabled/$domi ]] && local sign="${red} -"
 			
-			[[ $(is_wp $domi) == "true" && -n $(wp_config_read $domi WP_ENVIRONMENT_TYPE) ]] && local sype="$(site_type $domi):$(wp_config_read $domi WP_ENVIRONMENT_TYPE)" || local sype=$(site_type $domi)
+		[[ $(is_wp $domi) == "true" && -n $(wp_config_read $domi WP_ENVIRONMENT_TYPE) ]] && local sype="$(site_type $domi):$(wp_config_read $domi WP_ENVIRONMENT_TYPE)" || local sype=$(site_type $domi)
 			
-			[[ $(conf_read default-site) == $domi ]] && local check="${blu}${dim}($sype)(Default)" || local check="${blu}${dim}($sype)"
-			[[ $(conf_read tools-site) == $domi ]] && local check="${check}(Tools)"
-			[[ $(is_ssl $domi) != "true" ]] && local check="${check}${red}(NoSSL)" || local check="${check}${red}"
-			[[ $(is_ssl $domi) == "true" && $(is_ssl_staging $domi) == "true" ]] && local check="${check}(SSL-Staging)"
-			[[ $(is_log $domi) == "true" ]] && local check="${check}(AccessLog)"
+		[[ $(conf_read default-site) == $domi ]] && local check="${blu}${dim}($sype)(Default)" || local check="${blu}${dim}($sype)"
+		[[ $(conf_read tools-site) == $domi ]] && local check="${check}(Tools)"
+		[[ $(is_ssl $domi) != "true" ]] && local check="${check}${red}(NoSSL)" || local check="${check}${red}"
+		[[ $(is_ssl $domi) == "true" && $(is_ssl_staging $domi) == "true" ]] && local check="${check}(SSL-Staging)"
+		[[ $(is_log $domi) == "true" ]] && local check="${check}(AccessLog)"
 			
-			if [[ $(is_wp $domi) == "true" ]]; then
-				[[ $(is_cache $domi) =~ ^(wp|custom)$ ]] || local check="${check}(NoCache)"
-				[[ $(is_wp_auth $domi) != "true" ]] && local check="${check}(NoAdminAuth)"
-				[[ $(is_wp_debug $domi) == "true" ]] && local check="${check}(Debug)"
-			fi
-			
-			local outlist="$sign $domi $check ${end}"
-		elif [[ $list == "raw" || $raw =~ ^(all|parked|disabled|main|true)$ ]]; then
-			local outlist="$domi"
-		elif [[ -n $raw ]]; then
-			echo "${red}[ERROR] Please, enter a valid value for RAW!${end}"
-			exit 1
+		if [[ $(is_wp $domi) == "true" ]]; then
+			[[ $(is_cache $domi) =~ ^(wp|custom)$ ]] || local check="${check}(NoCache)"
+			[[ $(is_wp_auth $domi) != "true" ]] && local check="${check}(NoAdminAuth)"
+			[[ $(is_wp_debug $domi) == "true" ]] && local check="${check}(Debug)"
 		fi
+			
+		local outlist="$sign $domi $check ${end}"
+		
 		
 		if [[ -n $outlist ]]; then
 			echo "$outlist"
@@ -2026,7 +2020,7 @@ list_sites() {
 			local count=$(($count+1))
 		fi
 	done
-	[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No sites were found!${end}" || echo -e "\n${blu}Found:${end} $count sites"
+	[[ -z $nonemptylist ]] && echo "${blu}[Empty] No sites were found!${end}" || echo -e "\n${blu}Found:${end} $count sites"
 	echo ""
 }
 

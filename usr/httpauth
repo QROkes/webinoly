@@ -3,7 +3,7 @@
 # Http-Authentication Plugin
 # Syntax: httpauth <option> <argument>
 # Options: -add, -delete, -list, -wp-admin, -whitelist, -path
-# Arguments: -raw, -list, -exact
+# Arguments: -list, -exact
 
 source /opt/webinoly/lib/general
 check_for_parameters $@
@@ -150,15 +150,13 @@ elif [[ -n $whitelist ]]; then
 	api-events_update ha4
 	if [[ -z $purge ]]; then
 		if [[ -n $list ]]; then
-			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${blu}"
-			if [[ -f /etc/nginx/apps.d/whitelist-acl.conf && -z $raw ]]; then
+			echo "${blu}"
+			if [[ -f /etc/nginx/apps.d/whitelist-acl.conf ]]; then
 				sudo sed -n 's/^allow //p;' /etc/nginx/apps.d/whitelist-acl.conf | sudo sed -n 's/;$//p' | sed 's/^/+ /'
-			elif [[ -f /etc/nginx/apps.d/whitelist-acl.conf && -n $raw ]]; then
-				sudo sed -n 's/^allow //p;' /etc/nginx/apps.d/whitelist-acl.conf | sudo sed -n 's/;$//p'
 			else
-				[[ $list != "raw" && -z $raw ]] && echo "[Empty] No IP's were found!"
+				echo "[Empty] No IP's were found!"
 			fi
-			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
+			echo "${end}"
 		else
 			[[ $whitelist == true ]] && read -p "${blu}IP address to whitelist: ${end}" whitelist
 			
@@ -348,18 +346,16 @@ elif [[ $list == "protected" ]]; then
 	root=$( grep -F "acl.conf;" /etc/nginx/sites-available/$domain )
 	if [[ -n $root ]]; then
 		echo ""
-		[[ -z $raw ]] && echo "${blu}+ /" || echo "/"
+		echo "${blu}+ /"
 	elif [[ -z $root ]]; then
-		[[ -z $raw ]] && echo "${blu}" || echo ""
+		echo "${blu}"
 	fi
-	if [[ -f /etc/nginx/apps.d/$domain-nginx.conf && -z $raw ]]; then
+	if [[ -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
 		sudo sed -n 's/^# Path: //p;' /etc/nginx/apps.d/$domain-nginx.conf | sed 's/^/+ /'
-	elif [[ -f /etc/nginx/apps.d/$domain-nginx.conf && -n $raw ]]; then
-		sudo sed -n 's/^# Path: //p;' /etc/nginx/apps.d/$domain-nginx.conf
 	elif [[ -z $root ]]; then
-		[[ -z $raw ]] && echo "[Empty] No protected paths were found!"
+		echo "[Empty] No protected paths were found!"
 	fi
-	[[ -n $raw ]] && echo "" || echo "${end}"
+	echo "${end}"
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 	
@@ -371,12 +367,12 @@ elif [[ -n $list ]]; then
 		while read line
 		do
 			# Show only the user_name part, cut encrypted password string
-			[[ $list == "raw" || -n $raw ]] && echo "$line" | cut -f 1 -d ':' || echo "${gre}+ $(echo $line | cut -f 1 -d ':') ${end}"
+			echo "${gre}+ $(echo $line | cut -f 1 -d ':') ${end}"
 			nonemptylist=true
 		done
 		}
 	fi
-	[[ ( ! -s /etc/nginx/$authfile || -z $(cat -v /etc/nginx/$authfile | grep -m 1 '[^[:space:]]')) && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No users were found!${end}"
+	[[ ( ! -s /etc/nginx/$authfile || -z $(cat -v /etc/nginx/$authfile | grep -m 1 '[^[:space:]]')) ]] && echo "${blu}[Empty] No users were found!${end}"
 	echo ""
 	nginx_not="true" # Nginx-Reload not-needed.
 

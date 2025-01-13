@@ -1858,7 +1858,7 @@ custom_cache_global() {
 	fi	
 	
 	if [[ -n $list ]]; then
-		[[ -n $raw || $list == "raw" ]] && echo "" || echo "${gre}"
+		echo "${gre}"
 		
 		if [[ -f $confile ]]; then
 			[[ -n $query_string_never_cache ]] && local id="NeverCacheQueryString"
@@ -1866,17 +1866,12 @@ custom_cache_global() {
 			[[ -n $skip_cookie_cache ]] && local id="CacheSkipCookie"
 			[[ -n $skip_cache ]] && local id="CacheSkipURL"
 			
-			local isem=$(sudo sed -n "/# Value: /{h;d;}; H; /# $id/{x;p;}" $confile)
-			
-			if [[ -n $raw || $list == "raw" ]]; then
-				sudo sed -n "/# Value: /{h;d;}; H; /# $id/{x;p;}" $confile | sed -n '/# Value:/p' | sed 's/# Value: //g'
-			else
-				sudo sed -n "/# Value: /{h;d;}; H; /# $id/{x;p;}" $confile | sed -n '/# Value:/p' | sed 's/# Value: /+ /g'
-			fi
+			local isem=$(sudo sed -n "/# Value: /{h;d;}; H; /# $id/{x;p;}" $confile)	
+			sudo sed -n "/# Value: /{h;d;}; H; /# $id/{x;p;}" $confile | sed -n '/# Value:/p' | sed 's/# Value: /+ /g'
 		fi
-		[[ -z $isem && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No Cache Rules were found!${end}"
+		[[ -z $isem ]] && echo "${blu}[Empty] No Cache Rules were found!"
 	
-		[[ -n $raw || $list == "raw" ]] && echo "" || echo "${end}"
+		echo "${end}"
 	elif [[ -n $delete ]]; then
 		echo ""
 		[[ $skip_cache == "true" ]] && read -p "${blu}Cache Skip URL to delete: ${end}" skip_cache

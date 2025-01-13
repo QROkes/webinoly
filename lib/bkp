@@ -293,14 +293,12 @@ bkp_s3_profile() {
 		
 	elif [[ -n $add_db_pre && -n $list ]]; then
 		if [[ -s $HOME/.duply/$profile/pre ]]; then
-			if [[ -z $raw ]]; then
-				echo ""
-				echo "${gre}The following lines will be executed every time just before (PRE)${blu} '$profile' ${gre}backup is run:${blu}"
-			fi
+			echo ""
+			echo "${gre}The following lines will be executed every time just before (PRE)${blu} '$profile' ${gre}backup is run:${blu}"
 			cat $HOME/.duply/$profile/pre
-			[[ -z $raw ]] && echo "${end}"
+			echo "${end}"
 		else
-			[[ -z $raw ]] && echo "${red}[ERROR] PRE Database backups is empty!${end}"
+			echo "${red}[ERROR] PRE Database backups is empty!${end}"
 			exit 1
 		fi
 	
@@ -395,7 +393,7 @@ bkp_s3_list() {
 		do 
 			[[ -d $f ]] && pro=$(echo $f | rev | cut -f 1 -d "/" -s | rev)
 			[[ -f $f/conf ]] && fail="" || fail="${red}(fail)${end}"
-			[[ -n $raw || $list == "raw" ]] && outlist="$pro" || outlist=" ${gre}+ $pro ${end}${fail}"
+			outlist=" ${gre}+ $pro ${end}${fail}"
 			if [[ -n $pro ]]; then
 				echo "$outlist"
 				nonemptylist=true
@@ -403,7 +401,7 @@ bkp_s3_list() {
 		done
 	fi
 	
-	[[ -z $nonemptylist && -z $raw && $list != "raw" ]] && echo "${blu}[Empty] No profiles were found!${end}"
+	[[ -z $nonemptylist ]] && echo "${blu}[Empty] No profiles were found!${end}"
 	echo ""
 }
 

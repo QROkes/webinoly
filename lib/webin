@@ -573,18 +573,17 @@ show_db_data() {
 	[[ -n $(conf_read mysql-root) ]] && local rpass=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt ) || local rpass="Not-Available!"
 	[[ -n $(conf_read mysql-admin) ]] && local apass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt ) || local apass="Not-Available!"
 	echo ""
-	[[ ( $dbpass == "raw" || -n $raw ) || -z $extu ]] || echo "${gre}Localhost Credentials${end}"
-	[[ $dbpass == "raw" || -n $raw ]] && echo "root:$rpass" || echo "${blu}${bol}  root:${end}${blu}${dim} $rpass ${end}"
-	[[ $dbpass == "raw" || -n $raw ]] && echo "admin:$apass" || echo "${blu}${bol}  admin:${end}${blu}${dim} $apass ${end}"
+	echo "${gre}Localhost Credentials${end}"
+	echo "${blu}${bol}  root:${end}${blu}${dim} $rpass ${end}"
+	echo "${blu}${bol}  admin:${end}${blu}${dim} $apass ${end}"
 	echo ""
 	
 	if [[ -n $extu ]]; then
 		echo ""
-		[[ $dbpass == "raw" || -n $raw ]] || echo "${gre}External DB Credentials${end}"
-		[[ ( $dbpass == "raw" || -n $raw ) && -n $exth ]] && echo "Host:$exth" 
-		[[ ( $dbpass != "raw" && -z $raw ) && -n $exth ]] && echo "${blu}${bol}  Host:${end}${blu}${dim} $exth ${end}"
-		[[ $dbpass == "raw" || -n $raw ]] && echo "User:$extu" || echo "${blu}${bol}  User:${end}${blu}${dim} $extu ${end}"
-		[[ $dbpass == "raw" || -n $raw ]] && echo "Password:$extp" || echo "${blu}${bol}  Password:${end}${blu}${dim} $extp ${end}"
+		echo "${gre}External DB Credentials${end}"
+		[[ -n $exth ]] && echo "${blu}${bol}  Host:${end}${blu}${dim} $exth ${end}"
+		echo "${blu}${bol}  User:${end}${blu}${dim} $extu ${end}"
+		echo "${blu}${bol}  Password:${end}${blu}${dim} $extp ${end}"
 		echo ""
 	fi
 	
@@ -988,13 +987,13 @@ nginx_blockip() {
 	if [[ -z $purge ]]; then
 		if [[ -n $list ]]; then
 			echo ""
-			[[ $list == "raw" || -n $raw ]] && sign="" || sign="${blu}+ "
+			sign="${blu}+ "
 			if [[ -s /etc/nginx/conf.d/blockips.conf ]]; then
 				sudo sed -n "s/^deny /${sign}/p;" /etc/nginx/conf.d/blockips.conf | sudo sed -n 's/;$//p'
 			else
-				[[ $list != "raw" && -z $raw ]] && echo "${blu}[Empty] No IP's were found!"
+				echo "${blu}[Empty] No IP's were found!"
 			fi
-			[[ $list == "raw" || -n $raw ]] && echo "" || echo "${end}"
+			echo "${end}"
 		else
 			[[ $blockip == true ]] && read -p "${blu}IP address to block: ${end}" blockip
 			
