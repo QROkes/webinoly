@@ -828,7 +828,11 @@ createsite() {
 	fi
 
 	# Force redirection "root" is now enabled by default!
-	[[ $subdomain != "true" ]] && sudo site $domain -force-redirect=root
+	if [[ $subdomain != "true" && $force_redirect =~ ^(www|root|off)$ ]]; then
+		sudo site $domain -force-redirect=$force_redirect
+	elif [[ $subdomain != "true" ]]; then	
+		sudo site $domain -force-redirect=root
+	fi
 
 	# Blackhole default-site should be enabled after the first site is created!
 	[[ -z $(conf_read default-site) && $domain != $ADMIN_TOOLS_SITE ]] && webinoly -default-site=blackhole
@@ -899,7 +903,7 @@ force_redirect() {
 				
 				echo "${gre}Force-Redirection has been successfully disabled!${end}"
 			else
-				echo "${red}Force-Redirect is already disabled for site${blu} $domain ${end}"
+				echo "${gre}Force-Redirect${blu} (${domain}) ${gre}is already disabled for site!${end}"
 			fi
 		;;
 	esac
