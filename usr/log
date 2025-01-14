@@ -140,7 +140,7 @@ elif [[ -n $mysql ]]; then
 	elif [[ $mysql == "slow" ]]; then
 		if [[ -n $enable ]]; then
 			# https://mariadb.com/kb/en/slow-query-log-overview/
-			if [[ -n $long_query_time && $long_query_time =~ ^[0-9]+$ && $long_query_time -gt 1 ]]; then
+			if [[ -n $long_query_time && $long_query_time =~ ^[0-9]+$ && $long_query_time -gt 0 ]]; then
 				cnf_write long_query_time $long_query_time
 				echo "${gre}${dim}MySQL/MariaDB long query time set to ${long_query_time}s ${end}"
 			elif [[ -n $long_query_time ]]; then
