@@ -1069,7 +1069,16 @@ set_default_nginx_response() {
 	if [[ $default_site == "default" ]]; then
 		if [[ -f /opt/webinoly/templates/source/default ]]; then
 			sudo cat /opt/webinoly/templates/source/default >| /etc/nginx/sites-available/default
+			sudo sed -i 's/listen 80 default_server;/listen 80 reuseport backlog=<somax> deferred default_server;/' /etc/nginx/sites-available/default
+			sed -i '/listen 80 /a 	listen [::]:80 reuseport backlog=<somax> deferred default_server;' /etc/nginx/sites-available/default
 			remove_domain_default_site
+			
+			# Port 443 blackhole
+			create_blackhole_cert
+			sudo sed -i '0r /opt/webinoly/templates/general/nginx-blackhole' /etc/nginx/sites-available/default
+			sudo sed -i "s/<somax>/$(($somax/2))/g" /etc/nginx/sites-available/default
+			sudo sed -i '/NonSSL/,/NonSSLend/{/.*/d}' /etc/nginx/sites-available/default
+				
 			conf_write default-site default
 			conf_write default-response default
 			echo "${gre}Default Nginx was successfully assigned as default site!${end}"
@@ -1089,25 +1098,26 @@ set_default_nginx_response() {
 		# Domain option
 		if [[ -L /etc/nginx/sites-enabled/$default_site ]]; then
 			remove_domain_default_site
-			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 80.*/listen 80 default_server;/}" /etc/nginx/sites-available/$default_site
-			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:80.*/listen [::]:80 default_server;/}" /etc/nginx/sites-available/$default_site
-			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 ssl.*/listen 443 ssl default_server;/}" /etc/nginx/sites-available/$default_site
-			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 ssl.*/listen [::]:443 ssl default_server;/}" /etc/nginx/sites-available/$default_site
-			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 quic.*/listen 443 quic default_server;/}" /etc/nginx/sites-available/$default_site
-			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 quic.*/listen [::]:443 quic default_server;/}" /etc/nginx/sites-available/$default_site
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 80.*/listen 80 reuseport backlog=<somax> deferred default_server;/}" /etc/nginx/sites-available/$default_site
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:80.*/listen [::]:80 reuseport backlog=<somax> deferred default_server;/}" /etc/nginx/sites-available/$default_site
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 ssl.*/listen 443 ssl reuseport backlog=<somax> deferred default_server;/}" /etc/nginx/sites-available/$default_site
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 ssl.*/listen [::]:443 ssl reuseport backlog=<somax> deferred default_server;/}" /etc/nginx/sites-available/$default_site
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen 443 quic.*/listen 443 quic reuseport default_server;/}" /etc/nginx/sites-available/$default_site
+			sudo sed -i "/WebinolyNginxServerStart/,/WebinolyNginxServerEnd/{s/listen \[::\]:443 quic.*/listen [::]:443 quic reuseport default_server;/}" /etc/nginx/sites-available/$default_site
 			
 			# If default site is Non-SSL, we need add a blackhole for port 443.
 			if [[ $(is_ssl $default_site) == "false" ]]; then
 				create_blackhole_cert
 				sudo sed -i '1r /opt/webinoly/templates/general/nginx-blackhole' /etc/nginx/sites-available/$default_site
-				sudo sed -i "s/<somax>/$(($somax/2))/g" /etc/nginx/sites-available/$default_site
 				sudo sed -i '/NonSSL/,/NonSSLend/{/.*/d}' /etc/nginx/sites-available/$default_site
 			else
-				sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{s/listen 80;/listen 80 default_server;/}' /etc/nginx/sites-available/$default_site
-				sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{s/listen \[::\]:80;/listen [::]:80 default_server;/}' /etc/nginx/sites-available/$default_site
+				sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{s/listen 80;/listen 80 reuseport backlog=<somax> deferred default_server;/}' /etc/nginx/sites-available/$default_site
+				sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{s/listen \[::\]:80;/listen [::]:80 reuseport backlog=<somax> deferred default_server;/}' /etc/nginx/sites-available/$default_site
 			fi
 			
+			sudo sed -i "s/<somax>/$(($somax/2))/g" /etc/nginx/sites-available/$default_site
 			sudo rm -rf /etc/nginx/sites-enabled/default
+			
 			conf_write default-site $default_site
 			conf_write default-response $default_site
 			echo "${gre}Site${blu} ${default_site} ${gre}was successfully assigned as default site!${end}"
