@@ -388,12 +388,20 @@ check_mysql_connection() {
 		if [[ $4 != "-login-file" ]]; then
 			mysql_login_cnf
 			sudo sed -i "/\[client_${suffix_group_name}\]/,/# ClientEnd/{/.*/d}" $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+			
 			echo "[client_${suffix_group_name}]
 host = $1
 port = $2
 user = $3
 password = $4
+skip-ssl = true
 # ClientEnd" >> $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+
+		# We need skip-ssl because MariaDB 11.4 client cannot connect with remote MySQL server
+		# ERROR 2026 (HY000): TLS/SSL error: self-signed certificate in certificate chain
+		# Only for MariaDB, remove it from MySQL, not even exists!
+		[[ $(conf_read db-engine) == "mysql" ]] && sudo sed -i "/\[client_${suffix_group_name}\]/,/# ClientEnd/{/skip-ssl/d}" $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf
+		
 		else
 			[[ $5 == "-master-admin" ]] && unset user_param # take the user from the login group!
 			local error_display="false"
@@ -409,7 +417,7 @@ password = $4
 			# Display a warning message when not enough privileges!
 			if [[ $5 == "-master-admin" ]]; then
 				local priv=$($MYSQL_COMMAND --defaults-group-suffix=_${suffix_group_name} --connect-timeout=10 -h "$1" -P "$2" -e "SHOW GRANTS FOR CURRENT_USER();")
-				if ! [[ -n $(echo $priv | grep -Fo "WITH GRANT OPTION") && ( -n $(echo $priv | grep -Fo "GRANT ALL PRIVILEGES") || ( -n $(echo $priv | grep -Fo "CREATE USER") && -n $(echo $priv | grep -Fo "ALTER"))) ]]; then
+				if ! [[ -n $(echo $priv | grep -Fo "WITH GRANT OPTION") && ( -n $(echo $priv | grep -Fo "GRANT ALL PRIVILEGES") || ( -n $(echo $priv | grep -Fo "CREATE USER") && -n $(echo $priv | grep -Fo "ALTER") && -n $(echo $priv | grep -Fo "DELETE"))) ]]; then
 					if [[ $(conf_read quiet) != "true" ]]; then
 						echo "${red}${dim}[WARNING] Seems like '$(echo $priv | grep -oP -m 1 'Grants for \K\w+')' is not a Master user!${end}" >&2
 					else
@@ -445,10 +453,9 @@ password = $4
 	fi
 	
 	if [[ $out == "false" && $error_display != "false" && $(conf_read quiet) != "true" ]]; then
-		echo "${red}===================================================" >&2
-		echo "    [Error]  Database conection failed! (${1})" >&2
-		echo "===================================================${end}" >&2
-		echo "" >&2
+		echo "${red}" >&2
+		echo "[ERROR] Database conection failed! ${dim}(${1})" >&2
+		echo "${end}" >&2
 		echo "false"
 	elif [[ $out == "false" ]]; then
 		echo "false"
