@@ -2,7 +2,7 @@
 
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
-# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -login-www-data, -cache-valid, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -dynvar, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -custom-headers, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -email, -export, -import, -mysql-public-access
+# Options: -update, -server-reset, -verify, -dbpass, -tools-port, -sftp, -cache-valid, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -dynvar, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -custom-headers, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -email, -export, -import, -mysql-public-access
 # Arguments: -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre, -no-recovery, -recalculate, -dbname, -skip-db, -filename, -overwrite, -value, -bind
 
 source /opt/webinoly/lib/webin
@@ -60,7 +60,8 @@ elif [[ -n $tools_site ]]; then
 	set_tools_site
 
 	
-elif [[ -n $login_www_data ]]; then
+elif [[ -n $sftp || -n $login_www_data ]]; then
+	[[ -z $sftp ]] && sftp=$login_www_data
 	check_for_nginx -ask
 	www_data_sftp_access
 	nginx_not="true" # Nginx-Reload not-needed.

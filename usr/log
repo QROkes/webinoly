@@ -2,7 +2,7 @@
 
 # View logs in real time Plugins
 # Syntax: log <domain> <option>
-# Options: -wp, -error, -mail, -php o -fpm, -mysql, -only-error, -le, -ssh, -syslog
+# Options: -wp, -error, -mail, -php o -fpm, -mysql, -access-log, -le, -ssh, -syslog
 # Arguments: -lines, -display, -enable, -disable
 # Notes: If no domain or option is entered, access logs are displayed.
 
@@ -235,24 +235,28 @@ elif [[ -n $auth ]]; then
 
 
 # Turn On/Off Access Logs
-elif [[ -n $only_error ]]; then
-	if ! [[ $only_error =~ ^(on|off)$ ]]; then
-		echo "${red}[ERROR] Empty or not valid parameter for Only-Error!${end}"
+elif [[ -n $access_log || -n $only_error ]]; then
+	
+	[[ -z $access_log && $only_error == "on" ]] && access_log="off"
+	[[ -z $access_log && $only_error == "off" ]] && access_log="on"
+
+	if ! [[ $access_log =~ ^(on|off)$ ]]; then
+		echo "${red}[ERROR] Please, enter a valid value for Access Log!${end}"
 		exit 1
 	fi
 	
 	# Global-Conf
 	if [[ -z $domain ]]; then
-		if [[ $only_error == "on" ]]; then
+		if [[ $access_log == "off" ]]; then
 			api-events_update lg1
 			[[ $(conf_read nginx) == "true" ]] && sudo sed -i '/access_log /c \	access_log off;' /etc/nginx/nginx.conf
 			conf_write global-access-log-off true
-			echo "${gre}Only-Error Log was successfully enabled (global)!${end}"
-		elif [[ $only_error == "off" ]]; then
+			echo "${gre}Nginx Access Log was successfully disabled! ${dim}(global)${end}"
+		elif [[ $access_log == "on" ]]; then
 			api-events_update lg2
 			[[ $(conf_read nginx) == "true" ]] && sudo sed -i "/access_log /c \	access_log \/var\/log\/nginx\/access.log $(check_var nginx-log-format);" /etc/nginx/nginx.conf
 			conf_write global-access-log-off false
-			echo "${gre}Only-Error Log was successfully disabled (global)!${end}"
+			echo "${gre}Nginx Access Log was successfully enabled! ${dim}(global)${end}"
 		fi
 		
 		[[ $(check_var nginx-error-log-level) != "false" ]] && sudo sed -i "/error_log /c \	error_log \/var\/log\/nginx\/error.log $(check_var nginx-error-log-level);" /etc/nginx/nginx.conf
@@ -263,18 +267,18 @@ elif [[ -n $only_error ]]; then
 	if [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 		check_for_nginx
 		if [[ $domain == "default" || $domain == $ADMIN_TOOLS_SITE ]]; then
-			echo "${red}[ERROR] Only-Error is not allowed to be used in Tools-Port or Default Nginx site! ${end}"
+			echo "${red}[ERROR] Nginx Access Log is not allowed to be used in Tools-Port or Default Nginx site! ${end}"
 			exit 1
 		fi
 		
-		if [[ $only_error == "on" ]]; then
+		if [[ $access_log == "off" ]]; then
 			api-events_update lg3
 			sudo sed -i '/access_log /c \	access_log off;' /etc/nginx/sites-available/$domain
-			echo "${gre}Only-Error Log was successfully enabled for ${blu}${domain} ${gre}site!${end}"
-		elif [[ $only_error == "off" ]]; then
+			echo "${gre}Nginx Access Log was successfully disabled for ${blu}${domain} ${gre}site!${end}"
+		elif [[ $access_log == "on" ]]; then
 			api-events_update lg4
 			sudo sed -i "/access_log /c \	access_log \/var\/log\/nginx\/${domain}.access.log $(check_var nginx-log-format);" /etc/nginx/sites-available/$domain
-			echo "${gre}Only-Error Log was successfully disabled for ${blu}${domain} ${gre}site!${end}"
+			echo "${gre}Nginx Access Log was successfully enabled for ${blu}${domain} ${gre}site!${end}"
 		fi
 		
 		[[ $(check_var nginx-error-log-level) != "false" ]] && sudo sed -i "/error_log /c \	error_log \/var\/log\/nginx\/${domain}.error.log $(check_var nginx-error-log-level);" /etc/nginx/sites-available/$domain

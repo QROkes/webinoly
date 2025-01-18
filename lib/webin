@@ -780,11 +780,11 @@ set_tools_site() {
 
 
 www_data_sftp_access() {
-	if [[ $login_www_data == "on" && $(conf_read login-www-data) == "true" ]]; then
+	if [[ $sftp == "on" && $(conf_read login-www-data) == "true" ]]; then
 		echo "${gre}SFTP access for www-data user is already enabled! ${end}"
-	elif [[ $login_www_data == "off" && $(conf_read login-www-data) != "true" ]]; then
+	elif [[ $sftp == "off" && $(conf_read login-www-data) != "true" ]]; then
 		echo "${gre}SFTP access for www-data user is already disabled! ${end}"
-	elif [[ $login_www_data == "on" ]]; then
+	elif [[ $sftp == "on" ]]; then
 		# Remove if empty! (prevent empty files with spaces taken as valid)
 		if [[ -f /var/www/.ssh/authorized_keys && ( ! -s /var/www/.ssh/authorized_keys || -z $(cat -v /var/www/.ssh/authorized_keys | grep -m 1 '[^[:space:]]')) ]]; then
 			sudo rm -rf /var/www/.ssh/authorized_keys
@@ -825,7 +825,7 @@ Match Group sftponly
 		sudo systemctl restart ssh
 		echo "${gre}SFTP access for www-data user has been successfuly enabled! ${end}"
 	
-	elif [[ $login_www_data == "off" ]]; then
+	elif [[ $sftp == "off" ]]; then
 		sudo gpasswd -d www-data sftponly  > /dev/null 2>&1
 		sudo delgroup sftponly > /dev/null 2>&1
 		sudo chown www-data:www-data /var/www
