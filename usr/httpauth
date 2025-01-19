@@ -82,28 +82,6 @@ if [[ -n $add ]]; then
 	echo ""
 
 	
-elif [[ -n $delete ]]; then
-	api-events_update ha2
-	[[ $delete == true ]] && read -p "${blu}HTTP-Auth User: ${end}" userpurge || userpurge=$delete
-	[[ -f /etc/nginx/$authfile ]] && exist=$( grep -F "${userpurge}:" /etc/nginx/$authfile )
-	if [[ -z $userpurge ]]; then
-		echo "${red}[ERROR] Please, enter a valid username!${end}"
-		exit 1
-	elif [[ -z $exist ]]; then
-		echo "${red}[ERROR] User '$userpurge' does not exist!${end}"
-		exit 1
-	fi
-	sudo sed -i "/^$userpurge:/d" /etc/nginx/$authfile
-	
-	# Remove site-auth-file if empty.
-	if [[ -n $domain && -f /etc/nginx/$authfile && ( ! -s /etc/nginx/$authfile || -z $(cat -v $authfile | grep -m 1 '[^[:space:]]')) ]]; then
-		sudo rm /etc/nginx/$authfile
-		sudo rm -rf /etc/nginx/apps.d/.htpasswd-www.$domain
-	fi
-	
-	echo "${gre}User '$userpurge' has been deleted successfully!${end}"
-
-	
 elif [[ -n $wp_admin ]]; then
 	api-events_update ha3
 	if [[ -n $domain ]]; then
@@ -148,7 +126,7 @@ elif [[ -n $wp_admin ]]; then
 
 elif [[ -n $whitelist ]]; then
 	api-events_update ha4
-	if [[ -z $purge ]]; then
+	if [[ -z $delete ]]; then
 		if [[ -n $list ]]; then
 			echo "${blu}"
 			if [[ -f /etc/nginx/apps.d/whitelist-acl.conf ]]; then
@@ -199,7 +177,7 @@ elif [[ -n $whitelist ]]; then
 			c=1
 			while [[ -n $(echo $whitelist | cut -d',' -f $c -s) ]]
 			do  
-				[[ $(is_ip $(echo $whitelist | cut -d',' -f $c -s)) == "true" ]] && sudo httpauth -whitelist=$(echo $whitelist | cut -d',' -f $c -s) -purge
+				[[ $(is_ip $(echo $whitelist | cut -d',' -f $c -s)) == "true" ]] && sudo httpauth -whitelist=$(echo $whitelist | cut -d',' -f $c -s) -delete
 				c=$(($c+1))
 			done
 			exit 0
@@ -221,7 +199,7 @@ elif [[ -n $whitelist ]]; then
 
 
 elif [[ -n $path && -n $domain ]]; then
-	if [[ -z $purge ]]; then
+	if [[ -z $delete ]]; then
 		if [[ $(is_forward $domain) == "true" ]]; then
 			echo "${red}[ERROR] Forwarded domains are not allowed!${end}"
 			exit 1
@@ -297,7 +275,7 @@ location $sign$path {
 				
 				# Last verification
 				if ! sudo nginx -t > /dev/null 2>&1; then
-					sudo httpauth $domain -path=$path -purge > /dev/null 2>&1
+					sudo httpauth $domain -path=$path -delete > /dev/null 2>&1
 					echo "${red}[ERROR] Seems like you are using some invalid Nginx values or characters!${end}"
 					exit 1
 				fi
@@ -312,7 +290,7 @@ location $sign$path {
 			exit 1
 		fi
 	else
-		# Purge HttpAuth Path
+		# Delete/Remove HttpAuth Path
 		[[ $path == true ]] && read -p "${blu}Path to remove protection: ${end}" path
 		if [[ $path == "/" ]]; then
 			sudo sed -i "/acl.conf;/d" /etc/nginx/sites-available/$domain
@@ -377,6 +355,29 @@ elif [[ -n $list ]]; then
 	nginx_not="true" # Nginx-Reload not-needed.
 
 
+# At the end, for precedence...
+elif [[ -n $delete ]]; then
+	api-events_update ha2
+	[[ $delete == true ]] && read -p "${blu}HTTP-Auth User: ${end}" userpurge || userpurge=$delete
+	[[ -f /etc/nginx/$authfile ]] && exist=$( grep -F "${userpurge}:" /etc/nginx/$authfile )
+	if [[ -z $userpurge ]]; then
+		echo "${red}[ERROR] Please, enter a valid username!${end}"
+		exit 1
+	elif [[ -z $exist ]]; then
+		echo "${red}[ERROR] User '$userpurge' does not exist!${end}"
+		exit 1
+	fi
+	sudo sed -i "/^$userpurge:/d" /etc/nginx/$authfile
+	
+	# Remove site-auth-file if empty.
+	if [[ -n $domain && -f /etc/nginx/$authfile && ( ! -s /etc/nginx/$authfile || -z $(cat -v $authfile | grep -m 1 '[^[:space:]]')) ]]; then
+		sudo rm /etc/nginx/$authfile
+		sudo rm -rf /etc/nginx/apps.d/.htpasswd-www.$domain
+	fi
+	
+	echo "${gre}User '$userpurge' has been deleted successfully!${end}"
+
+	
 elif [[ -n $help || -n $h || -n $H || $empty_param == "true" ]]; then
 	help_message
 else

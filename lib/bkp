@@ -266,10 +266,6 @@ bkp_s3_profile() {
 		echo "${blu}Max_Age:${end} $age"
 		echo "${blu}Parameters:${end} $par"
 		echo ""
-	
-	elif [[ -n $delete ]]; then
-		sudo rm -rf $HOME/.duply/$profile
-		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully deleted!${end}"
 		
 	elif [[ -n $restore ]]; then
 		# Temporary check!!!! Should be removed soon!!!
@@ -304,7 +300,7 @@ bkp_s3_profile() {
 		fi
 	
 	
-	elif [[ -n $add_db_pre && -n $purge ]]; then
+	elif [[ -n $add_db_pre && -n $delete ]]; then
 		sudo rm -rf $HOME/.duply/$profile/pre
 		echo "${gre}PRE Database backups for${blu} '$profile' ${gre}has been successfully removed!${end}"
 		
@@ -340,6 +336,11 @@ bkp_s3_profile() {
 		[[ ! -f $HOME/.duply/$profile/pre ]] && sudo touch $HOME/.duply/$profile/pre
 		echo "sudo webinoly -backup=local -wp=$add_db_pre -destination=$destination $param" >> $HOME/.duply/$profile/pre
 		echo "${gre}Database backup will run each time you run your S3 backup!${end}"
+	
+	# At the end, for precedence...
+	elif [[ -n $delete ]]; then
+		sudo rm -rf $HOME/.duply/$profile
+		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully deleted!${end}"
 	
 	else
 		if [[ -d $HOME/.duply/$profile ]]; then

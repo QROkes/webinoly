@@ -984,7 +984,7 @@ clear_caches() {
 
 
 nginx_blockip() {
-	if [[ -z $purge ]]; then
+	if [[ -z $delete ]]; then
 		if [[ -n $list ]]; then
 			echo ""
 			sign="${blu}+ "
@@ -1026,7 +1026,7 @@ nginx_blockip() {
 				exit 1
 			fi
 		fi
-	elif [[ -n $purge ]]; then
+	elif [[ -n $delete ]]; then
 		[[ $blockip == true ]] && read -p "${blu}IP address to unblock: ${end}" blockip
 		
 		# Check for list of IP's
@@ -1034,7 +1034,7 @@ nginx_blockip() {
 			local c=1
 			while [[ -n $(echo $blockip | cut -d',' -f $c -s) ]]
 			do  
-				[[ $(is_ip $(echo $blockip | cut -d',' -f $c -s)) == "true" ]] && sudo webinoly -blockip=$(echo $blockip | cut -d',' -f $c -s) -purge
+				[[ $(is_ip $(echo $blockip | cut -d',' -f $c -s)) == "true" ]] && sudo webinoly -blockip=$(echo $blockip | cut -d',' -f $c -s) -delete
 				local c=$(($c+1))
 			done
 			exit 0
