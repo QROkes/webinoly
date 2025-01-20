@@ -984,7 +984,29 @@ clear_caches() {
 
 
 nginx_blockip() {
-	if [[ -z $delete ]]; then
+	if [[ -n $delete_all ]]; then
+		echo "${red}"
+		echo "All blocked IP's will be removed! ${end}"
+		
+		if ! [[ ${delete_all,,} == "force" ]]; then
+			echo "${blu}"
+			echo "Are you sure [y/N]? ${end}"
+			while read -r -n 1 -s answer; do
+				answer=${answer:-n}
+				echo ""
+				[[ $answer = [YyNn] ]] && break
+			done
+			
+			if [[ $answer == [Nn] ]]; then
+				echo "${red}Action aborted!${end}"
+				exit 1
+			fi
+		fi
+		
+		rm -rf /etc/nginx/conf.d/blockips.conf
+		echo "${gre}All IP addresses were successfully removed from the blocked list!${end}"
+	
+	elif [[ -z $delete ]]; then
 		if [[ -n $list ]]; then
 			echo ""
 			sign="${blu}+ "

@@ -3,7 +3,7 @@
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
 # Options: -update, -server-reset, -verify, -dbpass, -tools-port, -sftp, -cache-valid, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -dynvar, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -custom-headers, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -email, -export, -import, -mysql-public-access
-# Arguments: -profile, -list, -bucket, -source, -delete, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre, -no-recovery, -recalculate, -dbname, -skip-db, -filename, -overwrite, -value, -bind
+# Arguments: -profile, -list, -bucket, -source, -delete, -delete-all, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre, -no-recovery, -recalculate, -dbname, -skip-db, -filename, -overwrite, -value, -bind
 
 source /opt/webinoly/lib/webin
 source /opt/webinoly/lib/datadog

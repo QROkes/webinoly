@@ -3,7 +3,7 @@
 # Http-Authentication Plugin
 # Syntax: httpauth <option> <argument>
 # Options: -add, -delete, -list, -wp-admin, -whitelist, -path
-# Arguments: -list, -exact
+# Arguments: -list, -exact, -delete-all
 
 source /opt/webinoly/lib/general
 check_for_parameters $@
@@ -126,7 +126,30 @@ elif [[ -n $wp_admin ]]; then
 
 elif [[ -n $whitelist ]]; then
 	api-events_update ha4
-	if [[ -z $delete ]]; then
+	if [[ -n $delete_all ]]; then
+		echo "${red}"
+		echo "All whitelisted IP's will be removed! ${end}"
+		
+		if ! [[ ${delete_all,,} == "force" ]]; then
+			echo "${blu}"
+			echo "Are you sure [y/N]? ${end}"
+			while read -r -n 1 -s answer; do
+				answer=${answer:-n}
+				echo ""
+				[[ $answer = [YyNn] ]] && break
+			done
+			
+			if [[ $answer == [Nn] ]]; then
+				echo "${red}Action aborted!${end}"
+				exit 1
+			fi
+		fi
+		
+		rm -rf /etc/nginx/apps.d/whitelist-acl.conf
+		echo "${gre}All IP addresses were successfully removed from the whitelist!${end}"
+	
+	
+	elif [[ -z $delete ]]; then
 		if [[ -n $list ]]; then
 			echo "${blu}"
 			if [[ -f /etc/nginx/apps.d/whitelist-acl.conf ]]; then
@@ -199,7 +222,36 @@ elif [[ -n $whitelist ]]; then
 
 
 elif [[ -n $path && -n $domain ]]; then
-	if [[ -z $delete ]]; then
+	if [[ -n $delete_all ]]; then
+		echo "${red}"
+		echo "All protected paths will be removed! ${end}"
+		
+		if ! [[ ${delete_all,,} == "force" ]]; then
+			echo "${blu}"
+			echo "Are you sure [y/N]? ${end}"
+			while read -r -n 1 -s answer; do
+				answer=${answer:-n}
+				echo ""
+				[[ $answer = [YyNn] ]] && break
+			done
+			
+			if [[ $answer == [Nn] ]]; then
+				echo "${red}Action aborted!${end}"
+				exit 1
+			fi
+		fi
+		
+		if [[ -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
+			sudo sed -i "/^# Path: /,/^# PathEnd/{/.*/d}" /etc/nginx/apps.d/$domain-nginx.conf
+			
+			if [[ -f /etc/nginx/apps.d/$domain-nginx.conf && ( ! -s /etc/nginx/apps.d/$domain-nginx.conf || -z $(cat -v /etc/nginx/apps.d/$domain-nginx.conf | grep -m 1 '[^[:space:]]')) ]]; then
+				sudo rm /etc/nginx/apps.d/$domain-nginx.conf
+				sudo sed -i "/$domain-nginx.conf;/d" /etc/nginx/sites-available/$domain
+			fi
+		fi
+		echo "${gre}All protected paths were successfully removed!${end}"
+	
+	elif [[ -z $delete ]]; then
 		if [[ $(is_forward $domain) == "true" ]]; then
 			echo "${red}[ERROR] Forwarded domains are not allowed!${end}"
 			exit 1
