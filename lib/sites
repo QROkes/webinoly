@@ -1262,7 +1262,7 @@ parked_domain() {
 	elif [[ $(is_parked $parked) == "true" ]]; then
 		echo "${red}[ERROR] Parking a site using a parked site as main site is not allowed! ${end}"
 		exit 1
-	elif [[ $(is_empty_root_site $parked) =~ ^(true|full)$ ]]; then
+	elif [[ $(is_empty_root_site $parked) != "false" ]]; then
 		echo "${red}[ERROR] Invalid main site!${end}"
 		exit 1
 	fi
@@ -1410,7 +1410,7 @@ reverse_proxy() {
 		[[ -n $dedicated_reverse_proxy ]] && create_empty_site -full || create_empty_site
 	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "full" && $(is_dedicated_proxy $domain) == "false" ]]; then
 		echo "${gre}Site configuration found: Main site at${blu} $domain ${gre}root has been successfully set as Dedicated Reverse-Proxy!${end}"
-	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "true" ]]; then
+	elif [[ -z $subfolder && $(is_empty_root_site $domain) =~ ^(true|subfolders)$ ]]; then
 		echo "${gre}Site configuration found: Main site at${blu} $domain ${gre}root has been successfully set as Reverse-Proxy!${end}"
 	fi
 	

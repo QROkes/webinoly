@@ -1229,6 +1229,8 @@ is_empty_root_site() {
 	if [[ -n $1 ]]; then
 		if [[ -f /etc/nginx/sites-available/$1 && -z $(grep -F " common/locations.conf;" /etc/nginx/sites-available/$1) && -z $(grep -E "include common/headers-.*.conf;" /etc/nginx/sites-available/$1) ]]; then
 			echo "full"
+		elif [[ -f /etc/nginx/sites-available/$1 && -n $(grep -E "include apps.d/${1}_.*.conf;" /etc/nginx/sites-available/$1) ]]; then
+			echo "subfolders"
 		elif [[ $(is_wp $1) == "true" || $(is_php $1) == "true" || $(is_proxy $1) == "true" || $(is_html $1) == "true" || $(is_parked $1) == "true" || $(is_forward $1) == "true" ]]; then
 			echo "false"
 		elif [[ -f /etc/nginx/sites-available/$1 ]]; then
@@ -1291,8 +1293,10 @@ site_type() {
 		echo "Forward"
 	elif [[ $(is_empty_root_site $1) == "full" ]]; then
 		echo "Empty Blank"
-	elif [[ $(is_empty_root_site $1) == "true" ]]; then
+	elif [[ $(is_empty_root_site $1) == "subfolders" ]]; then
 		echo "Subfolders"
+	elif [[ $(is_empty_root_site $1) == "true" ]]; then
+		echo "Empty"
 	else
 		echo "Unknown"
 	fi

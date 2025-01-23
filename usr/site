@@ -133,7 +133,7 @@ if [[ -n $mysql || ( -n $php && -n $domain ) ]]; then
 			[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
 			echo "${gre}PHP Subfolder ${blu}'$subfolder' ${gre}successfully added!${end}"
 		else
-			if [[ -z $subfolder && $(is_empty_root_site $domain) == "true" ]]; then		
+			if [[ -z $subfolder && $(is_empty_root_site $domain) =~ ^(true|subfolders)$ ]]; then		
 				sudo sed -i "/locations.conf;/i \	include common/php.conf;" /etc/nginx/sites-available/$domain
 				echo "${gre}Subfolder configuration found: Main site at${blu} $domain ${gre}root has been successfully set as PHP!${end}"
 			else
@@ -164,7 +164,7 @@ elif [[ -n $html && -n $domain ]]; then
 	if [[ ( -z $subfolder || ( -n $subfolder && ! -f /etc/nginx/sites-available/$domain )) && $(is_empty_root_site $domain) == "false" ]]; then
 		create_empty_site
 		sudo sed -i '/index /c \	index index.html index.htm;' /etc/nginx/sites-available/$domain
-	elif [[ -z $subfolder && $(is_empty_root_site $domain) == "true" ]]; then
+	elif [[ -z $subfolder && $(is_empty_root_site $domain) =~ ^(true|subfolders)$ ]]; then
 		echo "${gre}Subfolder configuration found: Main site at${blu} $domain ${gre}root has been successfully set as HTML!${end}"
 	fi
 	
@@ -181,7 +181,7 @@ elif [[ -n $html && -n $domain ]]; then
 elif [[ -n $wp && -n $domain ]]; then
 	full_empty_not_allowed
 	if [[ -z $subfolder ]]; then
-		if [[ $(is_empty_root_site $domain) == "true" ]]; then		
+		if [[ $(is_empty_root_site $domain) =~ ^(true|subfolders)$ ]]; then		
 			wpinstall
 			sudo sed -i "/locations.conf;/i \	include common/php.conf;" /etc/nginx/sites-available/$domain
 			echo "${gre}Subfolder configuration found: Main site at${blu} $domain ${gre}root has been successfully set as WP!${end}"
