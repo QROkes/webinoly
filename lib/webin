@@ -73,22 +73,21 @@ system_info() {
 	fi
 	
 	echo "${blu}${bol}[MYSQL]${end}"
-	if [[ $(conf_read mysql) == "true" ]]; then
-		
-		# Check if file exist because in legacy it doesn't!
-		if [[ $(conf_read mysql-tool-pma) == "true" && -f /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/libraries/classes/Version.php ]]; then
-			local pmaver=$(grep -E "public const VERSION = '[0-9\.]+'.*;" /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/libraries/classes/Version.php | cut -f 2 -d "'")
-		
-		# Legacy support: before v5.1.0 (Feb 23, 2021) version is found here:
-		elif [[ $(conf_read mysql-tool-pma) == "true" ]]; then
-			local pmaver=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'")
-		
-		elif [[ $(conf_read mysql-tool-pma) != "true" ]]; then
-			local pmaver="Not installed!"
-		fi
-		
+	if [[ $(conf_read mysql) == "true" ]]; then		
 		echo "${blu}Info:${end}${dim} $($MYSQL_COMMAND --version) ${end}"
-		echo "${blu}phpMyAdmin:${end}${dim} $pmaver ${end}"
+		
+		[[ -n $(conf_read mysql-public-access) ]] && local mysql_remote=$(conf_read mysql-public-access) || local mysql_remote="Disabled"
+		[[ $(conf_read mysql-log-binary) == "true" ]] && local mysql_log_bin="Enabled" || local mysql_log_bin="Disabled"
+		[[ $(conf_read mysql-log-general) == "true" ]] && local mysql_log_gen="Enabled" || local mysql_log_gen="Disabled"
+		[[ $(conf_read mysql-log-slow) == "true" ]] && local mysql_log_slw="Enabled" || local mysql_log_slw="Disabled"
+		[[ -n $(conf_read mysql-long-query-time) ]] && local mysql_log_slt=$(conf_read mysql-long-query-time) || local mysql_log_slt="Default"
+		
+		echo "${blu}Remote Access:${end}${dim} $mysql_remote ${end}"
+		echo "${blu}Log Binary:${end}${dim} $mysql_log_bin ${end}"
+		echo "${blu}Log General:${end}${dim} $mysql_log_gen ${end}"
+		echo "${blu}Log Slow:${end}${dim} $mysql_log_slw ${end}"
+		echo "${blu}Log Slow Time:${end}${dim} $mysql_log_slt ${end}"
+		
 		echo ""		
 	else
 		echo "${red}${dim} MySQL/MariaDB is not installed! ${end}"
@@ -98,11 +97,12 @@ system_info() {
 	echo "${blu}${bol}[Webinoly]${end}"
 	[[ -n $(conf_read default-site) ]] && local ds=$(conf_read default-site) || local ds="default"
 	[[ -n $(conf_read tools-site) ]] && local ts=$(conf_read tools-site) || local ts="default"
+	[[ -n $(conf_read tools-port) ]] && local tp=$(conf_read tools-port) || local tp="Not Set"
 	[[ -n $(conf_read timezone) ]] && local tz=$(conf_read timezone) || local tz="Undefined"
 	
 	echo "${blu}Default site:${end}${dim} $ds ${end}"
 	echo "${blu}Tools site:${end}${dim} $ts ${end}"
-	echo "${blu}Tools port:${end}${dim} $(conf_read tools-port) ${end}"
+	echo "${blu}Tools port:${end}${dim} $tp ${end}"
 	echo "${blu}Timezone:${end}${dim} $tz ${end}"
 	if [[ $(conf_read smtp) == "true" ]]; then
 		echo "${blu}SMTP Host:${end}${dim} $(grep -E "^relayhost.?=.?*+" /etc/postfix/main.cf | cut -f 2 -d '=' -s) ${end}"
@@ -112,6 +112,32 @@ system_info() {
 	fi
 	echo ""
 	
+	[[ $(conf_read nginx-tool-ssl) == "true" ]] && local ver_certbot=$(echo $(certbot --version) | cut -d' ' -f2 -s) || local ver_certbot="Not Installed"
+	[[ $(conf_read nginx-tool-bkp) == "true" ]] && local ver_duplicity=$(echo $(duplicity --version) | cut -d' ' -f2 -s) || local ver_duplicity="Not Installed"
+	[[ $(conf_read nginx-tool-bkp) == "true" ]] && local ver_duply=$(echo $(duply --version) | head -1 | cut -d' ' -f3 -s) || local ver_duply="Not Installed"
+	[[ $(conf_read php-tool-postfix) == "true" ]] && local ver_postfix=$(echo $(postconf -d mail_version) | cut -d' ' -f3 -s) || local ver_postfix="Not Installed"
+	[[ $(conf_read php-tool-redis) == "true" ]] && local ver_redis=$(echo $(redis-cli --version) | cut -d' ' -f2 -s) || local ver_redis="Not Installed"
+	[[ $(conf_read php-tool-memcached) == "true" ]] && local ver_memcached=$(echo $(memcached --version) | cut -d' ' -f2 -s) || local ver_memcached="Not Installed"
+	
+	if [[ $(conf_read mysql-tool-pma) == "true" && -f /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/libraries/classes/Version.php ]]; then
+		local ver_pma=$(grep -E "public const VERSION = '[0-9\.]+'.*;" /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/libraries/classes/Version.php | cut -f 2 -d "'")
+	# Legacy support: before v5.1.0 (Feb 23, 2021) version is found here:
+	elif [[ $(conf_read mysql-tool-pma) == "true" ]]; then
+		local ver_pma=$(grep -e "\$this->set('PMA_VERSION',.*'[0-9\.]*');" /var/www/$ADMIN_TOOLS_SITE/htdocs/pma/libraries/classes/Config.php | cut -f 4 -d "'")
+	else
+		local ver_pma="Not installed"
+	fi
+	
+	echo "${blu}${bol}[Additional Tools]${end}"
+	echo "${blu}Certbot:${end}${dim} $ver_certbot ${end}"
+	echo "${blu}Duplicity:${end}${dim} $ver_duplicity ${end}"
+	echo "${blu}Duply:${end}${dim} $ver_duply ${end}"
+	echo "${blu}Postfix:${end}${dim} $ver_postfix ${end}"
+	echo "${blu}Redis:${end}${dim} $ver_redis ${end}"
+	echo "${blu}Memcached:${end}${dim} $ver_memcached ${end}"
+	echo "${blu}phpMyAdmin:${end}${dim} $ver_pma ${end}"
+	
+	echo ""
 	echo "${blu}${bol}[Internal]${end}"
 	if [[ -f /opt/webinoly/webinoly.conf ]]; then
 		sudo sed -nr "s/^([a-z\-]+)\:(.*)$/${blu}\1\:${end}${dim}\2${end}/p" /opt/webinoly/webinoly.conf
