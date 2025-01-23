@@ -1960,7 +1960,12 @@ wp_replace_content() {
 			exit 1
 		fi
 		
-		query="USE $wp_dbname; UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'$search','$replace');"
+		if [[ -n $regex ]]; then
+			# Regex support: https://mariadb.com/kb/en/regexp_replace/
+			query="USE $wp_dbname; UPDATE ${wp_dbpref}posts SET post_content = REGEXP_REPLACE (post_content,'$search','$replace');"
+		else
+			query="USE $wp_dbname; UPDATE ${wp_dbpref}posts SET post_content = REPLACE (post_content,'$search','$replace');"
+		fi
 		
 		if [[ $wp_dbhost_host == "localhost" ]]; then
 			$MYSQL_COMMAND --connect-timeout=10 --user=admin -e "$query" "${mysql_params[@]}"
