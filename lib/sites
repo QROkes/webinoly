@@ -2206,6 +2206,38 @@ site_info() {
 		echo "${blu}Forwarded to:${end} $(grep 'return 301 ' /etc/nginx/sites-available/$domain | cut -d ' ' -f 3 -s | cut -d '$' -f 1 -s)"
 	fi
 	echo ""
+	
+	# Check if site contains independent subfolders.
+	for site in "/etc/nginx/apps.d/${domain}_"*
+	do
+		sub="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+		
+		for val in "${sub_array[@]}"
+		do 
+			[[ $val == $sub ]] && local check="true"
+		done
+		
+		[[ $check != "true" && $(is_subfolder $domain $sub) != "false" ]] && sub_array=("${sub_array[@]}" $sub)
+		unset check
+	done
+	
+	# Check for HTML locations
+	local html_loc=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -E "location .* { try_files .* =404; }" | cut -d' ' -f2 -s | rev | cut -d'/' -f 2- -s | rev)
+	
+	if [[ -n $sub_array || -n $html_loc ]]; then
+		echo "${blu}Subfolders Configured:${dim}"
+		for i in "${sub_array[@]}"
+		do
+			local sub_type=$(is_subfolder $domain $i)
+			echo "  + $i (${sub_type^^})"
+		done
+		
+		for html in $html_loc
+		do
+			[[ $(is_subfolder $domain $html) == "html" ]] && echo "  + $html (HTML)"
+		done
+		echo "${end}"
+	fi
 }
 
 
