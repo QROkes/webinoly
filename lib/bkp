@@ -194,9 +194,9 @@ bkp_local_db() {
 
 	
 	if [[ ( $wp_dbhost_host == "localhost" || ( -z $extdb_url && -z $extdb_port )) && -n $db_name_list && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
-		$MYSQL_DUMP_COMMAND --user=admin --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
+		$MYSQL_DUMP_COMMAND --user=admin --single-transaction --quick $db_name_list > $destination/$filename
 	elif [[ -n $extdb_url && $extdb_url != "error" && -n $db_name_list && $(check_mysql_connection $extdb_url $extdb_port any -login-file -master-admin) == "true" ]]; then
-		$MYSQL_DUMP_COMMAND --defaults-group-suffix=_${extdb_url}:${extdb_port}_default -h "$extdb_url" -P "$extdb_port" --single-transaction --lock-tables --quick $db_name_list > $destination/$filename
+		$MYSQL_DUMP_COMMAND --defaults-group-suffix=_${extdb_url}:${extdb_port}_default -h "$extdb_url" -P "$extdb_port" --single-transaction --quick $db_name_list > $destination/$filename
 	elif [[ $extdb_url == "error" ]]; then
 		echo "${red}[ERROR] Multiple DB hosts not allowed!${end}"
 		exit 1

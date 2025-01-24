@@ -1891,13 +1891,13 @@ cloning_site() {
 		
 		if [[ $wp_dbhost_host == "localhost" ]]; then
 			site -mysql=[localhost,$dom,$usr,$AUTOGENPASS_WPDB] > /dev/null 2>&1
-			$MYSQL_DUMP_COMMAND -u admin "${mysql_params[@]}" $wp_dbname | $MYSQL_COMMAND -u admin "${mysql_params[@]}" $dom
+			$MYSQL_DUMP_COMMAND -u admin --single-transaction --quick "${mysql_params[@]}" $wp_dbname | $MYSQL_COMMAND -u admin "${mysql_params[@]}" $dom
 			
 			# No need of force-redirect check because this is a new and different site.
 			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
 		else
 			site -mysql=[$wp_dbhost,$dom,$usr,$AUTOGENPASS_WPDB,$extdb_user,$extdb_pass] > /dev/null 2>&1
-			$MYSQL_DUMP_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default -h "$wp_dbhost_host" -P "$wp_dbhost_port" $wp_dbname | $MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default -h "$wp_dbhost_host" -P "$wp_dbhost_port" $dom
+			$MYSQL_DUMP_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default -h "$wp_dbhost_host" -P "$wp_dbhost_port" --single-transaction --quick $wp_dbname | $MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_default -h "$wp_dbhost_host" -P "$wp_dbhost_port" $dom
 			
 			# No need of force-redirect check because this is a new and different site.
 			edit_wp_db_url $domain "http://${domain}${subfolder}" $subfolder
@@ -2217,7 +2217,7 @@ site_info() {
 			[[ $val == $sub ]] && local check="true"
 		done
 		
-		[[ $check != "true" && $(is_subfolder $domain $sub) != "false" ]] && sub_array=("${sub_array[@]}" $sub)
+		[[ $check != "true" && $(is_subfolder $domain $sub) =~ ^(wp|php|proxy)$ ]] && sub_array=("${sub_array[@]}" $sub)
 		unset check
 	done
 	
