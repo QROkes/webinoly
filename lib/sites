@@ -1983,7 +1983,7 @@ wp_replace_content() {
 list_sites() {
 	echo ""
 	
-	if ! [[ ${list,,}  =~ ^(true|disabled|main|parked|wordpress|php|html|proxy|forward|tools|default|ssl|nossl|sslstaging|accesslog|noaccesslog|cache|nocache|adminauth|noadminauth|debug|nodebug|wpenv)$ ]]; then
+	if ! [[ ${list,,}  =~ ^(true|disabled|main|parked|wordpress|php|html|proxy|forward|tools|default|ssl|nossl|sslstaging|accesslog|noaccesslog|cache|nocache|adminauth|noadminauth|debug|nodebug|wpenv|wpmultisite)$ ]]; then
 		echo "${red}[ERROR] Invalid value for list filter! ${end}"
 		exit 1
 	fi
@@ -2027,14 +2027,16 @@ list_sites() {
 			[[ ${list,,} == "nodebug" && $(is_wp_debug $domi) == "true" ]] && continue
 			
 			[[ ${list,,} == "wpenv" && -z $(wp_config_read $domi WP_ENVIRONMENT_TYPE) ]] && continue
+			[[ ${list,,} == "wpmultisite" && $(is_wp_multisite $domi) == "false" ]] && continue
 		fi
 		
 		[[ -d /var/www/$domi ]] && local sign="${gre} +" || local sign="${blu} *${gre}"
 		[[ ! -L /etc/nginx/sites-enabled/$domi ]] && local sign="${red} -"
 			
 		[[ $(is_wp $domi) == "true" && -n $(wp_config_read $domi WP_ENVIRONMENT_TYPE) ]] && local sype="$(site_type $domi):$(wp_config_read $domi WP_ENVIRONMENT_TYPE)" || local sype=$(site_type $domi)
-			
-		[[ $(conf_read default-site) == $domi ]] && local check="${blu}${dim}($sype)(Default)" || local check="${blu}${dim}($sype)"
+		
+		[[ $(is_wp_multisite $domi) =~ ^(subdirectory|subdomain)$ ]] && local check="${blu}${dim}($sype)(Multisite)" || local check="${blu}${dim}($sype)"
+		[[ $(conf_read default-site) == $domi ]] && local check="${check}(Default)"
 		[[ $(conf_read tools-site) == $domi ]] && local check="${check}(Tools)"
 		[[ $(is_ssl $domi) != "true" ]] && local check="${check}${red}(NoSSL)" || local check="${check}${red}"
 		[[ $(is_ssl $domi) == "true" && $(is_ssl_staging $domi) == "true" ]] && local check="${check}(SSL-Staging)"
@@ -2098,11 +2100,21 @@ site_info_subfolder() {
 		[[ -n $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder) ]] && echo "${blu}Environment:${end} $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder)"
 		echo ""
 		
+		# WordPress Multisite expanded!
+		if [[ $typesite == "wp" && $wpmu =~ ^(subdomain|subdirectory)$ ]]; then
+			local dbq="USE $wp_dbname; SELECT blog_id,domain,path FROM ${wp_dbpref}blogs;"
+			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
+				$MYSQL_COMMAND --connect-timeout=10 --user=admin -e "$dbq" "${mysql_params[@]}"
+			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
+				$MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbq"
+			fi
+			echo ""
+		fi
+		
 		echo "${blu}Database:${end} $wp_dbhost"
 		echo "${blu}DB Name:${end} $wp_dbname"
 		echo "${blu}DB User:${end} $wp_dbuser"
 		echo "${blu}DB Prefix:${end} $wp_dbpref"
-		[[ -n $wpmu && $wpmu =~ ^(subdomain|subdirectory)$ && -n $wp_blogid ]] && echo "${blu}Blog ID:${end} $wp_blogid"
 	fi
 	
 	[[ $typesite == "proxy" ]] && echo "${blu}Source Server:${end} $(grep 'proxy_pass ' /etc/nginx/apps.d/$domain$subname-proxy.conf | head -1 | cut -d ' ' -f 2 -s | rev | cut -c 2- | rev)"
@@ -2169,11 +2181,21 @@ site_info() {
 		[[ -n $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder) ]] && echo "${blu}Environment:${end} $(wp_config_read $domain WP_ENVIRONMENT_TYPE $subfolder)"
 		echo ""
 		
+		# WordPress Multisite expanded!
+		if [[ $typesite == "WordPress" && $wpmu =~ ^(subdomain|subdirectory)$ ]]; then
+			local dbq="USE $wp_dbname; SELECT blog_id,domain,path FROM ${wp_dbpref}blogs;"
+			if [[ $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) == "true" ]]; then
+				$MYSQL_COMMAND --connect-timeout=10 --user=admin -e "$dbq" "${mysql_params[@]}"
+			elif [[ $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port $wp_dbuser $wp_dbpass) == "true" ]]; then
+				$MYSQL_COMMAND --defaults-group-suffix=_${wp_dbhost_host}:${wp_dbhost_port}_${wp_dbuser} --connect-timeout=10 -h "$wp_dbhost_host" -P "$wp_dbhost_port" -u"$wp_dbuser" -e "$dbq"
+			fi
+			echo ""
+		fi
+		
 		echo "${blu}Database:${end} $wp_dbhost"
 		echo "${blu}DB Name:${end} $wp_dbname"
 		echo "${blu}DB User:${end} $wp_dbuser"
 		echo "${blu}DB Prefix:${end} $wp_dbpref"
-		[[ -n $wpmu && $wpmu =~ ^(subdomain|subdirectory)$ && -n $wp_blogid ]] && echo "${blu}Blog ID:${end} $wp_blogid"
 	fi
 	
 	if [[ $typesite == "Reverse Proxy" ]]; then
