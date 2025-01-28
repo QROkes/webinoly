@@ -1223,6 +1223,9 @@ database_import() {
 	if [[ -z $file || ! -f $file ]]; then
 		echo "${red}[ERROR] Please, enter a valid file path!${end}"
 		exit 1
+	elif [[ -n $dbname && $dbname == "true" ]]; then
+		echo "${red}[ERROR] Please, enter a valid DB name!${end}"
+		exit 1
 	fi
 	
 	check_external_db_saved
@@ -1235,7 +1238,13 @@ database_import() {
 			exit 1
 		fi
 		
-		$MYSQL_COMMAND --defaults-group-suffix=_${extdb_url}:${extdb_port}_default --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" < $file
+		if [[ -z $dbname ]]; then
+			$MYSQL_COMMAND --defaults-group-suffix=_${extdb_url}:${extdb_port}_default --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" < $file
+		else
+			$MYSQL_COMMAND --defaults-group-suffix=_${extdb_url}:${extdb_port}_default --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -e "CREATE DATABASE IF NOT EXISTS $dbname"
+			$MYSQL_COMMAND --defaults-group-suffix=_${extdb_url}:${extdb_port}_default --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" $dbname < $file
+		fi
+		
 		if [[ $? == "0" ]]; then
 			$MYSQL_COMMAND --defaults-group-suffix=_${extdb_url}:${extdb_port}_default --connect-timeout=10 -h "$extdb_url" -P "$extdb_port" -e "FLUSH PRIVILEGES;"
 			echo "${gre}Database successfully imported!${end}"
@@ -1244,7 +1253,14 @@ database_import() {
 		fi
 	elif [[ -z $external_db && $(check_mysql_connection localhost) == "true" ]]; then
 		check_for_mysql -ask
-		$MYSQL_COMMAND -u admin < $file
+		
+		if [[ -z $dbname ]]; then
+			$MYSQL_COMMAND -u admin < $file
+		else
+			$MYSQL_COMMAND -u admin -e "CREATE DATABASE IF NOT EXISTS $dbname" < $file
+			$MYSQL_COMMAND -u admin $dbname < $file			
+		fi
+		
 		if [[ $? == "0" ]]; then
 			$MYSQL_COMMAND --connect-timeout=10 --user=admin -e "FLUSH PRIVILEGES;"
 			echo "${gre}Database successfully imported!${end}"
