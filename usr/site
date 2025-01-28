@@ -3,7 +3,7 @@
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
 # Options: -html, -php, -mysql, -wp, -parked, -proxy, -empty, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -multisite-convert, -clone-from, -replace-content, -redirection, -forward, -info, -env
-# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -external-db, -revoke, -ssl-crt, -ssl-key, -ssl-ocsp, -subfolder, -from, -to, -http-code, -regex, -manual, -overwrite, -wp-cache-plugins, -dedicated-reverse-proxy, -must-staple, -cache-valid, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -query-string-cache-default, -reset, -test-cert, -db-role, -domain-mapping-wp-id, -delete-all
+# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -external-db, -revoke, -ssl-crt, -ssl-key, -subfolder, -from, -to, -http-code, -regex, -manual, -overwrite, -wp-cache-plugins, -dedicated-reverse-proxy, -cache-valid, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -query-string-cache-default, -reset, -test-cert, -db-role, -domain-mapping-wp-id, -delete-all
 
 # shopt is necessary for this kind !(html|<toolsport>) of patterns
 shopt -s extglob

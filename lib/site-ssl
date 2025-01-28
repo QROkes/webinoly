@@ -22,12 +22,6 @@ ssl_nginx() {
 	[[ -n $add_to_wildcard ]] && cert=$add_to_wildcard || cert=$domain
 	sudo sed -i "/WebinolySSLstart/,/WebinolySSLend/{s/domain.com/$cert/}" /etc/nginx/sites-available/$domain
 	
-	# Remove OCSP from staging certs
-	if [[ -n $test_cert ]]; then
-		sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/ssl_stapling/d}' /etc/nginx/sites-available/$domain
-		sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/ssl_trusted_certificate/d}' /etc/nginx/sites-available/$domain
-	fi
-	
 	# Custom SSL files
 	if [[ -n $ssl_crt && -n $ssl_key ]]; then
 		sudo sed -i '/WebinolySSLstart/a \	# WebinolySSLCustomCert' /etc/nginx/sites-available/$domain
@@ -46,15 +40,6 @@ ssl_nginx() {
 			wp_db_update $domain "https://www.${domain}"
 		else
 			wp_db_update $domain "https://${domain}"
-		fi
-		
-		if [[ -n $ssl_ocsp && -f $ssl_ocsp ]]; then
-			sudo sed -i "/ssl_trusted_certificate/c \	ssl_trusted_certificate $ssl_ocsp;" /etc/nginx/sites-available/$domain
-			sudo chmod 777 $ssl_ocsp
-			sudo chmod 755 $(dirname -- $ssl_ocsp)
-		else
-			sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/ssl_stapling/d}' /etc/nginx/sites-available/$domain
-			sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/ssl_trusted_certificate/d}' /etc/nginx/sites-available/$domain
 		fi
 	fi
 
@@ -137,14 +122,10 @@ site_ssl_on() {
 	done
 	
 	# Create new certificate
-	local param="--email $cermail --no-eff-email --agree-tos --staple-ocsp"
-	[[ $must_staple == "on" ]] && param="$param --must-staple"
+	local param="--email $cermail --no-eff-email --agree-tos"
 	[[ -n $test_cert ]] && param="$param --test-cert"
 	[[ $ssl == "force-renewal" ]] && param="$param --force-renewal"
 	[[ $subdomain == "true" ]] && local domset="-d $domain" || local domset="-d $domain -d www.$domain"
-	
-	# Must-Staple issue: https://trac.nginx.org/nginx/ticket/812
-	# Also: https://blog.apnic.net/2019/01/15/is-the-web-ready-for-ocsp-must-staple/
 	
 	if [[ -n $wildcard ]]; then
 		local domset="-d $domain -d *.$domain"
