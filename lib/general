@@ -839,7 +839,8 @@ is_domain() {
 		echo "false"
 	
 	# Check Total Lenght
-	elif [[ ${#1} -gt 255 ]]; then
+	# Each element of a domain name separated by [.] is called a “label.” The maximum length of each label is 63 characters, and a full domain name can have a maximum of 253 characters. Alphanumeric characters and hyphens can be used in labels, but a domain name must not commence or end with a hyphen.
+	elif [[ ${#1} -gt 253 ]]; then
 		echo "false"
 		
 	# Can not start or end with a hyphen

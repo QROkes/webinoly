@@ -651,6 +651,9 @@ change_tools_port() {
 			sudo cp -rp /var/www/$ADMIN_TOOLS_SITE/* /var/www/$NEW_ADMIN_TOOLS_SITE
 			sudo rm -rf /var/www/$ADMIN_TOOLS_SITE
 			
+			sudo chown -R www-data:www-data /var/www
+			[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
+		
 			sudo mv /etc/nginx/sites-available/$ADMIN_TOOLS_SITE /etc/nginx/sites-available/$NEW_ADMIN_TOOLS_SITE
 			sudo rm /etc/nginx/sites-enabled/$ADMIN_TOOLS_SITE
 			sudo ln -s /etc/nginx/sites-available/$NEW_ADMIN_TOOLS_SITE /etc/nginx/sites-enabled/$NEW_ADMIN_TOOLS_SITE

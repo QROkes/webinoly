@@ -664,7 +664,7 @@ export_server() {
 	[[ -f /opt/webinoly/templates/source/custom_header_http_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_http_webinoly.data"
 	[[ -f /opt/webinoly/templates/source/custom_header_https_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_https_webinoly.data"
 	[[ -f /opt/webinoly/templates/source/custom_header_html_webinoly.data ]] && local include="$include /opt/webinoly/templates/source/custom_header_html_webinoly.data"
-	[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf ]] && local include="$include $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf"
+	[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf ]] && local include="$include $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly-login.cnf"
 	[[ -f $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf ]] && local include="$include $MYSQL_CONF_PATH/${MYSQL_CONF_PREF}-webinoly.cnf"
 	[[ -d /etc/nginx/certs ]] && local include="$include /etc/nginx/certs"
 	

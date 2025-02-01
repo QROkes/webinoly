@@ -748,7 +748,7 @@ createsite() {
 		exit 1
 	fi
 	if [[ $(is_domain $domain_name) != "true" ]]; then
-		echo "${red}[ERROR] Domain names can only contain letters, numbers or a hyphen; can not start or end with a hyphen or period or having two periods together, and can be up to 67 characters long.${end}"
+		echo "${red}[ERROR] Domain names can only contain letters, numbers or a hyphen; can not start or end with a hyphen or period or having two periods together. The maximum length of each label is 63 characters, and a full domain name can have a maximum of 253 characters.${end}"
 		exit 1
 	fi
 	

@@ -265,7 +265,6 @@ elif [[ -n $datadog ]]; then
 
 
 elif [[ -n $db_import ]]; then
-	check_for_mysql
 	database_import
 	nginx_not="true" # Nginx-Reload not-needed.
 
