@@ -50,8 +50,7 @@ sudo httpauth -add
 
 
 ### Documentation
-For complete documentation: [English](https://webinoly.com/documentation/) | [Español](https://webinoly.com/es/documentacion/) | [
-繁體中文](https://webinoly.com/zh/shuo-ming-wen-jian/)
+For complete documentation: [English](https://webinoly.com/documentation/) | [Español](https://webinoly.com/es/documentacion/)
 
 
 ## Contributing
