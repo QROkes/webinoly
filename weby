@@ -23,25 +23,25 @@ if [[ $distr != "Ubuntu" ]] || ! [[ $osver =~ ^(focal|jammy|noble)$ ]]; then
 	sudo rm weby
 	exit 1
 
-# Block new installs for: 20.04 Focal (can be installed before 1.xx.0) (April 2025 EOL)
-#elif [[ $osver == "focal" && $1 != "upd" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -ge 1170 ]]; then
-#	echo "$(tput setaf 1)"
-#	echo "[ERROR] Ubuntu 20.04 is not supported on this version of Webinoly!"
-#	echo "$(tput sgr0)"
-#	sudo rm weby
-#	exit 1
-#elif [[ $osver == "focal" && $1 != "upd" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -lt 1170 ]]; then
-#	echo "$(tput setaf 1)"
-#	echo "[WARNING] You should consider a newer Ubuntu version! $(tput dim)(24.04 or 22.04 are recommended instead)"
-#	echo "$(tput sgr0)"
+# Block new installs for: 20.04 Focal (can be installed before 1.19.1) (April 2025 EOL)
+elif [[ $osver == "focal" && $1 != "upd" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -ge 1191 ]]; then
+	echo "$(tput setaf 1)"
+	echo "[ERROR] Ubuntu 20.04 is not supported on this version of Webinoly!"
+	echo "$(tput sgr0)"
+	sudo rm weby
+	exit 1
+elif [[ $osver == "focal" && $1 != "upd" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -lt 1191 ]]; then
+	echo "$(tput setaf 1)"
+	echo "[WARNING] You should consider a newer Ubuntu version! $(tput dim)(24.04 or 22.04 are recommended instead)"
+	echo "$(tput sgr0)"
 	
-# 20.04 Focal just for updates, no new installations after 1.xx.0
-#elif [[ $osver == "focal" && $1 != "upd" ]]; then
-#	echo "$(tput setaf 1)"
-#	echo "[ERROR] Ubuntu 20.04 is not supported for new installations! $(tput dim)(24.04 or 22.04 are recommended instead)"
-#	echo "$(tput sgr0)"
-#	sudo rm weby
-#	exit 1
+# 20.04 Focal just for updates, no new installations after 1.19.1
+elif [[ $osver == "focal" && $1 != "upd" ]]; then
+	echo "$(tput setaf 1)"
+	echo "[ERROR] Ubuntu 20.04 is not supported for new installations! $(tput dim)(24.04 or 22.04 are recommended instead)"
+	echo "$(tput sgr0)"
+	sudo rm weby
+	exit 1
 
 # 24.04 Noble is supported only after 1.18.0
 elif [[ $osver == "noble" && -n $ver && $(echo ${ver//'*'} | sed 's/\.//g') =~ ^[0-9]+$ && $(echo ${ver//'*'} | sed 's/\.//g') -lt 1180 ]]; then
