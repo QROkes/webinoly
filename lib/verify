@@ -698,6 +698,13 @@ if [[ -z $critical_mode ]]; then
 			echo "${blu}${dim}- [INFO] PHP v8.2 or later is recommended to get an optimal perfomance! (Current: ${ver_php_ver}) ${end}${red}"
 		fi
 		
+		# PHP Workers!
+		[[ -f /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf ]] && local phpworkers=$(grep -E "^pm.max_children.?=.?*+" /etc/php/$(conf_read php-ver)/fpm/pool.d/www.conf | cut -f 2 -d '=' -s | grep -oE '[0-9]+' )
+		if [[ -n $phpworkers && $phpworkers =~ ^[0-9]+$ && ( $phpworkers -lt $(($cores*2)) || $phpworkers -lt 3 ) ]]; then
+			echo "${dim}- [WARNING] PHP Workers are too low (${phpworkers}), you should consider a higher value!${dim} (Recommended = $(($cores*3))) ${end}${red}"
+			local ver_three_war="1"
+		fi
+		
 		# Security check...
 		if [[ $(conf_read php-disable-functions) == "off" ]]; then
 			echo "${dim}- [WARNING] PHP Security is compromised! (disable_functions is off)${end}${red}"
@@ -1313,6 +1320,11 @@ if [[ -z $critical_mode ]]; then
 			elif [[ -f /var/www/$ver_domi/wp-config.php || -f /var/www/$ver_domi/htdocs/wp-config.php ]]; then
 				echo "${red}${dim}- [WARNING] Seems like $ver_domi is a WordPress site but configured for a different type! ${end}${red}"
 				local ver_nine_war="1"
+			fi
+			
+			# Check if access log is enabled
+			if [[ $(is_log $ver_domi) == "true" ]]; then
+				echo "${blu}${dim}- [INFO] Access log is enabled (${ver_domi}) you should consider disabling it for better performance!${end}${red}"
 			fi
 		fi
 	done

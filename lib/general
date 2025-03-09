@@ -1585,7 +1585,7 @@ check_var() {
 		
 	# PHP Workers
 	elif [[ $1 == "php-max-child" ]]; then
-		if [[ -n $(conf_read php-max-child) && $(conf_read php-max-child) =~ ^[0-9]+$ && $(conf_read php-max-child) -ge 3 ]]; then
+		if [[ -n $(conf_read php-max-child) && $(conf_read php-max-child) =~ ^[0-9]+$ && $(conf_read php-max-child) -gt 0 ]]; then
 			local out=$(conf_read php-max-child)
 		else
 			[[ $((3*$cores)) =~ ^[0-9]+ && $((3*$cores)) -ge 6 ]] && local out=$((3*$cores)) || local out=6
