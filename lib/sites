@@ -15,7 +15,7 @@ warning_messages() {
 			echo "${dim}[WARNING] HTTP Authentication Credentials not found and you may need it to complete the WordPress installation process!!${end}"
 		fi
 		if [[ $(conf_read login-www-data) != "true" && (( -z $forward && -z $proxy && -z $parked && -z $mysql ) || ( -n $mysql && -n $domain )) ]]; then
-			echo "${dim}[WARNING] Login for www-data is not enabled and you may need it to upload your site files!${end}"
+			echo "${dim}[WARNING] SFTP access is not enabled and you may need it to upload your site files!${end}"
 		fi
 		warning_mes="true"
 	fi

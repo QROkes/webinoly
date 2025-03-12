@@ -248,10 +248,10 @@ if [[ -z $(conf_read stack-build-error-flag) && $type != "Error" ]]; then # We u
 		echo ""
 	fi
 	
-	[[ $setup == 0 ]] && echo "${gre}${dim}Webinoly has been successfully installed!!!${end}"
-	[[ $setup == 1 ]] && echo "${gre}${dim}Nginx and some other useful tools have been installed successfully! ${end}"
-	[[ $setup == 2 ]] && echo "${gre}${dim}Nginx, PHP and some other useful tools have been installed successfully! ${end}"
-	[[ $setup == 3 ]] && echo "${gre}${dim}Nginx, PHP, MySQL (MariaDB) and some other useful tools have been installed successfully! ${end}"
+	echo "${gre}${dim}Webinoly v${webyversion} has been successfully installed!!!${end}"
+	[[ $setup == 1 ]] && echo "${blu}${dim}Nginx and some other useful tools have been installed successfully! ${end}"
+	[[ $setup == 2 ]] && echo "${blu}${dim}Nginx, PHP and some other useful tools have been installed successfully! ${end}"
+	[[ $setup == 3 ]] && echo "${blu}${dim}Nginx, PHP, MySQL (MariaDB) and some other useful tools have been installed successfully! ${end}"
 	
 	echo "${blu}"
 	echo "****************************************************************************"
@@ -264,6 +264,8 @@ if [[ -z $(conf_read stack-build-error-flag) && $type != "Error" ]]; then # We u
 	echo "****************************************************************************"
 	echo "**********       ${end}${dim}Help me keep this project moving forward.${end}${blu}       ***********"
 	echo "****************************************************************************"
+	echo ""
+	echo "${bol}+ Give Webinoly a GitHub star!${dim} https://github.com/QROkes/webinoly"
 	echo "${end}"
 else
 	echo "${red}[ERROR] Sorry, unexpected error during installation and building stack process!${end}"

@@ -464,7 +464,7 @@ webinoly_update() {
 	sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=${app_version}" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
 	
 	if [[ $? == 0 ]]; then
-		echo "${gre}Webinoly App has been updated successfully!${dim} (Updated to: v$(conf_read app-version))${end}"
+		echo "${dim}Update Completed!${end}"
 	else
 		# Check if exist, because it can be deleted before if an error is triggered in the installer, for instance.
 		[[ -f weby ]] && sudo rm weby
