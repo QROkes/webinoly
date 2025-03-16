@@ -828,9 +828,9 @@ createsite() {
 	fi
 
 	# Force redirection "root" is now enabled by default!
-	if [[ $subdomain != "true" && $force_redirect =~ ^(www|root|off)$ ]]; then
+	if [[ $subdomain != "true" && $force_redirect =~ ^(www|root|off)$ && -z $parked ]]; then
 		sudo site $domain -force-redirect=$force_redirect
-	elif [[ $subdomain != "true" ]]; then	
+	elif [[ $subdomain != "true" && -z $parked ]]; then
 		sudo site $domain -force-redirect=root
 	fi
 
