@@ -422,7 +422,7 @@ elif [[ -n $delete ]]; then
 	sudo sed -i "/^$userpurge:/d" /etc/nginx/$authfile
 	
 	# Remove site-auth-file if empty.
-	if [[ -n $domain && -f /etc/nginx/$authfile && ( ! -s /etc/nginx/$authfile || -z $(cat -v $authfile | grep -m 1 '[^[:space:]]')) ]]; then
+	if [[ -n $domain && -f /etc/nginx/$authfile && ( ! -s /etc/nginx/$authfile || -z $(cat -v /etc/nginx/$authfile | grep -m 1 '[^[:space:]]')) ]]; then
 		sudo rm /etc/nginx/$authfile
 		sudo rm -rf /etc/nginx/apps.d/.htpasswd-www.$domain
 	fi
