@@ -724,7 +724,7 @@ elif [[ -n $php_ver ]]; then
 		fi
 		clear_force_flag
 	else
-		echo "${red}[ERROR] Please, enter a valid PHP version!${end}"
+		echo "${red}[ERROR] Please, enter a valid PHP version! ${dim}(${php_supported[@]})${end}"
 		exit 1
 	fi
 
@@ -752,7 +752,11 @@ elif [[ -n $mysql_ver ]]; then
 			echo "${gre}MySQL (MariaDB) is not already installed but this version will be installed next time! ${end}"
 		fi
 	else
-		echo "${red}[ERROR] Please, enter a valid MySQL (MariaDB) version!${end}"
+		if [[ $(conf_read db-engine) == "mysql" ]]; then
+			echo "${red}[ERROR] Please, enter a valid MySQL version! ${dim}(${mysql_supported[@]})${end}"
+		else
+			echo "${red}[ERROR] Please, enter a valid MariaDB version! ${dim}(${mariadb_supported[@]})${end}"
+		fi
 		exit 1
 	fi
 
