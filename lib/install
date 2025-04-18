@@ -254,6 +254,7 @@ mysql_install() {
 		echo "mysql-community-server mysql-community-server/root-pass password " | debconf-set-selections
 		#echo "mysql-community-server mysql-community-server/re-root-pass password $AUTOGENPASS_ROOT" | debconf-set-selections
 		echo "mysql-community-server mysql-server/default-auth-override select Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
+		echo "mysql-community-server mysql-community-server/data-dir note" | debconf-set-selections
 		sudo apt -y install mysql-server
 	else
 		# This option is no longer available in recent MariaDB versions, so we set the root password in the next step after installation.
