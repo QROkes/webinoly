@@ -343,6 +343,9 @@ elif [[ -n $domain && -f /etc/nginx/sites-available/$domain ]]; then
 			if [[ ! -f /var/www/${maindom}/wp-config.php ]]; then
 				echo "${red}[ERROR] Parked main WP domain not found!${dim} (${maindom})${end}"
 				exit 1
+			elif [[ ! -f /var/www/${maindom}/htdocs$subfolder/wp-content/debug.log ]]; then
+				echo "${red}[ERROR] WordPress log file from the main site not found or still empty!${end}"
+				exit 1
 			fi
 			
 			echo "${blu}${dim}WP Debug Log from main site (${maindom})${end}"
