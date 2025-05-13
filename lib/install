@@ -491,57 +491,57 @@ php_optim() {
 	[[ ! -f /opt/webinoly/templates/source/www.conf ]] && sudo cp -p /etc/php/${ver}/fpm/pool.d/www.conf /opt/webinoly/templates/source/
 	[[ ! -f /opt/webinoly/templates/source/php-fpm.conf ]] && sudo cp -p /etc/php/${ver}/fpm/php-fpm.conf /opt/webinoly/templates/source/
 	
-	sudo sed -i -r "/^[;]?max_execution_time =/c\max_execution_time = $(check_var php-max-time)" /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r '/^[;]?session.cookie_httponly =/c\session.cookie_httponly = 1' /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r '/^[;]?expose_php =/c\expose_php = Off' /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r "/^[;]?max_execution_time[[:space:]]?=/c\max_execution_time = $(check_var php-max-time)" /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r '/^[;]?session.cookie_httponly[[:space:]]?=/c\session.cookie_httponly = 1' /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r '/^[;]?expose_php[[:space:]]?=/c\expose_php = Off' /etc/php/$ver/fpm/php.ini
 	
 	# post_max must be a little larger and memory a little more larger - https://www.php.net/manual/en/ini.core.php#ini.post-max-size
-	sudo sed -i -r "/^[;]?upload_max_filesize =/c\upload_max_filesize = $(check_var max-mb-uploads)M" /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r "/^[;]?post_max_size =/c\post_max_size = $(($(check_var max-mb-uploads)+1))M" /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r "/^[;]?max_file_uploads =/c\max_file_uploads = $(check_var php-max-files)" /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r "/^[;]?upload_max_filesize[[:space:]]?=/c\upload_max_filesize = $(check_var max-mb-uploads)M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r "/^[;]?post_max_size[[:space:]]?=/c\post_max_size = $(($(check_var max-mb-uploads)+1))M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r "/^[;]?max_file_uploads[[:space:]]?=/c\max_file_uploads = $(check_var php-max-files)" /etc/php/$ver/fpm/php.ini
 	[[ $(check_var php-max-mem) -gt $(($(check_var max-mb-uploads)+1)) ]] && local phpmem=$(check_var php-max-mem) || local phpmem=$(($(check_var max-mb-uploads)+10))
-	sudo sed -i -r "/^[;]?memory_limit =/c\memory_limit = ${phpmem}M" /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r "/^[;]?max_input_vars =/c\max_input_vars = $(check_var php-max-input-vars)" /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r "/^[;]?memory_limit[[:space:]]?=/c\memory_limit = ${phpmem}M" /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r "/^[;]?max_input_vars[[:space:]]?=/c\max_input_vars = $(check_var php-max-input-vars)" /etc/php/$ver/fpm/php.ini
 	
-	[[ $(conf_read php-disable-functions) != "off" ]] && sudo sed -i -r "/^[;]?disable_functions =/c\disable_functions = $(check_var php-disable-functions)" /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r "/^[;]?allow_url_fopen =/c\allow_url_fopen = $(check_var php-allow-url-fopen)" /etc/php/$ver/fpm/php.ini
+	[[ $(conf_read php-disable-functions) != "off" ]] && sudo sed -i -r "/^[;]?disable_functions[[:space:]]?=/c\disable_functions = $(check_var php-disable-functions)" /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r "/^[;]?allow_url_fopen[[:space:]]?=/c\allow_url_fopen = $(check_var php-allow-url-fopen)" /etc/php/$ver/fpm/php.ini
 	
-	sudo sed -i -r "/^[;]?opcache.memory_consumption=/c\opcache.memory_consumption=$(check_var php-max-mem)" /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r '/^[;]?opcache.interned_strings_buffer=/c\opcache.interned_strings_buffer=16' /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r '/^[;]?opcache.max_accelerated_files=/c\opcache.max_accelerated_files=100000' /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r '/^[;]?opcache.max_wasted_percentage=/c\opcache.max_wasted_percentage=10' /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r '/^[;]?opcache.enable_cli=/c\opcache.enable_cli=1' /etc/php/$ver/fpm/php.ini
-	sudo sed -i -r '/^[;]?opcache.enable=/c\opcache.enable=1' /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r "/^[;]?opcache.memory_consumption[[:space:]]?=/c\opcache.memory_consumption=$(check_var php-max-mem)" /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r '/^[;]?opcache.interned_strings_buffer[[:space:]]?=/c\opcache.interned_strings_buffer=16' /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r '/^[;]?opcache.max_accelerated_files[[:space:]]?=/c\opcache.max_accelerated_files=100000' /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r '/^[;]?opcache.max_wasted_percentage[[:space:]]?=/c\opcache.max_wasted_percentage=10' /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r '/^[;]?opcache.enable_cli[[:space:]]?=/c\opcache.enable_cli=1' /etc/php/$ver/fpm/php.ini
+	sudo sed -i -r '/^[;]?opcache.enable[[:space:]]?=/c\opcache.enable=1' /etc/php/$ver/fpm/php.ini
 	
 	# Not set, unless non-empty and valid!
 	if [[ -n $(check_var php-opcache-timestamps) ]]; then
-		sudo sed -i -r "/^[;]?opcache.validate_timestamps=/c\opcache.validate_timestamps=$(check_var php-opcache-timestamps)" /etc/php/$ver/fpm/php.ini
+		sudo sed -i -r "/^[;]?opcache.validate_timestamps[[:space:]]?=/c\opcache.validate_timestamps=$(check_var php-opcache-timestamps)" /etc/php/$ver/fpm/php.ini
 	fi
 	if [[ -n $(check_var php-opcache-reval) ]]; then
-		sudo sed -i -r "/^[;]?opcache.revalidate_freq=/c\opcache.revalidate_freq=$(check_var php-opcache-reval)" /etc/php/$ver/fpm/php.ini
+		sudo sed -i -r "/^[;]?opcache.revalidate_freq[[:space:]]?=/c\opcache.revalidate_freq=$(check_var php-opcache-reval)" /etc/php/$ver/fpm/php.ini
 	fi
 	if [[ -n $(check_var php-session-max-lifetime) ]]; then
-		sudo sed -i -r "/^[;]?session.gc_maxlifetime = /c\session.gc_maxlifetime = $(check_var php-session-max-lifetime)" /etc/php/$ver/fpm/php.ini
+		sudo sed -i -r "/^[;]?session.gc_maxlifetime[[:space:]]?=/c\session.gc_maxlifetime = $(check_var php-session-max-lifetime)" /etc/php/$ver/fpm/php.ini
 	fi
 	if [[ -n $(check_var php-session-cookie-lifetime) ]]; then
-		sudo sed -i -r "/^[;]?session.cookie_lifetime = /c\session.cookie_lifetime = $(check_var php-session-cookie-lifetime)" /etc/php/$ver/fpm/php.ini
+		sudo sed -i -r "/^[;]?session.cookie_lifetime[[:space:]]?=/c\session.cookie_lifetime = $(check_var php-session-cookie-lifetime)" /etc/php/$ver/fpm/php.ini
 	fi
 	
 	
 	[[ -n $(conf_read timezone) ]] && set_timezone
 	
-	sudo sed -i -r "/^[;]?pm =/c\pm = $(check_var php-pm)" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i -r "/^[;]?pm.max_children =/c\pm.max_children = $(check_var php-max-child)" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i -r "/^[;]?pm.start_servers =/c\pm.start_servers = $(($(check_var php-max-child)/3))" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i -r "/^[;]?pm.min_spare_servers =/c\pm.min_spare_servers = $(($(check_var php-max-child)/3))" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i -r "/^[;]?pm.max_spare_servers =/c\pm.max_spare_servers = $((2*($(check_var php-max-child)/3)))" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i -r "/^[;]?request_terminate_timeout =/c\request_terminate_timeout = $(check_var php-max-time)" /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i -r '/^[;]?pm.max_requests =/c\pm.max_requests = 1000' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i -r '/^[;]?pm.status_path =/c\pm.status_path = /status' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i -r '/^[;]?ping.path =/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
-	sudo sed -i -r '/^[;]?listen.mode = /c\listen.mode = 0600' /etc/php/$ver/fpm/pool.d/www.conf
-	#sudo sed -i -r '/^[;]?listen = /c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
-	#sudo sed -i -r '/^[;]?listen.allowed_clients = /c\listen.allowed_clients = 127.0.0.1' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i -r "/^[;]?pm[[:space:]]?=/c\pm = $(check_var php-pm)" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i -r "/^[;]?pm.max_children[[:space:]]?=/c\pm.max_children = $(check_var php-max-child)" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i -r "/^[;]?pm.start_servers[[:space:]]?=/c\pm.start_servers = $(($(check_var php-max-child)/3))" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i -r "/^[;]?pm.min_spare_servers[[:space:]]?=/c\pm.min_spare_servers = $(($(check_var php-max-child)/3))" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i -r "/^[;]?pm.max_spare_servers[[:space:]]?=/c\pm.max_spare_servers = $((2*($(check_var php-max-child)/3)))" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i -r "/^[;]?request_terminate_timeout[[:space:]]?=/c\request_terminate_timeout = $(check_var php-max-time)" /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i -r '/^[;]?pm.max_requests[[:space:]]?=/c\pm.max_requests = 1000' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i -r '/^[;]?pm.status_path[[:space:]]?=/c\pm.status_path = /status' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i -r '/^[;]?ping.path[[:space:]]?=/c\ping.path = /ping' /etc/php/$ver/fpm/pool.d/www.conf
+	sudo sed -i -r '/^[;]?listen.mode[[:space:]]?=/c\listen.mode = 0600' /etc/php/$ver/fpm/pool.d/www.conf
+	#sudo sed -i -r '/^[;]?listen[[:space:]]?=/c\listen = 127.0.0.1:9000' /etc/php/$ver/fpm/pool.d/www.conf
+	#sudo sed -i -r '/^[;]?listen.allowed_clients[[:space:]]?=/c\listen.allowed_clients = 127.0.0.1' /etc/php/$ver/fpm/pool.d/www.conf
 	
 	[[ $(conf_read php-tool-redis) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
 	conf_write php-optim true
