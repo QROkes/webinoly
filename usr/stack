@@ -295,6 +295,7 @@ elif [[ -n $purge && -n $mysql ]]; then
 			purge_mysql_client
 			purge_autoremove="true"
 			conf_write mysql purged
+			conf_write mysql-optim purged
 			
 			echo ""
 			echo "${gre}MySQL/MariaDB has been deleted successfully! ${end}"
