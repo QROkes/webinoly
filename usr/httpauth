@@ -249,6 +249,10 @@ elif [[ -n $path && -n $domain ]]; then
 				sudo sed -i "/$domain-nginx.conf;/d" /etc/nginx/sites-available/$domain
 			fi
 		fi
+		
+		# In case of full site protected!
+		sudo sed -i "/acl.conf;/d" /etc/nginx/sites-available/$domain
+		
 		echo "${gre}All protected paths were successfully removed!${end}"
 	
 	elif [[ -z $delete ]]; then
@@ -348,10 +352,7 @@ location $sign$path {
 			sudo sed -i "/acl.conf;/d" /etc/nginx/sites-available/$domain
 			echo "${gre}HTTP Authentication successfully removed from ${blu}'$path'${gre}!${end}"
 		elif [[ $path == "all" ]]; then
-			sudo sed -i "/acl.conf;/d" /etc/nginx/sites-available/$domain
-			sudo sed -i "/$domain-nginx.conf;/d" /etc/nginx/sites-available/$domain
-			sudo rm -rf /etc/nginx/apps.d/$domain-nginx.conf
-			echo "${gre}HTTP Authentication successfully removed from all your custom paths!${gre}${end}"
+			sudo httpauth $domain -path -delete-all
 		elif [[ $path =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
 			if [[ -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
 				sudo sed -i "/^# Path: $(echo $path | sed "s#/#\\\/#g")/,/^# PathEnd/{/.*/d}" /etc/nginx/apps.d/$domain-nginx.conf
