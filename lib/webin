@@ -73,22 +73,27 @@ system_info() {
 	fi
 	
 	echo "${blu}${bol}[MYSQL]${end}"
-	if [[ $(conf_read mysql) == "true" ]]; then		
+	if [[ $(conf_read mysql) == "true" || $(conf_read mysql-client) == "true" ]]; then		
 		echo "${blu}Info:${end}${dim} $($MYSQL_COMMAND --version) ${end}"
 		
-		[[ -n $(conf_read mysql-public-access) ]] && local mysql_remote=$(conf_read mysql-public-access) || local mysql_remote="Disabled"
-		[[ $(conf_read mysql-log-binary) == "true" ]] && local mysql_log_bin="Enabled" || local mysql_log_bin="Disabled"
-		[[ $(conf_read mysql-log-general) == "true" ]] && local mysql_log_gen="Enabled" || local mysql_log_gen="Disabled"
-		[[ $(conf_read mysql-log-slow) == "true" ]] && local mysql_log_slw="Enabled" || local mysql_log_slw="Disabled"
-		[[ -n $(conf_read mysql-long-query-time) ]] && local mysql_log_slt=$(conf_read mysql-long-query-time) || local mysql_log_slt="Default"
-		
-		echo "${blu}Remote Access:${end}${dim} $mysql_remote ${end}"
-		echo "${blu}Log Binary:${end}${dim} $mysql_log_bin ${end}"
-		echo "${blu}Log General:${end}${dim} $mysql_log_gen ${end}"
-		echo "${blu}Log Slow:${end}${dim} $mysql_log_slw ${end}"
-		echo "${blu}Log Slow Time:${end}${dim} $mysql_log_slt ${end}"
-		
-		echo ""		
+		if [[ $(conf_read mysql) == "true" ]]; then
+			[[ -n $(conf_read mysql-public-access) ]] && local mysql_remote=$(conf_read mysql-public-access) || local mysql_remote="Disabled"
+			[[ $(conf_read mysql-log-binary) == "true" ]] && local mysql_log_bin="Enabled" || local mysql_log_bin="Disabled"
+			[[ $(conf_read mysql-log-general) == "true" ]] && local mysql_log_gen="Enabled" || local mysql_log_gen="Disabled"
+			[[ $(conf_read mysql-log-slow) == "true" ]] && local mysql_log_slw="Enabled" || local mysql_log_slw="Disabled"
+			[[ -n $(conf_read mysql-long-query-time) ]] && local mysql_log_slt=$(conf_read mysql-long-query-time) || local mysql_log_slt="Default"
+			
+			echo "${blu}Remote Access:${end}${dim} $mysql_remote ${end}"
+			echo "${blu}Log Binary:${end}${dim} $mysql_log_bin ${end}"
+			echo "${blu}Log General:${end}${dim} $mysql_log_gen ${end}"
+			echo "${blu}Log Slow:${end}${dim} $mysql_log_slw ${end}"
+			echo "${blu}Log Slow Time:${end}${dim} $mysql_log_slt ${end}"
+			
+			echo ""
+		else
+			echo "${blu}${dim}* MySQL Client only, server is not installed! ${end}"
+			echo ""
+		fi
 	else
 		echo "${red}${dim} MySQL/MariaDB is not installed! ${end}"
 		echo ""
