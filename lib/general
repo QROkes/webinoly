@@ -1085,7 +1085,7 @@ is_wp() {
 	
 	if [[ -z $2 && -f /etc/nginx/sites-available/$1 && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " common/wpcommon") ]]; then
 		[[ -f $(wp_config_path $1) ]] && echo "true" || echo "false"
-	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -f /etc/nginx/apps.d/$1$subn-wpcommon.conf ]]; then
+	elif [[ -n $2 && -f /etc/nginx/sites-available/$1 && -f /etc/nginx/apps.d/$1$subn-wpcommon.conf && -n $(sed -n -e '/# WebinolyCustom/,$p' /etc/nginx/sites-available/$1 | grep -E "apps.d/$1$subn-phpx?\.conf;") ]]; then
 		[[ -f $(wp_config_path $1 $2) ]] && echo "true" || echo "false"
 	else
 		echo "false"

@@ -2217,7 +2217,7 @@ site_info() {
 			[[ $val == $sub ]] && local check="true"
 		done
 		
-		[[ $check != "true" && $(is_subfolder $domain $sub) =~ ^(wp|php|proxy)$ ]] && sub_array=("${sub_array[@]}" $sub)
+		[[ $check != "true" ]] && sub_array=("${sub_array[@]}" $sub)
 		unset check
 	done
 	
@@ -2225,18 +2225,24 @@ site_info() {
 	local html_loc=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$domain | grep -E "location .* { try_files .* =404; }" | cut -d' ' -f2 -s | rev | cut -d'/' -f 2- -s | rev)
 	
 	if [[ -n $sub_array || -n $html_loc ]]; then
-		echo "${blu}Subfolders Configured:${dim}"
+		echo "${blu}Subfolders Configured:${end}"
 		for i in "${sub_array[@]}"
 		do
 			local sub_type=$(is_subfolder $domain $i)
-			echo "  + $i (${sub_type^^})"
+			if [[ $sub_type =~ ^(wp|php|proxy)$ ]]; then
+				echo "${blu}${dim}  + $i (${sub_type^^})${end}"
+			
+			# File exists in apps.d folder but is not included in sites-available conf
+			elif [[ $sub_type =~ ^(true|empty)$ || -f /etc/nginx/apps.d/${domain}$(echo $i | sed "s/\//_/g")-proxy.conf ]]; then
+				echo "${red}${dim}  + $i ${end}"
+			fi
 		done
 		
 		for html in $html_loc
 		do
-			[[ $(is_subfolder $domain $html) == "html" ]] && echo "  + $html (HTML)"
+			[[ $(is_subfolder $domain $html) == "html" ]] && echo "${blu}${dim}  + $html (HTML)${end}"
 		done
-		echo "${end}"
+		echo ""
 	fi
 }
 
