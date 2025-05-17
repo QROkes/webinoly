@@ -212,7 +212,7 @@ bkp_local_db() {
 		echo "${gre}Database local backup successfully done!${end}${dim} ($destination/$filename)${end}"
 		[[ -n $s3_compatible_endpoint ]] && local param="-s3-compatible-endpoint=$s3_compatible_endpoint "
 		[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket $param
-		[[ -n $max && $max =~ ^[0-9]+$ ]] && sudo ls -1tp $destination | grep -v /$ | tail -n +$((max+1)) | xargs -d '\n' -I '%' sudo rm -f $destination/% || echo ""
+		[[ -n $max && $max =~ ^[0-9]+$ ]] && find $destination -maxdepth 1 -type f -printf '%Ts\t%p\n' | sort -nr | cut -f2 -s | grep -v /$ | tail -n +$(($max+1)) | xargs -d '\n' -I '%' sudo rm -f % || echo "" # Never parse 'ls', use 'find' insted...
 	else
 		echo "${red}[ERROR] Database backup failed!${end}"
 		exit 1
@@ -685,7 +685,7 @@ export_server() {
 		
 		[[ -n $s3_compatible_endpoint ]] && local param="-s3-compatible-endpoint=$s3_compatible_endpoint "
 		[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket $param
-		[[ -n $max && $max =~ ^[0-9]+$ ]] && sudo ls -1tp $destination | grep -v /$ | tail -n +$((max+1)) | xargs -d '\n' -I '%' sudo rm -f $destination/% || echo ""
+		[[ -n $max && $max =~ ^[0-9]+$ ]] && find $destination -maxdepth 1 -type f -printf '%Ts\t%p\n' | sort -nr | cut -f2 -s | grep -v /$ | tail -n +$(($max+1)) | xargs -d '\n' -I '%' sudo rm -f % || echo "" # Never parse 'ls', use 'find' insted...
 	else
 		[[ -f $destination/$filename ]] && sudo rm -rf $destination/$filename
 		echo "${red}[ERROR] Unexpected error occurred while trying to export your server files!${end}"
@@ -840,7 +840,7 @@ export_site() {
 		
 		[[ -n $s3_compatible_endpoint ]] && local param="-s3-compatible-endpoint=$s3_compatible_endpoint "
 		[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket $param
-		[[ -n $max && $max =~ ^[0-9]+$ ]] && sudo ls -1tp $destination | grep -v /$ | tail -n +$((max+1)) | xargs -d '\n' -I '%' sudo rm -f $destination/% || echo ""
+		[[ -n $max && $max =~ ^[0-9]+$ ]] && find $destination -maxdepth 1 -type f -printf '%Ts\t%p\n' | sort -nr | cut -f2 -s | grep -v /$ | tail -n +$(($max+1)) | xargs -d '\n' -I '%' sudo rm -f % || echo "" # Never parse 'ls', use 'find' insted...
 	else
 		[[ -f $destination/$filename ]] && sudo rm -rf $destination/$filename
 		echo "${red}[ERROR] Unexpected error occurred while trying to export your site!${end}"
