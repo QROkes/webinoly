@@ -679,6 +679,9 @@ deletesite_subfolder() {
 		[[ -f /etc/nginx/conf.d/upstream_proxy.conf && ( ! -s /etc/nginx/conf.d/upstream_proxy.conf || -z $(cat -v /etc/nginx/conf.d/upstream_proxy.conf | grep -m 1 '[^[:space:]]')) ]] && sudo rm /etc/nginx/conf.d/upstream_proxy.conf
 	fi
 	
+	# HTML subfolder
+	sudo sed -i "/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/{\|location $subfolder/ |d}" /etc/nginx/sites-available/$domain
+	
 	sudo rm -rf /var/www/$domain/htdocs$subfolder
 	echo "${gre}Subfolder successfully removed!${end}"
 }
@@ -2211,6 +2214,7 @@ site_info() {
 	for site in "/etc/nginx/apps.d/${domain}_"*
 	do
 		sub="/$(echo $site | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+		[[ $sub = "/" ]] && continue # Skip if empty!
 		
 		for val in "${sub_array[@]}"
 		do 
