@@ -849,14 +849,14 @@ if [[ -z $critical_mode ]]; then
 				echo "${blu}${dim}- [INFO] MySQL v8.4 is recommended to get an optimal perfomance! (Current: ${ver_mysql_ver}) ${end}${red}"
 			fi
 		else
-			if ! [[ $ver_mysql_ver =~ ^(10.0|10.1|10.2|10.3|10.4|10.5|10.6|10.11|11.4)$ ]]; then
+			if ! [[ $ver_mysql_ver =~ ^(10.0|10.1|10.2|10.3|10.4|10.5|10.6|10.11|11.4|11.8)$ ]]; then
 				echo "${dim}- [WARNING] Unknown MariaDB version! (${ver_mysql_ver}) ${end}${red}"
 				local ver_four_war="1"
-			elif [[ $ver_mysql_ver =~ ^(10.0|10.1|10.2|10.3|10.4)$ ]]; then
+			elif [[ $ver_mysql_ver =~ ^(10.0|10.1|10.2|10.3|10.4|10.5)$ ]]; then
 				echo "${dim}- [WARNING] You have an obsolete MariaDB version (${ver_mysql_ver}) installed that not even receive security updates!${end}${red}"
 				local ver_four_war="1"
-			elif [[ $ver_mysql_ver =~ ^(10.5)$ ]]; then
-				echo "${blu}${dim}- [INFO] MariaDB v10.6 or later is recommended to get an optimal perfomance! (Current: ${ver_mysql_ver}) ${end}${red}"
+			elif [[ $ver_mysql_ver =~ ^(10.6)$ ]]; then
+				echo "${blu}${dim}- [INFO] MariaDB v10.11 or later is recommended to get an optimal perfomance! (Current: ${ver_mysql_ver}) ${end}${red}"
 			fi
 		fi
 	fi
