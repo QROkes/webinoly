@@ -1,5 +1,11 @@
 <div align="center">
- 	<p><a href="https://webinoly.com/"><img width="50%" src="https://cdn.qrokes.com/wp-content/uploads/sites/4/2020/11/webinoly_logo_blue.png" /></a></p>
+ 	<p><a href="https://webinoly.com/">
+		<picture>
+		  <source media="(prefers-color-scheme: dark)" srcset="https://cdn.qrokes.com/wp-content/uploads/sites/4/2025/06/Webinoly_Logo_Dark_Transparent.png">
+		  <source media="(prefers-color-scheme: light)" srcset="https://cdn.qrokes.com/wp-content/uploads/sites/4/2025/06/Webinoly_Logo_Light_Transparent.png">
+		  <img width="62%" alt="Webinoly logo" src="https://cdn.qrokes.com/wp-content/uploads/sites/4/2025/06/Webinoly_Logo_Light_Transparent.png">
+		</picture>
+	</a></p>
  	<p>
 		<img src="https://img.shields.io/badge/build-passing-brightgreen.svg" />
         <img src="https://img.shields.io/github/license/QROkes/webinoly" />
