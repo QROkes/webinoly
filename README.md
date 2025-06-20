@@ -3,7 +3,7 @@
 		<picture>
 		  <source media="(prefers-color-scheme: dark)" srcset="https://cdn.qrokes.com/wp-content/uploads/sites/4/2025/06/Webinoly_Logo_Dark_Transparent.png">
 		  <source media="(prefers-color-scheme: light)" srcset="https://cdn.qrokes.com/wp-content/uploads/sites/4/2025/06/Webinoly_Logo_Light_Transparent.png">
-		  <img width="62%" alt="Webinoly logo" src="https://cdn.qrokes.com/wp-content/uploads/sites/4/2025/06/Webinoly_Logo_Light_Transparent.png">
+		  <img width="50%" alt="Webinoly logo" src="https://cdn.qrokes.com/wp-content/uploads/sites/4/2025/06/Webinoly_Logo_Light_Transparent.png">
 		</picture>
 	</a></p>
  	<p>
@@ -62,11 +62,11 @@ For complete documentation: [English](https://webinoly.com/documentation/) | [Es
 ## Contributing
 You don't need developer skills to help, visit our site to know [How to Contribute to Webinoly](https://webinoly.com/contribute/).
 
-### Donations
+### Sponsor Me!
 
-[![PayPal Donations](https://cdn.qrokes.com/media/paypal-webinoly-donate.png)](https://www.paypal.me/qrokes)
-[![GitHub Sponsors](https://cdn.qrokes.com/media/github-sponsors.png)](https://github.com/sponsors/QROkes)
-[![Bitcoin Donations](https://cdn.qrokes.com/media/bitcoin-webinoly-donate.png)](https://www.blockchain.com/en/btc/address/1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3)
+- [GitHub Sponsors](https://github.com/sponsors/QROkes)
+- [PayPal](https://www.paypal.me/qrokes)
+- [Bitcoin](https://www.blockchain.com/en/btc/address/1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3)
 
 If you like Webinoly, buy me a coffee or a beer to show support.
 
@@ -74,5 +74,5 @@ If you like Webinoly, buy me a coffee or a beer to show support.
 
 ### Community
 - [Discussions/Issues](https://webinoly.com/premium/)
-- Follow [@Webinoly](https://twitter.com/Webinoly) on Twitter
+- Follow [@Webinoly](https://x.com/Webinoly) on Twitter
 - Subscribe to our [Newsletter](https://webinoly.com/newsletter/)
