@@ -4,13 +4,13 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.19.3"
+readonly app_version="1.19.4"
 readonly svr_version="1.11"
 readonly os_ubuntu_supported=(focal jammy noble) # https://ubuntu.com/about/release-cycle
 readonly php_supported=(7.4 8.0 8.1 8.2 8.3 8.4) # https://www.php.net/supported-versions.php
-readonly php_default="8.3"
+readonly php_default="8.4"
 readonly mariadb_supported=(10.11 11.4 11.8) # https://mariadb.com/kb/en/mariadb-server-release-dates/
-readonly mariadb_default="11.4"
+readonly mariadb_default="11.8"
 readonly mysql_supported=(8.0 8.4) # https://endoflife.date/mysql
 readonly mysql_default="8.4"
 readonly tools_port_default="22222"
