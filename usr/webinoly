@@ -297,7 +297,7 @@ elif [[ -n $mysql_public_access ]]; then
 	nginx_not="true" # Nginx-Reload not-needed.
 	
 
-elif [[ -n $help || -n $h || -n $H || $empty_param == "true" ]]; then
+elif [[ -n $help || -n $h || -n $_h || -n $_help || $empty_param == "true" ]]; then
 	help_message
 else
 	echo "${red}[ERROR] Please, enter a valid option!${end}"

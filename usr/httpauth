@@ -17,7 +17,7 @@ if [[ -n $subfolder && -z $wp_admin && -z $path ]]; then
 fi
 
 
-[[ -z $empty_param && -z $h && -z $H && -z $help ]] && ! [[ -n $wp_admin && -z $domain ]] && check_for_nginx -ask
+[[ -z $empty_param && -z $h && -z $_h && -z $help && -z $_help ]] && ! [[ -n $wp_admin && -z $domain ]] && check_for_nginx -ask
 
 
 # Check for domain.
@@ -431,7 +431,7 @@ elif [[ -n $delete ]]; then
 	echo "${gre}User '$userpurge' has been deleted successfully!${end}"
 
 	
-elif [[ -n $help || -n $h || -n $H || $empty_param == "true" ]]; then
+elif [[ -n $help || -n $h || -n $_h || -n $_help || $empty_param == "true" ]]; then
 	help_message
 else
 	echo "${red}[ERROR] Please, enter a valid option!${end}"
