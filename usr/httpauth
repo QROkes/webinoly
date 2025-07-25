@@ -74,9 +74,9 @@ if [[ -n $add ]]; then
 	exist=$( grep -E "^${user}:" /etc/nginx/$authfile )
 	if [[ -z $exist ]]; then
 		echo "$user:$(openssl passwd -1 $pass)" >> /etc/nginx/$authfile
-		echo "${gre}User '$user' has been added successfully!${end}"
+		echo "${gre}User ${blu}'${user}'${gre} has been added successfully!${end}"
 	else
-		echo "${red}[ERROR] Can not create '$user' user because already exist!${end}"
+		echo "${red}[ERROR] This user already exist! ${dim}(${user})${end}"
 		exit 1
 	fi
 	echo ""
@@ -86,7 +86,7 @@ elif [[ -n $wp_admin ]]; then
 	api-events_update ha3
 	if [[ -n $domain ]]; then
 		if [[ $(is_wp $domain $subfolder) == "false" ]]; then
-			echo "${red}[ERROR] Site${blu} $domain$subfolder ${red}is not a WP site!${end}"
+			echo "${red}[ERROR] This site is not a WP site! ${dim}${domain}${subfolder}${end}"
 			exit 1
 		fi
 	fi
@@ -118,6 +118,12 @@ elif [[ -n $wp_admin ]]; then
 			echo "${gre}WordPress Admin HTTP Authentication for${blu} $domain$subfolder ${gre}is already disabled! ${end}"
 			nginx_not="true" # Nginx-Reload not-needed.
 		fi
+	elif [[ $wp_admin == "on" ]]; then
+		conf_write wp-admin-auth true
+		echo "${gre}WordPress Admin HTTP Authentication (global) has been enabled! ${dim}(Existing sites are not affected by this change)${end}"
+	elif [[ $wp_admin == "off" ]]; then
+		conf_write wp-admin-auth false
+		echo "${gre}WordPress Admin HTTP Authentication (global) has been disabled! ${dim}(Existing sites are not affected by this change)${end}"
 	else
 		echo "${red}[ERROR] Invalid value for wp-admin! ${end}"
 		exit 1
@@ -166,7 +172,7 @@ elif [[ -n $whitelist ]]; then
 				c=1
 				while [[ -n $(echo $whitelist | cut -d',' -f $c -s) ]]
 				do  
-					[[ $(is_ip $(echo $whitelist | cut -d',' -f $c -s)) == "true" ]] && sudo httpauth -whitelist=$(echo $whitelist | cut -d',' -f $c -s)
+					sudo httpauth -whitelist=$(echo $whitelist | cut -d',' -f $c -s)
 					c=$(($c+1))
 				done
 				exit 0
@@ -182,13 +188,13 @@ elif [[ -n $whitelist ]]; then
 				exist=$( grep -E "^allow $whitelist;$" /etc/nginx/apps.d/whitelist-acl.conf )
 				if [[ -z $exist ]]; then
 					echo "allow ${whitelist};" >> /etc/nginx/apps.d/whitelist-acl.conf
-					echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully whitelisted!${end}"
+					echo "${gre}The IP address ${blu}'${whitelist}'${gre} was successfully whitelisted!${end}"
 				else
-					echo "${gre}IP '$whitelist' is already whitelisted!${end}"
+					echo "${gre}IP ${blu}'${whitelist}'${gre} is already whitelisted!${end}"
 					nginx_not="true" # Nginx-Reload not-needed.
 				fi
 			else	
-				echo "${red}[ERROR] Please, enter a valid IP value!${end}"
+				echo "${red}[ERROR] Please, enter a valid IP value! ${dim}(${whitelist})${end}"
 				exit 1
 			fi
 		fi
@@ -200,7 +206,7 @@ elif [[ -n $whitelist ]]; then
 			c=1
 			while [[ -n $(echo $whitelist | cut -d',' -f $c -s) ]]
 			do  
-				[[ $(is_ip $(echo $whitelist | cut -d',' -f $c -s)) == "true" ]] && sudo httpauth -whitelist=$(echo $whitelist | cut -d',' -f $c -s) -delete
+				sudo httpauth -whitelist=$(echo $whitelist | cut -d',' -f $c -s) -delete
 				c=$(($c+1))
 			done
 			exit 0
@@ -213,9 +219,9 @@ elif [[ -n $whitelist ]]; then
 			# Remove site-auth-file if empty.
 			[[ -f /etc/nginx/apps.d/whitelist-acl.conf && ( ! -s /etc/nginx/apps.d/whitelist-acl.conf || -z $(cat -v /etc/nginx/apps.d/whitelist-acl.conf | grep -m 1 '[^[:space:]]')) ]] && sudo rm /etc/nginx/apps.d/whitelist-acl.conf
 			
-			echo "${gre}The IP address ${blu}'$whitelist'${gre} was successfully removed from whitelist!${end}"
+			echo "${gre}The IP address ${blu}'${whitelist}'${gre} was successfully removed from whitelist!${end}"
 		else
-			echo "${red}[ERROR] Please, enter a valid IP value!${end}"
+			echo "${red}[ERROR] Please, enter a valid IP value! ${dim}(${whitelist})${end}"
 			exit 1
 		fi
 	fi
@@ -287,9 +293,9 @@ elif [[ -n $path && -n $domain ]]; then
 			exist=$( grep -F "acl.conf;" /etc/nginx/sites-available/$domain )
 			if [[ -z $exist ]]; then
 				sudo sed -i "/# WebinolyCustom$/a \	include common/acl.conf;" /etc/nginx/sites-available/$domain
-				echo "${gre}This path ${blu}'$path'${gre} was successfully protected!${end}"
+				echo "${gre}This path ${blu}'${path}'${gre} was successfully protected!${end}"
 			else
-				echo "${gre}Path: ${blu}'$path'${gre} is already protected!${end}"
+				echo "${gre}Path: ${blu}'${path}'${gre} is already protected!${end}"
 				nginx_not="true" # Nginx-Reload not-needed.
 			fi
 		elif [[ $path =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
@@ -336,9 +342,9 @@ location $sign$path {
 					exit 1
 				fi
 				
-				echo "${gre}This path ${blu}'$path'${gre} was successfully protected!${end}"
+				echo "${gre}This path ${blu}'${path}'${gre} was successfully protected!${end}"
 			else
-				echo "${gre}Path: ${blu}'$path'${gre} is already protected!${end}"
+				echo "${gre}Path: ${blu}'${path}'${gre} is already protected!${end}"
 				nginx_not="true" # Nginx-Reload not-needed.
 			fi
 		else	
@@ -350,23 +356,26 @@ location $sign$path {
 		[[ $path == true ]] && read -p "${blu}Path to remove protection: ${end}" path
 		if [[ $path == "/" ]]; then
 			sudo sed -i "/acl.conf;/d" /etc/nginx/sites-available/$domain
-			echo "${gre}HTTP Authentication successfully removed from ${blu}'$path'${gre}!${end}"
+			echo "${gre}HTTP Authentication successfully removed from ${blu}'${path}'${gre}!${end}"
 		elif [[ $path == "all" ]]; then
 			sudo httpauth $domain -path -delete-all
 		elif [[ $path =~ ^\/([A-Za-z0-9_\/\.\-]+)?$ ]]; then
 			if [[ -f /etc/nginx/apps.d/$domain-nginx.conf ]]; then
-				sudo sed -i "/^# Path: $(echo $path | sed "s#/#\\\/#g")/,/^# PathEnd/{/.*/d}" /etc/nginx/apps.d/$domain-nginx.conf
+				sudo sed -i "/^# Path: $(echo $path | sed "s#/#\\\/#g")$/,/^# PathEnd/{/.*/d}" /etc/nginx/apps.d/$domain-nginx.conf
 				if [[ -f /etc/nginx/apps.d/$domain-nginx.conf && ( ! -s /etc/nginx/apps.d/$domain-nginx.conf || -z $(cat -v /etc/nginx/apps.d/$domain-nginx.conf | grep -m 1 '[^[:space:]]')) ]]; then
 					sudo rm /etc/nginx/apps.d/$domain-nginx.conf
 					sudo sed -i "/$domain-nginx.conf;/d" /etc/nginx/sites-available/$domain
 				fi
 			fi
-			echo "${gre}HTTP Authentication successfully removed from ${blu}'$path'${gre}!${end}"
+			echo "${gre}HTTP Authentication successfully removed from ${blu}'${path}'${gre}!${end}"
 		else
 			echo "${red}[ERROR] Please, enter a valid URL path!${end}"
 			exit 1
 		fi
 	fi
+elif [[ -n $path && -z $domain ]]; then
+	echo "${red}[ERROR] Please, enter a valid domain for your path!${end}"
+	exit 1
 
 elif [[ $list == "protected" ]]; then
 	if [[ -z $domain ]]; then
@@ -417,7 +426,7 @@ elif [[ -n $delete ]]; then
 		echo "${red}[ERROR] Please, enter a valid username!${end}"
 		exit 1
 	elif [[ -z $exist ]]; then
-		echo "${red}[ERROR] User '$userpurge' does not exist!${end}"
+		echo "${red}[ERROR] This user does not exist! ${dim}(${userpurge})${end}"
 		exit 1
 	fi
 	sudo sed -i "/^$userpurge:/d" /etc/nginx/$authfile
@@ -428,7 +437,7 @@ elif [[ -n $delete ]]; then
 		sudo rm -rf /etc/nginx/apps.d/.htpasswd-www.$domain
 	fi
 	
-	echo "${gre}User '$userpurge' has been deleted successfully!${end}"
+	echo "${gre}User ${blu}'${userpurge}'${gre} has been deleted successfully!${end}"
 
 	
 elif [[ -n $help || -n $h || -n $_h || -n $_help || $empty_param == "true" ]]; then

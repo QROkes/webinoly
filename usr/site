@@ -189,7 +189,7 @@ elif [[ -n $wp && -n $domain ]]; then
 			createsite
 		fi
 		sudo sed -i '/locations.conf/i \	include common/wpcommon.conf;' /etc/nginx/sites-available/$domain
-		[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domain -wp-admin=off > /dev/null 2>&1
+		[[ $(conf_read wp-admin-auth) == "false" ]] && sudo httpauth $domain -wp-admin=off
 		[[ -n $env ]] && sudo site $domain -env=$env
 	else
 		if [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $type == [123] && $(is_subfolder $domain $subfolder) != "false" ]]; then

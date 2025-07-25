@@ -11,7 +11,7 @@ warning_messages() {
 		if [[ $type == [123] && $dbhost != "localhost" && $(conf_read dbrole) =~ ^(all|grant)$ ]]; then
 			echo "${dim}[WARNING] You have set '$(conf_read dbrole)' as default privileges, some external DB services may not support it!${end}"
 		fi
-		if [[ $type == [123] && $(conf_read wp-admin-auth) != "purged" && ( ! -s /etc/nginx/.htpasswd || -z $(cat -v /etc/nginx/.htpasswd | grep '[^[:space:]]')) && ( ! -s /etc/nginx/apps.d/.htpasswd-$domain || -z $(cat -v /etc/nginx/apps.d/.htpasswd-$domain | grep -m 1 '[^[:space:]]')) ]]; then
+		if [[ $type == [123] && $(conf_read wp-admin-auth) != "false" && ( ! -s /etc/nginx/.htpasswd || -z $(cat -v /etc/nginx/.htpasswd | grep '[^[:space:]]')) && ( ! -s /etc/nginx/apps.d/.htpasswd-$domain || -z $(cat -v /etc/nginx/apps.d/.htpasswd-$domain | grep -m 1 '[^[:space:]]')) ]]; then
 			echo "${dim}[WARNING] HTTP Authentication Credentials not found and you may need it to complete the WordPress installation process!!${end}"
 		fi
 		if [[ $(conf_read login-www-data) != "true" && (( -z $forward && -z $proxy && -z $parked && -z $mysql ) || ( -n $mysql && -n $domain )) ]]; then
@@ -1169,7 +1169,7 @@ wp_subfolder() {
 	sudo sed -i "s#subfolder#$subfolder#g" /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 	sudo sed -i '/WPRobotStart/,/WPRobotsEnd/{/.*/d}' /etc/nginx/apps.d/$domain$subname-wpcommon-noauth.conf
 	
-	[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domain -wp-admin=off -subfolder=$subfolder > /dev/null 2>&1
+	[[ $(conf_read wp-admin-auth) == "false" ]] && sudo httpauth $domain -wp-admin=off -subfolder=$subfolder
 	
 	# Activate FastCgi cache
 	if [[ $cache == "on" ]]; then

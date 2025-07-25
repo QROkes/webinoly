@@ -103,7 +103,7 @@ onethree_to_onefour() {
 				sudo sed -i "/$pat/a \	" /etc/nginx/sites-available/$domi
 				
 				if [[ $(is_wp $domi) == "true" ]]; then
-					[[ $(conf_read wp-admin-auth) == "purged" ]] && sudo httpauth $domi -wp-admin=off
+					[[ $(conf_read wp-admin-auth) == "false" ]] && sudo httpauth $domi -wp-admin=off
 				fi
 			fi
 		done
