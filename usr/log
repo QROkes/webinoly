@@ -2,7 +2,7 @@
 
 # View logs in real time Plugins
 # Syntax: log <domain> <option>
-# Options: -wp, -error, -mail, -php o -fpm, -mysql, -access-log, -le, -ssh, -syslog
+# Options: -wp, -error, -mail, -php o -fpm, -mysql, -access-log, -le, -ssh, -auth, -syslog
 # Arguments: -lines, -display, -enable, -disable
 # Notes: If no domain or option is entered, access logs are displayed.
 
@@ -32,18 +32,18 @@ fi
 
 
 if [[ -n $purge ]]; then
-	if [[ $purge =~ ^(nginx|letsencrypt|mysql|redis|force)$ ]]; then
+	if [[ ${purge,,} =~ ^(nginx|letsencrypt|mysql|redis|force)$ ]]; then
 		answer="Y"
-		if [[ $purge =~ ^(nginx|letsencrypt|mysql|redis)$ ]]; then
-			fol="/$purge"
-			mes="($purge) "
+		if [[ ${purge,,} =~ ^(nginx|letsencrypt|mysql|redis)$ ]]; then
+			fol="/${purge,,}"
+			mes="(${purge,,}) "
 		else
 			fol=""
 		fi
-	elif [[ $purge =~ ^(all|true)$ ]]; then
-		echo "${gre}"
+	elif [[ ${purge,,} =~ ^(all|true)$ ]]; then
+		echo "${red}"
 		echo "All your logs GZ files will be removed from your server!"
-		echo "${blu}Are you sure [y/N]? "
+		echo "${blu}Are you sure [y/N]? ${end}"
 		while read -r -n 1 -s answer; do
 			answer=${answer:-n}
 			echo ""
@@ -54,11 +54,11 @@ if [[ -n $purge ]]; then
 		exit 1
 	fi
 	
-	if [[ ! -d /var/log$fol ]]; then
+	if [[ ! -d /var/log${fol} ]]; then
 		echo "${red}[ERROR] Log folder not found!${end}"
 		exit 1
 	elif [[ $answer == [Yy] ]]; then
-		sudo find /var/log$fol -name "*.gz" -type f -delete
+		sudo find /var/log${fol} -name "*.gz" -type f -delete
 		echo "${gre}All your logs ${mes}GZ files has been successfully removed from your server!${end}"
 	else
 		echo "${red}Action aborted!${end}"
@@ -99,7 +99,7 @@ elif [[ -n $le ]]; then
 	else
 		error
 	fi
-elif [[ -n $ssh ]]; then
+elif [[ -n $auth || -n $ssh ]]; then
 	if [[ -f /var/log/auth.log ]]; then
 		[[ ! -s /var/log/auth.log ]] && waiting_for_log
 		sudo tail -f --lines=$clines /var/log/auth.log
@@ -223,17 +223,6 @@ elif [[ -n $syslog ]]; then
 	fi
 
 
-# Authentication
-elif [[ -n $auth ]]; then
-	if [[ -s /var/log/auth.log ]]; then
-		[[ ! -s /var/log/auth.log ]] && waiting_for_log
-		sudo tail -f --lines=$clines /var/log/auth.log
-	else
-		echo "${red}[ERROR] Auth Log file not found or still empty!${end}"
-		exit 1
-	fi	
-
-
 # Turn On/Off Access Logs
 elif [[ -n $access_log || -n $only_error ]]; then
 	
@@ -259,8 +248,10 @@ elif [[ -n $access_log || -n $only_error ]]; then
 			echo "${gre}Nginx Access Log was successfully enabled! ${dim}(global)${end}"
 		fi
 		
-		[[ $(check_var nginx-error-log-level) != "false" ]] && sudo sed -i "/error_log /c \	error_log \/var\/log\/nginx\/error.log $(check_var nginx-error-log-level);" /etc/nginx/nginx.conf
-		sudo systemctl reload nginx
+		if [[ $(conf_read nginx) == "true" ]]; then
+			[[ $(check_var nginx-error-log-level) != "false" ]] && sudo sed -i "/error_log /c \	error_log \/var\/log\/nginx\/error.log $(check_var nginx-error-log-level);" /etc/nginx/nginx.conf
+			sudo systemctl reload nginx
+		fi
 	fi
 	
 	# Per site
@@ -281,8 +272,10 @@ elif [[ -n $access_log || -n $only_error ]]; then
 			echo "${gre}Nginx Access Log was successfully enabled for ${blu}${domain} ${gre}site!${end}"
 		fi
 		
-		[[ $(check_var nginx-error-log-level) != "false" ]] && sudo sed -i "/error_log /c \	error_log \/var\/log\/nginx\/${domain}.error.log $(check_var nginx-error-log-level);" /etc/nginx/sites-available/$domain
-		sudo systemctl reload nginx
+		if [[ $(conf_read nginx) == "true" ]]; then
+			[[ $(check_var nginx-error-log-level) != "false" ]] && sudo sed -i "/error_log /c \	error_log \/var\/log\/nginx\/${domain}.error.log $(check_var nginx-error-log-level);" /etc/nginx/sites-available/$domain
+			sudo systemctl reload nginx
+		fi
 		
 	elif [[ -n $domain && ! -f /etc/nginx/sites-available/$domain ]]; then
 		echo "${red}[ERROR] Domain not found!${end}"
