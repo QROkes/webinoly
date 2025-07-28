@@ -32,8 +32,8 @@ wp_cache_plugins() {
 			sudo rm /var/www/$domain/htdocs/nginx-helper-plugin.zip
 			echo ""
 			echo "${gre} Nginx Helper Plugin has been installed!"
-			echo " Please, activate this plugin for a better experience with FastCgi Cache."
-			echo "${blu} ** IMPORTANT - Plugin Settings **"
+			echo "${dim} Please, activate this plugin for a better experience with FastCgi Cache.${end}"
+			echo "${blu} ** IMPORTANT - Plugin Settings **${dim}"
 			echo "- Go to “Menu > Settings > Nginx Helper” The “Caching Method” should be set to “Nginx FastCgi Cache”."
 			echo "- Support for purge/url method is a premium feature only included in NGINX Plus (not-free) and we recommend not to trust in solutions or tools that use third-party NGINX modules to offer this feature."
 			echo "- The Purge Method should be set to “Delete local server cache file”."
@@ -53,8 +53,8 @@ wp_cache_plugins() {
 			sudo rm /var/www/$domain/htdocs/redis-cache-plugin.zip
 			echo ""
 			echo "${gre} Redis Object Cache Plugin has been installed!"
-			echo " Please, activate this plugin for a better experience with WordPress Object Cache."
-			echo "${blu} ** IMPORTANT - Plugin Settings **"
+			echo "${dim} Please, activate this plugin for a better experience with WordPress Object Cache.${end}"
+			echo "${blu} ** IMPORTANT - Plugin Settings **${dim}"
 			echo "- Go to “Menu > Settings > Redis” and be sure that Object Cache is enabled. "
 			echo "${end}"
 		else
@@ -207,10 +207,6 @@ wpinstall() {
 				
 				if [[ $ext_login == "true" ]]; then
 					echo "${blu}${dim}External DB Credentials found! (${dburl}:${dbport})${end}"
-				elif [[ -n $retry && $retry -ge 3 ]]; then
-					setupmysql="N"
-					local db_error_flag="true"
-					echo "${red}[ERROR] Database creation failed after 3 retries! ${blu}"
 				elif [[ ( $dbhost == "localhost" && $(check_mysql_connection localhost) != "true" ) || ( $dbhost != "localhost" && $(check_mysql_connection $dburl $dbport $dburoot $dbproot -master-admin) != "true" ) ]]; then
 					# Reset variables
 					local dburl=""
@@ -219,8 +215,11 @@ wpinstall() {
 					local dbproot=""
 					
 					# Prevent infinite loops, just 3 intents!
-					[[ -z $retry ]] && local retry=0
-					local retry=$(($retry+1))
+					[[ -z $retry1 ]] && local retry1=1 || local retry1=$(($retry1+1))
+					if [[ $retry1 -ge 3 ]]; then
+						local db_error_flag="true"
+						break;
+					fi
 					
 					# While loop
 					done="0"
@@ -269,6 +268,14 @@ wpinstall() {
 						
 						if [[ $dbreuse != [yY] ]]; then
 							echo ""
+							
+							# Prevent infinite loops, just 3 intents!
+							[[ -z $retry2 ]] && local retry2=1 || local retry2=$(($retry2+1))
+							if [[ $retry2 -ge 3 ]]; then
+								local db_error_flag="true"
+								break 2;
+							fi
+							
 							read -p "Please enter a new DB_NAME for your Database: " newdbname
 							[[ -z "$newdbname" ]] && newdbname="$dbname"
 							dbname="$newdbname"
@@ -318,6 +325,14 @@ wpinstall() {
 						
 						if [[ $dbureuse != [yY] ]]; then
 							echo ""
+							
+							# Prevent infinite loops, just 3 intents!
+							[[ -z $retry3 ]] && local retry3=1 || local retry3=$(($retry3+1))
+							if [[ $retry3 -ge 3 ]]; then
+								local db_error_flag="true"
+								break 2;
+							fi
+							
 							read -p "Please enter a new DB_User for your Database: " newdbuser
 							[[ -z "$newdbuser" ]] && newdbuser=$dbuser
 							dbuser=$newdbuser
@@ -456,6 +471,16 @@ _EOF_
 				[[ $done == [nN] ]] && done="1"
 			fi
 		done
+	fi
+	
+	# BREAK the installation in case of 3 or more error/retries...
+	if [[ $db_error_flag == "true" ]]; then
+		echo "${red}[ERROR] Database configuration failed after 3 retries! ${end}"
+		if [[ -n $domain ]]; then
+			[[ -z $subfolder ]] && site $domain -delete=force || site $domain -delete=force -subfolder=$subfolder
+		fi
+		echo "${red}[ERROR] Site creation aborted! ${end}"
+		exit 1
 	fi
 	
 	# Display data just to confirm the DB creation.
@@ -610,6 +635,7 @@ deletesite() {
 	# In case of custom cache
 	if [[ -f /etc/nginx/conf.d/webinoly.conf ]]; then
 		sudo sed -i "/^fastcgi_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g').*/d" /etc/nginx/conf.d/webinoly.conf
+		sudo sed -i "/^proxy_cache_path \/run\/nginx-cache\/$(echo $domain | sed 's/[^0-9A-Za-z]/_/g').*/d" /etc/nginx/conf.d/webinoly.conf
 		[[ -f /etc/nginx/conf.d/webinoly.conf && ( ! -s /etc/nginx/conf.d/webinoly.conf || -z $(cat -v /etc/nginx/conf.d/webinoly.conf | grep -m 1 '[^[:space:]]')) ]] && sudo rm /etc/nginx/conf.d/webinoly.conf
 	fi
 	
@@ -683,7 +709,7 @@ deletesite_subfolder() {
 	sudo sed -i "/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/{\|location $subfolder/ |d}" /etc/nginx/sites-available/$domain
 	
 	sudo rm -rf /var/www/$domain/htdocs$subfolder
-	echo "${gre}Subfolder successfully removed!${end}"
+	echo "${gre}Subfolder ${blu}${domain}${subfolder}${gre} successfully removed!${end}"
 }
 
 
@@ -1588,8 +1614,8 @@ wp_cache() {
 			[[ -n $subfolder ]] && sudo sed -i "/ apps.d\/$domain$subname-php.conf;/c \	include apps.d/$domain$subname-wpfc.conf;" /etc/nginx/sites-available/$domain
 			if [[ $(is_parked $domain) == "false" && ( ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/nginx-helper || ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/redis-cache ) ]]; then
 				if [[ -z $wp_cache_plugins ]]; then
-					echo "${gre}"
-					echo "We recommend Nginx Helper Plugin and Redis Object Cache Plugin as an easy way to manage FastCGI and Redis Cache on your WordPress site."
+					echo "${blu}${dim}"
+					echo "We recommend Nginx Helper Plugin and Redis Object Cache Plugin as an easy way to manage FastCGI and Redis Cache on your WordPress site.${end}"
 					echo "${blu}Do you want to install it now [Y/n]? ${end}"
 					while read -r -n 1 -s answer; do
 					  answer=${answer:-y}
@@ -1954,7 +1980,7 @@ wp_replace_content() {
 	
 	wp_conf_retrieve $domain false true $subfolder
 	if [[ $(is_wp_installed $domain $subfolder) != "true" ]]; then
-		echo "${red}[ERROR] WordPress is empty and still not configured in ${domain}${subfolder} site!${end}"
+		echo "${red}[ERROR] WordPress is empty and still not configured in ${blu}${domain}${subfolder}${red} site!${end}"
 		exit 1
 	fi
 	

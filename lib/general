@@ -1228,14 +1228,14 @@ is_subfolder() {
 is_empty_root_site() {
 	# $1 = domain
 	if [[ -n $1 ]]; then
-		if [[ -f /etc/nginx/sites-available/$1 && -z $(grep -F " common/locations.conf;" /etc/nginx/sites-available/$1) && -z $(grep -E "include common/headers-.*.conf;" /etc/nginx/sites-available/$1) ]]; then
-			echo "full"
-		elif [[ -f /etc/nginx/sites-available/$1 && -n $(grep -E "include apps.d/${1}_.*.conf;" /etc/nginx/sites-available/$1) ]]; then
-			echo "subfolders"
-		elif [[ $(is_wp $1) == "true" || $(is_php $1) == "true" || $(is_proxy $1) == "true" || $(is_html $1) == "true" || $(is_parked $1) == "true" || $(is_forward $1) == "true" ]]; then
+		if [[ $(is_wp $1) == "true" || $(is_php $1) == "true" || $(is_proxy $1) == "true" || $(is_html $1) == "true" || $(is_parked $1) == "true" || $(is_forward $1) == "true" ]]; then
 			echo "false"
+		elif [[ -f /etc/nginx/sites-available/$1 && -z $(grep -F " common/locations.conf;" /etc/nginx/sites-available/$1) && -z $(grep -E "include common/headers-.*.conf;" /etc/nginx/sites-available/$1) ]]; then
+			echo "full"
+		elif [[ -f /etc/nginx/sites-available/$1 && ( -n $(grep -E "include apps.d/${1}_.*.conf;" /etc/nginx/sites-available/$1) || -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -E "location /.* { try_files ")) ]]; then
+			echo "subfolders"
 		elif [[ -f /etc/nginx/sites-available/$1 ]]; then
-			echo "true"	
+			echo "true"
 		else
 			echo "false"
 		fi
@@ -1330,7 +1330,7 @@ email_update() {
 		
 		echo "${gre}Email address has been successfuly validated, updated and saved!"
 	else
-		echo "${red}Please enter a valid email address!"
+		echo "${red}Please, enter a valid email address!"
 	fi
 	echo "${end}"
 }
@@ -1792,22 +1792,22 @@ config_fastcgi_cache() {
 
 	
 	if [[ $cache_valid == true ]]; then
-		echo "${gre}"
+		echo "${blu}"
 		echo "**********************************************************************"
-		echo "*************      Set Nginx Cache new time values      **************"
+		echo "*************      ${bol}Set Nginx Cache new time values${end}${blu}      **************"
 		echo "*****  Example: 30d = 30days  |  3h = 3hours  |  5m = 5minutes  ******"
 		echo "**********************************************************************"
-		echo "${blu}"
-		echo "Nginx Cache Valid for Pages (HttpCode: 200) actual value is: $hitval"
-		read -p "   Set new value: " hit
+		echo "${dim}"
+		echo "Nginx Cache Valid for Pages (HttpCode: 200) actual value is: $hitval ${end}"
+		read -p "   ${blu}Set new value:${end} " hit
 		hit=${hit:-$hitval}
 		echo ""
-		echo "Purge Cache for inactive pages actual value is: $inaval"
-		read -p "   Set new value: " ina
+		echo "${blu}${dim}Purge Cache for inactive pages actual value is: $inaval ${end}"
+		read -p "   ${blu}Set new value: ${end}" ina
 		ina=${ina:-$inaval}
 		echo ""
-		echo "Nginx Cache Valid for Errors and Redirections (301 302 303 307 308 404 410 451) actual value is: $othval"
-		read -p "   Set new value: " oth
+		echo "${blu}${dim}Nginx Cache Valid for Errors and Redirections (301 302 303 307 308 404 410 451) actual value is: $othval ${end}"
+		read -p "   ${blu}Set new value: ${end}" oth
 		oth=${oth:-$othval}
 		echo ""
 	elif [[ $(echo "${cache_valid}" | cut -c-1) == "[" && $(echo "${cache_valid}" | rev | cut -c-1) == "]" ]]; then
