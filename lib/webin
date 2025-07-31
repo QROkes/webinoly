@@ -159,12 +159,12 @@ smtp_setup() {
 		local hostname=$(grep -E "^myhostname[ ]?=[ ]?.*$" /etc/postfix/main.cf | cut -d "=" -f 2 -s | sed "s/ //")
 		[[ -n $hostname && -f /etc/nginx/sites-available/$hostname ]] && local default_host=" [$hostname]"
 		
-		echo "${gre}"
+		echo "${blu}"
 		echo "**********************************"
-		echo "**********  SMTP Setup  **********"
+		echo "**********  ${bol}SMTP Setup${end}${blu}  **********"
 		echo "**********************************"
 		echo ""
-		echo " * We only support TLS and Port 587."
+		echo "${dim} * We only support TLS and Port 587.${end}"
 		echo ""
 		read -p "${blu} + SMTP Host: ${end}" host
 		read -p "${blu} + User: ${end}" user
@@ -589,6 +589,7 @@ server_reset() {
 
 
 show_db_data() {
+	check_for_mysql
 	if [[ -n $(conf_read external-dbu) && -n $(conf_read external-dbp) ]]; then
 		local extu=$(conf_read external-dbu)
 		local extp=$(conf_read external-dbp)
@@ -604,17 +605,17 @@ show_db_data() {
 	[[ -n $(conf_read mysql-root) ]] && local rpass=$( echo $(conf_read mysql-root) | openssl enc -d -a -salt ) || local rpass="Not-Available!"
 	[[ -n $(conf_read mysql-admin) ]] && local apass=$( echo $(conf_read mysql-admin) | openssl enc -d -a -salt ) || local apass="Not-Available!"
 	echo ""
-	echo "${gre}Localhost Credentials${end}"
-	echo "${blu}${bol}  root:${end}${blu}${dim} $rpass ${end}"
-	echo "${blu}${bol}  admin:${end}${blu}${dim} $apass ${end}"
+	echo "${blu}${bol}Localhost Credentials:${end}"
+	echo "${blu}root:${end}${blu}${dim} $rpass ${end}"
+	echo "${blu}admin:${end}${blu}${dim} $apass ${end}"
 	echo ""
 	
 	if [[ -n $extu ]]; then
 		echo ""
-		echo "${gre}External DB Credentials${end}"
+		echo "${blu}${bol}External DB Credentials:${end}"
 		[[ -n $exth ]] && echo "${blu}${bol}  Host:${end}${blu}${dim} $exth ${end}"
-		echo "${blu}${bol}  User:${end}${blu}${dim} $extu ${end}"
-		echo "${blu}${bol}  Password:${end}${blu}${dim} $extp ${end}"
+		echo "${blu}User:${end}${blu}${dim} $extu ${end}"
+		echo "${blu}Password:${end}${blu}${dim} $extp ${end}"
 		echo ""
 	fi
 	
@@ -755,7 +756,7 @@ set_tools_site() {
 		if [[ $force_www =~ ^(www|root)$ ]]; then
 			sudo site galaboral.com -force-redirect=off > /dev/null 2>&1
 			sudo site galaboral.com -force-redirect=$force_www > /dev/null 2>&1
-			echo "${gre}${dim}Force-Redirect '${force_www}' settings updated!${end}"
+			echo "${gre}${dim}Force-Redirect ${blu}'${force_www}'${gre} settings updated!${end}"
 		fi
 	
 		echo "${gre}Domain${blu} ${tools_site}:$(conf_read tools-port) ${gre}was successfully assigned to access your server tools!${end}"
@@ -818,9 +819,9 @@ set_tools_site() {
 
 www_data_sftp_access() {
 	if [[ $sftp == "on" && $(conf_read login-www-data) == "true" ]]; then
-		echo "${gre}SFTP access for www-data user is already enabled! ${end}"
+		echo "${gre}SFTP access for ${blu}'www-data'${gre} user is already enabled! ${end}"
 	elif [[ $sftp == "off" && $(conf_read login-www-data) != "true" ]]; then
-		echo "${gre}SFTP access for www-data user is already disabled! ${end}"
+		echo "${gre}SFTP access for ${blu}'www-data'${gre} user is already disabled! ${end}"
 	elif [[ $sftp == "on" ]]; then
 		# Remove if empty! (prevent empty files with spaces taken as valid)
 		if [[ -f /var/www/.ssh/authorized_keys && ( ! -s /var/www/.ssh/authorized_keys || -z $(cat -v /var/www/.ssh/authorized_keys | grep -m 1 '[^[:space:]]')) ]]; then
@@ -860,7 +861,7 @@ Match Group sftponly
 		conf_write login-www-data true
 		conf_write sftp-www-data true
 		sudo systemctl restart ssh
-		echo "${gre}SFTP access for www-data user has been successfuly enabled! ${end}"
+		echo "${gre}SFTP access for ${blu}'www-data'${gre} user has been successfuly enabled! ${end}"
 	
 	elif [[ $sftp == "off" ]]; then
 		sudo gpasswd -d www-data sftponly  > /dev/null 2>&1
@@ -884,9 +885,9 @@ Match Group sftponly
 		conf_write login-www-data false
 		conf_write sftp-www-data false
 		sudo systemctl restart ssh
-		echo "${gre}SFTP access for www-data user has been successfuly disabled! ${end}"
+		echo "${gre}SFTP access for ${blu}'www-data'${gre} user has been successfuly disabled! ${end}"
 	else
-		echo "${red}[ERROR] Invalid value for login-www-data! ${end}"
+		echo "${red}[ERROR] Invalid value for SFTP! ${end}"
 		exit 1
 	fi
 }
@@ -954,16 +955,17 @@ external_sources_update() {
 
 
 clear_caches() {
-	if [[ $clear_cache =~ ^(redis|all)$ ]]; then
+	if [[ ${clear_cache,,} =~ ^(redis|all)$ ]]; then
 		if [[ $(conf_read php-tool-redis) == "true" && -f /etc/redis/redis.conf ]]; then
 			sudo redis-cli flushall
 			echo "${gre}- Redis Cache has been successfully cleared!${end}"
 		else
-			[[ $clear_cache != "all" ]] && echo "${red}[ERROR] We can not clear Redis Cache because is not installed!${end}"
+			[[ ${clear_cache,,} != "all" ]] && echo "${red}[ERROR] We can not clear Redis Cache because is not installed!${end}"
+			[[ ${clear_cache,,} == "all" ]] && echo "${dim}[INFO] Redis not installed!${end}"
 			err_cont=true
 		fi
 	fi
-	if [[ $clear_cache =~ ^(memcache|memcached|all)$ ]]; then
+	if [[ ${clear_cache,,} =~ ^(memcache|memcached|all)$ ]]; then
 		if [[ $(conf_read php-tool-memcached) == "true" && -f /etc/memcached.conf ]]; then
 			local memhost=$(grep ^-l /etc/memcached.conf | cut -f 2 -d ' ' | head -1)
 			local memport=$(grep ^-p /etc/memcached.conf | cut -f 2 -d ' ' | head -1)
@@ -973,11 +975,12 @@ clear_caches() {
 				echo "${red}- Memcached connection failed! ${dim}(/dev/tcp/$memhost/$memport)${end}"
 			fi
 		else
-			[[ $clear_cache != "all" ]] && echo "${red}[ERROR] We can not clear Memcache because is not installed!${end}"
+			[[ ${clear_cache,,} != "all" ]] && echo "${red}[ERROR] We can not clear Memcache because is not installed!${end}"
+			[[ ${clear_cache,,} == "all" ]] && echo "${dim}[INFO] Memcache not installed!${end}"
 			err_cont=true
 		fi
 	fi
-	if [[ $clear_cache =~ ^(opcache|all)$ ]]; then
+	if [[ ${clear_cache,,} =~ ^(opcache|all)$ ]]; then
 		if [[ $(conf_read nginx) == "true" && $(conf_read php) == "true" ]]; then
 			if [[ ! -f /var/www/$ADMIN_TOOLS_SITE/htdocs/php/opcache/index.php ]]; then
 				sudo mkdir /var/www/$ADMIN_TOOLS_SITE/htdocs/php/opcache
@@ -989,16 +992,18 @@ clear_caches() {
 			wget --spider --no-check-certificate --timeout=15 -t 1 localhost:$(conf_read tools-port)/php/opcache/  > /dev/null 2>&1 &
 			echo "${gre}- OpCache has been successfully cleared!${end}"
 		else
-			[[ $clear_cache != "all" ]] && echo "${red}[ERROR] We can not clear OpCache because PHP or NGINX are not installed!${end}"
+			[[ ${clear_cache,,} != "all" ]] && echo "${red}[ERROR] We can not clear OpCache because PHP or NGINX are not installed!${end}"
+			[[ ${clear_cache,,} == "all" ]] && echo "${dim}[INFO] OpCache not installed!${end}"
 			err_cont=true
 		fi
 	fi
-	if [[ $clear_cache =~ ^(fastcgi|all)$ ]]; then
+	if [[ ${clear_cache,,} =~ ^(fastcgi|all)$ ]]; then
 		if [[ $(conf_read nginx) == "true" ]]; then
 			sudo rm -Rf /run/nginx-cache/*
 			echo "${gre}- FastCgi Cache has been successfully cleared!${end}"
 		else	
-			[[ $clear_cache != "all" ]] && echo "${red}[ERROR] We can not clear FastCGI Cache because NGINX is not installed!${end}"
+			[[ ${clear_cache,,} != "all" ]] && echo "${red}[ERROR] We can not clear FastCGI Cache because NGINX is not installed!${end}"
+			[[ ${clear_cache,,} == "all" ]] && echo "${dim}[INFO] FastCGI not installed!${end}"
 			err_cont=true
 		fi
 	fi
@@ -1078,7 +1083,7 @@ nginx_blockip() {
 					echo "deny $blockip;" >> /etc/nginx/conf.d/blockips.conf
 					echo "${gre}The IP address ${blu}'$blockip'${gre} was successfully blocked!${end}"
 				else
-					echo "${gre}IP '$blockip' is already blocked!${end}"
+					echo "${gre}IP ${blu}'$blockip'${gre} is already blocked!${end}"
 				fi
 			else	
 				echo "${red}[ERROR] Please, enter a valid IP value!${end}"
@@ -1120,8 +1125,8 @@ nginx_blockip() {
 
 set_default_nginx_response() {
 	if [[ $default_site == true ]]; then
-		echo "${gre}Please, enter a valid option to set the Default-Site server response! ${end}"
-		read -p "${blu}default/blackhole or any existing domain: ${end}" default_site
+		echo "${blu}${bol}Please, enter a valid option to set the Default-Site server response.${end}"
+		read -p "${blu}* default, blackhole or example.com (valid domain)? ${end}" default_site
 		default_site=${default_site:-NeverMatchDotCom}
 	fi
 	
@@ -1230,6 +1235,7 @@ aws_secret_access_key = $pass" >> $HOME/.aws/credentials
 
 
 database_import() {
+	check_for_mysql
 	[[ -z $file ]] && read -p "${blu}SQL file path to import: ${end}" file
 	if [[ -z $file || ! -f $file ]]; then
 		echo "${red}[ERROR] Please, enter a valid file path!${end}"

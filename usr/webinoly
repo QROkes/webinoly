@@ -154,12 +154,8 @@ elif [[ -n $default_site ]]; then
 	
 	
 elif [[ -n $mysql_password ]]; then
-	if [[ $(conf_read mysql) != "true" ]]; then
-		echo "${red}[ERROR] Seems like MySQL/MariaDB is not installed!${end}"
-		exit 1
-	elif [[ $(check_mysql_connection localhost) != "true" ]]; then
-		exit 1
-	fi
+	check_for_mysql
+	[[ $(check_mysql_connection localhost) != "true" ]] && exit 1
 	mysql_change_password
 	nginx_not="true" # Nginx-Reload not-needed.
 
@@ -196,6 +192,7 @@ elif [[ -n $backup ]]; then
 		elif [[ -n $import ]]; then
 			import_server
 		else
+			check_for_mysql
 			bkp_local_db
 		fi
 	elif [[ $backup == "s3" ]]; then
