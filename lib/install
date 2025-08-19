@@ -258,9 +258,7 @@ mysql_install() {
 		sudo apt -y install mysql-server
 	else
 		# This option is no longer available in recent MariaDB versions, so we set the root password in the next step after installation.
-		#local ver=$(conf_read mysql-ver)
-		#echo "mariadb-server-${ver} mysql-server/root_password password $AUTOGENPASS_ROOT" | debconf-set-selections
-		#echo "mariadb-server-${ver} mysql-server/root_password_again password $AUTOGENPASS_ROOT" | debconf-set-selections
+		echo "mariadb-server  mariadb-server/feedback_optin   boolean false" | debconf-set-selections
 		sudo apt -y install apt-transport-https dirmngr mariadb-server
 	fi
 	
