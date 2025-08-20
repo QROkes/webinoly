@@ -17,26 +17,22 @@
 </div>
 
 ## Overview
-A complete LEMP stack _– Linux Ubuntu + Nginx + MariaDB (or MySQL, you can choose) + PHP –_ or install individual packages according to your needs.
+**Webinoly offers one of the most reliable configurations for hosting websites—deploy everything in a single step.**
 
-**One of the most reliable configurations to host your websites and with Webinoly you can do it in just one step.**
+Install a complete LEMP stack or individual packages tailored to your needs.
 
-Webinoly provides a set of tools and commands that facilitate web server administration.
-- Unique commands to create, delete, disable sites.
-- Free SSL certificates for your sites with Let’s Encrypt and automatic server configuration.
-- HTTP/3 dramatically increases the speed of serving your content.
-- PHP 8.4 and support for earlier versions if needed (8.3, 8.2, 8.1, 8.0 or 7.4).
-- FastCGI Cache and Redis Object Cache for your WordPress sites.
-- Install WP in any subfolder and support for external databases, multisite and domain mapping.
-- Reverse Proxy for any app (Java, React, Node, Angular, Vue, etc) or to use your own domain with any external file repo like S3.
-- A complete suite of tools for backups. Moving a site or the whole server has never been so easy.
-- Protect your site, folder or file with HTTP Authentication.
-- Advanced support for cloning your sites for testing.
-- Custom FastCGI Cache support for any dynamic site.
-- Nginx redirection manager, native SMTP for emails and a lot more features.
-- Datadog native integration for monitoring and analytics.
-- Get an A+ grade on [Qualys (SSL Labs) Test](https://www.ssllabs.com/ssltest/).
-- Log viewer in real time.
+### 🚀 Key Features
+- **LEMP Stack:** Ubuntu + NGINX + MariaDB/MySQL + PHP (8.4 and earlier versions)
+- **Performance:** FastCGI Cache, Redis Object Cache, HTTP/3 support
+- **Security:** Free SSL via Let’s Encrypt, HTTP Authentication
+- **WordPress Tools:** Subfolder install, external DB, multisite, domain mapping
+- **Reverse Proxy:** Compatible with Java, Node, React, Vue, etc.
+- **Backup & Migration:** Full site/server cloning and transfer tools
+- **Monitoring:** Real-time log viewer, Datadog integration
+- **Extras:** Redirection manager, SMTP support, custom headers
+
+Get an A+ grade on [Qualys (SSL Labs) Test](https://www.ssllabs.com/ssltest/).
+
 
 ## Usage
 
@@ -44,7 +40,7 @@ Webinoly provides a set of tools and commands that facilitate web server adminis
 # Install Webinoly and build the stack
 wget -qO weby qrok.es/wy && sudo bash weby
 
-# Create your first site.
+# Create your first WordPress site.
 sudo site example.com -wp
 
 # Authentication
@@ -53,6 +49,8 @@ sudo httpauth -add
 
 ### Requirements
 * Ubuntu 24.04 or 22.04
+* Architecture: arm64 / x86_64 (amd64)
+* RAM Minimum: 512 MB
 
 
 ### Documentation
@@ -60,15 +58,14 @@ For complete documentation: [English](https://webinoly.com/documentation/) | [Es
 
 
 ## Contributing
-You don't need developer skills to help, visit our site to know [How to Contribute to Webinoly](https://webinoly.com/contribute/).
+You don’t need to be a developer to contribute—[visit our site to learn how to get involved.](https://webinoly.com/contribute/).
 
 ### Sponsor Me!
+If you find Webinoly useful, consider supporting the project via:
 
 - [GitHub Sponsors](https://github.com/sponsors/QROkes)
 - [PayPal](https://www.paypal.me/qrokes)
 - [Bitcoin](https://www.blockchain.com/en/btc/address/1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3)
-
-If you like Webinoly, buy me a coffee or a beer to show support.
 
 **_Your regular donations keep this project moving forward._**
 
