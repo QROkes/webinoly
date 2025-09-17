@@ -22,10 +22,10 @@
 Install a complete LEMP stack or individual packages tailored to your needs.
 
 ### 🚀 Key Features
-- **LEMP Stack:** Ubuntu + NGINX + MariaDB/MySQL + PHP (8.4 and earlier versions)
+- **LEMP Stack:** Ubuntu + NGINX + MariaDB/MySQL + PHP
 - **Performance:** FastCGI Cache, Redis Object Cache, HTTP/3 support
 - **Security:** Free SSL via Let’s Encrypt, HTTP Authentication
-- **WordPress Tools:** Subfolder install, external DB, multisite, domain mapping
+- **WordPress Tools:** Subfolder install, external database, multisite, domain mapping
 - **Reverse Proxy:** Compatible with Java, Node, React, Vue, etc.
 - **Backup & Migration:** Full site/server cloning and transfer tools
 - **Monitoring:** Real-time log viewer, Datadog integration
@@ -67,9 +67,7 @@ If you find Webinoly useful, consider supporting the project via:
 - [PayPal](https://www.paypal.me/qrokes)
 - [Bitcoin](https://www.blockchain.com/en/btc/address/1E3Ybo5UcvaAr1MoK4nBnMRFFY9aEMiku3)
 
-**_Your regular donations keep this project moving forward._**
-
 ### Community
 - [Discussions/Issues](https://webinoly.com/premium/)
-- Follow [@Webinoly](https://x.com/Webinoly) on Twitter
+- Follow us on [Twitter](https://x.com/Webinoly) and [Facebook](https://www.facebook.com/Webinoly/)
 - Subscribe to our [Newsletter](https://webinoly.com/newsletter/)
