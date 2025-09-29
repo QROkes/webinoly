@@ -204,7 +204,7 @@ nginx_install() {
 php_install() {
 	api-events_update ip1
 	if [[ -n $(conf_read php-ver) && $(check_php_version $(conf_read php-ver)) == "true" ]]; then
-		echo "${gre}PHP version '$(conf_read php-ver)' is set as default.${end}"
+		echo "${blu}PHP version${end} '$(conf_read php-ver)' ${blu}is set as default.${end}"
 	else
 		# Default PHP version
 		conf_write php-ver $php_default
@@ -228,7 +228,7 @@ php_install() {
 
 mysql_install() {
 	api-events_update im3
-	echo "${gre}MySQL/MariaDB version '$(conf_read mysql-ver)' is set as default.${end}"
+	echo "${blu}MySQL/MariaDB version${end} '$(conf_read mysql-ver)' ${blu}is set as default.${end}"
 	
 	# debconf-utils for unattended scripts
 	# debconf-get-selections | grep phpmyadmin   <<-- list conf variables
@@ -973,10 +973,10 @@ message_welcome() {
 	if [[ $1 =~ ^(full|basic|light|partial)$ ]]; then
 		echo "${dim} -    -    -    -    -    -    -    -    -    -    -    - ${end}${blu}"
 		echo ""
-		[[ $1 == "full" ]] && echo "Build Profile: ${dim}Full Stack (Nginx, PHP, MySQL/MariaDB and ALL the additional tools)"
-		[[ $1 == "basic" ]] && echo "Build Profile: ${dim}Basic Stack (Only the most essential tools)"
-		[[ $1 == "light" ]] && echo "Build Profile: ${dim}Light Stack (Only core packages, NO additional tools will be installed)"
-		[[ $1 == "partial" ]] && echo "Build Profile: ${dim}Partial Stack"
+		[[ $1 == "full" ]] && echo "Build Profile: ${dim}Full Stack (LEMP, all the way)"
+		[[ $1 == "basic" ]] && echo "Build Profile: ${dim}Basic Stack (LEMP + SSL + Backups)"
+		[[ $1 == "light" ]] && echo "Build Profile: ${dim}Light Stack (Only LEMP Core Packages)"
+		[[ $1 == "partial" ]] && echo "Build Profile: ${dim}Partial Stack (Single Package)"
 	fi
 	echo "${end}"
 }
@@ -1091,10 +1091,10 @@ stack_builder() {
 	
 	if [[ $3 =~ ^(mysql|mysql-client)$ && $(conf_read mysql-client) != "true" ]]; then
 		if [[ -n $(conf_read mysql-ver) && $(check_mysql_version $(conf_read mysql-ver)) == "true" ]]; then
-			echo "${blu}Retrieving a saved MySQL/MariaDB version configured before...${dim}${end}"
+			echo "${blu}Retrieving a saved MySQL/MariaDB version configured before... ${dim}(Ver: $(conf_read mysql-ver))${end}"
 		else
-			echo "${blu}Setting the default MySQL/MariaDB version...${dim}${end}"
 			[[ $(conf_read db-engine) == "mysql" ]] && conf_write mysql-ver $mysql_default || conf_write mysql-ver $mariadb_default
+			echo "${blu}Setting the default MySQL/MariaDB version... ${dim}(Ver: $(conf_read mysql-ver))${end}"
 		fi
 		
 		if [[ $(conf_read db-engine) == "mysql" ]]; then

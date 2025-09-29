@@ -576,9 +576,9 @@ elif [[ -n $purge && -n $lemp ]]; then
 
 elif [[ -n $purge_server_all ]]; then
 	api-events_update st2
-	echo ""
-	echo "${red}¡ C A U T I O N !  You are about to remove Webinoly Stack completely from your server!"
-	echo "This action will remove Nginx, PHP, MySQL/MariaDB and all the additional tools."
+	echo "${red}"
+	echo "${bol}¡ C A U T I O N !  Removing the Webinoly stack will delete NGINX, PHP, MySQL/MariaDB, and all associated components.${end}"
+	echo "${red}* If you plan to reinstall or migrate, consider backing up your configuration first."
 	echo "${end}"
 	if [[ $(conf_read force-flag) != "true" && $force != 1 ]]; then
 		echo " ${blu}Are you sure [y/N]? ${end}"
@@ -622,10 +622,11 @@ elif [[ -n $purge_server_all ]]; then
 		[[ $(conf_read swap-owner) == "webinoly" ]] && swap_delete
 		
 		echo "${gre}"
-		echo "****************************************************************************"
-		echo "***     ${bol}Webinoly Stack have been completely removed from your server${end}${gre}     ***"
-		echo "****         ${dim}We are sad because you decided to remove Webinoly!!${end}${gre}        ****"
-		echo "****************************************************************************"
+		echo "***********************************************************************"
+		echo "**   ${bol}Webinoly stack has been successfully removed from your server ${end}${gre}  **"
+		echo "**********         We're grateful you gave it a try!  ${end}${gre}      ***********"
+		echo "***********************************************************************"
+		echo "${dim}* If you have any feedback or suggestions, we'd love to hear from you.${end}${gre}"
 		echo "${end}"
 	else
 		echo ""

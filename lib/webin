@@ -912,7 +912,8 @@ webinoly_uninstall() {
 		sudo rm /usr/bin/site
 		sudo rm /usr/bin/httpauth
 		sudo rm /usr/bin/log			
-		echo "${gre}Webinoly App has been removed successfully from your server!${end}"
+		echo "${gre}Webinoly App has been successfully removed from your server."
+		echo "${dim}* If you have any feedback or suggestions, we'd love to hear from you.${end}"
 		exit 0 # Only allowed here because after this Webinoly does not exist in the server!
 	else
 		echo "${red}Action aborted!${end}"

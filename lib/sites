@@ -715,8 +715,9 @@ deletesite_subfolder() {
 
 delete_all_sites() {
 	echo "${red}"
-	echo "All your sites files will be removed."
-	echo "This action will only delete Databases attached to a WordPress site, any other Database will not be deleted. ${end}"
+	echo "${bol}All site files will be deleted.${end}"
+	echo "${red}Only databases linked to WordPress sites will be removed, others will remain untouched."
+	echo "${dim}* If you plan to reinstall or migrate, backing up your data is recommended. ${end}"
 	
 	if ! [[ ${delete_all,,} =~ ^(force|keep-db)$ ]]; then
 		echo "${blu}"
