@@ -194,7 +194,7 @@ wpinstall() {
 			if [[ $setupmysql == [yY] ]]; then
 				echo "${blu}"
 				
-				if [[ $dbhost != "localhost" && ( $type == [135] && ( -z $dburoot || -z $dbproot )) ]]; then
+				if [[ $dbhost != "localhost" && ( $type == [0135] && ( -z $dburoot || -z $dbproot )) ]]; then
 					# Don't ask for password if already in file!
 					if [[ $(check_mysql_connection $dburl $dbport any -login-file -master-admin) != "true" ]]; then
 						read -p "${blu}External DB Master Username: ${end}" dburoot
@@ -484,7 +484,7 @@ _EOF_
 	fi
 	
 	# Display data just to confirm the DB creation.
-	if [[ $type == [45] && $db_error_flag != "true" ]]; then
+	if [[ $type == [045] && $db_error_flag != "true" ]]; then
 		echo "${blu}"
 		echo "Database Host: $dbhost"
 		echo "Database Name: $dbname"

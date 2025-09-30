@@ -192,7 +192,6 @@ elif [[ -n $backup ]]; then
 		elif [[ -n $import ]]; then
 			import_server
 		else
-			check_for_mysql
 			bkp_local_db
 		fi
 	elif [[ $backup == "s3" ]]; then

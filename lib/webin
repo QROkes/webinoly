@@ -1236,7 +1236,6 @@ aws_secret_access_key = $pass" >> $HOME/.aws/credentials
 
 
 database_import() {
-	check_for_mysql
 	[[ -z $file ]] && read -p "${blu}SQL file path to import: ${end}" file
 	if [[ -z $file || ! -f $file ]]; then
 		echo "${red}[ERROR] Please, enter a valid file path!${end}"
