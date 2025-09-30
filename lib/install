@@ -257,8 +257,8 @@ mysql_install() {
 		echo "mysql-community-server mysql-community-server/data-dir note" | debconf-set-selections
 		sudo apt -y install mysql-server
 	else
-		# This option is no longer available in recent MariaDB versions, so we set the root password in the next step after installation.
 		echo "mariadb-server  mariadb-server/feedback_optin   boolean false" | debconf-set-selections
+		#echo "mariadb-server  mariadb-server/old_data_directory_saved note" | debconf-set-selections  # Displayed when MySQL (not MariaDB) old data found...
 		sudo apt -y install apt-transport-https dirmngr mariadb-server
 	fi
 	

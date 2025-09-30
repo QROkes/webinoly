@@ -66,6 +66,41 @@ purge_nginx_tools() {
 	[[ -n $(conf_read default-site) ]] && conf_delete default-site
 }
 
+check_mysql_different_engine_data_remains() {
+	# /var/lib/mysql/mariadb_upgrade_info  -- 11.8.3-MariaDB
+	# /var/lib/mysql/mysql_upgrade_info  --   10.11.14-MariaDB
+	# /var/lib/mysql/mysql_upgrade_history -- 8.4   (MySQL 8.0 no file found)
+	
+	local out="false"
+	# First, check if MySQL/MariaDB data folder exist...
+	if [[ -d /var/lib/mysql ]]; then
+		if [[ $(conf_read db-engine) == "mysql" ]]; then
+			# For MySQL, MariaDB data should not exist...
+			if [[ -f /var/lib/mysql/mariadb_upgrade_info ]]; then
+				local out="true"
+			elif [[ -f /var/lib/mysql/mysql_upgrade_info && -n $(grep -F "MariaDB" /var/lib/mysql/mysql_upgrade_info) ]]; then
+				local out="true"
+			fi
+		else
+			# For MariaDB, MySQL data should not exist...
+			if [[ -f /var/lib/mysql/mysql_upgrade_history && -z $(grep -F "MariaDB" /var/lib/mysql/mysql_upgrade_history) ]]; then
+				local out="true"
+			fi
+		fi
+	fi
+	
+	if [[ $out == "true" ]]; then
+		if [[ $(conf_read db-engine) == "mysql" ]]; then
+			echo "${red}[ERROR] You have MySQL set as database engine, but we found you have MariaDB data in your server.${end}"
+		else
+			echo "${red}[ERROR] You have MariaDB set as database engine, but we found you have MySQL data in your server.${end}"
+		fi
+		
+		clear_force_flag
+		exit 1
+	fi
+}
+
 
 #############################################
 ########   Delete/Purge some stack   ########
@@ -242,6 +277,8 @@ elif [[ -n $purge && -n $php ]]; then
 	
 elif [[ -n $purge && -n $mysql ]]; then
 	api-events_update pm1
+	check_mysql_different_engine_data_remains
+	
 	if [[ $(conf_read mysql) != "true" && $(conf_read mysql-client) == "true" ]]; then
 		purge_mysql_client
 		echo "${dim}MySQL/MariaDB is not installed, hence can not be deleted! ${end}"
@@ -654,6 +691,7 @@ elif [[ -n $php ]]; then
 	[[ $answer = [Yy] || $php == "nginx" ]] && stack_builder nginx php false $build || stack_builder false php false $build
 	
 elif [[ -n $mysql ]]; then
+	check_mysql_different_engine_data_remains
 	[[ $(conf_read php) != "true" || $(conf_read nginx) != "true" ]] && build=light
 	[[ $mysql == "client" ]] && stack_builder false false mysql-client || stack_builder false false mysql $build
 
@@ -733,6 +771,7 @@ elif [[ -n $php_ver ]]; then
 
 elif [[ -n $mysql_ver ]]; then
 	api-events_update st4
+	check_mysql_different_engine_data_remains
 	
 	if [[ $mysql_ver != true && $(check_mysql_version $mysql_ver) == "true" ]]; then
 		echo "${blu}New MySQL (MariaDB) version: '$mysql_ver' ${end}"
