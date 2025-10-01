@@ -371,10 +371,10 @@ elif [[ -n $clone_from ]]; then
 	elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" && $overwrite != "on" ]]; then
 		echo "${red}[ERROR] Subfolder ${blu}'$subfolder'${red} already exists!${end}"
 		exit 1
-	elif ! [[ $(site_type $clone_from) =~ ^(HTML|PHP|WordPress)$ ]]; then
+	elif ! [[ $(site_type $clone_from $subfolder) =~ ^(HTML|PHP|WordPress)$ ]]; then
 		echo "${red}[ERROR] Only HTML, PHP or WordPress sites are supported for cloning!${end}"
 		exit 1
-	elif [[ $overwrite == "on" && -f /etc/nginx/sites-available/$domain && $(site_type $clone_from) != $(site_type $domain) ]]; then
+	elif [[ $overwrite == "on" && -f /etc/nginx/sites-available/$domain && $(site_type $clone_from $subfolder) != $(site_type $domain $subfolder) ]]; then
 		echo "${red}[ERROR] Source and destination sites should be the same type of site!${end}"
 		exit 1
 	fi

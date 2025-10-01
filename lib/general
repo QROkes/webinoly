@@ -1278,26 +1278,31 @@ escaped_string() {
 site_type() {
 	if [[ -z $1 ]]; then
 		echo "false"
-	elif [[ $(is_parked $1) == "true" ]]; then
+	
+	# These type of sites are not supported in subfolders...
+	elif [[ -z $2 && $(is_parked $1) == "true" ]]; then
 		echo "Parked"
-	elif [[ $(is_wp $1) == "true" ]]; then
-		echo "WordPress"
-	elif [[ $(is_php $1) == "true" ]]; then
-		echo "PHP"
-	elif [[ $(is_html $1) == "true" ]]; then
-		echo "HTML"
-	elif [[ $(is_dedicated_proxy_domain $1) == "true" ]]; then
-		echo "Dedicated Reverse Proxy"
-	elif [[ $(is_proxy $1) == "true" ]]; then
-		echo "Reverse Proxy"
-	elif [[ $(is_forward $1) == "true" ]]; then
+	elif [[ -z $2 && $(is_forward $1) == "true" ]]; then
 		echo "Forward"
-	elif [[ $(is_empty_root_site $1) == "full" ]]; then
+	elif [[ -z $2 && $(is_empty_root_site $1) == "full" ]]; then
 		echo "Empty Blank"
-	elif [[ $(is_empty_root_site $1) == "subfolders" ]]; then
+	elif [[ -z $2 && $(is_empty_root_site $1) == "subfolders" ]]; then
 		echo "Subfolders"
-	elif [[ $(is_empty_root_site $1) == "true" ]]; then
+	elif [[ -z $2 && $(is_empty_root_site $1) == "true" ]]; then
 		echo "Empty"
+
+	# Subfolder supported...
+	elif [[ $(is_wp $1 $2) == "true" ]]; then
+		echo "WordPress"
+	elif [[ $(is_php $1 $2) == "true" ]]; then
+		echo "PHP"
+	elif [[ $(is_html $1 $2) == "true" ]]; then
+		echo "HTML"
+	elif [[ $(is_dedicated_proxy_domain $1 $2) == "true" ]]; then
+		echo "Dedicated Reverse Proxy"
+	elif [[ $(is_proxy $1 $2) == "true" ]]; then
+		echo "Reverse Proxy"
+	
 	else
 		echo "Unknown"
 	fi
