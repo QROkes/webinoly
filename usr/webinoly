@@ -60,8 +60,7 @@ elif [[ -n $tools_site ]]; then
 	set_tools_site
 
 	
-elif [[ -n $sftp || -n $login_www_data ]]; then
-	[[ -z $sftp ]] && sftp=$login_www_data
+elif [[ -n $sftp ]]; then
 	check_for_nginx -ask
 	www_data_sftp_access
 	nginx_not="true" # Nginx-Reload not-needed.

@@ -224,11 +224,7 @@ elif [[ -n $syslog ]]; then
 
 
 # Turn On/Off Access Logs
-elif [[ -n $access_log || -n $only_error ]]; then
-	
-	[[ -z $access_log && $only_error == "on" ]] && access_log="off"
-	[[ -z $access_log && $only_error == "off" ]] && access_log="on"
-
+elif [[ -n $access_log ]]; then
 	if ! [[ $access_log =~ ^(on|off)$ ]]; then
 		echo "${red}[ERROR] Please, enter a valid value for Access Log!${end}"
 		exit 1
