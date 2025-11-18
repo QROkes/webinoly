@@ -754,8 +754,8 @@ set_tools_site() {
 		
 		local force_www=$(is_force_redirect $tools_site)
 		if [[ $force_www =~ ^(www|root)$ ]]; then
-			sudo site galaboral.com -force-redirect=off > /dev/null 2>&1
-			sudo site galaboral.com -force-redirect=$force_www > /dev/null 2>&1
+			sudo site $tools_site -force-redirect=off > /dev/null 2>&1
+			sudo site $tools_site -force-redirect=$force_www > /dev/null 2>&1
 			echo "${gre}${dim}Force-Redirect ${blu}'${force_www}'${gre} settings updated!${end}"
 		fi
 	
