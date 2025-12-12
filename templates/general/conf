@@ -100,7 +100,7 @@
 # SFTP Access for www-data user
 # Values: boolean (true/false)
 # Default: false
-# Same as: sudo webinoly -login-www-data=on
+# Same as: sudo webinoly -sftp=on
 ###########################
 #sftp-www-data:false
 
@@ -109,7 +109,7 @@
 # Values: boolean (true/false)
 # Default: true
 # Note: This setting will be applied to new sites, or for existing sites 'access log' needs to be reenabled (same for global).
-# Same as: sudo log -only-error=on
+# Same as: sudo log -access-log=off
 ###########################
 #global-access-log-off:true
 

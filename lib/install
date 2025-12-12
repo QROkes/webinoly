@@ -211,8 +211,11 @@ php_install() {
 	fi
 	local ver=$(conf_read php-ver)
 	
-	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary php${ver}-intl php-pear graphviz ghostscript
+	sudo apt -y install php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary php${ver}-intl php-pear graphviz ghostscript
 	
+	# Starting with 8.5: Opcache extension is now always bundled in core, cannot be installed separately.
+	[[ $ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0|8.1|8.2|8.3|8.4)$ ]] && sudo apt -y install php${ver}-opcache
+
 	conf_write php true
 	
 	if [[ -d /etc/php/${ver}/fpm ]] && systemctl is-active --quiet php${ver}-fpm; then
@@ -430,13 +433,13 @@ fastcgi_param  HTTP_ACCEPT_ENCODING "";
 	[[ -n $(conf_read default-response) ]] && sudo webinoly -default-site=$(conf_read default-response)
 	[[ -n $(conf_read tools-port-set) ]] && sudo webinoly -tools-port=$(conf_read tools-port-set)
 	[[ -n $(conf_read tools-site) ]] && sudo webinoly -tools-site=$(conf_read tools-site)
-	[[ $(conf_read global-access-log-off) =~ ^(false|purged)$ ]] && sudo log -only-error=off || sudo log -only-error=on
+	[[ $(conf_read global-access-log-off) =~ ^(false|purged)$ ]] && sudo log -access-log=on || sudo log -access-log=off
 	[[ -n $(conf_read fastcgi-conf) ]] && sudo webinoly -cache-valid=[$(conf_read fastcgi-conf)]
 	[[ -n $(conf_read auth-whitelist-ip) ]] && sudo httpauth -whitelist=$(conf_read auth-whitelist-ip)
 	[[ -n $(conf_read blockip) ]] && sudo webinoly -blockip=$(conf_read blockip)
 	
-	[[ $(conf_read sftp-www-data) == "true" ]] && sudo webinoly -login-www-data=on
-	[[ $(conf_read sftp-www-data) == "false" ]] && sudo webinoly -login-www-data=off
+	[[ $(conf_read sftp-www-data) == "true" ]] && sudo webinoly -sftp=on
+	[[ $(conf_read sftp-www-data) == "false" ]] && sudo webinoly -sftp=off
 	
 	http_header_referrer
 	http_header_hsts
@@ -797,7 +800,10 @@ php_tool_memcached() {
 	local ver=$(conf_read php-ver)
 	
 	# Memcached (Object Cache)
-	sudo apt -y install php${ver}-memcached php${ver}-memcache memcached
+	sudo apt -y install php${ver}-memcached memcached
+	
+	# Starting with 8.5: Memcache module still not available, we should consider remove it permanently.
+	[[ $ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0|8.1|8.2|8.3|8.4)$ ]] && sudo apt -y install php${ver}-memcache
 	
 	conf_write php-tool-memcached true
 	

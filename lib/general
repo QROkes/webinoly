@@ -7,7 +7,7 @@
 readonly app_version="1.19.7"
 readonly svr_version="1.11"
 readonly os_ubuntu_supported=(focal jammy noble) # https://ubuntu.com/about/release-cycle
-readonly php_supported=(7.4 8.0 8.1 8.2 8.3 8.4) # https://www.php.net/supported-versions.php
+readonly php_supported=(7.4 8.0 8.1 8.2 8.3 8.4 8.5) # https://www.php.net/supported-versions.php
 readonly php_default="8.4"
 readonly mariadb_supported=(10.11 11.4 11.8) # https://mariadb.com/docs/release-notes/community-server
 readonly mariadb_default="11.8"

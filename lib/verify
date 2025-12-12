@@ -688,14 +688,14 @@ if [[ -z $critical_mode ]]; then
 			local ver_three_war="1"
 		fi
 		
-		if ! [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0|8.1|8.2|8.3|8.4)$ ]]; then
+		if ! [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0|8.1|8.2|8.3|8.4|8.5)$ ]]; then
 			echo "${dim}- [WARNING] Unknown PHP version! (${ver_php_ver}) ${end}${red}"
 			local ver_three_war="1"
-		elif [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0)$ ]]; then
+		elif [[ $ver_php_ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0|8.1)$ ]]; then
 			echo "${dim}- [WARNING] You have an obsolete PHP version installed (${ver_php_ver}) that not even receive security updates!${end}${red}"
 			local ver_three_war="1"
-		elif [[ $ver_php_ver == "8.1" ]]; then
-			echo "${blu}${dim}- [INFO] PHP v8.2 or later is recommended to get an optimal perfomance! (Current: ${ver_php_ver}) ${end}${red}"
+		elif [[ $ver_php_ver == "8.2" ]]; then
+			echo "${blu}${dim}- [INFO] PHP v8.3 or later is recommended to get an optimal perfomance! (Current: ${ver_php_ver}) ${end}${red}"
 		fi
 		
 		# PHP Workers!
@@ -1167,6 +1167,13 @@ if [[ -z $critical_mode ]]; then
 				fi
 			done
 		fi
+	fi
+
+	if [[ $(conf_read smtp) == "true" && $(conf_read php-tool-postfix) != "true" ]]; then
+		echo "- [ERROR] Seems like SMTP is configuraded, but Postfix is not found!"
+		local ver_seven_err="1"
+	elif [[ $(conf_read smtp) == "true" ]]; then
+		echo "${blu}${dim}- [INFO] SMTP is Enabled! Be sure SPF, DKIM and DMARC are also configured!${end}${red}"
 	fi
 
 	if [[ $ver_seven_err == "1" ]]; then

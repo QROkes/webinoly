@@ -852,9 +852,9 @@ createsite() {
 	
 	# Check if only-error log is enabled
 	if [[ $(conf_read global-access-log-off) == "true" && $domain != $ADMIN_TOOLS_SITE ]]; then
-		sudo log $domain -only-error=on > /dev/null 2>&1
+		sudo log $domain -access-log=off > /dev/null 2>&1
 	else
-		sudo log $domain -only-error=off > /dev/null 2>&1
+		sudo log $domain -access-log=on > /dev/null 2>&1
 	fi
 
 	# Force redirection "root" is now enabled by default!

@@ -55,7 +55,7 @@ purge_mysql_client() {
 
 purge_nginx_tools() {
 	# Remove additional tools
-	[[ $(conf_read login-www-data) == "true" ]] && webinoly -login-www-data=off
+	[[ $(conf_read login-www-data) == "true" ]] && webinoly -sftp=off
 	[[ $(conf_read nginx-tool-ssl) == "true" ]] && stack -letsencrypt -purge=force
 	[[ $(conf_read nginx-tool-bkp) == "true" ]] && stack -backups -purge=force
 	[[ $(conf_read mysql-tool-pma) == "true" ]] && stack -pma -purge=force
@@ -231,7 +231,10 @@ elif [[ -n $purge && -n $php ]]; then
 			ver=$(conf_read php-ver)
 			sudo systemctl stop php${ver}-fpm
 			
-			sudo apt -y purge php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-opcache php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary php${ver}-intl php-pear graphviz ghostscript
+			sudo apt -y purge php${ver}-common php${ver}-cli php${ver}-fpm php${ver}-curl php${ver}-gd php${ver}-imap php${ver}-readline php${ver}-mysql php${ver}-mbstring php${ver}-bcmath php${ver}-mysql php${ver}-zip php${ver}-xml php${ver}-soap php${ver}-imagick php${ver}-msgpack php${ver}-igbinary php${ver}-intl php-pear graphviz ghostscript
+			
+			# Starting with 8.5: Opcache extension is now always bundled in core, cannot be installed separately.
+			[[ $ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0|8.1|8.2|8.3|8.4)$ ]] && sudo apt -y purge php${ver}-opcache
 			
 			# For old packages - before ondrej split modules
 			sudo apt -y purge php-imagick php-msgpack
@@ -547,7 +550,8 @@ elif [[ -n $purge && -n $memcached ]]; then
 
 		if [[ $answer == [Yy] || $(conf_read force-flag) == "true" ]]; then
 			ver=$(conf_read php-ver)
-			sudo apt -y purge php${ver}-memcached php${ver}-memcache memcached
+			sudo apt -y purge php${ver}-memcached memcached
+			[[ $ver =~ ^(5.6|7.0|7.1|7.2|7.3|7.4|8.0|8.1|8.2|8.3|8.4)$ ]] && sudo apt -y purge php${ver}-memcache
 			purge_autoremove="true"
 			
 			# For old packages - before ondrej split modules
