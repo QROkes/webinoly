@@ -951,7 +951,7 @@ stack_builder() {
 		
 		if [[ $(conf_read db-engine) == "mysql" ]]; then
 			[[ -f /usr/share/keyrings/mysql-archive-keyring.gpg && ( ! -s /usr/share/keyrings/mysql-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/mysql-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/mysql-archive-keyring.gpg # Prevent issues!
-			[[ ! -f /usr/share/keyrings/mysql-archive-keyring.gpg ]] && wget -nv -O- 'https://repo.mysql.com/RPM-GPG-KEY-mysql-2023' | sudo gpg --dearmor -o /usr/share/keyrings/mysql-archive-keyring.gpg
+			[[ ! -f /usr/share/keyrings/mysql-archive-keyring.gpg ]] && wget -nv -O- 'https://repo.mysql.com/RPM-GPG-KEY-mysql-2025' | sudo gpg --dearmor -o /usr/share/keyrings/mysql-archive-keyring.gpg
 			
 			# Stupid things that are only needed for MySQL.
 			# Be aware that they like to change names and syntax unexpectedly at anytime.
