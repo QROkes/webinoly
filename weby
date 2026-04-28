@@ -1,10 +1,11 @@
 #!/bin/bash
 # Webinoly Installation Script.
 
-readonly os_supported_latest=("noble" "24.04" "1.18.0")   # Newest Ubuntu supported, including first Webinoly version with full support.
-readonly os_supported_stable=("jammy" "22.04")            # Supported in all versions available of Webinoly.
-readonly os_supported_legacy=("focal" "20.04" "1.19.1")   # Oldest Ubuntu. Partially supported. No new installations, updates only! Webinoly version when support was removed.
+readonly os_supported_latest=("resolute" "26.04" "1.20.1")   # Newest Ubuntu supported, including first Webinoly version with full support.
+readonly os_supported_stable=("noble" "24.04")               # Supported in all versions available of Webinoly.
+readonly os_supported_legacy=("jammy" "22.04" "1.20.1")      # Oldest Ubuntu. Partially supported. No new installations, updates only! Webinoly version when support was removed.
 
+# 26.04 resolute - 1.20.1
 # 24.04 noble - 1.18.0
 # 22.04 jammy - 1.16.6
 # 20.04 focal - 1.12.0

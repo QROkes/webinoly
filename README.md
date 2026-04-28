@@ -48,7 +48,7 @@ sudo httpauth -add
 ```
 
 ### Requirements
-* Ubuntu 24.04 or 22.04
+* Ubuntu 26.04 or 24.04
 * Architecture: arm64 / x86_64 (amd64)
 * RAM Minimum: 512 MB
 
