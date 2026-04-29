@@ -242,7 +242,7 @@ if [[ -z $critical_mode ]]; then
 		echo "${dim}- [WARNING] Webinoly App version check is corrupted! (Installed: $app_version != Conf: ${ver_currentver}) ${end}${red}"
 		local ver_one_war="1"
 	else
-		local ver_checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
+		local ver_checkver=$(curl -sSLf -m 10 "https://api.webinoly.com/check?text=true")
 		if [[ -z $ver_checkver ]] || ! [[ $ver_checkver =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 			echo "${blu}${dim}- [INFO] Webinoly API Unavailable! (version check failed)${end}${red}"
 		elif [[ $(version $ver_checkver) -gt $(version $ver_currentver) ]]; then
@@ -1006,9 +1006,9 @@ if [[ $ver_disk =~ ^[0-9]+$ && $ver_disk -gt 75 ]]; then
 	local ver_six_war="1"
 fi
 
-# Check if WGET is installed
-if ! which wget >/dev/null ; then
-	echo "- [ERROR] Seems like WGET package is not installed!"
+# Check if CURL is installed
+if ! which curl >/dev/null ; then
+	echo "- [ERROR] Seems like CURL package is not installed!"
 	local ver_six_err="1"
 fi
 

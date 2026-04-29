@@ -26,7 +26,7 @@ wp_cache_plugins() {
 	
 	if [[ ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/nginx-helper ]]; then
 		# Download Nginx Helper Plugin
-		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/nginx-helper-plugin.zip https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
+		curl -sSLf --connect-timeout 15 -o "/var/www/$domain/htdocs/nginx-helper-plugin.zip" https://downloads.wordpress.org/plugin/nginx-helper.latest-stable.zip
 		if [[ -s /var/www/$domain/htdocs/nginx-helper-plugin.zip ]]; then		
 			sudo unzip -qq /var/www/$domain/htdocs/nginx-helper-plugin.zip -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/
 			sudo rm /var/www/$domain/htdocs/nginx-helper-plugin.zip
@@ -47,7 +47,7 @@ wp_cache_plugins() {
 
 	if [[ ! -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/redis-cache ]]; then
 		# Download Redis Object Cache Plugin
-		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/redis-cache-plugin.zip https://downloads.wordpress.org/plugin/redis-cache.latest-stable.zip
+		curl -sSLf --connect-timeout 15 -o "/var/www/$domain/htdocs/redis-cache-plugin.zip" https://downloads.wordpress.org/plugin/redis-cache.latest-stable.zip
 		if [[ -s /var/www/$domain/htdocs/redis-cache-plugin.zip ]]; then		
 			sudo unzip -qq /var/www/$domain/htdocs/redis-cache-plugin.zip -d /var/www/$domain/htdocs$subfolder/wp-content/plugins/
 			sudo rm /var/www/$domain/htdocs/redis-cache-plugin.zip
@@ -123,7 +123,7 @@ wpinstall() {
 	# Download WP (latest version)
 	if [[ $type == [123] ]]; then
 		echo "${dim}Downloading WordPress...${end}${blu}"
-		sudo wget --timeout=15 -t 1 -qrO /var/www/$domain/htdocs/wp.tar.gz https://wordpress.org/latest.tar.gz
+		curl -sSLf --connect-timeout 15 -o "/var/www/$domain/htdocs/wp.tar.gz" https://wordpress.org/latest.tar.gz
 		if [[ ! -s /var/www/$domain/htdocs/wp.tar.gz ]]; then
 			echo "${red}[ERROR] Downloading WordPress failed!${end}"
 			exit 1
@@ -1513,7 +1513,7 @@ reverse_proxy() {
 	
 	# Check host and port
 	echo "${blu}${dim}Checking connection with your endpoint or upstream server...${end}"
-	local code=$(wget -t 1 --timeout=5 --server-response --spider $proxydata 2>&1 | awk '/^  HTTP/{print $2}')
+	local code=$(curl -s -m 5 -o /dev/null -w "%{http_code}" "$proxydata")
 	code="${code##*$'\n'}"
 	[[ -n $code ]] && local mes="(Code: ${code})"
 	[[ $code =~ ^(2|3|4)[0-9][0-9]$ ]] && echo "${gre}Successful!${end}" || echo "${red}[WARNING] Seems like your Reverse Proxy host is not responding! ${mes}${end}"

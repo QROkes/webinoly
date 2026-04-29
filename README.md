@@ -38,7 +38,7 @@ Get an A+ grade on [Qualys (SSL Labs) Test](https://www.ssllabs.com/ssltest/).
 
 ```bash
 # Install Webinoly and build the stack
-wget -qO weby qrok.es/wy && sudo bash weby
+curl -sSL qrok.es/wy | sudo bash
 
 # Create your first WordPress site.
 sudo site example.com -wp

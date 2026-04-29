@@ -32,7 +32,7 @@ if [[ $distr != "ubuntu" ]] || ! [[ $osver =~ ^(${os_supported_legacy[0]}|${os_s
 	echo "$(tput setaf 1)"
 	echo "[ERROR] Operating system not supported! $(tput dim)(${distr} '${osver}')"
 	echo "$(tput sgr0)"
-	sudo rm weby
+	rm -f weby wy
 	exit 1
 
 # Block new installs for oldest legacy Ubuntu supported, only updates are allowed...
@@ -44,7 +44,7 @@ elif [[ $osver == ${os_supported_legacy[0]} && $1 != "upd" ]]; then
 		echo "$(tput dim)Webinoly ${os_supported_legacy[2]} was the last version with full support."
 		echo "$(tput dim)Use only if absolutely needed — at your own risk."
 		echo "$(tput sgr0)"
-		sudo rm weby
+		rm -f weby wy
 		exit 1
 	elif [[ -n $ver_int && $ver_int -le $(echo ${os_supported_legacy[2]} | sed 's/\.//g') ]]; then
 		echo "$(tput setaf 1)"
@@ -57,7 +57,7 @@ elif [[ $osver == ${os_supported_legacy[0]} && $1 != "upd" ]]; then
 		echo "[ERROR] Sorry, Ubuntu '${os_supported_legacy[1]}' is no longer supported for new installs."
 		echo "$(tput dim)Please use Ubuntu ${os_supported_stable[1]} or newer!"
 		echo "$(tput sgr0)"
-		sudo rm weby
+		rm -f weby wy
 		exit 1
 	fi
 
@@ -66,14 +66,14 @@ elif [[ $osver == ${os_supported_latest[0]} && -n $ver_int && $ver_int -lt $(ech
 	echo "$(tput setaf 1)"
 	echo "[ERROR] This Webinoly version does not support Ubuntu ${os_supported_latest[1]}."
 	echo "$(tput sgr0)"
-	sudo rm weby
+	rm -f weby wy
 	exit 1
 fi
 
 # Check for sudo/root privileges
 if [[ $(whoami) != "root" ]]; then
 	echo "$(tput setaf 1)Please run this script as root or using sudo.$(tput sgr0)"
-	sudo rm weby
+	rm -f weby wy
 	exit 1
 fi
 
@@ -81,11 +81,11 @@ fi
 if [[ -f /opt/webinoly/webinoly.conf && $1 != "upd" && $2 != "-ver=alpha" ]]; then
 	echo "$(tput setaf 2)Webinoly is already installed on your server!"
 	echo "$(tput setaf 6)To update use the proper command:$(tput dim) sudo webinoly -update $(tput sgr0)"
-	sudo rm weby
+	rm -f weby wy
 	exit 0
 elif [[ ! -f /opt/webinoly/webinoly.conf && $1 == "upd" ]]; then
 	echo "$(tput setaf 1)Webinoly cannot be updated because it's not installed or not found.$(tput sgr0)"
-	sudo rm weby
+	rm -f weby wy
 	exit 0
 fi
 
@@ -122,25 +122,25 @@ fi
 # Download and install Webinoly
 if [[ -n $ver ]]; then
 	# Be sure we have a valid server response for the requested version
-	code=$(wget --server-response --spider https://qrok.es/webinoly?version=$ver 2>&1 | awk '/^  HTTP/{print $2}')
+	code=$(curl -sLI -o /dev/null -w "%{http_code}" "https://qrok.es/webinoly?version=$ver")
 	code="${code##*$'\n'}" # Get the last code (redirections)
 
 	if [[ $code == 200 ]]; then
-		sudo wget --timeout=15 -t 1 -qrO $HOME/webinoly.tar https://qrok.es/webinoly?version=$ver
+		curl -sSLf --connect-timeout 15 -o "$HOME/webinoly.tar" https://qrok.es/webinoly?version=$ver
 		[[ $ver == "beta" ]] && echo "$(tput setaf 1)[WARNING] You are installing a BETA version of Webinoly and it's not recommended for production enviroments.$(tput sgr0)"
 		type="Custom"
 	else
 		echo "$(tput setaf 1)[ERROR] Version not found or not available! ($code) $(tput sgr0)"
-		sudo rm weby
+		rm -f weby wy
 		exit 1
 	fi
 else
-	sudo wget --timeout=15 -t 1 --referer="https://webinoly.com/?option=${setup}${update}" -qrO $HOME/webinoly.tar https://qrok.es/wytar
+	curl -sSLf -m 15 -e "https://webinoly.com/?option=${setup}${update}" -o "$HOME/webinoly.tar" https://qrok.es/wytar
 fi
 
 if [[ ! -s $HOME/webinoly.tar ]]; then
 	echo "$(tput setaf 1)[ERROR] Downloading Webinoly failed!$(tput sgr0)"
-	sudo rm weby
+	rm -f weby wy
 	exit 1
 else
 	echo "$(tput dim)Downloading... Successful!"
@@ -211,13 +211,13 @@ if [[ $statskip != "true" ]]; then
 		type="Beta"
 	elif [[ -n $update && $type == "Custom" ]]; then
 		type="Downgrade"
-		webyversion=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
+		webyversion=$(curl -sSLf -m 10 "https://api.webinoly.com/check?text=true")
 		opt=$ver
 	elif [[ -n $update && -n $oldapp ]]; then
 		type="Updates"
 		opt=$oldapp
 	elif [[ $type == "Custom" ]]; then
-		webyversion=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
+		webyversion=$(curl -sSLf -m 10 "https://api.webinoly.com/check?text=true")
 		opt=$ver
 	else
 		type="Error"
@@ -225,7 +225,7 @@ if [[ $statskip != "true" ]]; then
 		echo "${red}[ERROR] Installation method not recognized!${end}"
 	fi
 
-	wget https://api.webinoly.com/stats/?install=${branch}:${webyversion}:${type}:${opt} --referer="Webinoly-Internal-Verified-Stats" --spider --timeout=15 -t 1 -q
+	curl -sLk -I -m 15 -e "Webinoly-Internal-Verified-Stats" "https://api.webinoly.com/stats/?install=${branch}:${webyversion}:${type}:${opt}" -o /dev/null
 fi
 
 
@@ -288,5 +288,5 @@ fi
 
 
 # Remove Installation File
-sudo rm weby
+rm -f weby wy
 app_purge

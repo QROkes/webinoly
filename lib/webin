@@ -453,7 +453,7 @@ webinoly_update() {
 	if [[ -n $update && $update != true ]]; then
 		local branch="-ver=${update}"
 	else
-		local checkver=$(wget --timeout=10 -t 1 -qO- https://api.webinoly.com/check?text=true)
+		local checkver=$(curl -sSLf -m 10 "https://api.webinoly.com/check?text=true")
 		if [[ -z $checkver ]] || ! [[ $checkver =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 			echo "${red}[ERROR] Webinoly API Unavailable! ${dim}(version check failed)${end}"
 			exit 1
@@ -466,13 +466,13 @@ webinoly_update() {
 		fi
 	fi
 	
-	sudo wget --timeout=15 -t 1 --referer="https://update.webinoly.com/?ver=${app_version}" -qrO weby https://qrok.es/wyupd && sudo bash weby upd $branch
+	curl -sSLf -m 15 -e "https://update.webinoly.com/?ver=${app_version}" -o weby https://qrok.es/wyupd && sudo bash weby upd $branch
 	
 	if [[ $? == 0 ]]; then
 		echo "${dim}Update Completed!${end}"
 	else
 		# Check if exist, because it can be deleted before if an error is triggered in the installer, for instance.
-		[[ -f weby ]] && sudo rm weby
+		rm -f weby wy
 		echo "${red}[ERROR] Update process has failed!${end}"
 		exit 1
 	fi
@@ -957,7 +957,7 @@ webinoly_uninstall() {
 
 external_sources_update() {
 	echo "${blu}- Downloading Public Suffix List!${end}"
-	sudo wget --timeout=15 -t 1 -qrO /tmp/temp-public_suffix_list.dat https://publicsuffix.org/list/public_suffix_list.dat
+	curl -sSLf --connect-timeout 15 -o "/tmp/temp-public_suffix_list.dat" https://publicsuffix.org/list/public_suffix_list.dat
 	if [[ -s /tmp/temp-public_suffix_list.dat ]]; then
 		echo "${blu}- Processing file!${end}"
 		sudo sed -i '/^\/\// d' /tmp/temp-public_suffix_list.dat
@@ -973,7 +973,7 @@ external_sources_update() {
 	
 	echo ""
 	echo "${blu}- Downloading Timezone Database!${end}"
-	sudo wget --timeout=15 -t 1 -qrO /tmp/timezonedb.tgz https://pecl.php.net/get/timezonedb
+	curl -sSLf --connect-timeout 15 -o "/tmp/timezonedb.tgz" https://pecl.php.net/get/timezonedb
 	if [[ -s /tmp/timezonedb.tgz ]]; then
 		echo "${blu}- Processing file!${end}"
 		sudo tar -xf /tmp/timezonedb.tgz -C /tmp/ --wildcards --no-anchored timezonedb-*/timezonedb.h --strip-components=1
@@ -1023,7 +1023,7 @@ clear_caches() {
 				sudo chown -R www-data:www-data /var/www/$ADMIN_TOOLS_SITE/htdocs/php/opcache
 				sudo chmod 644 /var/www/$ADMIN_TOOLS_SITE/htdocs/php/opcache/index.php
 			fi
-			wget --spider --no-check-certificate --timeout=15 -t 1 localhost:$(conf_read tools-port)/php/opcache/  > /dev/null 2>&1 &
+			curl -sLIk -m 15 --connect-timeout 15 localhost:$(conf_read tools-port)/php/opcache/ -o /dev/null > /dev/null 2>&1 &
 			echo "${gre}- OpCache has been successfully cleared!${end}"
 		else
 			[[ ${clear_cache,,} != "all" ]] && echo "${red}[ERROR] We can not clear OpCache because PHP or NGINX are not installed!${end}"

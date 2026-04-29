@@ -307,6 +307,7 @@ linux_purge() {
 
         # Mark purge complete
         conf_write linux-optim purged
+		conf_delete server-version
         api-events_update pn8
     fi
 }
