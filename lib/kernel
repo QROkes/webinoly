@@ -267,6 +267,10 @@ EOF
 
 
 linux_purge() {
+	# Here to be inmune when user disable kernel-optim
+	# Should not be set when the stack is not installed
+	conf_delete server-version -commented
+	
     if [[ $(conf_read linux-optim) == "true" ]]; then
         api-events_update pn7
 
@@ -307,7 +311,6 @@ linux_purge() {
 
         # Mark purge complete
         conf_write linux-optim purged
-		conf_delete server-version
         api-events_update pn8
     fi
 }
