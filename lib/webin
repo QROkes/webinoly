@@ -15,7 +15,7 @@ system_info() {
 	echo "${blu}SWAP:${end}${dim} $swapv ${end}"
 	echo ""
 	echo "${blu}CPU Model:${end}${dim} $(lscpu | grep "Model name:" | cut -d ":" -f 2 -s | sed 's/^[ \t]*//') ${end}"
-	echo "${blu}Architecture:${end}${dim} $(lscpu | grep "Vendor ID:" | cut -d ":" -f 2 -s | sed 's/^[ \t]*//') ($(lscpu | grep "Architecture:" | cut -d ":" -f 2 -s | sed 's/^[ \t]*//')) ${end}"
+	echo "${blu}Architecture:${end}${dim} $(cpu_arch) ($(uname -m)) ${end}"
 	echo "${blu}Cores:${end}${dim} $cores ${end}"
 	echo "${blu}Threads per core:${end}${dim} $(lscpu | grep "Thread(s) per core:" | cut -d ":" -f 2 -s | sed 's/^[ \t]*//') ${end}"
 	echo ""
@@ -118,8 +118,7 @@ system_info() {
 	echo ""
 	
 	[[ $(conf_read nginx-tool-ssl) == "true" ]] && local ver_certbot=$(echo $(certbot --version) | cut -d' ' -f2 -s) || local ver_certbot="Not Installed"
-	[[ $(conf_read nginx-tool-bkp) == "true" ]] && local ver_duplicity=$(echo $(duplicity --version) | cut -d' ' -f2 -s) || local ver_duplicity="Not Installed"
-	[[ $(conf_read nginx-tool-bkp) == "true" ]] && local ver_duply=$(echo $(duply --version) | head -1 | cut -d' ' -f3 -s) || local ver_duply="Not Installed"
+	[[ $(conf_read nginx-tool-rclone) == "true" ]] && local ver_rclone=$(rclone version | head -n 1 | awk '{print $2}' | sed 's/v//') || local ver_rclone="Not Installed"
 	[[ $(conf_read php-tool-postfix) == "true" ]] && local ver_postfix=$(echo $(postconf -d mail_version) | cut -d' ' -f3 -s) || local ver_postfix="Not Installed"
 	[[ $(conf_read php-tool-redis) == "true" ]] && local ver_redis=$(echo $(redis-cli --version) | cut -d' ' -f2 -s) || local ver_redis="Not Installed"
 	[[ $(conf_read php-tool-memcached) == "true" ]] && local ver_memcached=$(echo $(memcached --version) | cut -d' ' -f2 -s) || local ver_memcached="Not Installed"
@@ -135,8 +134,7 @@ system_info() {
 	
 	echo "${blu}${bol}[Additional Tools]${end}"
 	echo "${blu}Certbot:${end}${dim} $ver_certbot ${end}"
-	echo "${blu}Duplicity:${end}${dim} $ver_duplicity ${end}"
-	echo "${blu}Duply:${end}${dim} $ver_duply ${end}"
+	echo "${blu}Rclone:${end}${dim} $ver_rclone ${end}"
 	echo "${blu}Postfix:${end}${dim} $ver_postfix ${end}"
 	echo "${blu}Redis:${end}${dim} $ver_redis ${end}"
 	echo "${blu}Memcached:${end}${dim} $ver_memcached ${end}"

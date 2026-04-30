@@ -1134,6 +1134,13 @@ if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
 		local ver_seven_err="1"
 	fi
 fi
+if [[ $(conf_read nginx-tool-rclone) == "true" ]]; then
+	# Check if RCLONE command is installed
+	if ! which rclone >/dev/null ; then
+		echo "- [ERROR] Seems like Rclone command is not installed!"
+		local ver_seven_err="1"
+	fi
+fi
 
 if [[ -z $critical_mode ]]; then
 	# Check for SSL Orphan-Certs

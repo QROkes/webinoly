@@ -15,9 +15,6 @@ readonly mysql_supported=(8.4 9.7) # https://endoflife.date/mysql
 readonly mysql_default="9.7"
 readonly tools_port_default="22222"
 
-# Additional Tools
-readonly duplicity_version="2.1.4"
-
 # echo colors
 readonly red=$(tput setaf 1)
 readonly gre=$(tput setaf 2)

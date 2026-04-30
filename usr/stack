@@ -399,7 +399,7 @@ elif [[ -n $purge && -n $letsencrypt ]]; then
 
 elif [[ -n $purge && -n $backups ]]; then
 	api-events_update pn5
-	if [[ $(conf_read nginx-tool-bkp) != "true" ]]; then
+	if [[ $(conf_read nginx-tool-bkp) != "true" && $(conf_read nginx-tool-rclone) != "true" ]]; then
 		echo "${dim}BackUp packages are not installed, hence can not be deleted! ${end}"
 		clear_force_flag
 	else
@@ -416,25 +416,31 @@ elif [[ -n $purge && -n $backups ]]; then
 		fi
 
 		if [[ $answer == [Yy] || $(conf_read force-flag) == "true" ]]; then	
-			# Remove duply profiles
-			if [[ -d $HOME/.duply ]]; then
-				sudo rm -rf $HOME/.duply
-				echo "${gre}${dim}Backup (duply) profiles deleted!${end}"
-			fi
-			
-			if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(jammy|focal)$ ]]; then
-				sudo pip3 uninstall -y duplicity 2>&1 | grep -v "pip as the 'root' user"
+			if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
+				# Remove duply profiles
+				if [[ -d $HOME/.duply ]]; then
+					sudo rm -rf $HOME/.duply
+					echo "${gre}${dim}Backup (duply) profiles deleted!${end}"
+				fi
+				
+				if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(jammy|focal)$ ]]; then
+					sudo pip3 uninstall -y duplicity 2>&1 | grep -v "pip as the 'root' user"
+				else
+					sudo /opt/duplicity/bin/pip uninstall -y duplicity
+					sudo rm -rf /usr/bin/duplicity
+					sudo rm -rf /opt/duplicity
+				fi
+				
+				sudo apt -y purge python3-boto3
+				sudo rm -rf /usr/bin/duply
+				
+				purge_autoremove="true"
+				conf_write nginx-tool-bkp purged
 			else
-				sudo /opt/duplicity/bin/pip uninstall -y duplicity
-				sudo rm -rf /usr/bin/duplicity
-				sudo rm -rf /opt/duplicity
+				rm -f /usr/bin/rclone
+				rm -rf /root/.config/rclone /root/.cache/rclone
+				conf_write nginx-tool-rclone purged
 			fi
-			
-			sudo apt -y purge python3-boto3
-			sudo rm -rf /usr/bin/duply
-			
-			purge_autoremove="true"
-			conf_write nginx-tool-bkp purged
 			
 			echo ""
 			echo "${gre}BackUp packages have been deleted successfully! ${end}"
@@ -716,7 +722,7 @@ elif [[ -n $letsencrypt ]]; then
 	[[ $(conf_read nginx-tool-ssl) != "true" ]] && stack_builder false false false letsencrypt || echo "${dim}Let's Encrypt is already installed!${end}"
 
 elif [[ -n $backups ]]; then
-	[[ $(conf_read nginx-tool-bkp) != "true" ]] && stack_builder false false false backups || echo "${dim}BackUp packages are already installed!${end}"
+	[[ $(conf_read nginx-tool-bkp) != "true" && $(conf_read nginx-tool-rclone) != "true" ]] && stack_builder false false false backups || echo "${dim}BackUp packages are already installed!${end}"
 
 elif [[ -n $postfix ]]; then
 	[[ $(conf_read php-tool-postfix) != "true" ]] && stack_builder false false false postfix || echo "${dim}Postfix is already installed!${end}"
