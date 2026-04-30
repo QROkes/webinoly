@@ -184,8 +184,16 @@ site_ssl_on() {
 		
 		local cronmail=$( sudo grep -F "MAILTO=" /var/spool/cron/crontabs/root )
 		local cronrene=$( sudo grep -F "certbot renew" /var/spool/cron/crontabs/root )
+		local cronupgr=$( sudo grep -F "pip install --upgrade certbot" /var/spool/cron/crontabs/root )
+		
 		[[ -z $cronmail && -n $cermail && -z $cronrene ]] && echo "MAILTO=${cermail}" | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
-		[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
+		
+		if [[ $(conf_read snap) == "false" ]];  then
+			[[ -z $cronrene ]] && echo '15 3 * * * certbot renew -q' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
+			[[ -z $cronupgr ]] && echo '@monthly /opt/certbot/bin/pip install --upgrade certbot > /dev/null' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
+		else
+			[[ -z $cronrene ]] && echo '15 3 * * 7 certbot renew -q' | sudo tee -a /var/spool/cron/crontabs/root > /dev/null
+		fi
 
 		# We use this script instead of the post-hook in crontab to restart Nginx
 		# Most of the times certs are renewed via the certbot systemctl timer - sudo systemctl list-timers

@@ -507,22 +507,38 @@ php_tool_site() {
 nginx_tool_ssl() {
 	api-events_update in5
 
+	# Starting with Ubuntu 26.04 we will not use or install Snap by default (we only use it for Certbot)
+	[[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(jammy|focal|noble)$ ]] || conf_write snap false
+
 	# Install LetsEncrypt
-	local certb=0
-	while [[ $certb -le 3 ]]
-	do
-		sudo snap install --classic certbot
+	if [[ $(conf_read snap) == "false" ]];  then
+		sudo apt -y install python3 python3-dev python3-venv libaugeas-dev gcc
+		sudo python3 -m venv /opt/certbot/
+		sudo /opt/certbot/bin/pip install --upgrade pip --no-cache-dir
+		sudo /opt/certbot/bin/pip install certbot
+		sudo ln -s /opt/certbot/bin/certbot /usr/bin/certbot
+	else
+		# Snap is installed by default since 16.04, but better be sure!
+		sudo apt -y install snapd
+		sudo snap install core
+		sudo snap refresh core
 		
-		# SNAP Repo fails a lot, so we need to be sure and retry!!!
-		if [[ ! -f /snap/bin/certbot ]]; then
-			local certb=$(($certb+1))
-			[[ $certb -le 3 ]] && echo "${red}[ERROR] Certbot installation failed!${dim} We will retry in a moment...($(($certb*30))s)${end}"
-			[[ $certb -gt 3 ]] && echo "${red}[ERROR] Fatal Error: Certbot cannot be installed after 3 retries!${end}" || sleep $(($certb*20))
-		else
-			break
-		fi
-	done
-	[[ ! -L /usr/bin/certbot ]] && sudo ln -s /snap/bin/certbot /usr/bin/certbot
+		local certb=0
+		while [[ $certb -le 3 ]]
+		do
+			sudo snap install --classic certbot
+			
+			# SNAP Repo fails a lot, so we need to be sure and retry!!!
+			if [[ ! -f /snap/bin/certbot ]]; then
+				local certb=$(($certb+1))
+				[[ $certb -le 3 ]] && echo "${red}[ERROR] Certbot installation failed!${dim} We will retry in a moment...($(($certb*30))s)${end}"
+				[[ $certb -gt 3 ]] && echo "${red}[ERROR] Fatal Error: Certbot cannot be installed after 3 retries!${end}" || sleep $(($certb*20))
+			else
+				break
+			fi
+		done
+		[[ ! -L /usr/bin/certbot ]] && sudo ln -s /snap/bin/certbot /usr/bin/certbot
+	fi
 	
 	conf_write nginx-tool-ssl true
 	
@@ -862,14 +878,10 @@ stack_builder() {
 		api-events_update ics
 		sudo apt -qq update
 		
-		# Usually comes by default with Ubuntu. Ensure we have it always! (software-properties-common snapd debconf-utils zip)
+		# Usually comes by default with Ubuntu. Ensure we have it always! (software-properties-common debconf-utils zip)
 		# Webinoly tools (pwgen unzip)
 		# Fix issue installing in some Digital Ocean droplets (dialog)
-		sudo apt -y -qq install software-properties-common snapd debconf-utils zip pwgen unzip dialog
-		
-		# Snap is installed by default since 16.04, but better be sure!
-		sudo snap install core
-		sudo snap refresh core
+		sudo apt -y -qq install software-properties-common debconf-utils zip pwgen unzip dialog
 		
 		linux_optim
 		conf_write pre-packs true

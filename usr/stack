@@ -376,11 +376,13 @@ elif [[ -n $purge && -n $letsencrypt ]]; then
 			if [[ -f /var/spool/cron/crontabs/root ]]; then
 				sudo sed -i '/MAILTO=/d' /var/spool/cron/crontabs/root
 				sudo sed -i '/certbot renew/d' /var/spool/cron/crontabs/root
+				sudo sed -i '/pip install --upgrade certbot/d' /var/spool/cron/crontabs/root
 			fi
 			
 			# To remove a snap without generating a snapshot, use the additional --purge argument
-			sudo snap remove certbot --purge
-			[[ -L /usr/bin/certbot ]] && sudo rm -rf /usr/bin/certbot
+			[[ $(conf_read snap) == "false" ]] && rm -rf /opt/certbot || snap remove certbot --purge
+			[[ -L /usr/bin/certbot ]] && rm -f /usr/bin/certbot
+			
 			conf_write nginx-tool-ssl purged
 			echo ""
 			echo "${gre}Let's Encrypt has been deleted successfully! ${end}"
