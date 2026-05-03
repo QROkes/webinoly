@@ -226,7 +226,7 @@ check_for_nginx_tool_ssl() {
 }
 check_for_nginx_tool_bkp() {
 	#check_for_nginx # Backups doesn't need nginx, can be installed alone!
-	if [[ $(conf_read nginx-tool-bkp) != "true" && $1 == "-ask" ]]; then
+	if [[ $(conf_read nginx-tool-bkp) != "true" && $(conf_read nginx-tool-rclone) != "true" && $1 == "-ask" ]]; then
 		echo "${red}"
 		echo "+ BackUp packages Not Found!"
 		echo "${blu}Do you want to install it now? [y/N]? ${end}"
@@ -239,7 +239,7 @@ check_for_nginx_tool_bkp() {
 		[[ $answer == [Yy] ]] && sudo stack -backups
 	fi
 	
-	if [[ $(conf_read nginx-tool-bkp) != "true" ]]; then
+	if [[ $(conf_read nginx-tool-bkp) != "true" && $(conf_read nginx-tool-rclone) != "true" ]]; then
 		echo "${red}[ERROR] BackUp packages are required and not found! ${end}"
 		exit 1
 	fi

@@ -1,32 +1,9 @@
 #!/bin/bash
-
-# Note: We use $HOME here, because it matches the duply/duplicity profile creation folder.
-# The profile folder will be stored under '~/.duply/<profile>' (where ~ is the current users home directory).
-# Hint: If the folder '/etc/duply' exists, the profiles for the super user root will be searched & created there.
+source /opt/webinoly/lib/rclone
 
 
-bucket_validation() {
-	local bucketname=$(echo $1 | cut -d "/" -f 1)
-	local bucketfolder=$(echo $1 | cut -d "/" -f 2- -s)
-	
-	# Only numerals 0-9, basic Latin letters (only lowercase) and underscore.
-	# https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
-	# Now there're a lot of rules, we cannot validate all of them, we still use the old simple rules...
-	if [[ -z $1 || -z $bucketname ]]; then
-		echo "${red}[ERROR] Please, enter a valid bucket name! ${end}"
-		exit 1
-	elif ! [[ $bucketname =~ ^[0-9a-z\/-]+$ ]] || [[ -z $bucketname || $(echo $bucketname | cut -c-1) =~ [-|\/] || ${#bucketname} -gt 63 || ${#bucketname} -lt 3 ]]; then
-		echo "${red}[ERROR] Bucket names can only contain lowercase letters, numbers or hyphens; must start with a letter or number and must be at least 3 and no more than 63 characters long.${end}"
-		exit 1
-	elif [[ -n $bucketfolder ]] && ! [[ $bucketfolder =~ ^[0-9a-zA-Z\/-_\!\.\*\'\)\(]+$ ]]; then
-		if [[ $(is_url_path /$bucketfolder) == "true" ]]; then
-			echo "${red}[WARNING] Your bucket folder name contain some characters that might require special handling!"
-			echo "More info: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html ${end}"
-		else
-			echo "${red}[ERROR] Invalid bucket folder name.${end}"
-			exit 1
-		fi
-	fi
+conf_read_exported() {
+	echo $(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf.exported | cut -f 2- -d ':')
 }
 
 
@@ -210,8 +187,14 @@ bkp_local_db() {
 	
 	if [[ -s $destination/$filename ]]; then
 		echo "${gre}Database local backup successfully done!${end}${dim} ($destination/$filename)${end}"
-		[[ -n $s3_compatible_endpoint ]] && local param="-s3-compatible-endpoint=$s3_compatible_endpoint "
-		[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket $param
+		
+		if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
+			[[ -n $s3_compatible_endpoint ]] && local param="-s3-compatible-endpoint=$s3_compatible_endpoint "
+			[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket $param
+		else
+			[[ -n $bucket ]] && sudo webinoly -backup=s3 -run -source=$destination/$filename -profile=$profile -bucket=$bucket
+		fi
+		
 		[[ -n $max && $max =~ ^[0-9]+$ ]] && find $destination -maxdepth 1 -type f -printf '%Ts\t%p\n' | sort -nr | cut -f2 -s | grep -v /$ | tail -n +$(($max+1)) | xargs -d '\n' -I '%' sudo rm -f % || echo "" # Never parse 'ls', use 'find' insted...
 	else
 		echo "${red}[ERROR] Database backup failed!${end}"
@@ -219,262 +202,6 @@ bkp_local_db() {
 	fi
 }
 
-
-bkp_s3_profile() {
-	if [[ ( ! -f $HOME/.aws/credentials || ( -f $HOME/.aws/credentials && ( ! -s $HOME/.aws/credentials || -z $(cat -v $HOME/.aws/credentials | grep -m 1 '[^[:space:]]')))) && $(conf_read awsiamrole) != true ]]; then
-		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
-		exit 1
-	fi
-	
-	if [[ $profile == "true" || -z $profile ]]; then
-		echo ""
-		read -p "${gre}Profile name: ${end}" profile
-		
-		if [[ -z $profile ]]; then
-			echo "${red}[ERROR] Profile name is empty!${end}"
-			exit 1
-		fi
-	fi
-	
-	# These options needs a valid profile!
-	if [[ -n $profile && $profile != "true" && ! -d $HOME/.duply/$profile && ( -n $run || -n $info || -n $delete || -n $restore || -n $add_db_pre ) ]]; then
-		echo "${red}[ERROR] Backup profile not found!${end}"
-		exit 1
-	#else 
-		# Create a new profile!
-	fi
-	
-	
-	if [[ -n $run ]]; then
-		sudo duply $profile backup_verify_purge --force --allow-source-mismatch --progress
-		
-	elif [[ -n $info ]]; then
-		local tar=$(grep -E "^TARGET[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "'" )
-		local sou=$(grep -E "^SOURCE[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "'" )
-		local age=$(grep -E "^MAX_AGE[ ]?=" $HOME/.duply/$profile/conf | cut -f 2 -d "=" )
-		local par=$(grep "s3-use-new-style" $HOME/.duply/$profile/conf | cut -f 2 -d '"' )
-		
-		# Validations
-		[[ -z $par ]] && local par="${dim}<Empty>${end}"
-		[[ ! -d $sou ]] && local sou="$sou ${red}${dim}(Error: Path not found!)${end}"
-		
-		
-		# Display	
-		echo ""
-		echo "${blu}S3 Bucket:${end} $tar"
-		echo "${blu}Source:${end} $sou"
-		echo "${blu}Max_Age:${end} $age"
-		echo "${blu}Parameters:${end} $par"
-		echo ""
-		
-	elif [[ -n $restore ]]; then
-		# Temporary check!!!! Should be removed soon!!!
-		if [[ $restore != "true" && -z $destination ]]; then
-			echo "${red}[ERROR] Backup Restore syntax has changed, destination paramater is needed!${end}"
-			exit 1
-		fi
-		
-		if [[ -z $destination || $destination == "true" ]]; then
-			echo ""
-			# We don't do a destination path validation because duply can handle it better.
-			read -p "${gre}Restore destination folder: ${end}" destination
-			
-			if [[ -z $destination ]]; then
-				echo "${red}[ERROR] Invalid destination path!${end}"
-				exit 1
-			fi
-		fi
-		
-		[[ $restore != "true" ]] && sudo duply $profile fetch $restore $destination $date || sudo duply $profile restore $destination $date
-		
-		
-	elif [[ -n $add_db_pre && -n $list ]]; then
-		if [[ -s $HOME/.duply/$profile/pre ]]; then
-			echo ""
-			echo "${gre}The following lines will be executed every time just before (PRE)${blu} '$profile' ${gre}backup is run:${blu}"
-			cat $HOME/.duply/$profile/pre
-			echo "${end}"
-		else
-			echo "${red}[ERROR] PRE Database backups is empty!${end}"
-			exit 1
-		fi
-	
-	
-	elif [[ -n $add_db_pre && -n $delete ]]; then
-		sudo rm -rf $HOME/.duply/$profile/pre
-		echo "${gre}PRE Database backups for${blu} '$profile' ${gre}has been successfully removed!${end}"
-		
-		
-	elif [[ -n $add_db_pre ]]; then
-		if [[ $add_db_pre == "true" ]]; then
-			read -p "${gre}WordPress site (domain): ${end}" add_db_pre
-			
-			is_url $add_db_pre -split
-			
-			if [[ -n $url_host && -n $url_path ]]; then
-					add_db_pre=$url_host
-					subfolder=$url_path
-			fi
-		fi
-		
-		# we dont check is_wp_installed because at this point we are still not doing a backup, just setting it.
-		if [[ -z $add_db_pre || $(is_wp $add_db_pre $subfolder) != "true"  ]]; then
-			echo "${red}[ERROR] Please, enter a valid WP site!${end}"
-			exit 1
-		elif [[ $(wp_config_read $add_db_pre DB_HOST $subfolder) != "localhost" && -z $(conf_read external-dbu) && -z $(conf_read external-dbp) ]]; then
-			echo "${red}[ERROR] Database host is not localhost!${dim} (External databases are supported only when credentials are saved in Webinoly Configuration file)${end}"
-			exit 1
-		fi
-		
-		[[ -z $destination || $destination == "true" ]] && destination="default"
-		[[ -z $max && $destination == "default" ]] && max="5"
-		[[ -n $max && $max =~ ^[0-9]+$ ]] && local param="-max=$max "
-		[[ -n $bucket && $bucket != "true" ]] && local param="${param}-bucket=$bucket "
-		[[ -n $s3_compatible_endpoint ]] && local param="${param}-s3-compatible-endpoint=$s3_compatible_endpoint "
-		[[ -n $subfolder ]] && local param="${param}-subfolder=$subfolder"
-		
-		[[ ! -f $HOME/.duply/$profile/pre ]] && sudo touch $HOME/.duply/$profile/pre
-		echo "sudo webinoly -backup=local -wp=$add_db_pre -destination=$destination $param" >> $HOME/.duply/$profile/pre
-		echo "${gre}Database backup will run each time you run your S3 backup!${end}"
-	
-	# At the end, for precedence...
-	elif [[ -n $delete ]]; then
-		sudo rm -rf $HOME/.duply/$profile
-		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully deleted!${end}"
-	
-	else
-		if [[ -d $HOME/.duply/$profile ]]; then
-			echo "${red}[ERROR] Can not create profile${blu} '$profile' ${red}because already exists!${end}"
-			exit 1
-		fi
-		
-		# S3 Compatible services
-		if [[ -n $s3_compatible_endpoint ]] && ! [[ $(is_url $s3_compatible_endpoint) =~ ^(http|https)$ ]]; then
-			echo "${red}[ERROR] Invalid endpoint URL!${end}"
-			exit 1
-		fi
-	
-		[[ -z $bucket || $bucket == "true" ]] &&	read -p "${gre}S3 Bucket name: ${end}" bucket
-		bucket_validation $bucket
-		
-		[[ -z $source || $source == "true" ]] && read -p "${gre}Source path: ${end}" source
-		if [[ -z $source || ! -d $source ]]; then
-			echo "${red}[ERROR] Please, enter a valid source folder and bucket name!${end}"
-			exit 1
-		fi
-		
-		sudo duply $profile create
-		[[ -z $max_age ]] && max_age="1M"
-		sudo sed -i -E "/^[#]?GPG_KEY=/c GPG_KEY='disabled'" $HOME/.duply/$profile/conf
-		sudo sed -i -E "/^[#]?GPG_PW=/c #GPG_PW='_GPG_PASSWORD_'" $HOME/.duply/$profile/conf
-		sudo sed -i -E "/^[#]?SOURCE=/c SOURCE='$source'" $HOME/.duply/$profile/conf
-		sudo sed -i -E "/^[#]?MAX_AGE=/c MAX_AGE=$max_age" $HOME/.duply/$profile/conf
-		sudo sed -i '/^#MAX_FULLBKP_AGE=/s/#//' $HOME/.duply/$profile/conf
-		sudo sed -i '/^#DUPL_PARAMS="\$DUPL_PARAMS --full-if-older-than \$MAX_FULLBKP_AGE "/s/#//' $HOME/.duply/$profile/conf
-		sudo sed -i -E "/^[#]?TARGET=/c TARGET='s3://${bucket}'" $HOME/.duply/$profile/conf
-		
-		if [[ -n $s3_compatible_endpoint ]]; then
-			sudo echo "DUPL_PARAMS=\"\$DUPL_PARAMS --s3-endpoint-url $s3_compatible_endpoint \"" >> $HOME/.duply/$profile/conf
-			echo "${blu}${dim}S3 Compatible service mode enabled (Not AWS)${end}"
-		fi
-		if [[ $(conf_read exclude-other-filesystems) == "true" ]]; then
-			# https://github.com/QROkes/webinoly/pull/78
-			sudo echo "DUPL_PARAMS=\"\$DUPL_PARAMS --exclude-other-filesystems \"" >> $HOME/.duply/$profile/conf
-			echo "${blu}${dim}Exclude-Other-Filesystems enabled!${end}"
-		fi
-		
-		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully created!${end}"
-	fi
-}
-
-
-bkp_s3_list() {
-	echo ""
-	if [[ -d $HOME/.duply ]];  then
-		for f in $HOME/.duply/*
-		do 
-			[[ -d $f ]] && pro=$(echo $f | rev | cut -f 1 -d "/" -s | rev)
-			[[ -f $f/conf ]] && fail="" || fail="${red}(fail)${end}"
-			outlist=" ${gre}+ $pro ${end}${fail}"
-			if [[ -n $pro ]]; then
-				echo "$outlist"
-				nonemptylist=true
-			fi
-		done
-	fi
-	
-	[[ -z $nonemptylist ]] && echo "${blu}[Empty] No profiles were found!${end}"
-	echo ""
-}
-
-
-s3_send() {
-	if [[ ( ! -f $HOME/.aws/credentials || ( -f $HOME/.aws/credentials && ( ! -s $HOME/.aws/credentials || -z $(cat -v $HOME/.aws/credentials | grep -m 1 '[^[:space:]]')))) && $(conf_read awsiamrole) != true ]]; then
-		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
-		exit 1
-	fi
-	
-	# S3 Compatible services
-	if [[ -n $s3_compatible_endpoint ]] && ! [[ $(is_url $s3_compatible_endpoint) =~ ^(http|https)$ ]]; then
-		echo "${red}[ERROR] Invalid endpoint URL!${end}"
-		exit 1
-	elif [[ -n $s3_compatible_endpoint ]]; then
-		echo "${blu}${dim}S3 Compatible service mode enabled (Not AWS)${end}"
-	else
-		local s3_compatible_endpoint=""
-	fi
-	
-	[[ -z $send_to_s3 || $send_to_s3 == "true" ]] && read -p "${blu}File to send: ${end}" send_to_s3
-	if [[ ! -f $send_to_s3 ]]; then
-		echo "${red}[ERROR] File not found!${end}"
-		exit 1
-	fi
-	
-	[[ -z $bucket || $bucket == "true" ]] &&	read -p "${blu}S3 Bucket name: ${end}" bucket
-	bucket_validation $bucket
-	
-	local keyfol=$(echo $bucket | cut -f 2- -d "/" -s)
-	[[ -n $keyfol ]] && keyfol="${keyfol}/"
-	
-	export keyfol
-	export bucket=$(echo $bucket | cut -f 1 -d "/")
-	export send_to_s3
-	export s3_compatible_endpoint
-	
-	python3 - &>/dev/null <<END
-import os,boto3
-
-filepath = os.environ['send_to_s3']
-BUCKET = os.environ['bucket']
-folder = os.environ['keyfol']
-similar = os.environ['s3_compatible_endpoint']
-
-if similar:
-	s3_client = boto3.client('s3',endpoint_url = similar)
-else:
-	s3_client = boto3.client('s3')
-	
-s3_client.upload_file(filepath, BUCKET, folder + filepath.split('/')[-1])
-END
-	
-	if [[ $? == 0 ]]; then
-		unset send_to_s3
-		unset keyfol
-		unset bucket
-		echo "${gre}File was sent to S3 successfully!${end}"
-	else
-		unset send_to_s3
-		unset keyfol
-		unset bucket
-		echo "${red}[ERROR] Can not connect with your bucket!${end}"
-		exit 1
-	fi
-}
-
-
-conf_read_exported() {
-	echo $(grep -w "^${1}:.*" /opt/webinoly/webinoly.conf.exported | cut -f 2- -d ':')
-}
 
 
 check_exported_conf() {
@@ -683,8 +410,13 @@ export_server() {
 	if [[ -s $destination/$filename ]]; then
 		echo "${gre}Webinoly Complete Server Backup exported successfully!${end}${dim} ($destination/$filename) ${end}"
 		
-		[[ -n $s3_compatible_endpoint ]] && local param="-s3-compatible-endpoint=$s3_compatible_endpoint "
-		[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket $param
+		if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
+			[[ -n $s3_compatible_endpoint ]] && local param="-s3-compatible-endpoint=$s3_compatible_endpoint "
+			[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket $param
+		else
+			[[ -n $bucket ]] && sudo webinoly -backup=s3 -run -source=$destination/$filename -profile=$profile -bucket=$bucket
+		fi
+		
 		[[ -n $max && $max =~ ^[0-9]+$ ]] && find $destination -maxdepth 1 -type f -printf '%Ts\t%p\n' | sort -nr | cut -f2 -s | grep -v /$ | tail -n +$(($max+1)) | xargs -d '\n' -I '%' sudo rm -f % || echo "" # Never parse 'ls', use 'find' insted...
 	else
 		[[ -f $destination/$filename ]] && sudo rm -rf $destination/$filename
@@ -838,8 +570,13 @@ export_site() {
 		[[ -z $multi_export ]] && echo "${gre}Webinoly Site Backup${blu} $siteto ${gre}exported successfully!${end}${dim} ($destination/$filename) ${end}"
 		[[ -n $multi_export ]] && echo "${gre}Webinoly Site Backup for multiple sites exported successfully!${end}${dim} ($destination/$filename) ${end}"
 		
-		[[ -n $s3_compatible_endpoint ]] && local param="-s3-compatible-endpoint=$s3_compatible_endpoint "
-		[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket $param
+		if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
+			[[ -n $s3_compatible_endpoint ]] && local param="-s3-compatible-endpoint=$s3_compatible_endpoint "
+			[[ -n $bucket ]] && sudo webinoly -backup=s3 -send-to-s3=$destination/$filename -bucket=$bucket $param
+		else
+			[[ -n $bucket ]] && sudo webinoly -backup=s3 -run -source=$destination/$filename -profile=$profile -bucket=$bucket
+		fi
+		
 		[[ -n $max && $max =~ ^[0-9]+$ ]] && find $destination -maxdepth 1 -type f -printf '%Ts\t%p\n' | sort -nr | cut -f2 -s | grep -v /$ | tail -n +$(($max+1)) | xargs -d '\n' -I '%' sudo rm -f % || echo "" # Never parse 'ls', use 'find' insted...
 	else
 		[[ -f $destination/$filename ]] && sudo rm -rf $destination/$filename
@@ -1069,57 +806,61 @@ import_server() {
 
 bkp_wizard() {
 	echo "${gre}"
-	echo " ***********************************"
-	echo " ************  Backups  ************"
-	echo " ***********************************"
+	echo " ************************************"
+	echo " ******    Webinoly Backups    ******"
+	echo " ************************************"
 	echo "${blu}"
-	echo " 1 - Add AWS S3 Credentials"
-	echo " 2 - AWS S3 directory backup"
-	echo " 3 - WordPress Database local backup"
-	echo " 4 - Restore backup from S3"
-	echo " 5 - Run S3 backup"
-	echo " 6 - Delete profile"
-	echo " 7 - Profile info"
-	echo " 8 - List profiles"
-	echo " 9 - Export site"
-	echo " 10 - Export server"
-	echo " 11 - Import server/site"
+	echo " -- Configuration & Profiles --"
+	echo "  1 - Add AWS Credentials (Native .aws/credentials)"
+	echo "  2 - Setup S3 Backup (AWS or Compatible Providers)"
+	echo "  3 - Setup Custom Cloud (70+ Providers via Rclone)"
+	echo "  4 - List Profiles"
+	echo "  5 - Profile Info"
+	echo "  6 - Delete Profile"
+	echo ""
+	echo " -- Backup & Restore Operations --"
+	echo "  7 - Run Backup (Upload to Cloud)"
+	echo "  8 - Restore from Cloud"
+	echo "  9 - WordPress Database Local Backup"
+	echo ""
+	echo " -- Import / Export --"
+	echo " 10 - Export Site"
+	echo " 11 - Export Full Server"
+	echo " 12 - Import Site or Server"
 	echo "${gre}"
-	read -p "What do you want to do? ${end}" wzd
+	read -p " Select an option [1-11]: ${end}" wzd
 	echo ""
 	
 	if [[ $wzd == 1 ]]; then
 		webinoly -aws-s3-credentials
 	elif [[ $wzd == 2 ]]; then
-		bkp_s3_profile
+		webinoly -backup=s3
 	elif [[ $wzd == 3 ]]; then
-		bkp_local_db
+		rclone config
 	elif [[ $wzd == 4 ]]; then
-		restore="true"
-		bkp_s3_profile
+		webinoly -backup -list
 	elif [[ $wzd == 5 ]]; then
-		run="true"
-		bkp_s3_profile
+		webinoly -backup=s3 -info
 	elif [[ $wzd == 6 ]]; then
-		delete="true"
-		bkp_s3_profile
+		webinoly -backup=s3 -delete
 	elif [[ $wzd == 7 ]]; then
-		info="true"
-		bkp_s3_profile
+		webinoly -backup=s3 -run
 	elif [[ $wzd == 8 ]]; then
-		bkp_s3_list
+		webinoly -backup=s3 -restore
 	elif [[ $wzd == 9 ]]; then
+		webinoly -backup=local
+	elif [[ $wzd == 10 ]]; then
 		read -p "${blu}Site to export (domain): ${end}" site
 		is_url $site -split	
 		if [[ -n $url_host && -n $url_path ]]; then
-			sudo webinoly -backup=local -export=$url_host -subfolder=$url_path
+			webinoly -backup=local -export=$url_host -subfolder=$url_path
 		else # if not a URL, let it fail in the export function!
-			sudo webinoly -backup=local -export=$site
+			webinoly -backup=local -export=$site
 		fi
-	elif [[ $wzd == 10 ]]; then
-		export_server
 	elif [[ $wzd == 11 ]]; then
-		import_server
+		webinoly -backup=local -export
+	elif [[ $wzd == 12 ]]; then
+		webinoly -backup=local -import
 	else
 		echo "${red}[ERROR] Please, enter a valid option!${end}"
 		exit 1

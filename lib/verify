@@ -184,10 +184,6 @@ if [[ ! -f /opt/webinoly/templates/general/conf ]]; then
 	echo "- [ERROR] File: /opt/webinoly/templates/general/conf not found!"
 	local ver_one_err="1"
 fi
-if [[ ! -f /opt/webinoly/templates/general/duply ]]; then
-	echo "- [ERROR] File: /opt/webinoly/templates/general/duply not found!"
-	local ver_one_err="1"
-fi
 if [[ ! -f /opt/webinoly/templates/general/nginx-blackhole ]]; then
 	echo "- [ERROR] File: /opt/webinoly/templates/general/nginx-blackhole not found!"
 	local ver_one_err="1"
@@ -1123,6 +1119,9 @@ if [[ $(conf_read nginx-tool-ssl) == "true" ]]; then
 	fi
 fi
 if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
+	echo "${dim}- [WARNING] Legacy backup system detected. Support ends soon; please migrate to the new Webinoly backup tool to avoid interruptions.${end}${red}"
+	local ver_seven_war="1"
+	
 	# Check if DUPLY command is installed
 	if ! which duply >/dev/null ; then
 		echo "- [ERROR] Seems like Duply (cli) command is not installed!"
@@ -1151,22 +1150,6 @@ if [[ -z $critical_mode ]]; then
 			echo "${blu}${dim}- [INFO] SSL Orphan-Cert found ($domain)!${end}${red}"
 		fi
 	done
-	
-	# Backups integrity
-	if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
-		if [[ -d $HOME/.duply ]];  then
-			for f in $HOME/.duply/*
-			do 
-				if [[ -d $f && ! -f $f/conf ]]; then
-					echo "${dim}- [WARNING] Backup Configuration corrupted! (Not found: ${f}/conf) ${end}${red}"
-					local ver_seven_war="1"
-				elif [[ -d $f && -f $f/conf && ! -d $(grep -E "^SOURCE[ ]?=" $f/conf | cut -f 2 -d "'" ) ]]; then	
-					echo "${dim}- [WARNING] Backup Configuration corrupted! (Invalid source in: ${f}/conf) ${end}${red}"
-					local ver_seven_war="1"
-				fi
-			done
-		fi
-	fi
 
 	if [[ $(conf_read smtp) == "true" && $(conf_read php-tool-postfix) != "true" ]]; then
 		echo "- [ERROR] Seems like SMTP is configuraded, but Postfix is not found!"

@@ -1,0 +1,243 @@
+#!/bin/bash
+
+
+bkp_rclone() {	
+	
+	# LEGACY: Temporal support for Duplicity RUN backups! 
+	# Just to not break existing installations (will be removed soon)
+	# Only RUN and "Send to S3" are still supported.
+	if [[ $(conf_read nginx-tool-bkp) == "true" && -n $profile && -d /root/.duply/$profile && -n $run ]]; then
+		sudo duply $profile backup_verify_purge --force --allow-source-mismatch --progress
+		message_legacy_duplicity
+		exit 1 # Soft error for legacy support
+	elif [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
+		message_legacy_duplicity
+		exit 1
+	fi
+	
+	if [[ $profile == "true" || -z $profile ]]; then
+		echo ""
+		read -p "${gre}Profile name: ${end}" profile
+		
+		if [[ -z $profile ]]; then
+			echo "${red}[ERROR] Profile name is empty!${end}"
+			exit 1
+		fi
+	fi
+	
+	# These options needs a valid profile!
+	if [[ -n $profile ]] && ! rclone listremotes | grep -q "^${profile}:$" && [[ -n $run || -n $info || -n $delete || -n $restore ]]; then
+		echo "${red}[ERROR] Backup profile not found!${end}"
+		exit 1
+	fi
+	
+	
+	if [[ -n $run ]]; then
+		[[ -z $bucket || $bucket == "true" ]] && read -p "${gre}S3 Bucket name: ${end}" bucket
+		bucket_validation $bucket
+		
+		[[ -z $source || $source == "true" ]] && read -p "${gre}Source path: ${end}" source
+		if [[ -z $source || ( ! -d $source && ! -f $source ) ]]; then
+			echo "${red}[ERROR] Please, enter a valid source folder/file!${end}"
+			exit 1
+		fi
+
+		[[ -z $filename ]] && local filename="webinoly_backup-$(date +%Y%m%d-%H%M)"
+		[[ -n $exclude_other_filesystems ]] && local fs="--one-file-system"
+		
+		if [[ ${run,,} == "tar" ]]; then
+			tar ${fs} -cpzPf - "${source}" | rclone rcat "${profile}:${bucket}/${filename}.tar.gz"
+			echo "${gre}Backup TAR:${dim} ${source} -> ${profile}:${bucket}/${filename}${end}"
+		elif [[ $run == "sync" ]]; then
+			rclone sync $source ${profile}:${bucket} $fs
+			echo "${gre}Backup Sync:${dim} ${source} -> ${profile}:${bucket}${end}"
+		else
+			rclone copy $source ${profile}:${bucket} $fs
+			echo "${gre}Backup Copy:${dim} ${source} -> ${profile}:${bucket}${end}"
+		fi
+		
+		
+	elif [[ -n $info ]]; then
+		rclone config show $profile
+		
+	elif [[ -n $restore ]]; then
+		if [[ -z $destination || $destination == "true" ]]; then
+			echo ""
+			read -p "${gre}Restore destination folder: ${end}" destination
+			
+			if [[ -z $destination || ! -d $destination ]]; then
+				echo "${red}[ERROR] Invalid destination path!${end}"
+				exit 1
+			fi
+		fi
+		
+		rclone copy ${profile}:${bucket} $destination
+		echo "${gre}Backup restored successfully!${end}"
+	
+	
+	# At the end, for precedence...
+	elif [[ -n $delete ]]; then
+		rclone config delete $profile
+		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully deleted!${end}"
+	
+	elif [[ ${backup,,} == "s3" ]]; then
+		if [[ -d /root/.config/rclone/${profile}.conf ]]; then
+			echo "${red}[ERROR] Can not create profile${blu} '$profile' ${red}because already exists!${end}"
+			exit 1
+		fi
+		
+		# S3 Compatible services
+		if [[ -n $s3_compatible_endpoint ]] && ! [[ $(is_url $s3_compatible_endpoint) =~ ^(true|http|https)$ ]]; then
+			echo "${red}[ERROR] Invalid endpoint URL!${end}"
+			exit 1
+		fi
+	
+		echo ""
+		echo "${blu}${bol}Setup S3 Backup! ${end}${blu}${dim}(AWS or Compatible Providers)${end}"
+		
+		if [[ -z $s3_compatible_endpoint && ( $(conf_read awsiamrole) == "true" || -s /root/.aws/credentials ) && ( -z $access_key_id || -z $secret_access_key ) ]]; then
+			local params=(provider "AWS" env_auth "true")
+			echo "${blu}AWS Credentials found!${end}"
+		else
+			echo ""
+			[[ -z $access_key_id ]] && read -p "${blu}Access Key ID: ${end}" access_key_id
+			[[ -z $secret_access_key ]] && read -p "${blu}Secret Access Key: ${end}" secret_access_key
+			echo ""
+			
+			if [[ -z $access_key_id || -z $secret_access_key ]]; then
+				echo "${red}[ERROR] Invalid access key!${end}"
+				exit 1
+			fi
+			
+			if [[ -z $s3_compatible_endpoint ]]; then
+				local params=(provider "AWS" env_auth "false" access_key_id "$access_key_id" secret_access_key "$secret_access_key")
+			else
+				local params=(provider "Other" env_auth "false" access_key_id "$access_key_id" secret_access_key "$secret_access_key" endpoint "$s3_compatible_endpoint")
+			fi
+		fi
+		
+		if [[ -z $s3_compatible_endpoint ]]; then
+			[[ -z $region ]] && read -p "${blu}AWS Region: ${end}" region
+			
+			if [[ -z $region ]]; then
+				echo "${red}[ERROR] Invalid AWS region!${end}"
+				exit 1
+			fi
+			
+			local params+=(region "$region" location_constraint "$region")
+		fi
+		
+		rclone config create "${profile}" s3 "${params[@]}"
+		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully created!${end}"
+	else
+		bkp_wizard
+	fi
+}
+
+
+bkp_profile_list() {
+	if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
+		message_legacy_duplicity
+		exit 1
+	fi
+	
+	echo ""
+	local list=$(rclone listremotes --long)
+	[[ -n $list ]] && echo "$list" || echo "${blu}[Empty] No profiles were found!${end}"
+	echo ""
+}
+
+bucket_validation() {
+	local bucketname=$(echo $1 | cut -d "/" -f 1)
+	local bucketfolder=$(echo $1 | cut -d "/" -f 2- -s)
+	
+	# Only numerals 0-9, basic Latin letters (only lowercase) and underscore.
+	# https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
+	# Now there're a lot of rules, we cannot validate all of them, we still use the old simple rules...
+	if [[ -z $1 || -z $bucketname ]]; then
+		echo "${red}[ERROR] Please, enter a valid bucket name! ${end}"
+		exit 1
+	elif ! [[ $bucketname =~ ^[0-9a-z\/-]+$ ]] || [[ -z $bucketname || $(echo $bucketname | cut -c-1) =~ [-|\/] || ${#bucketname} -gt 63 || ${#bucketname} -lt 3 ]]; then
+		echo "${red}[ERROR] Bucket names can only contain lowercase letters, numbers or hyphens; must start with a letter or number and must be at least 3 and no more than 63 characters long.${end}"
+		exit 1
+	elif [[ -n $bucketfolder ]] && ! [[ $bucketfolder =~ ^[0-9a-zA-Z\/-_\!\.\*\'\)\(]+$ ]]; then
+		if [[ $(is_url_path /$bucketfolder) == "true" ]]; then
+			echo "${red}[WARNING] Your bucket folder name contain some characters that might require special handling!"
+			echo "More info: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html ${end}"
+		else
+			echo "${red}[ERROR] Invalid bucket folder name.${end}"
+			exit 1
+		fi
+	fi
+}
+
+
+s3_send() {
+	message_legacy_duplicity
+	if [[ ( ! -f $HOME/.aws/credentials || ( -f $HOME/.aws/credentials && ( ! -s $HOME/.aws/credentials || -z $(cat -v $HOME/.aws/credentials | grep -m 1 '[^[:space:]]')))) && $(conf_read awsiamrole) != true ]]; then
+		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
+		exit 1
+	fi
+	
+	# S3 Compatible services
+	if [[ -n $s3_compatible_endpoint ]] && ! [[ $(is_url $s3_compatible_endpoint) =~ ^(http|https)$ ]]; then
+		echo "${red}[ERROR] Invalid endpoint URL!${end}"
+		exit 1
+	elif [[ -n $s3_compatible_endpoint ]]; then
+		echo "${blu}${dim}S3 Compatible service mode enabled (Not AWS)${end}"
+	else
+		local s3_compatible_endpoint=""
+	fi
+	
+	[[ -z $send_to_s3 || $send_to_s3 == "true" ]] && read -p "${blu}File to send: ${end}" send_to_s3
+	if [[ ! -f $send_to_s3 ]]; then
+		echo "${red}[ERROR] File not found!${end}"
+		exit 1
+	fi
+	
+	[[ -z $bucket || $bucket == "true" ]] &&	read -p "${blu}S3 Bucket name: ${end}" bucket
+	bucket_validation $bucket
+	
+	local keyfol=$(echo $bucket | cut -f 2- -d "/" -s)
+	[[ -n $keyfol ]] && keyfol="${keyfol}/"
+	
+	export keyfol
+	export bucket=$(echo $bucket | cut -f 1 -d "/")
+	export send_to_s3
+	export s3_compatible_endpoint
+	
+	python3 - &>/dev/null <<END
+import os,boto3
+
+filepath = os.environ['send_to_s3']
+BUCKET = os.environ['bucket']
+folder = os.environ['keyfol']
+similar = os.environ['s3_compatible_endpoint']
+
+if similar:
+	s3_client = boto3.client('s3',endpoint_url = similar)
+else:
+	s3_client = boto3.client('s3')
+	
+s3_client.upload_file(filepath, BUCKET, folder + filepath.split('/')[-1])
+END
+	
+	if [[ $? == 0 ]]; then
+		unset send_to_s3
+		unset keyfol
+		unset bucket
+		echo "${gre}File was sent to S3 successfully!${end}"
+		message_legacy_duplicity
+	else
+		unset send_to_s3
+		unset keyfol
+		unset bucket
+		echo "${red}[ERROR] Can not connect with your bucket!${end}"
+		exit 1
+	fi
+}
+
+
+message_legacy_duplicity() {
+	echo "${red}[WARNING] Legacy backup system detected. Support ends soon; please migrate to the new Webinoly backup tool to avoid interruptions.${end}"
+}

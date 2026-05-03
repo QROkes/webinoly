@@ -570,6 +570,7 @@ nginx_tool_bkp() {
 	conf_write nginx-tool-rclone true
 	
 	if which rclone >/dev/null ; then
+		rclone config touch -q
 		echo "${gre}BackUp packages has been installed successfully! ${end}"
 	else
 		# Don't need a flag or anything else, because it will be also detected during verify process!

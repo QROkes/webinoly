@@ -3,7 +3,7 @@
 # Webinoly Server Manager Plugin
 # Syntax: webinoly <option> <argument>
 # Options: -update, -server-reset, -verify, -dbpass, -tools-port, -sftp, -cache-valid, -uninstall, -info, -external-sources-update, -clear-cache, -version, -blockip, -dynvar, -default-site, -tools-site, -mysql-password, -smtp, -backup, -aws-s3-credentials, -db-import, -send-to-s3, -custom-headers, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -email, -export, -import, -mysql-public-access
-# Arguments: -profile, -list, -bucket, -source, -delete, -delete-all, -run, -restore, -wp, -destination, -date, -s3-european-buckets, info, -file, -add-db-pre, -no-recovery, -recalculate, -dbname, -skip-db, -filename, -overwrite, -value, -bind
+# Arguments: -profile, -list, -bucket, -source, -delete, -delete-all, -run, -restore, -wp, -destination, -date, -info, -file, -no-recovery, -recalculate, -dbname, -skip-db, -filename, -overwrite, -value, -bind, -access-key-id, -secret-access-key, -region, -exclude-other-filesystems
 
 source /opt/webinoly/lib/webin
 source /opt/webinoly/lib/verify
@@ -182,8 +182,8 @@ elif [[ -n $smtp ]]; then
 elif [[ -n $backup ]]; then
 	[[ $import =~ ^(true|stack|full)$ || $backup == "local" ]] || check_for_nginx_tool_bkp -ask
 	
-	if [[ -n $list && -z $add_db_pre ]]; then
-		bkp_s3_list
+	if [[ -n $list ]]; then
+		bkp_profile_list
 	elif [[ $backup == "local" ]]; then
 		if [[ -n $export ]]; then
 			[[ $export == "true" ]] && export_server || export_site
@@ -192,8 +192,8 @@ elif [[ -n $backup ]]; then
 		else
 			bkp_local_db
 		fi
-	elif [[ $backup == "s3" ]]; then
-		[[ -n $send_to_s3 ]] && s3_send || bkp_s3_profile
+	elif [[ $backup != "true" ]]; then
+		[[ -n $send_to_s3 ]] && s3_send || bkp_rclone
 	else
 		bkp_wizard
 	fi
