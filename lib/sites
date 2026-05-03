@@ -1496,7 +1496,7 @@ reverse_proxy() {
 	# When multiple servers are defined be sure the Host header is not set to one specific destination server.
 	
 	# We recommend setting the 'keepalive' parameter to twice the number of servers listed in the upstream block.
-	# The proxy_http_version directive should be set to “1.1” and the “Connection” header field should be cleared.
+	# A keepalive should be set when connecting via http/1.1 (default) or http/2. Don't use keepalive for Unix sockets, only for TCP/HTTP backends.
 	# Note also that when you specify a load-balancing algorithm in the upstream block – with the hash, ip_hash, least_conn, least_time, or random directive – the directive must appear above the keepalive directive.
 	keepalive 2;
 } #End" >> /etc/nginx/conf.d/upstream_proxy.conf
