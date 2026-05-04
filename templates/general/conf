@@ -245,17 +245,6 @@
 #wp-admin-auth:true
 
 
-# WordPress WP-Admin Limited Requests
-# Values: boolean (true/false)
-# Default: true
-# Note: Excesive requests on 'wp-admin' can have a fatal effect on your site and server performance.
-# Note: Denial of Service (DoS) attacks can easily abuse it, or even poorly coded themes and plugins can have the same effect under high-traffic conditions.
-# Note: For example, '/wp-admin/admin-ajax.php', '/wp-admin/load-scripts.php' and '/wp-admin/load-styles.php' are a common target.
-# Note: This is a security feature and shouldn't be disabled under normal circumstances.
-###########################
-#wp-admin-limited:true
-
-
 # WordPress XMLRPC requests
 # Values: open | blocked
 # Default: blocked

@@ -222,12 +222,6 @@ nginx_optim() {
 	sudo sed -i "s&<browser-cache-extensions>&$(check_var browser-cache-extensions)&" /etc/nginx/common/header.conf
 	sudo sed -i "s&<browser-cache-extensions>&$(check_var browser-cache-extensions)&" /etc/nginx/common/headers.conf
 	
-	# WP-Admin Limited Requests
-	if [[ $(conf_read wp-admin-limited) == "false" ]]; then
-		sudo sed -i '/# WP-Admin Limited Access/,/\} #End/{/.*/d}' /etc/nginx/common/wpcommon.conf
-		sudo sed -i '/# WP-Admin Limited Access/,/\} #End/{/.*/d}' /etc/nginx/common/wpcommon-noauth.conf
-	fi
-	
 	# WP Cache
 	[[ $(check_var wpcache-query-strings) =~ ^(all|off)$ ]] && sudo sed -i '/# URL with a query string should always go to php/,/\} #End/{/.*/d}' /etc/nginx/common/wpfc.conf
 	

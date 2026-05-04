@@ -1320,8 +1320,6 @@ if [[ -z $critical_mode ]]; then
 
 	# WordPress (only if at least one WP site is found)
 	if [[ $(conf_read nginx) == "true" && -n $wp_site_exist ]]; then
-		[[ $(conf_read wp-admin-limited) == "false" ]] && echo "${blu}${dim}- [INFO] WP-Admin Limited Request is a security feature and is disabled, you should reconsider this decision!${end}${red}"
-		[[ $(conf_read wp-admin-limited) != "false" ]] && echo "${blu}${dim}- [INFO] WP-Admin Limited Request is a security feature and is enabled by default, in some rare cases you may experience some unexpected errors in WP sites!${end}${red}"
 		[[ $(conf_read xmlrpc) == "open" ]] && echo "${blu}${dim}- [INFO] You have at least one WP site and XMLRPC is open, you should reconsider this decision!${end}${red}"
 	fi
 	
