@@ -698,6 +698,8 @@ change_tools_port() {
 			sudo sed -i "s/$ADMIN_TOOLS_SITE/$NEW_ADMIN_TOOLS_SITE/g"  /etc/nginx/sites-available/$NEW_ADMIN_TOOLS_SITE
 		fi
 		
+		[[ -f /etc/nginx/conf.d/ratelimit.conf ]] && sed -i "s/${oldport}/${port}/g" /etc/nginx/conf.d/ratelimit.conf
+		
 		conf_write tools-port $port
 		conf_write tools-port-set $port
 		echo "${gre}Port${blu} $port ${gre}has been enabled to access all your Tools! ${end}"

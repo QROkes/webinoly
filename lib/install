@@ -222,6 +222,35 @@ nginx_optim() {
 	sudo sed -i "s&<browser-cache-extensions>&$(check_var browser-cache-extensions)&" /etc/nginx/common/header.conf
 	sudo sed -i "s&<browser-cache-extensions>&$(check_var browser-cache-extensions)&" /etc/nginx/common/headers.conf
 	
+	# Rate Limiting
+	rm -f /etc/nginx/conf.d/ratelimit.conf
+	local rate_value=$(conf_read ratelimit) # Needed for bash_rematch
+	if [[ -n $rate_value && $rate_value =~ ^([0-9]+)([sm])([0-9]+)$ ]]; then
+		local rate="${BASH_REMATCH[1]}"
+		local time="${BASH_REMATCH[2]}"
+		local burst="${BASH_REMATCH[3]}"
+		
+		cp -p /opt/webinoly/templates/general/ratelimit.conf /etc/nginx/conf.d/
+		sed -i "s|rate=5r/m;|rate=${rate}r/${time};|" /etc/nginx/conf.d/ratelimit.conf
+		sed -i "s|burst=10 nodelay;|burst=${burst} nodelay;|" /etc/nginx/conf.d/ratelimit.conf
+		sed -i "s/22222/$(conf_read tools-port)/g"  /etc/nginx/conf.d/ratelimit.conf
+		
+		if [[ -n $(conf_read ratelimit-conn) && $(conf_read ratelimit-conn) =~ ^[0-9]+$ ]]; then
+			sed -i "s|limit_conn conn_limit 5;|limit_conn conn_limit $(conf_read ratelimit-conn);|" /etc/nginx/conf.d/ratelimit.conf
+		fi
+		
+		if [[ -n $(conf_read ratelimit-whitelist-ip) ]]; then
+			local c=1
+			local ips=$(conf_read ratelimit-whitelist-ip)
+			while [[ -n $(echo $ips | cut -d',' -f $c) ]]
+			do  
+				local ip=$(echo $ips | cut -d',' -f $c)
+				[[ $(is_ip $ip) == "true" ]] && sed -i "/default \$cookie_key;/i\	${ip} \"\";" /etc/nginx/conf.d/ratelimit.conf
+				local c=$(($c+1))
+			done
+		fi
+	fi
+	
 	# WP Cache
 	[[ $(check_var wpcache-query-strings) =~ ^(all|off)$ ]] && sudo sed -i '/# URL with a query string should always go to php/,/\} #End/{/.*/d}' /etc/nginx/common/wpfc.conf
 	

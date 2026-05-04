@@ -521,6 +521,12 @@ if [[ -z $critical_mode ]]; then
 			local ver_two_war="1"
 		fi
 		
+		# Rate Limiting
+		if [[ -z $(conf_read ratelimit) || ! -f /etc/nginx/conf.d/ratelimit.conf ]]; then
+			echo "${dim}- [WARNING] Rate Limiting is currently OFF. Your backend is exposed to unthrottled requests, making it an easy target for malicious scrapers and DoS. ${end}${red}"
+			local ver_two_war="1"
+		fi
+		
 		# Check Nginx Branch in Configuration File
 		if [[ $(($(sudo nginx -v 2>&1 | cut -d'.' -f 2 -s)%2)) == 1 && $(conf_read nginx-ppa) != "mainline" ]]; then
 			echo "- [ERROR] Nginx Branch in Configuration File is corrupted!"

@@ -186,6 +186,20 @@
 #blockip:1.1.1.1,2.2.2.2
 
 
+# Rate Limiting
+# Values: <ip>,<ip>,<ip>... (Whitelisted IP's)
+# Values: numeric int (concurrent connections per IP)
+# Values: <requests><per minute/second><burst>
+# Default: disabled
+# Note: For example, 5m10 (5 requests per minute per IP with 10 burst). Or 10s30 (10 requests per second per IP with 30 burst)
+# Note: You will see "Error 429 - Too many requests" when rate limit is exceded. Adjust according to your needs.
+# Note: It can help protect against DDoS attacks by limiting the incoming request rate to a value typical for real users.
+# Note: https://blog.nginx.org/blog/rate-limiting-nginx
+#ratelimit-whitelist-ip:1.1.1.1,2.2.2.2
+#ratelimit-conn:5
+#ratelimit:5m10
+
+
 # Block/Deny files and extensions
 # Values:  <filename>|<filename>... (case insensitive, with this extension only: txt|html|htm|md|xml)
 # Values:  <ext>|<ext>... (case-insensitive, any file using any of these extensions)
