@@ -83,16 +83,51 @@ elif [[ -n $mail || -n $email ]]; then
 	else
 		error
 	fi
+
+
 elif [[ -n $fpm || -n $php ]]; then
 	check_for_php
-	# REMOVE: Temporal check because we change log path in v1.11.0
-	php_log_path=$(grep -w "^error_log = .*" /etc/php/$(conf_read php-ver)/fpm/php-fpm.conf | cut -f 3 -d ' ')
-	if [[ -f $php_log_path ]]; then
-		[[ ! -s $php_log_path ]] && waiting_for_log
-		sudo tail -f --lines=$clines $php_log_path
+	ver=$(conf_read php-ver)
+	
+	# Slow PHP Log
+	if [[ $php == "slow" ]]; then
+		if [[ -n $enable ]]; then
+			[[ -z $slow_log_timeout ]] && slow_log_timeout=5 # Default
+			if [[ -n $slow_log_timeout && $slow_log_timeout =~ ^[0-9]+$ && $slow_log_timeout -gt 0 ]]; then
+				sed -i -r "/^[;]?request_slowlog_timeout[[:space:]]?=/c\request_slowlog_timeout = ${slow_log_timeout}" /etc/php/$ver/fpm/pool.d/www.conf
+				echo "${gre}${dim}PHP Slow log timeout set to ${slow_log_timeout}s ${end}"
+			elif [[ -n $slow_log_timeout ]]; then
+				echo "${red}[ERROR] Invalid value for slow log timeout! ${dim}(Should be a number greater than zero)${end}"
+				exit 1
+			fi
+			
+			sed -i -r "/^[;]?slowlog[[:space:]]?=/c\slowlog = \/var\/log\/php.log.slow" /etc/php/$ver/fpm/pool.d/www.conf
+			systemctl restart php${ver}-fpm
+			echo "${gre}PHP Slow log was successfully enabled!${end}"
+		elif [[ -n $disable ]]; then
+			sed -i -r "/^[;]?request_slowlog_timeout[[:space:]]?=/c\;request_slowlog_timeout = 5" /etc/php/$ver/fpm/pool.d/www.conf
+			sed -i -r "/^[;]?slowlog[[:space:]]?=/c\;slowlog = \/var\/log\/php.log.slow" /etc/php/$ver/fpm/pool.d/www.conf
+			systemctl restart php${ver}-fpm
+			echo "${gre}PHP Slow log was successfully disabled!${end}"
+		elif grep -qE ";slowlog[[:space:]]?=" /etc/php/$ver/fpm/pool.d/www.conf; then
+			echo "${red}[ERROR] PHP Slow log is not enabled!${end}"
+			exit 1
+		elif [[ -f /var/log/php.log.slow ]]; then
+			[[ ! -s /var/log/php.log.slow ]] && waiting_for_log
+			sudo tail -f --lines=$clines /var/log/php.log.slow
+		else
+			echo "${red}[ERROR] PHP Slow log file not found or still empty!${end}"
+			exit 1
+		fi
+	
+	elif [[ -f /var/log/php${ver}-fpm.log ]]; then
+		[[ ! -s /var/log/php${ver}-fpm.log ]] && waiting_for_log
+		sudo tail -f --lines=$clines /var/log/php${ver}-fpm.log
 	else
 		error
 	fi
+	
+	
 elif [[ -n $le ]]; then
 	if [[ -f /var/log/letsencrypt/letsencrypt.log ]]; then
 		[[ ! -s /var/log/letsencrypt/letsencrypt.log ]] && waiting_for_log
