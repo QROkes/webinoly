@@ -79,7 +79,7 @@ site_ssl_on() {
 	if [[ -n $manual && $manual != "http" && $manual != "dns" ]]; then
 		echo "${red}[ERROR] Invalid value for manual option!${end}"
 		exit 1
-	elif [[ ! -d /var/www/$path/htdocs && -z $root_path && -z $manual && $(is_forward $domain) != "true" ]]; then
+	elif [[ ! -d /var/www/$path/htdocs && -z $root_path && -z $manual && $(is_forward $domain) != "true" && -z $internal_path ]]; then
 		echo "${red}[ERROR] Seems like you are trying to request an SSL Certificate for a Parked/Mapped Domain."
 		echo "Please, use the '-root=domain.com' parameter to specify the main domain."
 		echo ""
@@ -135,17 +135,25 @@ site_ssl_on() {
 		local domset="-d $domain -d *.$domain"
 		local manual="dns"
 	fi
-	
-	if [[ $(is_forward $domain) == "true" ]]; then
+
+	# Internal Path Configuration
+	if [[ -n $internal_path ]]; then
+		if [[ $(is_forward $domain) == "true" ]]; then	
+			if ! sed -n '/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/p' /etc/nginx/sites-available/$domain | grep -q 'location /.well-known/acme-challenge/ {root /var/www/.webinoly;'; then
+				sed -i "/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/{ /return 30/s|^.*return 30\(.*\)\;$|\n\n	location /.well-known/acme-challenge/ {root /var/www/.webinoly;autoindex off;try_files \$uri =404;disable_symlinks on;limit_except GET {deny all;}}\n	location / {return 30\1\;}| }" /etc/nginx/sites-available/$domain
+			fi
+		elif [[ $(is_proxy $domain) == "true" ]]; then
+			sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/ s|# WebinolyCustom$|# WebinolyCustom\n	location /.well-known/acme-challenge/ {root /var/www/.webinoly;autoindex off;try_files \$uri =404;disable_symlinks on;limit_except GET {deny all;}}|" /etc/nginx/sites-available/$domain
+		else
+			echo "${red}[ERROR] Internal Path configuration not supported for this site!${end}"
+			exit 1
+		fi
+		
 		root_path=/var/www/.webinoly
 		[[ ! -d /var/www/.webinoly ]] && mkdir -p /var/www/.webinoly
 		chmod 750 /var/www/.webinoly
-		
-		if ! sed -n '/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/p' /etc/nginx/sites-available/$domain | grep -q 'location /.well-known/acme-challenge/ {root /var/www/.webinoly;'; then
-			sed -i "/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/{ /return 30/s|^.*return 30\(.*\)\;$|\n\n	location /.well-known/acme-challenge/ {root /var/www/.webinoly;autoindex off;try_files \$uri =404;disable_symlinks on;limit_except GET {deny all;}}\n	location / {return 30\1\;}| }" /etc/nginx/sites-available/$domain
-		fi
-		
-		echo "${blu}Forwarded domain configuration!${end}"
+		sudo nginx -t && sudo systemctl reload nginx
+		echo "${blu}Internal Path SSL Configuration!${end}"
 	fi
 	
 	# Custom Root-Path mode for local Reverse Proxy sites
@@ -265,6 +273,9 @@ site_ssl_off() {
 	sudo sed -i '/listen \[::\]:443/c \	listen [::]:80;' /etc/nginx/sites-available/$domain
 	sudo sed -i '/WebinolySSLstart/,/WebinolySSLend/{/.*/d}' /etc/nginx/sites-available/$domain
 	sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
+	
+	# Forwarded sites don't worth the effort to reconstruct all the locations, also it has no impact...
+	[[ $(is_proxy $domain) == "true" ]] && sudo sed -i '/# WebinolyCustom/,/# WebinolyCustomEnd/{/location \/.well-known\/acme-challenge\//d}' /etc/nginx/sites-available/$domain
 	
 	# Headers
 	sudo sed -i '/headers.conf;/c \	include common/header.conf;' /etc/nginx/sites-available/$domain
