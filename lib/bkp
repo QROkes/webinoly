@@ -828,7 +828,7 @@ bkp_wizard() {
 	echo " 11 - Export Full Server"
 	echo " 12 - Import Site or Server"
 	echo "${gre}"
-	read -p " Select an option [1-11]: ${end}" wzd
+	read -p " Select an option [1-12]: ${end}" wzd
 	echo ""
 	
 	if [[ $wzd == 1 ]]; then
