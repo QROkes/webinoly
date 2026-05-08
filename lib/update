@@ -401,6 +401,12 @@ oneeleven_to_onetwelve() {
 }
 
 
+# v1.21.0
+onetwelve_to_onethirteen() {
+	sudo webinoly -server-reset=confile
+}
+
+
 [[ $(version $oldver) -lt $(version "1.1") ]] && onezero_to_oneone
 [[ $(version $oldver) -lt $(version "1.2") ]] && oneone_to_onetwo
 [[ $(version $oldver) -lt $(version "1.3") ]] && onetwo_to_onethree
@@ -413,6 +419,7 @@ oneeleven_to_onetwelve() {
 [[ $(version $oldver) -lt $(version "1.10") ]] && onenine_to_oneten
 [[ $(version $oldver) -lt $(version "1.11") ]] && oneten_to_oneeleven
 [[ $(version $oldver) -lt $(version "1.12") ]] && oneeleven_to_onetwelve
+[[ $(version $oldver) -lt $(version "1.13") ]] && onetwelve_to_onethirteen
 
 
 api-events_update wysue
