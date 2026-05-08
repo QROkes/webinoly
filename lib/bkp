@@ -836,7 +836,7 @@ bkp_wizard() {
 	elif [[ $wzd == 2 ]]; then
 		webinoly -backup=s3
 	elif [[ $wzd == 3 ]]; then
-		rclone config
+		webinoly -backup=custom
 	elif [[ $wzd == 4 ]]; then
 		webinoly -backup -list
 	elif [[ $wzd == 5 ]]; then

@@ -192,6 +192,8 @@ elif [[ -n $backup ]]; then
 		else
 			bkp_local_db
 		fi
+	elif [[ $backup == "custom" ]]; then
+		rclone config
 	elif [[ $backup != "true" ]]; then
 		[[ -n $send_to_s3 ]] && s3_send || bkp_rclone
 	else

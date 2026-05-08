@@ -1,8 +1,7 @@
 #!/bin/bash
 
 
-bkp_rclone() {	
-	
+bkp_rclone() {
 	# LEGACY: Temporal support for Duplicity RUN backups! 
 	# Just to not break existing installations (will be removed soon)
 	# Only RUN and "Send to S3" are still supported.
@@ -46,12 +45,23 @@ bkp_rclone() {
 		[[ -n $exclude_other_filesystems ]] && local fs="--one-file-system"
 		
 		if [[ ${run,,} == "tar" ]]; then
-			tar ${fs} -cpzPf - "${source}" | rclone rcat "${profile}:${bucket}/${filename}.tar.gz"
+			echo "${blu}${dim}Transfering files...${end}"
+			tar ${fs} -cpzPf - "${source}" | rclone rcat "${profile}:${bucket}/${filename}.tar.gz" -q
 			echo "${gre}Backup TAR:${dim} ${source} -> ${profile}:${bucket}/${filename}${end}"
+		elif [[ ${run,,} == "zstd" ]]; then
+			if ! command -v zstd >/dev/null 2>&1; then
+				echo "${red}[ERROR] Package 'zstd' not found!${end}"
+				exit 1
+			fi
+			echo "${blu}${dim}Transfering files...${end}"
+			tar ${fs} -cpPf - --zstd "${source}" | rclone rcat "${profile}:${bucket}/${filename}.tar.zst" -q
+			echo "${gre}Backup ZSTD:${dim} ${source} -> ${profile}:${bucket}/${filename}${end}"
 		elif [[ $run == "sync" ]]; then
+			echo "${blu}${dim}Transfering files...${end}"
 			rclone sync $source ${profile}:${bucket} $fs
 			echo "${gre}Backup Sync:${dim} ${source} -> ${profile}:${bucket}${end}"
 		else
+			echo "${blu}${dim}Transfering files...${end}"
 			rclone copy $source ${profile}:${bucket} $fs
 			echo "${gre}Backup Copy:${dim} ${source} -> ${profile}:${bucket}${end}"
 		fi
@@ -71,6 +81,10 @@ bkp_rclone() {
 			fi
 		fi
 		
+		[[ -z $bucket || $bucket == "true" ]] && read -p "${gre}S3 Bucket name: ${end}" bucket
+		bucket_validation $bucket
+		
+		echo "${blu}${dim}Transfering files...${end}"
 		rclone copy ${profile}:${bucket} $destination
 		echo "${gre}Backup restored successfully!${end}"
 	
@@ -173,7 +187,13 @@ bucket_validation() {
 
 
 s3_send() {
-	message_legacy_duplicity
+	if [[ $(conf_read nginx-tool-bkp) == "true" ]]; then
+		message_legacy_duplicity
+	else
+		echo "${red}Please, enter a valid option!${end}"
+		exit 1
+	fi
+	
 	if [[ ( ! -f $HOME/.aws/credentials || ( -f $HOME/.aws/credentials && ( ! -s $HOME/.aws/credentials || -z $(cat -v $HOME/.aws/credentials | grep -m 1 '[^[:space:]]')))) && $(conf_read awsiamrole) != true ]]; then
 		echo "${red}[ERROR] AWS S3 Credentials not found!${end}"
 		exit 1
