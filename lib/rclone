@@ -95,8 +95,11 @@ bkp_rclone() {
 		echo "${gre}Backup profile ${blu}'$profile'${gre} was successfully deleted!${end}"
 	
 	elif [[ ${backup,,} == "s3" ]]; then
-		if [[ -d /root/.config/rclone/${profile}.conf ]]; then
+		if [[ -n $profile ]] && rclone listremotes | grep -q "^${profile}:$"; then
 			echo "${red}[ERROR] Can not create profile${blu} '$profile' ${red}because already exists!${end}"
+			exit 1
+		elif [[ -z $profile ]]; then
+			echo "${red}[ERROR] Unexpected error, profile is empty!${end}" # It should never happen!
 			exit 1
 		fi
 		
@@ -107,7 +110,7 @@ bkp_rclone() {
 		fi
 	
 		echo ""
-		echo "${blu}${bol}Setup S3 Backup! ${end}${blu}${dim}(AWS or Compatible Providers)${end}"
+		echo "${blu}Setup S3 Backup! ${dim}(AWS or Compatible Providers)${end}"
 		
 		if [[ -z $s3_compatible_endpoint && ( $(conf_read awsiamrole) == "true" || -s /root/.aws/credentials ) && ( -z $access_key_id || -z $secret_access_key ) ]]; then
 			local params=(provider "AWS" env_auth "true")
