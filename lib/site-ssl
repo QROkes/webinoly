@@ -146,7 +146,7 @@ site_ssl_on() {
 				sed -i "/# WebinolyNginxServerStart/,/# WebinolyNginxServerEnd/{ /return 30/s|^.*return 30\(.*\)\;$|\n\n	location /.well-known/acme-challenge/ {root /var/www/.webinoly;autoindex off;try_files \$uri =404;disable_symlinks on;limit_except GET {deny all;}}\n	location / {return 30\1\;}| }" /etc/nginx/sites-available/$domain
 			fi
 		elif [[ $(is_proxy $domain) == "true" ]]; then
-			sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/ s|# WebinolyCustom$|# WebinolyCustom\n	location /.well-known/acme-challenge/ {root /var/www/.webinoly;autoindex off;try_files \$uri =404;disable_symlinks on;limit_except GET {deny all;}}|" /etc/nginx/sites-available/$domain
+			sed -i "/# WebinolyCustom/,/# WebinolyCustomEnd/ s|# WebinolyCustom$|# WebinolyCustom\n	location ^~ /.well-known/acme-challenge/ {root /var/www/.webinoly;autoindex off;try_files \$uri =404;disable_symlinks on;limit_except GET {deny all;}}|" /etc/nginx/sites-available/$domain
 		else
 			echo "${red}[ERROR] Internal Path configuration not supported for this site!${end}"
 			exit 1
@@ -154,7 +154,8 @@ site_ssl_on() {
 		
 		root_path=/var/www/.webinoly
 		[[ ! -d /var/www/.webinoly ]] && mkdir -p /var/www/.webinoly
-		chmod 750 /var/www/.webinoly
+		chown -R root:www-data /var/www/.webinoly
+		chmod -R 2750 /var/www/.webinoly
 		sudo nginx -t && sudo systemctl reload nginx
 		echo "${blu}Internal Path SSL Configuration!${end}"
 	fi
@@ -278,7 +279,7 @@ site_ssl_off() {
 	sudo sed -i '/WebinolySSLredirectStart/,/WebinolySSLredirectEnd/{/.*/d}' /etc/nginx/sites-available/$domain
 	
 	# Forwarded sites don't worth the effort to reconstruct all the locations, also it has no impact...
-	[[ $(is_proxy $domain) == "true" ]] && sudo sed -i '/# WebinolyCustom/,/# WebinolyCustomEnd/{/location \/.well-known\/acme-challenge\//d}' /etc/nginx/sites-available/$domain
+	[[ $(is_proxy $domain) == "true" ]] && sudo sed -i '/# WebinolyCustom/,/# WebinolyCustomEnd/{/location .* \/.well-known\/acme-challenge\//d}' /etc/nginx/sites-available/$domain
 	
 	# Headers
 	sudo sed -i '/headers.conf;/c \	include common/header.conf;' /etc/nginx/sites-available/$domain

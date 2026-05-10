@@ -926,16 +926,18 @@ stack_builder() {
 	fi
 	
 	if [[ $2 == "php" && $(conf_read php) != "true" ]]; then
-		if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
-			# Fix ondrej issue - https://github.com/oerdnj/deb.sury.org/issues/56
-			#sudo apt install -y language-pack-en-base
-			sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
-		else
-			[[ -f /usr/share/keyrings/php-archive-keyring.gpg && ( ! -s /usr/share/keyrings/php-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/php-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/php-archive-keyring.gpg # Prevent issues!
+		
+		[[ -f /usr/share/keyrings/php-archive-keyring.gpg && ( ! -s /usr/share/keyrings/php-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/php-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/php-archive-keyring.gpg # Prevent issues!
+		
+		if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(jammy|noble)$ ]]; then
 			[[ ! -f /usr/share/keyrings/php-archive-keyring.gpg ]] && curl -sSLf 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xB8DC7E53946656EFBCE4C1DD71DAEAAB4AD4CAB6' | sudo gpg --dearmor -o /usr/share/keyrings/php-archive-keyring.gpg
 			echo "deb [signed-by=/usr/share/keyrings/php-archive-keyring.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
-			chmod 644 /usr/share/keyrings/php-archive-keyring.gpg
+		else
+			[[ ! -f /usr/share/keyrings/php-archive-keyring.gpg ]] && curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb && dpkg -i /tmp/debsuryorg-archive-keyring.deb && sudo cp /usr/share/keyrings/deb.sury.org-php.gpg /usr/share/keyrings/php-archive-keyring.gpg && rm /tmp/debsuryorg-archive-keyring.deb
+			echo "deb [signed-by=/usr/share/keyrings/php-archive-keyring.gpg] https://packages.sury.org/php/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
 		fi
+		
+		chmod 644 /usr/share/keyrings/php-archive-keyring.gpg
 		
 		api-events_update ikp
 		local code="run"
@@ -944,16 +946,10 @@ stack_builder() {
 		[[ $code != "run" ]] && local code=0
 	fi
 	if [[ ( $2 == "php" || $4 == "redis" ) && $(conf_read php-tool-redis) != "true" ]] && ! [[ $4 =~ ^(light|basic)$ ]]; then
-		if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(bionic|focal)$ ]]; then
-			# Now there is an Official PPA: https://github.com/redis/redis-debian - https://launchpad.net/~redislabs/+archive/ubuntu/redis
-			# Snap is available but it has no support for ARM architecture: https://snapcraft.io/redis
-			echo | sudo add-apt-repository ppa:redislabs/redis
-		else
-			[[ -f /usr/share/keyrings/redis-archive-keyring.gpg && ( ! -s /usr/share/keyrings/redis-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/redis-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/redis-archive-keyring.gpg # Prevent issues!
-			[[ ! -f /usr/share/keyrings/redis-archive-keyring.gpg ]] && curl -sSLf https://packages.redis.io/gpg | sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
-			echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/redis.list
-			chmod 644 /usr/share/keyrings/redis-archive-keyring.gpg
-		fi
+		[[ -f /usr/share/keyrings/redis-archive-keyring.gpg && ( ! -s /usr/share/keyrings/redis-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/redis-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/redis-archive-keyring.gpg # Prevent issues!
+		[[ ! -f /usr/share/keyrings/redis-archive-keyring.gpg ]] && curl -sSLf https://packages.redis.io/gpg | sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
+		echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/redis.list
+		chmod 644 /usr/share/keyrings/redis-archive-keyring.gpg
 		
 		api-events_update ikr
 		local code="run"
