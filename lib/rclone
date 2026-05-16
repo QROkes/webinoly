@@ -42,11 +42,16 @@ bkp_rclone() {
 		fi
 
 		[[ -z $filename ]] && local filename="webinoly_backup-$(date +%Y%m%d-%H%M)"
+		
+		local params="--progress"
+		[[ ! -t 1 ]] && local params="${params} --stats 1m"
 		[[ -n $exclude_other_filesystems ]] && local fs="--one-file-system"
+		# Not an error, --links flag is not included in TAR and ZSTD, that's why is not part of "params"
+		# Also, "fs" is not included in "params" because we need it isolated for TAR.
 		
 		if [[ ${run,,} == "tar" ]]; then
 			echo "${blu}${dim}Transfering files...${end}"
-			tar ${fs} -cpzPf - "${source}" | rclone rcat "${profile}:${bucket}/${filename}.tar.gz" -q
+			tar ${fs} -cpzPf - "${source}" | rclone rcat "${profile}:${bucket}/${filename}.tar.gz" -q $params
 			echo "${gre}Backup TAR:${dim} ${source} -> ${profile}:${bucket}/${filename}${end}"
 		elif [[ ${run,,} == "zstd" ]]; then
 			if ! command -v zstd >/dev/null 2>&1; then
@@ -54,15 +59,15 @@ bkp_rclone() {
 				exit 1
 			fi
 			echo "${blu}${dim}Transfering files...${end}"
-			tar ${fs} -cpPf - --zstd "${source}" | rclone rcat "${profile}:${bucket}/${filename}.tar.zst" -q
+			tar ${fs} -cpPf - --zstd "${source}" | rclone rcat "${profile}:${bucket}/${filename}.tar.zst" -q $params
 			echo "${gre}Backup ZSTD:${dim} ${source} -> ${profile}:${bucket}/${filename}${end}"
 		elif [[ $run == "sync" ]]; then
 			echo "${blu}${dim}Transfering files...${end}"
-			rclone sync $source ${profile}:${bucket} $fs
+			rclone sync $source ${profile}:${bucket} --links $params $fs
 			echo "${gre}Backup Sync:${dim} ${source} -> ${profile}:${bucket}${end}"
 		else
 			echo "${blu}${dim}Transfering files...${end}"
-			rclone copy $source ${profile}:${bucket} $fs
+			rclone copy $source ${profile}:${bucket} --links $params $fs
 			echo "${gre}Backup Copy:${dim} ${source} -> ${profile}:${bucket}${end}"
 		fi
 		
@@ -85,7 +90,7 @@ bkp_rclone() {
 		bucket_validation $bucket
 		
 		echo "${blu}${dim}Transfering files...${end}"
-		rclone copy ${profile}:${bucket} $destination
+		rclone copy ${profile}:${bucket} $destination --links --progress
 		echo "${gre}Backup restored successfully!${end}"
 	
 	
@@ -174,7 +179,7 @@ bucket_validation() {
 	if [[ -z $1 || -z $bucketname ]]; then
 		echo "${red}[ERROR] Please, enter a valid bucket name! ${end}"
 		exit 1
-	elif ! [[ $bucketname =~ ^[0-9a-z\/-]+$ ]] || [[ -z $bucketname || $(echo $bucketname | cut -c-1) =~ [-|\/] || ${#bucketname} -gt 63 || ${#bucketname} -lt 3 ]]; then
+	elif ! [[ $bucketname =~ ^[0-9a-zA-Z\.\/-]+$ ]] || [[ -z $bucketname || $(echo $bucketname | cut -c-1) =~ [-|\/] || ${#bucketname} -gt 63 || ${#bucketname} -lt 3 ]]; then
 		echo "${red}[ERROR] Bucket names can only contain lowercase letters, numbers or hyphens; must start with a letter or number and must be at least 3 and no more than 63 characters long.${end}"
 		exit 1
 	elif [[ -n $bucketfolder ]] && ! [[ $bucketfolder =~ ^[0-9a-zA-Z\/-_\!\.\*\'\)\(]+$ ]]; then

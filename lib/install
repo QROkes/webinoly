@@ -926,18 +926,21 @@ stack_builder() {
 	fi
 	
 	if [[ $2 == "php" && $(conf_read php) != "true" ]]; then
-		
-		[[ -f /usr/share/keyrings/php-archive-keyring.gpg && ( ! -s /usr/share/keyrings/php-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/php-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/php-archive-keyring.gpg # Prevent issues!
-		
 		if [[ $(lsb_release -c | cut -d':' -f 2 | xargs) =~ ^(jammy|noble)$ ]]; then
+			[[ -f /usr/share/keyrings/php-archive-keyring.gpg && ( ! -s /usr/share/keyrings/php-archive-keyring.gpg || -z $(cat -v /usr/share/keyrings/php-archive-keyring.gpg | grep -m 1 '[^[:space:]]')) ]] && sudo rm -rf /usr/share/keyrings/php-archive-keyring.gpg # Prevent issues!
 			[[ ! -f /usr/share/keyrings/php-archive-keyring.gpg ]] && curl -sSLf 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xB8DC7E53946656EFBCE4C1DD71DAEAAB4AD4CAB6' | sudo gpg --dearmor -o /usr/share/keyrings/php-archive-keyring.gpg
 			echo "deb [signed-by=/usr/share/keyrings/php-archive-keyring.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
+			chmod 644 /usr/share/keyrings/php-archive-keyring.gpg
 		else
-			[[ ! -f /usr/share/keyrings/php-archive-keyring.gpg ]] && curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb && dpkg -i /tmp/debsuryorg-archive-keyring.deb && sudo cp /usr/share/keyrings/deb.sury.org-php.gpg /usr/share/keyrings/php-archive-keyring.gpg && rm /tmp/debsuryorg-archive-keyring.deb
-			echo "deb [signed-by=/usr/share/keyrings/php-archive-keyring.gpg] https://packages.sury.org/php/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
+			if [[ ! -f /usr/share/keyrings/deb.sury.org-php.gpg ]]; then
+				rm -f /tmp/debsuryorg-archive-keyring.deb
+				curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb
+				dpkg -i /tmp/debsuryorg-archive-keyring.deb
+				echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
+				rm /tmp/debsuryorg-archive-keyring.deb
+			fi
+			chmod 644 /usr/share/keyrings/deb.sury.org-php.gpg
 		fi
-		
-		chmod 644 /usr/share/keyrings/php-archive-keyring.gpg
 		
 		api-events_update ikp
 		local code="run"
@@ -1005,7 +1008,7 @@ stack_builder() {
 	# We need this validation, because for example, LEMP can install additional tools when main package is already installed.
 	if [[ $code == 0 && $4 != "light" ]]; then
 		[[ ( $1 == "nginx" || $4 == "letsencrypt" ) && $(conf_read nginx) == "true" && $(conf_read nginx-tool-ssl) != "true" ]] && unset code
-		[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" ]] && unset code # Backups doesn't need nginx, can be installed alone!
+		[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" && $(conf_read nginx-tool-rclone) != "true" ]] && unset code # Backups doesn't need nginx, can be installed alone!
 		[[ ( $2 == "php" || $4 == "postfix" ) && $(conf_read php) == "true" && $(conf_read php-tool-postfix) != "true" ]] && unset code
 		
 		if [[ $4 != "basic" ]]; then
@@ -1022,7 +1025,8 @@ stack_builder() {
 		# Install Packages!
 		[[ $1 == "nginx" && $(conf_read nginx) != "true" ]] && nginx_install && nginx_optim && nginx_tool_site
 		[[ ( $1 == "nginx" || $4 == "letsencrypt" ) && $(conf_read nginx) == "true" && $(conf_read nginx-tool-ssl) != "true" && $4 != "light" ]] && nginx_tool_ssl
-		[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" && $4 != "light" ]] && nginx_tool_bkp # Backups doesn't need nginx, can be installed alone!
+		[[ ( $1 == "nginx" || $4 == "backups" ) && $(conf_read nginx-tool-bkp) != "true" && $(conf_read nginx-tool-rclone) != "true" && $4 != "light" ]] && nginx_tool_bkp
+		# Backups doesn't need nginx, can be installed alone!
 		
 		[[ $2 == "php" && $(conf_read php) != "true" ]] && php_install && php_optim && php_tool_site
 		[[ ( $2 == "php" || $4 == "postfix" ) && $(conf_read php) == "true" && $(conf_read php-tool-postfix) != "true" && $4 != "light" ]] && php_tool_postfix
