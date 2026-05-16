@@ -249,6 +249,10 @@ elif [[ -n $purge && -n $php ]]; then
 				sudo rm -rf /usr/share/keyrings/deb.sury.org-php.gpg
 				sudo rm -rf /etc/apt/sources.list.d/php.list
 			fi
+			
+			# Remove symlink
+			rm -f /etc/tmpfiles.d/php-fpm-link.conf
+			rm -f /run/php/php-fpm.sock
 
 			# Remove sources
 			sudo rm -rf /etc/php

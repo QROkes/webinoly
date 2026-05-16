@@ -412,6 +412,12 @@ php_optim() {
 	
 	[[ $(conf_read php-tool-redis) == "true" && -n $(conf_read redis-max-mem) ]] && redis_optim
 	
+	# Ondrej is not creating the generic symlink anymore...
+	rm -f /etc/tmpfiles.d/php-fpm-link.conf
+	mkdir -p /etc/tmpfiles.d/
+	echo "L+ /run/php/php-fpm.sock - - - - /run/php/php${ver}-fpm.sock" | sudo tee /etc/tmpfiles.d/php-fpm-link.conf > /dev/null
+	systemd-tmpfiles --create /etc/tmpfiles.d/php-fpm-link.conf
+	
 	init_php
 	conf_write php-optim true
 	sudo systemctl restart php${ver}-fpm

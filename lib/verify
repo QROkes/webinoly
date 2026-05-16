@@ -929,9 +929,6 @@ elif [[ $(conf_read php) == "true" ]]; then
 	if [[ ! -L /run/php/php-fpm.sock ]]; then
 		echo "- [ERROR] PHP Socket route/symlink is broken or not found! (/run/php/php-fpm.sock)"
 		local ver_five_err="1"
-	elif [[ ! -L /etc/alternatives/php-fpm.sock ]]; then
-		echo "- [ERROR] PHP Socket route/symlink is broken or not found! (/etc/alternatives/php-fpm.sock)"
-		local ver_five_err="1"
 	elif [[ ! -S /run/php/php$(conf_read php-ver)-fpm.sock ]]; then
 		echo "- [ERROR] PHP Socket not found! (/run/php/php$(conf_read php-ver)-fpm.sock)"
 		local ver_five_err="1"
