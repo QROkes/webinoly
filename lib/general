@@ -1287,6 +1287,10 @@ site_type() {
 		echo "Parked"
 	elif [[ -z $2 && $(is_forward $1) == "true" ]]; then
 		echo "Forward"
+	elif [[ $(is_dedicated_proxy_domain $1 $2) == "true" ]]; then
+		echo "Dedicated Reverse Proxy"
+	elif [[ $(is_proxy $1 $2) == "true" ]]; then
+		echo "Reverse Proxy"
 	elif [[ -z $2 && $(is_empty_root_site $1) == "full" ]]; then
 		echo "Empty Blank"
 	elif [[ -z $2 && $(is_empty_root_site $1) == "subfolders" ]]; then
@@ -1301,10 +1305,6 @@ site_type() {
 		echo "PHP"
 	elif [[ $(is_html $1 $2) == "true" ]]; then
 		echo "HTML"
-	elif [[ $(is_dedicated_proxy_domain $1 $2) == "true" ]]; then
-		echo "Dedicated Reverse Proxy"
-	elif [[ $(is_proxy $1 $2) == "true" ]]; then
-		echo "Reverse Proxy"
 	
 	else
 		echo "Unknown"

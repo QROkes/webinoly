@@ -134,6 +134,10 @@ wpinstall() {
 		sudo mv /var/www/$domain/wordpress/* /var/www/$domain/htdocs$subfolder/
 		sudo rm -rf /var/www/$domain/wordpress
 		sudo rm /var/www/$domain/htdocs/wp.tar.gz
+		
+		# Owner www-data is set/ensured in createsite function
+		sudo find /var/www/$domain -type d -exec chmod 750 {} +
+		sudo find /var/www/$domain -type f -exec chmod 640 {} +
 	fi
 	
 	# Generate and auto-fill wp-config.php and also create database
@@ -879,8 +883,6 @@ createsite() {
 	[[ -z $(conf_read default-site) && $domain != $ADMIN_TOOLS_SITE ]] && webinoly -default-site=blackhole
 	
 	sudo chown -R www-data:www-data /var/www
-	sudo find /var/www/$domain -type d -exec chmod 750 {} +
-	sudo find /var/www/$domain -type f -exec chmod 640 {} +
 	[[ $(conf_read login-www-data) == "true" ]] && sudo chown root:root /var/www
 
 	warning_messages

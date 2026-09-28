@@ -104,6 +104,10 @@ if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; the
 elif [[ -n $subfolder && -z $delete && -z $cache && -z $multisite_convert && -z $clone_from && -z $replace_content && -z $wp && -z $html && -z $php && -z $mysql && -z $proxy && -z $env && -z $info ]]; then
 	echo "${red}[ERROR] Subfolder option not supported!${end}"
 	exit 1
+# Only these sites are allowed to have subfolders, no data folder sites are not allowed, like parked, forward or proxy...
+elif [[ -n $subfolder ]] && ! [[ $(site_type $domain) =~ ^(HTML|PHP|WordPress)$ ]]; then
+	echo "${red}[ERROR] Subfolder option not supported for this type of site!${end}"
+	exit 1
 # Clone-from empty is here to allow -cache=on when cloning a site
 elif [[ -n $subfolder && -z $wp && ( $cache == "on" || -n $multisite_convert || -n $replace_content || -n $env ) && $(is_subfolder $domain $subfolder) != "wp" && -z $clone_from ]]; then
 	echo "${red}[ERROR] Subfolder not found or is not a WP site!${end}"
