@@ -104,8 +104,8 @@ if [[ -n $subfolder && ! ( $subfolder =~ ^\/([A-Za-z0-9_\/\-]+)?[^\/]$ ) ]]; the
 elif [[ -n $subfolder && -z $delete && -z $cache && -z $multisite_convert && -z $clone_from && -z $replace_content && -z $wp && -z $html && -z $php && -z $mysql && -z $proxy && -z $env && -z $info ]]; then
 	echo "${red}[ERROR] Subfolder option not supported!${end}"
 	exit 1
-# Only these sites are allowed to have subfolders, no data folder sites are not allowed, like parked, forward or proxy...
-elif [[ -n $subfolder ]] && ! [[ $(site_type $domain) =~ ^(HTML|PHP|WordPress)$ ]]; then
+# Parked and forward are not allowed... Check comments on site_type function!
+elif [[ -n $subfolder && $(site_type $domain) =~ ^(Parked|Forward)$ ]]; then
 	echo "${red}[ERROR] Subfolder option not supported for this type of site!${end}"
 	exit 1
 # Clone-from empty is here to allow -cache=on when cloning a site
@@ -252,7 +252,9 @@ elif [[ -n $parked && -n $domain ]]; then
 
 	
 # Reverse proxy
-elif [[ -n $proxy && -n $domain ]]; then	
+elif [[ -n $proxy && -n $domain ]]; then
+	# When you create a “dedicated reverse proxy” site, then only “dedicated reverse proxy” sites will be allowed in subfolders...
+	[[ -n $subfolder && -z $dedicated_reverse_proxy ]] && full_empty_not_allowed
 	reverse_proxy
 	
 
@@ -365,45 +367,7 @@ elif [[ -n $force_redirect && -f /etc/nginx/sites-available/$domain ]]; then
 
 
 # Staging and Clone sites
-elif [[ -n $clone_from ]]; then
-	if [[ ! -f /etc/nginx/sites-available/$clone_from ]]; then
-		echo "${red}[ERROR] Site/domain ${blu}'$clone_from'${red} not found!${end}"
-		exit 1
-	elif [[ -f /etc/nginx/sites-available/$domain && -z $subfolder && $overwrite != "on" ]]; then
-		echo "${red}[ERROR] Can not create site${blu} $domain ${red}because already exists!${end}"
-		exit 1
-	elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" && $overwrite != "on" ]]; then
-		echo "${red}[ERROR] Subfolder ${blu}'$subfolder'${red} already exists!${end}"
-		exit 1
-	elif ! [[ $(site_type $clone_from $subfolder) =~ ^(HTML|PHP|WordPress)$ ]]; then
-		echo "${red}[ERROR] Only HTML, PHP or WordPress sites are supported for cloning!${end}"
-		exit 1
-	elif [[ $overwrite == "on" && -f /etc/nginx/sites-available/$domain && $(site_type $clone_from $subfolder) != $(site_type $domain $subfolder) ]]; then
-		echo "${red}[ERROR] Source and destination sites should be the same type of site!${end}"
-		exit 1
-	fi
-	
-	if [[ $(is_wp $clone_from $subfolder) == "true" ]]; then
-		wp_conf_retrieve $clone_from true false $subfolder
-		iswpclone="true"
-		
-		if [[ -z $wp_dbhost ||-z $wp_dbhost_host || -z $wp_dbname || -z $wp_dbpref ]]; then
-			echo "${red}[ERROR] Can not retrieve WP data ${dim}(WP Configuration corrupted)!${end}"
-			exit 1
-		elif [[ ( $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) != "true" ) || ( $wp_dbhost_host != "localhost" && $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port any -login-file -master-admin) != "true" ) ]]; then
-			echo "${red}[ERROR] Database connection failed! ${dim}($wp_dbhost)${end}"
-			exit 1
-		elif [[ $(is_wp_multisite $clone_from $subfolder) != "false" ]]; then
-			echo "${red}[ERROR] WordPress Multisite can not be cloned!${end}"
-			exit 1
-		elif [[ $(is_wp_installed $clone_from $subfolder) != "true" ]]; then
-			echo "${dim}[INFO] WordPress is empty and still not configured in ${clone_from}${subfolder} site!${end}"
-		fi
-	elif [[ -n $subfolder && $(is_subfolder $clone_from $subfolder) == "false" ]]; then
-		echo "${red}[ERROR] Subfolder not found!${end}"
-		exit 1
-	fi
-	
+elif [[ -n $clone_from ]]; then	
 	cloning_site
 
 

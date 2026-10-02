@@ -1811,6 +1811,53 @@ wp_cache() {
 
 
 cloning_site() {
+	if [[ ! -f /etc/nginx/sites-available/$clone_from ]]; then
+		echo "${red}[ERROR] Site/domain ${blu}'$clone_from'${red} not found!${end}"
+		exit 1
+	elif [[ -f /etc/nginx/sites-available/$domain && -z $subfolder && $overwrite != "on" ]]; then
+		echo "${red}[ERROR] Can not create site${blu} $domain ${red}because already exists!${end}"
+		exit 1
+	elif [[ -f /etc/nginx/sites-available/$domain && -n $subfolder && $(is_subfolder $domain $subfolder) != "false" && $overwrite != "on" ]]; then
+		echo "${red}[ERROR] Subfolder ${blu}'$subfolder'${red} already exists!${end}"
+		exit 1
+	elif ! [[ $(site_type $clone_from $subfolder) =~ ^(HTML|PHP|WordPress|Reverse Proxy|Dedicated Reverse Proxy)$ ]]; then
+		# Supporting raw folders is just copying data and we DON'T do it anymore, it can copy any folder just by accident just because exists...
+		echo "${red}[ERROR] Only HTML, PHP, WordPress and Reverse Proxy sites are supported for cloning!${end}"
+		exit 1
+	elif [[ -f /etc/nginx/sites-available/$domain && $(is_dedicated_proxy $clone_from $subfolder) == "true" && $(is_dedicated_proxy_domain $domain) != "true" && $(is_empty_root_site $domain) != "full" ]]; then
+		# Note: is_dedicated_proxy_domain is not true when no site/subfolder is configured even when is_empty_root_site is full... That's why we need to check both!
+		echo "${red}[ERROR] Destination domain already exists and is not a Dedicated Reverse Proxy!${end}"
+		exit 1
+	elif [[ -f /etc/nginx/sites-available/$domain && $(is_dedicated_proxy $clone_from $subfolder) != "true" && ( $(is_dedicated_proxy_domain $domain) == "true" || $(is_empty_root_site $domain) == "full" ) ]]; then
+		# Note: is_dedicated_proxy_domain is not true when no site/subfolder is configured even when is_empty_root_site is full... That's why we need to check both!
+		echo "${red}[ERROR] Destination is a Dedicated Reverse Proxy domain/site!${end}"
+		exit 1
+	elif [[ $overwrite == "on" && -f /etc/nginx/sites-available/$domain && $(site_type $clone_from $subfolder) != $(site_type $domain $subfolder) ]]; then
+		echo "${red}[ERROR] Source and destination sites should be the same type of site!${end}"
+		exit 1
+	fi
+	
+	if [[ $(is_wp $clone_from $subfolder) == "true" ]]; then
+		wp_conf_retrieve $clone_from true false $subfolder
+		iswpclone="true"
+		
+		if [[ -z $wp_dbhost ||-z $wp_dbhost_host || -z $wp_dbname || -z $wp_dbpref ]]; then
+			echo "${red}[ERROR] Can not retrieve WP data ${dim}(WP Configuration corrupted)!${end}"
+			exit 1
+		elif [[ ( $wp_dbhost_host == "localhost" && $(check_mysql_connection localhost $mysql_param) != "true" ) || ( $wp_dbhost_host != "localhost" && $(check_mysql_connection $wp_dbhost_host $wp_dbhost_port any -login-file -master-admin) != "true" ) ]]; then
+			echo "${red}[ERROR] Database connection failed! ${dim}($wp_dbhost)${end}"
+			exit 1
+		elif [[ $(is_wp_multisite $clone_from $subfolder) != "false" ]]; then
+			echo "${red}[ERROR] WordPress Multisite can not be cloned!${end}"
+			exit 1
+		elif [[ $(is_wp_installed $clone_from $subfolder) != "true" ]]; then
+			echo "${dim}[INFO] WordPress is empty and still not configured in ${clone_from}${subfolder} site!${end}"
+		fi
+	elif [[ -n $subfolder && $(is_subfolder $clone_from $subfolder) == "false" ]]; then
+		echo "${red}[ERROR] Subfolder not found!${end}"
+		exit 1
+	fi
+	
 	if [[ -f /etc/nginx/sites-available/$domain && $overwrite == "on" ]]; then
 		echo "${blu}Site already exists! ${dim} Overwriting...${end}"
 		
@@ -1835,13 +1882,19 @@ cloning_site() {
 		echo "${blu}Cloning your site! ${dim} Wait...${end}"
 	fi
 	
-	[[ ! -f /etc/nginx/sites-available/$domain ]] && create_empty_site
+	if [[ ! -f /etc/nginx/sites-available/$domain && $(is_dedicated_proxy $clone_from $subfolder) == "true" ]]; then
+		create_empty_site -full
+	elif [[ ! -f /etc/nginx/sites-available/$domain ]]; then
+		create_empty_site
+	fi
 	
+	# Cloning sites works in 2 differents modes:
+	# Full site: files are just copied and check for subfolders recursively...
+	# Subfolder: files are created and modified, don't check for recursive subfolders inside...
 	if [[ -n $subfolder ]]; then
 		local subtype=$(is_subfolder $clone_from $subfolder)
 		
-		# WordPress only runs when is called in a recursive way below!
-		if [[ $subtype == "wp" && -n $child ]]; then
+		if [[ $subtype == "wp" ]]; then
 			echo "${blu}${dim}Cloning WP subfolder...${end}"
 			sudo cp /etc/nginx/apps.d/$clone_from$subname-php.conf /etc/nginx/apps.d/$domain$subname-php.conf
 			sudo cp /etc/nginx/apps.d/$clone_from$subname-wpfc.conf /etc/nginx/apps.d/$domain$subname-wpfc.conf
@@ -1850,10 +1903,6 @@ cloning_site() {
 			sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-php.conf
 			sudo sed -i "s/$clone_from/$domain/g" /etc/nginx/apps.d/$domain$subname-wpfc.conf
 			sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-php.conf;" /etc/nginx/sites-available/$domain
-		fi
-		
-		if [[ $subtype == "wp" ]]; then
-			echo "${blu}${dim}Cloning WP subfolder...${end}"
 		elif [[ $subtype == "php" ]]; then
 			echo "${blu}${dim}Cloning PHP subfolder...${end}"
 			if [[ -f /etc/nginx/apps.d/$clone_from$subname-php.conf ]]; then
@@ -1866,13 +1915,12 @@ cloning_site() {
 				sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-phpx.conf;" /etc/nginx/sites-available/$domain
 			fi
 		elif [[ $subtype == "html" ]]; then
+			sudo sed -i "/index/a \	location $subfolder/ { try_files \$uri \$uri/ =404; }" /etc/nginx/sites-available/$domain
 			echo "${blu}${dim}Cloning HTML subfolder...${end}"
 		elif [[ $subtype == "proxy" ]]; then
 			echo "${blu}${dim}Cloning PROXY subfolder...${end}"
 			sudo cp /etc/nginx/apps.d/$clone_from$subname-proxy.conf /etc/nginx/apps.d/$domain$subname-proxy.conf
 			sudo sed -i "/# WebinolyCustom$/a \	include apps.d/$domain$subname-proxy.conf;" /etc/nginx/sites-available/$domain
-		elif [[ $subtype == "true" ]]; then
-			echo "${blu}${dim}Cloning subfolder data only...${end}"
 		else
 			# Don't show this message when WP recursive!
 			[[ -z $child ]] && echo "${red}${dim}[ERROR] Unexpected error, subfolder type is undetermined!${end}"
@@ -1902,17 +1950,18 @@ cloning_site() {
 		fi
 	fi
 	
-	sudo chown -R www-data:www-data /var/www/$domain
-	
 	# Clone Subfolder conf files from apps.d
-	if [[ -z $child ]]; then
+	# Here are cloned WP found in subfolders using a recursive function
+	# Other kind of subfolders, like proxy, php or html, are just copied, that's why we don't see an output message.
+	# Only run when root domain is cloned (subfolder empty)
+	if [[ -z $child && -z $subfolder ]]; then
 		conf_write nginx-reload false
 		
-		for appfile in /etc/nginx/apps.d/${clone_from}*.conf
+		for appfile in /etc/nginx/apps.d/${clone_from}${subname}*.conf
 		do
 			if [[ -s $appfile ]]; then
 				local newfile=$(echo $appfile | sed "s/$clone_from/$domain/")
-				sudo cp $appfile $newfile
+				[[ ! -f $newfile ]] && cp $appfile $newfile
 				
 				# Check if site contains WP in subfolders.
 				if [[ $appfile == "/etc/nginx/apps.d/${clone_from}${subname}"*-wpcommon.conf ]]; then
@@ -1972,7 +2021,14 @@ cloning_site() {
 			replace_content="[http://www.$clone_from,http://$domain]" && wp_replace_content > /dev/null 2>&1
 			replace_content="[https://www.$clone_from,https://$domain]" && wp_replace_content > /dev/null 2>&1
 		fi
-
+		
+		# Set WP Environment variable
+		[[ -n $env && -n $subfolder ]] && local envpar="-subfolder=$subfolder "
+		[[ -n $env && -n $cache ]] && local envpar="$envpar -cache=$cache -wp-cache-plugins=on"
+		[[ -n $env ]] && sudo site $domain -env=$env $envpar
+	fi
+	
+	if [[ -z $child ]]; then
 		# Force-Redirect
 		if [[ $subdomain != "true" ]]; then
 			sudo site $domain -force-redirect=root
@@ -1983,15 +2039,15 @@ cloning_site() {
 			sudo site $domain -subdomain=false -force-redirect=off > /dev/null 2>&1
 		fi
 		
-		# Set WP Environment variable
-		[[ -n $env && -n $subfolder ]] && local envpar="-subfolder=$subfolder "
-		[[ -n $env && -n $cache ]] && local envpar="$envpar -cache=$cache -wp-cache-plugins=on"
-		[[ -n $env ]] && sudo site $domain -env=$env $envpar
+		# Remove custom settings from cloned site
+		[[ $(is_ssl $clone_from) == "true" ]] && sudo site $domain -ssl=off -revoke=off -no-db-update > /dev/null 2>&1
+		[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
+		
+		# If main root domain is HTML fix the index
+		[[ $(site_type $domain) =~ "HTML" && $(site_type $clone_from $subfolder) =~ ^(PHP|WordPress)$ ]] && sed -i '/index /c \	index index.php index.html index.htm;' /etc/nginx/sites-available/$domain
+		
+		sudo chown -R www-data:www-data /var/www/$domain
 	fi
-	
-	# Remove custom settings from cloned site
-	[[ $(is_ssl $clone_from) == "true" ]] && sudo site $domain -ssl=off -revoke=off -no-db-update > /dev/null 2>&1
-	[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
 	
 	echo "${gre}Site${blu} $domain$subfolder ${gre}is now a successfull clone of${blu} $clone_from$subfolder ${end}"
 }

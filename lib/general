@@ -1076,11 +1076,11 @@ is_proxy() {
 is_dedicated_proxy() {
 	# $1 = domain, $2 = subfolder
 	[[ -n $2 ]] && local subn=$(echo $2 | sed "s/\//_/g")
-	[[ -f /etc/nginx/sites-available/$1 && -z $(grep -F " common/locations.conf;" /etc/nginx/sites-available/$1) && -z $(grep -E "include common/headers-.*.conf;" /etc/nginx/sites-available/$1) && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " apps.d/$1$subn-proxy.conf;") ]] && echo "true" || echo "false"	
+	[[ -f /etc/nginx/sites-available/$1 && -z $(grep -F " common/locations.conf;" /etc/nginx/sites-available/$1) && -z $(grep -E "include common/headers[s]?.conf;" /etc/nginx/sites-available/$1) && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -F " apps.d/$1$subn-proxy.conf;") ]] && echo "true" || echo "false"	
 }
 is_dedicated_proxy_domain() {
 	# $1 = domain
-	[[ -f /etc/nginx/sites-available/$1 && -z $(grep -F " common/locations.conf;" /etc/nginx/sites-available/$1) && -z $(grep -E "include common/headers-.*.conf;" /etc/nginx/sites-available/$1) && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -E " apps.d/${1}.*-proxy.conf;") ]] && echo "true" || echo "false"	
+	[[ -f /etc/nginx/sites-available/$1 && -z $(grep -F " common/locations.conf;" /etc/nginx/sites-available/$1) && -z $(grep -E "include common/headers[s]?.conf;" /etc/nginx/sites-available/$1) && -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -E " apps.d/${1}.*-proxy.conf;") ]] && echo "true" || echo "false"	
 }
 
 
@@ -1252,7 +1252,7 @@ is_empty_root_site() {
 	if [[ -n $1 ]]; then
 		if [[ $(is_wp $1) == "true" || $(is_php $1) == "true" || $(is_proxy $1) == "true" || $(is_html $1) == "true" || $(is_parked $1) == "true" || $(is_forward $1) == "true" ]]; then
 			echo "false"
-		elif [[ -f /etc/nginx/sites-available/$1 && -z $(grep -F " common/locations.conf;" /etc/nginx/sites-available/$1) && -z $(grep -E "include common/headers-.*.conf;" /etc/nginx/sites-available/$1) ]]; then
+		elif [[ -f /etc/nginx/sites-available/$1 && -z $(grep -F " common/locations.conf;" /etc/nginx/sites-available/$1) && -z $(grep -E "include common/header[s]?.conf;" /etc/nginx/sites-available/$1) ]]; then
 			echo "full"
 		elif [[ -f /etc/nginx/sites-available/$1 && ( -n $(grep -E "include apps.d/${1}_.*.conf;" /etc/nginx/sites-available/$1) || -n $(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$1 | grep -E "location /.* { try_files ")) ]]; then
 			echo "subfolders"
@@ -1283,28 +1283,33 @@ site_type() {
 		echo "false"
 	
 	# These type of sites are not supported in subfolders...
+	# Parked - root path is pointing to a different site.
+	# Forward - don't even have a regular Nginx server block to serve a website.
 	elif [[ -z $2 && $(is_parked $1) == "true" ]]; then
 		echo "Parked"
 	elif [[ -z $2 && $(is_forward $1) == "true" ]]; then
 		echo "Forward"
-	elif [[ $(is_dedicated_proxy_domain $1 $2) == "true" ]]; then
-		echo "Dedicated Reverse Proxy"
-	elif [[ $(is_proxy $1 $2) == "true" ]]; then
-		echo "Reverse Proxy"
-	elif [[ -z $2 && $(is_empty_root_site $1) == "full" ]]; then
-		echo "Empty Blank"
-	elif [[ -z $2 && $(is_empty_root_site $1) == "subfolders" ]]; then
-		echo "Subfolders"
-	elif [[ -z $2 && $(is_empty_root_site $1) == "true" ]]; then
-		echo "Empty"
-
+	
 	# Subfolder supported...
+	# Dedicated Reverse Proxy and Empty Blank - only support dedicated reverse proxy in subfolders.
 	elif [[ $(is_wp $1 $2) == "true" ]]; then
 		echo "WordPress"
 	elif [[ $(is_php $1 $2) == "true" ]]; then
 		echo "PHP"
 	elif [[ $(is_html $1 $2) == "true" ]]; then
 		echo "HTML"
+	elif [[ -z $2 && $(is_dedicated_proxy_domain $1) == "true" ]]; then
+		echo "Dedicated Reverse Proxy"
+	elif [[ $(is_dedicated_proxy $1 $2) == "true" ]]; then
+		echo "Dedicated Reverse Proxy"
+	elif [[ $(is_proxy $1 $2) == "true" ]]; then
+		echo "Reverse Proxy" # Always after dedicated, is_proxy is true for dedicated...
+	elif [[ -z $2 && $(is_empty_root_site $1) == "full" ]]; then
+		echo "Empty Blank"
+	elif [[ -z $2 && $(is_empty_root_site $1) == "subfolders" ]]; then
+		echo "Subfolders"
+	elif [[ -z $2 && $(is_empty_root_site $1) == "true" ]]; then
+		echo "Empty"
 	
 	else
 		echo "Unknown"
