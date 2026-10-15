@@ -232,7 +232,7 @@ smtp_setup() {
 
 	sudo sed -i '/^relayhost/a \smtp_tls_security_level = encrypt' /etc/postfix/main.cf
 	sudo sed -i '/^relayhost/a \smtp_tls_note_starttls_offer = yes' /etc/postfix/main.cf
-	sudo sed -i '/^relayhost/a \smtp_use_tls = yes' /etc/postfix/main.cf
+	#sudo sed -i '/^relayhost/a \smtp_use_tls = yes' /etc/postfix/main.cf
 	sudo sed -i '/^relayhost/a \smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd' /etc/postfix/main.cf
 	sudo sed -i '/^relayhost/a \smtp_sasl_security_options = noanonymous' /etc/postfix/main.cf
 	sudo sed -i '/^relayhost/a \smtp_sasl_auth_enable = yes' /etc/postfix/main.cf
