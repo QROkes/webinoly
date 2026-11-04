@@ -180,8 +180,8 @@ nginx_optim() {
 		sudo chmod 600 /etc/ssl/dhparam.pem
 	fi
 	
-	sudo cp -R /opt/webinoly/templates/nginx/common /etc/nginx/common
-	sudo cp -R /opt/webinoly/templates/nginx/conf.d/* /etc/nginx/conf.d/
+	sudo cp -a /opt/webinoly/templates/nginx/common /etc/nginx/common
+	sudo cp -a /opt/webinoly/templates/nginx/conf.d/* /etc/nginx/conf.d/
 	sudo cat /opt/webinoly/templates/nginx/nginx.conf > /etc/nginx/nginx.conf
 
 	sudo sed -i "/client_max_body_size /c \	client_max_body_size $(check_var max-mb-uploads)m;" /etc/nginx/nginx.conf
