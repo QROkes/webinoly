@@ -385,10 +385,12 @@ LimitMEMLOCK=infinity
 EOF
         fi
     done
+
+	cnf_write open_files_limit ${fd_per_process}
 	
 	sudo systemctl daemon-reload
 	
-	for svc in mariadb.service mysql.service; do
-        systemctl list-units --type=service | grep -q "^${svc}" && sudo systemctl restart "$svc"
-    done
+	for svc in mariadb mysql; do
+		sudo systemctl is-active --quiet "$svc" && sudo systemctl restart "$svc"
+	done
 }

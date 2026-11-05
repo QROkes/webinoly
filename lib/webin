@@ -22,7 +22,16 @@ system_info() {
 	echo "${blu}Hostname:${end}${dim} $(sudo hostname) ${end}"
 	echo "${blu}File descriptors (OS):${end}${dim} $(sudo cat /proc/sys/fs/file-max) ${end}"
 	echo "${blu}File descriptors (root):${end}${dim} $(ulimit -Hn) ${end}"
-	[[ $(conf_read nginx) == "true" ]] && echo "${blu}File descriptors (nginx/per process):${end}${dim} $(grep 'Max open files' /proc/$(cat /run/nginx.pid)/limits | cut -f 15 -d ' ') ${end}"
+	
+	[[ $(conf_read nginx) == "true" ]] && echo "${blu}File descriptors (nginx/per process):${end}${dim} $(grep 'Max open files' /proc/$(cat /run/nginx.pid)/limits | awk '{print $4}') ${end}"
+	
+	[[ $(conf_read php) == "true" ]] && echo "${blu}File descriptors (php/per process):${end}${dim} $(grep 'Max open files' /proc/$(systemctl show --property=MainPID --value php$(conf_read php-ver)-fpm)/limits | awk '{print $4}') ${end}"
+	
+	[[ $(conf_read mysql) == "true" ]] && echo "${blu}File descriptors (mysql/per process):${end}${dim} $(grep 'Max open files' /proc/$(cat /run/mysqld/mysqld.pid)/limits | awk '{print $4}') ${end}"
+	
+	[[ $(conf_read linux-optim) == "true" ]] && local kernel="Enabled" || local kernel="Disabled"
+	echo "${blu}Kernel optimization:${end}${dim} $kernel ${end}"
+	
 	echo ""
 	echo "${blu}${bol}[Disk Usage]${end}${dim}"
 	sudo df -Th /
@@ -55,7 +64,7 @@ system_info() {
 	echo "${blu}${bol}[PHP]${end}"
 	if [[ $(conf_read php) == "true" ]]; then
 		echo "${blu}Info:${end}${dim} $(php -v | grep -m1 "") ${end}"
-		echo "${blu}memory_limit:${end}${dim} $(grep memory_limit /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' -s ) ${end}"
+		echo "${blu}memory_limit:${end}${dim} $(grep ^memory_limit /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' -s ) ${end}"
 		echo "${blu}post_max_size:${end}${dim} $(grep post_max_size /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' -s ) ${end}"
 		echo "${blu}upload_max_filesize:${end}${dim} $(grep upload_max_filesize /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' -s ) ${end}"
 		echo "${blu}max_file_uploads:${end}${dim} $(grep max_file_uploads /etc/php/$(conf_read php-ver)/fpm/php.ini | cut -f 2 -d '=' -s ) ${end}"
