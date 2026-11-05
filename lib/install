@@ -533,7 +533,7 @@ nginx_tool_ssl() {
 	api-events_update in5
 
 	# Starting with Ubuntu 26.04 we will not use or install Snap by default (we only use it for Certbot)
-	[[ $OS_VERSION_NAME =~ ^(jammy|noble)$ ]] || conf_write snap false
+	[[ ! $(conf_read snap) =~ ^(true|false)$ && ! $OS_VERSION_NAME =~ ^(jammy|noble)$ ]] && conf_write snap false
 
 	# Install LetsEncrypt
 	if [[ $(conf_read snap) == "false" ]];  then
