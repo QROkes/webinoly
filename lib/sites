@@ -1541,9 +1541,9 @@ reverse_proxy() {
 	local code=$(curl -s -m 5 -o /dev/null -w "%{http_code}" "$proxydata")
 	code="${code##*$'\n'}"
 	[[ -n $code ]] && local mes="(Code: ${code})"
-	[[ $code =~ ^(2|3|4)[0-9][0-9]$ ]] && echo "${gre}Successful!${end}" || echo "${red}[WARNING] Seems like your Reverse Proxy host is not responding! ${mes}${end}"
+	[[ $code =~ ^(2|3|4)[0-9][0-9]$ ]] || echo "${red}[WARNING] The upstream server (backend) is not responding! ${mes}${end}"
 	
-	[[ -n $subfolder ]] && echo "${gre}Reverse proxy${blu} $subfolder ${gre}subfolder successfully created!${end}"
+	echo "${gre}Reverse proxy${blu} ${domain}${subfolder} ${gre}successfully created!${end}"
 }
 
 
@@ -1869,15 +1869,8 @@ cloning_site() {
 			local custom_wp_dbpref=$( grep -F "table_prefix" $(wp_config_path $domain $subfolder) | cut -f 2 -d "'" -s)
 		fi
 		
-		if [[ $(echo "$(wp_config_read $domain DB_HOST $subfolder)" | cut -f 1 -d ':' ) == "localhost" ]]; then
-			[[ -z $subfolder ]] && sudo site $domain -delete=force > /dev/null 2>&1 || sudo site $domain -subfolder=$subfolder -delete=force > /dev/null 2>&1
-		else
-			if [[ -z $subfolder ]]; then
-				sudo site $domain -delete=force > /dev/null 2>&1
-			else
-				sudo site $domain -subfolder=$subfolder -delete=force > /dev/null 2>&1
-			fi
-		fi
+		[[ -z $subfolder ]] && sudo site $domain -delete=force > /dev/null 2>&1 || sudo site $domain -subfolder=$subfolder -delete=force > /dev/null 2>&1
+		
 	else
 		echo "${blu}Cloning your site! ${dim} Wait...${end}"
 	fi
@@ -1951,40 +1944,65 @@ cloning_site() {
 	fi
 	
 	# Clone Subfolder conf files from apps.d
-	# Here are cloned WP found in subfolders using a recursive function
-	# Other kind of subfolders, like proxy, php or html, are just copied, that's why we don't see an output message.
-	# Only run when root domain is cloned (subfolder empty)
-	if [[ -z $child && -z $subfolder ]]; then
+	if [[ -z $child ]]; then
 		conf_write nginx-reload false
 		
 		for appfile in /etc/nginx/apps.d/${clone_from}${subname}*.conf
 		do
 			if [[ -s $appfile ]]; then
+				local xsub="/$(echo $appfile | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
+				local subn=$(echo $xsub | sed "s/\//_/g")
+				
+				# Not sure if necessary - ensure everything is copied...
 				local newfile=$(echo $appfile | sed "s/$clone_from/$domain/")
 				[[ ! -f $newfile ]] && cp $appfile $newfile
 				
+				[[ -z $xsub || -z subn || $xsub == $subfolder ]] && continue
+				
 				# Check if site contains WP in subfolders.
-				if [[ $appfile == "/etc/nginx/apps.d/${clone_from}${subname}"*-wpcommon.conf ]]; then
-					local wpsub="/$(echo $appfile | cut -f 2- -d "_" -s | cut -f -1 -d "-" -s | sed "s/_/\//g")"
-					if [[ -n $wpsub && -f /var/www/$domain/htdocs$wpsub/wp-config.php ]]; then
-						echo "${gre}${dim}WordPress installed in a subfolder${blu} '${wpsub}' ${gre}was found, we will clone it too...${end}"
+				if [[ $appfile == "/etc/nginx/apps.d/${clone_from}${subn}-wpcommon.conf" ]]; then
+					if [[ -f /var/www/$domain/htdocs$xsub/wp-config.php ]]; then
+						echo "${gre}${dim}WordPress installed in a subfolder${blu} '${xsub}' ${gre}was found, we will clone it too...${end}"
 						# Silenced because some times files are still not all copied and this commands reload nginx causing unexpected errors.
 						# At the end when all the files are copied everything is fine and nothing to worry!
-						sudo site $domain -subfolder=$wpsub -delete=keep-db > /dev/null 2>&1
+						sudo site $domain -subfolder=$xsub -delete=keep-db > /dev/null 2>&1
 						[[ -n $env ]] && local pars="-env=$env "
 						[[ -n $cache ]] && local pars="$pars -cache=$cache -wp-cache-plugins=on"
-						sudo site $domain -clone-from=$clone_from -subfolder=$wpsub -child $pars > /dev/null 2>&1
+						sudo site $domain -clone-from=$clone_from -subfolder=$xsub -child $pars > /dev/null 2>&1
 					fi
+				
+				# Check if site contains PHP in subfolders.
+				elif [[ $appfile == "/etc/nginx/apps.d/${clone_from}${subn}-php.conf" && ! -f /etc/nginx/apps.d/${clone_from}${subn}-wpcommon.conf ]]; then
+					echo "${gre}${dim}PHP subfolder${blu} '${xsub}' ${gre}was found, we will clone it too...${end}"
+					sudo site $domain -subfolder=$xsub -delete=keep-db > /dev/null 2>&1
+					sudo site $domain -clone-from=$clone_from -subfolder=$xsub -child > /dev/null 2>&1
+					
+				# Check if site contains Proxy in subfolders.
+				elif [[ $appfile == "/etc/nginx/apps.d/${clone_from}${subn}-proxy.conf" ]]; then
+					echo "${gre}${dim}Reverse Proxy subfolder${blu} '${xsub}' ${gre}was found, we will clone it too...${end}"
+					sudo site $domain -subfolder=$xsub -delete=keep-db > /dev/null 2>&1
+					sudo site $domain -clone-from=$clone_from -subfolder=$xsub -child > /dev/null 2>&1
 				fi
 			fi
 		done
 		
 		conf_delete nginx-reload
-	fi
+		
+		# Check for HTML subfolders...
+		local html_loc=$(sed -n -e '/WebinolyNginxServerStart/,$p' /etc/nginx/sites-available/$clone_from | grep -E "location .* { try_files .* =404; }" | cut -d' ' -f2 -s | rev | cut -d'/' -f 2- -s | rev)
+		
+		for html in $html_loc
+		do
+			if [[ $html == "${subfolder}/"* && $(is_subfolder $clone_from $html) == "html" ]]; then
+				echo "${gre}${dim}HTML subfolder${blu} '${html}' ${gre}was found, we will clone it too...${end}"
+				sudo site $domain -subfolder=$html -delete=keep-db > /dev/null 2>&1
+				sudo site $domain -clone-from=$clone_from -subfolder=$html -child > /dev/null 2>&1
+			fi
+		done
+	fi 
 
 	# Only for WP sites
-	# Main process runs always for WP - Child WP process only run when recursive and skip main if main is subfolder.
-	if [[ ( $iswpclone == "true" && -z $subfolder ) || ( $iswpclone == "true" && -n $subfolder && -n $child ) ]]; then
+	if [[ ( $iswpclone == "true" && -z $child ) || ( $iswpclone == "true" && -n $subfolder && -n $child ) ]]; then
 		local dom=$(echo $domain$subfolder | sed "s/[^0-9A-Za-z]/_/g")
 		local usr=$dom
 		local AUTOGENPASS_WPDB=`pwgen -s -1 16`
@@ -2028,7 +2046,7 @@ cloning_site() {
 		[[ -n $env ]] && sudo site $domain -env=$env $envpar
 	fi
 	
-	if [[ -z $child ]]; then
+	if [[ -z $child && -z $subfolder ]]; then
 		# Force-Redirect
 		if [[ $subdomain != "true" ]]; then
 			sudo site $domain -force-redirect=root
@@ -2042,11 +2060,13 @@ cloning_site() {
 		# Remove custom settings from cloned site
 		[[ $(is_ssl $clone_from) == "true" ]] && sudo site $domain -ssl=off -revoke=off -no-db-update > /dev/null 2>&1
 		[[ $(conf_read default-site) == $clone_from ]] && remove_nginx_default_server $domain
-		
+	fi
+	if [[ -z $child ]]; then
 		# If main root domain is HTML fix the index
 		[[ $(site_type $domain) =~ "HTML" && $(site_type $clone_from $subfolder) =~ ^(PHP|WordPress)$ ]] && sed -i '/index /c \	index index.php index.html index.htm;' /etc/nginx/sites-available/$domain
 		
-		sudo chown -R www-data:www-data /var/www/$domain
+		# Check just to prevent errors with no-data folder sites, like proxy sites...
+		[[ -d /var/www/$domain ]] && sudo chown -R www-data:www-data /var/www/$domain
 	fi
 	
 	echo "${gre}Site${blu} $domain$subfolder ${gre}is now a successfull clone of${blu} $clone_from$subfolder ${end}"
