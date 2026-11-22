@@ -922,22 +922,14 @@ stack_builder() {
 	fi
 	
 	if [[ $2 == "php" && $(conf_read php) != "true" ]]; then
-		if [[ $OS_VERSION_NAME =~ ^(jammy|noble)$ ]]; then
-			rm -f /usr/share/keyrings/php-archive-keyring.gpg
-			curl -sSLf 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xB8DC7E53946656EFBCE4C1DD71DAEAAB4AD4CAB6' | sudo gpg --dearmor -o /usr/share/keyrings/php-archive-keyring.gpg
-			chmod 644 /usr/share/keyrings/php-archive-keyring.gpg
+		rm -f /usr/share/keyrings/deb.sury.org-php.gpg
+		rm -f /tmp/debsuryorg-archive-keyring.deb # DoubleCheck!
+		curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb
+		dpkg -i /tmp/debsuryorg-archive-keyring.deb
+		chmod 644 /usr/share/keyrings/deb.sury.org-php.gpg
 		
-			echo "deb [signed-by=/usr/share/keyrings/php-archive-keyring.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
-		else
-			rm -f /usr/share/keyrings/deb.sury.org-php.gpg
-			rm -f /tmp/debsuryorg-archive-keyring.deb # DoubleCheck!
-			curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb
-			dpkg -i /tmp/debsuryorg-archive-keyring.deb
-			chmod 644 /usr/share/keyrings/deb.sury.org-php.gpg
-			
-			echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
-			rm /tmp/debsuryorg-archive-keyring.deb
-		fi
+		echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
+		rm /tmp/debsuryorg-archive-keyring.deb
 		
 		api-events_update ikp
 		local code="run"
