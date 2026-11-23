@@ -5,7 +5,7 @@
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
 readonly app_version="1.21.4"
-readonly svr_version="1.13"
+readonly svr_version="1.14"
 readonly os_ubuntu_supported=(jammy noble resolute) # https://ubuntu.com/about/release-cycle
 readonly php_supported=(7.4 8.0 8.1 8.2 8.3 8.4 8.5 8.6) # https://www.php.net/supported-versions.php
 readonly php_default="8.5"

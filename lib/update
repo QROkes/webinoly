@@ -401,6 +401,32 @@ onetwelve_to_onethirteen() {
 	sudo webinoly -server-reset=confile
 }
 
+# v1.21.4
+onethirteen_to_onefourteen() {
+	# Server reset not needed, just update server version...
+	[[ $oldver == "1.13" ]] && conf_write server-reset skip
+	
+	# This update is only to update to the new PHP Ondrej PPA, the old one is now deprecated
+	# That's why server reset is not needed
+	# It will only be applied to Ubuntu 24.04 and 22.04
+	
+	if [[ $OS_VERSION_NAME =~ ^(jammy|noble)$ ]]; then
+		# Remove old PPA
+		rm -f /usr/share/keyrings/php-archive-keyring.gpg
+		rm -f /etc/apt/sources.list.d/php.list
+		
+		# Add new PPA
+		rm -f /usr/share/keyrings/deb.sury.org-php.gpg
+		rm -f /tmp/debsuryorg-archive-keyring.deb # DoubleCheck!
+		curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb
+		dpkg -i /tmp/debsuryorg-archive-keyring.deb
+		chmod 644 /usr/share/keyrings/deb.sury.org-php.gpg
+		
+		echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/php.list
+		rm /tmp/debsuryorg-archive-keyring.deb
+	fi
+}
+
 
 [[ $(version $oldver) -lt $(version "1.1") ]] && onezero_to_oneone
 [[ $(version $oldver) -lt $(version "1.2") ]] && oneone_to_onetwo
@@ -415,6 +441,7 @@ onetwelve_to_onethirteen() {
 [[ $(version $oldver) -lt $(version "1.11") ]] && oneten_to_oneeleven
 [[ $(version $oldver) -lt $(version "1.12") ]] && oneeleven_to_onetwelve
 [[ $(version $oldver) -lt $(version "1.13") ]] && onetwelve_to_onethirteen
+[[ $(version $oldver) -lt $(version "1.14") ]] && onethirteen_to_onefourteen
 
 
 api-events_update wysue

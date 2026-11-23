@@ -533,7 +533,14 @@ fix_permissions() {
 
 server_reset() {
 	# Operating System - Linux Optim
-	if [[ $(conf_read pre-packs) == true && $server_reset =~ ^(os|all)$ ]]; then		
+	if [[ $(conf_read pre-packs) == true && $server_reset =~ ^(os|all)$ && $(conf_read server-reset) == "skip" ]]; then
+		# This is a hack to skip server reset during stack update
+		# We need to run linux_optim to update the stack version and return with no optim...
+		linux_optim
+		conf_delete server-reset
+		echo "${gre}Stack version updated!${end}"
+		return
+	elif [[ $(conf_read pre-packs) == true && $server_reset =~ ^(os|all)$ ]]; then
 		linux_purge
 		linux_optim
 		echo "${gre}Operating System optimization settings has been updated successfully!${end}"

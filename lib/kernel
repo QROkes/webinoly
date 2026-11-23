@@ -35,7 +35,7 @@ fi
 linux_optim() {
     api-events_update ic1
 	conf_write server-version $svr_version
-    [[ $(conf_read linux-optim) == "true" || $(conf_read kernel-optim) == "false" ]] && return
+    [[ $(conf_read linux-optim) == "true" || $(conf_read kernel-optim) == "false" || $(conf_read server-reset) == "skip" ]] && return
     echo "${gre}Optimizing Ubuntu kernel for LEMP workloads...${end}"
     api-events_update ic2
 
